@@ -1,5 +1,12 @@
+__precompile__()
+
 module Metalhead
 
-# package code goes here
+using Flux, Images
+
+export VGG19
+
+include("utils.jl")
+include("vgg19.jl")
 
 end # module
