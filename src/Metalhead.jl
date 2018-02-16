@@ -4,7 +4,7 @@ module Metalhead
 
 using Flux, Images
 
-export VGG19
+export load, VGG19
 
 const imagenet_classes = split(String(read(joinpath(@__DIR__, "..", "imagenet_classes.txt"))),
                                "\n", keep = false)
