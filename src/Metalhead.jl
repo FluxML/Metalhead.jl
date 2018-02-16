@@ -6,6 +6,9 @@ using Flux, Images
 
 export VGG19
 
+const imagenet_classes = split(String(read(joinpath(@__DIR__, "..", "imagenet_classes.txt"))),
+                               "\n", keep = false)
+
 include("utils.jl")
 include("vgg19.jl")
 
