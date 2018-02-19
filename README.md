@@ -4,7 +4,7 @@
 
 ```julia
 # Note that this package currently requires Flux.jl master.
-Pkg.clone("https://github.com/FluxML/Metalhead.jl")
+Pkg.add("Metalhead")
 ```
 
 This package provides computer vision models that run on top of the [Flux](http://fluxml.github.io/) machine learning library.
