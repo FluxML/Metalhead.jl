@@ -10,7 +10,7 @@ end
 
 function weights(name)
   getweights(name)
-  open(deserialize, joinpath(deps, name))
+  BSON.load(joinpath(deps, name))
 end
 
 function preprocess(im::AbstractMatrix{<:AbstractRGB})

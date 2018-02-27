@@ -2,7 +2,7 @@ __precompile__()
 
 module Metalhead
 
-using Flux, Images
+using Flux, Images, BSON
 
 export load, VGG19
 
