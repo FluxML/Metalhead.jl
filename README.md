@@ -3,7 +3,6 @@
 [![Build Status](https://travis-ci.org/FluxML/Metalhead.jl.svg?branch=master)](https://travis-ci.org/FluxML/Metalhead.jl)
 
 ```julia
-# Note that this package currently requires Flux.jl master.
 Pkg.add("Metalhead")
 ```
 
