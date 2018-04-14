@@ -9,3 +9,14 @@ testy = vgg19(testx)
 
 @test testy isa AbstractArray
 @test length(testy) == 1000
+
+# Just run the prediction code end-to-end
+# TODO: Set up travis to actually run these
+if length(datasets()) == 2
+    for dataset in (ImageNet, CIFAR10)
+        val1 = valimgs(dataset)[1]
+        predict(vgg19, val1)
+        classify(vgg19, val1)
+    end
+    predict(vgg19, testimgs(dataset(ImageNet))[1])
+end

@@ -39,3 +39,30 @@ julia> vgg.layers[1:21](x)
  0.663341  0.600874  0.596379  0.596292  0.596385  0.598204  0.590494
   ⋮
 ```
+
+# Working with common datasets
+Metalhead includes support for wokring with several common object recognition datasets.
+The `datasets()` function will attempt to auto-detect any common dataset placed in
+the `datasets/`. The `Metalhead.download` function can be used to download these datasets
+(where such automatic download is possible - for other data sets, see `datasets/README.md`),
+e.g.:
+```
+MetalHead.download(CIFAR10)
+```
+
+Once a dataset is load, it's training, validation, and test images are available using the
+`trainimgs`, `valimgs`, and `testimgs` functions. E.g.
+
+```
+julia> valimgs(dataset(ImageNet))[rand(1:50000, 10)]
+```
+
+will fetch 10 random validation images from the ImageNet data set.
+
+# Inline Images at the REPL
+
+If you are using OS X, it is recommended that you use iTerm2 and install the
+`TerminalExtensions.jl` package. This will allow you to see inference results
+as well as the corresponding images directly in your terminal:
+
+![REPL Screenshot](https://i.imgur.com/hy7LXS5.png)

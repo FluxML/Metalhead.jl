@@ -33,7 +33,7 @@ function vgg19_layers()
   return ls
 end
 
-struct VGG19
+struct VGG19 <: ClassificationModel{ImageNet.ImageNet1k}
   layers::Chain
 end
 
