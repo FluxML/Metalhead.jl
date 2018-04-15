@@ -1,15 +1,30 @@
 __precompile__()
-
 module Metalhead
 
 using Flux, Images, BSON
 
-export load, VGG19
+# Models
+export VGG19
 
-const imagenet_classes = split(String(read(joinpath(@__DIR__, "..", "imagenet_classes.txt"))),
-                               "\n", keep = false)
+# Useful re-export from Images
+export load
 
+# High-level classification APIs
+export predict, classify
+
+# Data Sets
+export ImageNet, CIFAR10
+
+# Data set utilities
+export testimgs, valimgs, dataset, datasets
+
+include("datasets/utils.jl")
+include("model.jl")
 include("utils.jl")
+include("display/terminal.jl")
+include("datasets/imagenet.jl")
+include("datasets/cifar10.jl")
+include("datasets/autodetect.jl")
 include("vgg19.jl")
 
 end # module
