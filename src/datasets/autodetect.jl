@@ -48,19 +48,6 @@ function download(which)
             Base.download("https://www.cs.toronto.edu/~kriz/cifar-10-binary.tar.gz", local_path)
             run(`tar xzf $local_path $dir_path`)
         end
-        files = ["data_batch_1.bin","data_batch_2.bin","data_batch_3.bin","data_batch_4.bin","data_batch_5.bin"]
-        cd(dir_path) do
-            open("train_data.bin","w") do f1
-                for i in files
-                    if(isfile(i))
-                        open(i,"r") do f2
-                            write(f1, f2)
-                        end
-                        run(`rm ./$i`)
-                    end
-                end
-            end
-        end
     else
         error("Download not supported for $(which)")
     end
