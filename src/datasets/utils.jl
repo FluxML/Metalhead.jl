@@ -19,6 +19,14 @@ struct TestData{T<:DataSet} <: AbstractVector{Any}
 end
 testimgs(set::DataSet) = TestData(set)
 
-struct TrainData{T<:DataSet} <: AbstractVector{Any}
+struct TrainingImage
+    set::Type{<:DataSet}
+    idx::Int
+    img
+    ground_truth::ObjectClass
+end
+
+struct TrainData{T<:DataSet} <: AbstractVector{TrainingImage}
     set::T
 end
+trainimgs(set::DataSet) = TrainData(set)

@@ -35,14 +35,19 @@ function dataset(which)
     end
 end
 valimgs(m::Module) = valimgs(dataset(m))
+testimgs(m::Module) = testimgs(dataset(m))
+trainimgs(m::Module) = trainimgs(dataset(m))
 
 function download(which)
     if which === ImageNet
         error("ImageNet is not automatiacally downloadable. See instructions in datasets/README.md")
     elseif which == CIFAR10
         local_path = joinpath(@__DIR__, "..", "..", "datasets", "cifar-10-binary.tar.gz")
-        Base.download("https://www.cs.toronto.edu/~kriz/cifar-10-binary.tar.gz", local_path)
-        run(`tar xzf $local_path`)
+        dir_path = joinpath(@__DIR__,"..","..","datasets","cifar-10-batches-bin")
+        if(!isdir(dir_path))
+            Base.download("https://www.cs.toronto.edu/~kriz/cifar-10-binary.tar.gz", local_path)
+            run(`tar xzf $local_path $dir_path`)
+        end
     else
         error("Download not supported for $(which)")
     end

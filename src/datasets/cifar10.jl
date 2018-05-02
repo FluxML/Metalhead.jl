@@ -2,7 +2,7 @@ module CIFAR10
 
 import ..Metalhead
 import ..Metalhead: testimgs
-import ..Metalhead: ValidationImage, ValData, TestData, TrainData, ObjectClass, labels
+import ..Metalhead: ValidationImage, TrainingImage, ValData, TestData, TrainData, ObjectClass, labels
 
 abstract type DataSet <: Metalhead.DataSet end
 using Images
@@ -23,6 +23,8 @@ end
 
 Base.size(v::ValData{<:DataSet}) = (10000,)
 
+Base.size(v::TrainData{<:DataSet}) = (50000,)
+
 testimgs(::DataSet) = error("CIFAR10 does not specify a test set (test_batch is considered the validation set)")
 
 function bytes_to_image(bytes::Vector{UInt8})
@@ -41,5 +43,15 @@ function Base.getindex(v::ValData{BinPackedFS}, i::Integer)
     end...)
 end
 
+function Base.getindex(v::TrainData{BinPackedFS}, i::Integer)
+    batch, num = divrem(i - 1, 10000)
+    file = "data_batch_$(batch+1).bin"
+    TrainingImage(DataSet, i, open(joinpath(v.set.folder, file)) do f
+        seek(f, num * 3073)
+        label = read(f, UInt8)
+        bytes = read(f, 3072)
+        bytes_to_image(bytes), C10Class(label+1)
+    end...)
+end
 
 end
