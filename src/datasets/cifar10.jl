@@ -44,10 +44,10 @@ function Base.getindex(v::ValData{BinPackedFS}, i::Integer)
 end
 
 function Base.getindex(v::TrainData{BinPackedFS}, i::Integer)
-    batch = i÷10000
-    batch = i%10000==0?batch-1:batch
-    num = i%10000
-    num = num==0?i-10000*batch:num
+    batch = i ÷ 10000
+    batch = (i % 10000 == 0)? (batch - 1) : batch
+    num = i % 10000
+    num = (num == 0)? (i - 10000 * batch) : num
     file = "data_batch_$(batch+1).bin"
     TrainingImage(DataSet, i, open(joinpath(v.set.folder, file)) do f
         seek(f, (num-1)*3073)
