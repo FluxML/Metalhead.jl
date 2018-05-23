@@ -4,7 +4,7 @@ module Metalhead
 using Flux, Images, BSON
 
 # Models
-export VGG19, squeezenet, densenet
+export VGG19, squeezenet, densenet, resnet
 
 # Useful re-export from Images
 export load
@@ -28,4 +28,5 @@ include("datasets/autodetect.jl")
 include("vgg19.jl")
 include("squeezenet.jl")
 include("densenet.jl")
+include("resnet.jl")
 end # module
