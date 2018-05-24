@@ -62,14 +62,14 @@ function squeezenet_layers()
   return ls
 end
 
-struct squeezenet <: ClassificationModel{ImageNet.ImageNet1k}
+struct SqueezeNet <: ClassificationModel{ImageNet.ImageNet1k}
   layers::Chain
 end
 
-squeezenet() = squeezenet(squeezenet_layers())
+SqueezeNet() = SqueezeNet(squeezenet_layers())
 
-Base.show(io::IO, ::squeezenet) = print(io, "squeezenet()")
+Base.show(io::IO, ::SqueezeNet) = print(io, "SqueezeNet()")
 
-Flux.treelike(squeezenet)
+Flux.treelike(SqueezeNet)
 
-(m::squeezenet)(x) = m.layers(x)
+(m::SqueezeNet)(x) = m.layers(x)

@@ -137,14 +137,14 @@ function resnet_layers()
   return ls
 end
 
-struct resnet <: ClassificationModel{ImageNet.ImageNet1k}
+struct ResNet <: ClassificationModel{ImageNet.ImageNet1k}
   layers::Chain
 end
 
-resnet() = resnet(resnet_layers())
+ResNet() = ResNet(resnet_layers())
 
-Base.show(io::IO, ::resnet) = print(io, "resnet()")
+Base.show(io::IO, ::ResNet) = print(io, "ResNet()")
 
-Flux.treelike(resnet)
+Flux.treelike(ResNet)
 
-(m::resnet)(x) = m.layers(x)
+(m::ResNet)(x) = m.layers(x)

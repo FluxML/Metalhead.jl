@@ -257,14 +257,14 @@ function densenet_layers()
   return ls
 end
 
-struct densenet <: ClassificationModel{ImageNet.ImageNet1k}
+struct DenseNet <: ClassificationModel{ImageNet.ImageNet1k}
   layers::Chain
 end
 
-densenet() = densenet(densenet_layers())
+DenseNet() = DenseNet(densenet_layers())
 
-Base.show(io::IO, ::densenet) = print(io, "densenet()")
+Base.show(io::IO, ::DenseNet) = print(io, "DenseNet()")
 
-Flux.treelike(densenet)
+Flux.treelike(DenseNet)
 
-(m::densenet)(x) = m.layers(x)
+(m::DenseNet)(x) = m.layers(x)
