@@ -7,7 +7,12 @@ function valimgs end
 function getweights(name)
   mkpath(deps)
   cd(deps) do
-    isfile(name) || Base.download("$url/$name", name)
+    if name == "vgg19.bson"
+        isfile(name) || Base.download("$url/$name", name)
+    else
+        loc = "https://github.com/FluxML/Metalhead.jl/releases/download/v0.1.1"
+        isfile(name) || Base.download("$loc/$name", name)
+    end
   end
 end
 

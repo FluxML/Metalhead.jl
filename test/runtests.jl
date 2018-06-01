@@ -10,7 +10,7 @@ testy = vgg19(testx)
 @test testy isa AbstractArray
 @test length(testy) == 1000
 
-squeezenet = squeezenet()
+squeezenet = SqueezeNet()
 
 testx = rand(Float32, 224, 224, 3, 1)
 
@@ -19,7 +19,7 @@ testy = squeezenet(testx)
 @test testy isa AbstractArray
 @test length(testy) == 1000
 
-densenet = densenet()
+densenet = DenseNet()
 
 testx = rand(Float32, 224, 224, 3, 1)
 
@@ -28,7 +28,7 @@ testy = vgg19(testx)
 @test testy isa AbstractArray
 @test length(testy) == 1000
 
-resnet = resnet()
+resnet = ResNet()
 
 testx = rand(Float32, 224, 224, 3, 1)
 
