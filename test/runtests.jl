@@ -23,7 +23,7 @@ densenet = DenseNet()
 
 testx = rand(Float32, 224, 224, 3, 1)
 
-testy = vgg19(testx)
+testy = densenet(testx)
 
 @test testy isa AbstractArray
 @test length(testy) == 1000
@@ -32,7 +32,16 @@ resnet = ResNet()
 
 testx = rand(Float32, 224, 224, 3, 1)
 
-testy = vgg19(testx)
+testy = resnet(testx)
+
+@test testy isa AbstractArray
+@test length(testy) == 1000
+
+googlenet = GoogleNet()
+
+testx = rand(Float32, 224, 224, 3, 1)
+
+testy = googlenet(testx)
 
 @test testy isa AbstractArray
 @test length(testy) == 1000
