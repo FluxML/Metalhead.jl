@@ -37,6 +37,15 @@ testy = vgg19(testx)
 @test testy isa AbstractArray
 @test length(testy) == 1000
 
+googlenet = GoogleNet()
+
+# Test that the models can be indexed
+
+@test length(vgg19[1:4]) == 4
+@test length(squeezenet[1:4]) == 4
+@test length(resnet[1:4]) == 4
+@test length(googlenet[1:4]) == 4
+
 # Just run the prediction code end-to-end
 # TODO: Set up travis to actually run these
 if length(datasets()) == 2
