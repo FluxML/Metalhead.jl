@@ -28,6 +28,17 @@ function (block::ResidualBlock)(input)
   relu.(((block.norm_layers[end])((block.conv_layers[end])(value))) + block.shortcut(input))
 end
 
+function Bottleneck(filters::Int, downsample::Bool = false, res_top::Bool = false)
+  if(!downsample && !res_top)
+    return ResidualBlock([4 * filters, filters, filters, 4 * filters], [1,3,1], [0,1,0], [1,1,1])
+  elseif(downsample && res_top)
+    return ResidualBlock([filters, filters, filters, 4 * filters], [1,3,1], [0,1,0], [1,1,1], Chain(Conv((1,1), filters=>4 * filters, pad = (0,0), stride = (1,1)), BatchNorm(4 * filters)))
+  else
+    shortcut = Chain(Conv((1,1), 2 * filters=>4 * filters, pad = (0,0), stride = (2,2)), BatchNorm(4 * filters))
+    return ResidualBlock([2 * filters, filters, filters, 4 * filters], [1,3,1], [0,1,0], [1,1,2], shortcut)
+  end
+end
+
 function resnet50()
   local layers = [3, 4, 6, 3]
   local layer_arr = []
