@@ -41,10 +41,10 @@ googlenet = GoogleNet()
 
 # Test that the models can be indexed
 
-@test length(vgg19[1:4]) == 4
-@test length(squeezenet[1:4]) == 4
-@test length(resnet[1:4]) == 4
-@test length(googlenet[1:4]) == 4
+@test length(vgg19.layers[1:4]) == 4
+@test length(squeezenet.layers[1:4]) == 4
+@test length(resnet.layers[1:4]) == 4
+@test length(googlenet.layers[1:4]) == 4
 
 # Just run the prediction code end-to-end
 # TODO: Set up travis to actually run these
