@@ -16,7 +16,7 @@ export predict, classify
 export ImageNet, CIFAR10
 
 # Data set utilities
-export testimgs, valimgs, dataset, datasets
+export trainimgs, testimgs, valimgs, dataset, datasets
 
 include("datasets/utils.jl")
 include("model.jl")
