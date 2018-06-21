@@ -44,7 +44,7 @@ function _densenet(nblocks = [6, 12, 24, 16]; block = Bottleneck, growth_rate = 
   num_planes += nblocks[4] * growth_rate
   push!(layers, BatchNorm(num_planes, relu))
 
-  Chain(layers..., x -> meanpool(x, (4, 4)),
+  Chain(layers..., x -> meanpool(x, (7, 7)),
         x -> reshape(x, :, size(x, 4)),
         Dense(num_planes, num_classes), softmax)
 end
@@ -70,7 +70,7 @@ function densenet_layers()
       end
       l += 2
   end
-  for i in [5, 7, ] # Transition Block Conv Layers
+  for i in [5, 7, 9] # Transition Block Conv Layers
     ls[i][2].weight.data .= weights["conv$(i÷2)_blk_w_0"]
     ls[i][1].β.data .= weights["conv$(i÷2)_blk/bn_w_0"]
     ls[i][1].γ.data .= weights["conv$(i÷2)_blk/bn_w_0"]
