@@ -27,7 +27,7 @@ function dataset(which)
         return first(sets)
     elseif which == CIFAR10
         sets = collect(Iterators.filter(x->isa(x, CIFAR10.DataSet), datasets()))
-        isempty(sets) && error("No ImageNet dataset available. "*
+        isempty(sets) && error("No CIFAR10 dataset available. "*
             "See datasets/README.md for download instructions")
         return first(sets)
     else
