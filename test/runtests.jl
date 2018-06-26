@@ -37,21 +37,21 @@ testy = resnet(testx)
 @test testy isa AbstractArray
 @test length(testy) == 1000
 
-# googlenet = GoogleNet()
-#
-# testx = rand(224, 224, 3, 1)
-#
-# testy = googlenet(testx)
-#
-# @test testy isa AbstractArray
-# @test length(testy) == 1000
+googlenet = GoogleNet()
+
+testx = rand(224, 224, 3, 1)
+
+testy = googlenet(testx)
+
+@test testy isa AbstractArray
+@test length(testy) == 1000
 
 # Test that the models can be indexed
 
 @test length(vgg19.layers[1:4].layers) == 4
 @test length(squeezenet.layers[1:4].layers) == 4
 @test length(resnet.layers[1:4].layers) == 4
-# @test length(googlenet.layers[1:4].layers) == 4
+@test length(googlenet.layers[1:4].layers) == 4
 @test length(densenet.layers[1:4].layers) == 4
 
 # Just run the prediction code end-to-end
