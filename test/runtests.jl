@@ -37,6 +37,13 @@ testy = vgg19(testx)
 @test testy isa AbstractArray
 @test length(testy) == 1000
 
+# Test proper download and functioning of CIFAR10
+Metalhead.download(CIFAR10)
+x1 = trainimgs(CIFAR10)[1]
+x2 = valimgs(CIFAR10)[1]
+@test size(x1.img) == (32, 32)
+@test size(x2.img) == (32, 32)
+
 # Just run the prediction code end-to-end
 # TODO: Set up travis to actually run these
 if length(datasets()) == 2
