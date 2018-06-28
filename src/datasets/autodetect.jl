@@ -27,7 +27,7 @@ function dataset(which)
         return first(sets)
     elseif which == CIFAR10
         sets = collect(Iterators.filter(x->isa(x, CIFAR10.DataSet), datasets()))
-        isempty(sets) && error("No ImageNet dataset available. "*
+        isempty(sets) && error("No CIFAR10 dataset available. "*
             "See datasets/README.md for download instructions")
         return first(sets)
     else
@@ -43,10 +43,12 @@ function download(which)
         error("ImageNet is not automatiacally downloadable. See instructions in datasets/README.md")
     elseif which == CIFAR10
         local_path = joinpath(@__DIR__, "..", "..", "datasets", "cifar-10-binary.tar.gz")
-        dir_path = joinpath(@__DIR__,"..","..","datasets","cifar-10-batches-bin")
-        if(!isdir(dir_path))
-            Base.download("https://www.cs.toronto.edu/~kriz/cifar-10-binary.tar.gz", local_path)
-            run(`tar xzf $local_path $dir_path`)
+        dir_path = joinpath(@__DIR__,"..","..","datasets")
+        if(!isdir(joinpath(dir_path, "cifar-10-batches-bin")))
+            if(!isfile(local_path))
+                Base.download("https://www.cs.toronto.edu/~kriz/cifar-10-binary.tar.gz", local_path)
+            end
+            run(`tar -xzvf $local_path -C $dir_path`)
         end
     else
         error("Download not supported for $(which)")
