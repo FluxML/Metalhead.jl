@@ -21,21 +21,39 @@ testy = squeezenet(testx)
 
 densenet = DenseNet()
 
-testx = rand(Float32, 224, 224, 3, 1)
+testx = rand(224, 224, 3, 1)
 
-testy = vgg19(testx)
+testy = densenet(testx)
 
 @test testy isa AbstractArray
 @test length(testy) == 1000
 
 resnet = ResNet()
 
-testx = rand(Float32, 224, 224, 3, 1)
+testx = rand(224, 224, 3, 1)
 
-testy = vgg19(testx)
+testy = resnet(testx)
 
 @test testy isa AbstractArray
 @test length(testy) == 1000
+
+googlenet = GoogleNet()
+
+testx = rand(224, 224, 3, 1)
+
+testy = googlenet(testx)
+
+@test testy isa AbstractArray
+@test length(testy) == 1000
+
+
+# Test that the models can be indexed
+
+@test length(vgg19.layers[1:4].layers) == 4
+@test length(squeezenet.layers[1:4].layers) == 4
+@test length(resnet.layers[1:4].layers) == 4
+@test length(googlenet.layers[1:4].layers) == 4
+@test length(densenet.layers[1:4].layers) == 4
 
 # Test proper download and functioning of CIFAR10
 Metalhead.download(CIFAR10)

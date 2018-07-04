@@ -1,82 +1,71 @@
+struct InceptionBlock
+  path_1
+  path_2
+  path_3
+  path_4
+end
+
+Flux.treelike(InceptionBlock)
+
+function InceptionBlock(in_chs, chs_1x1, chs_3x3_reduce, chs_3x3, chs_5x5_reduce, chs_5x5, pool_proj)
+  path_1 = Conv((1, 1), in_chs=>chs_1x1, relu)
+
+  path_2 = (Conv((1, 1), in_chs=>chs_3x3_reduce, relu),
+            Conv((3, 3), chs_3x3_reduce=>chs_3x3, relu, pad = (1, 1)))
+
+  path_3 = (Conv((1, 1), in_chs=>chs_5x5_reduce, relu),
+            Conv((5, 5), chs_5x5_reduce=>chs_5x5, relu, pad = (2, 2)))
+
+  path_4 = (x -> maxpool(x, (3,3), stride = (1, 1), pad = (1, 1)),
+            Conv((1, 1), in_chs=>pool_proj, relu))
+
+  InceptionBlock(path_1, path_2, path_3, path_4)
+end
+
+function (m::InceptionBlock)(x)
+  cat(3, m.path_1(x), m.path_2[2](m.path_2[1](x)), m.path_3[2](m.path_3[1](x)), m.path_4[2](m.path_4[1](x)))
+end
+
+_googlenet() = Chain(Conv((7, 7), 3=>64, stride = (2, 2), relu, pad = (3, 3)),
+      x -> maxpool(x, (3, 3), stride = (2, 2), pad = (1, 1)),
+      Conv((1, 1), 64=>64, relu),
+      Conv((3, 3), 64=>192, relu, pad = (1, 1)),
+      x -> maxpool(x, (3, 3), stride = (2, 2), pad = (1, 1)),
+      InceptionBlock(192, 64, 96, 128, 16, 32, 32),
+      InceptionBlock(256, 128, 128, 192, 32, 96, 64),
+      x -> maxpool(x, (3, 3), stride = (2, 2), pad = (1, 1)),
+      InceptionBlock(480, 192, 96, 208, 16, 48, 64),
+      InceptionBlock(512, 160, 112, 224, 24, 64, 64),
+      InceptionBlock(512, 128, 128, 256, 24, 64, 64),
+      InceptionBlock(512, 112, 144, 288, 32, 64, 64),
+      InceptionBlock(528, 256, 160, 320, 32, 128, 128),
+      x -> maxpool(x, (3, 3), stride = (2, 2), pad = (1, 1)),
+      InceptionBlock(832, 256, 160, 320, 32, 128, 128),
+      InceptionBlock(832, 384, 192, 384, 48, 128, 128),
+      x -> meanpool(x, (7, 7), stride = (1, 1), pad = (0, 0)),
+      x -> reshape(x, :, size(x, 4)),
+      Dropout(0.4),
+      Dense(1024, 1000), softmax)
+
 function googlenet_layers()
   weight = Metalhead.weights("googlenet.bson")
   weights = Dict{Any, Any}()
   for ele in keys(weight)
-    weights[string(ele)] = convert(Array{Float64, N} where N ,weight[ele])
+    weights[string(ele)] = convert(Array{Float64, N} where N, weight[ele])
   end
-  Mul(a,b,c) = b .* reshape(c, (1,1,size(c)[a],1)) 
-  Add(axis, A ,B) = A .+ reshape(B, (1,1,size(B)[1],1)) 
-    c_1 = Chain(((x_2,)->meanpool(x_2, (7, 7), pad=(0, 0), stride=(1, 1))), Dropout(0.4f0), vec, Dense(transpose(weights["loss3/classifier_w_0"]), weights["loss3/classifier_b_0"]), vec, softmax)
-    c_3 = Conv(weights["inception_5b/1x1_w_0"], weights["inception_5b/1x1_b_0"], stride=(1, 1), pad=(0, 0))
-    c_4 = Conv(weights["inception_5a/1x1_w_0"], weights["inception_5a/1x1_b_0"], stride=(1, 1), pad=(0, 0))
-    c_5 = Conv(weights["inception_4e/1x1_w_0"], weights["inception_4e/1x1_b_0"], stride=(1, 1), pad=(0, 0))
-    c_6 = Conv(weights["inception_4d/1x1_w_0"], weights["inception_4d/1x1_b_0"], stride=(1, 1), pad=(0, 0))
-    c_7 = Conv(weights["inception_4c/1x1_w_0"], weights["inception_4c/1x1_b_0"], stride=(1, 1), pad=(0, 0))
-    c_8 = Conv(weights["inception_4b/1x1_w_0"], weights["inception_4b/1x1_b_0"], stride=(1, 1), pad=(0, 0))
-    c_9 = Conv(weights["inception_4a/1x1_w_0"], weights["inception_4a/1x1_b_0"], stride=(1, 1), pad=(0, 0))
-    c_10 = Conv(weights["inception_3b/1x1_w_0"], weights["inception_3b/1x1_b_0"], stride=(1, 1), pad=(0, 0))
-    c_11 = Conv(weights["inception_3a/1x1_w_0"], weights["inception_3a/1x1_b_0"], stride=(1, 1), pad=(0, 0))
-    c_12 = Conv(weights["conv2/3x3_w_0"], weights["conv2/3x3_b_0"], stride=(1, 1), pad=(1, 1))
-    c_13 = Conv(weights["conv2/3x3_reduce_w_0"], weights["conv2/3x3_reduce_b_0"], stride=(1, 1), pad=(0, 0))
-    c_14 = Conv(weights["conv1/7x7_s2_w_0"], weights["conv1/7x7_s2_b_0"], stride=(2, 2), pad=(3, 3))
-    c_15 = Conv(weights["inception_3a/3x3_w_0"], weights["inception_3a/3x3_b_0"], stride=(1, 1), pad=(1, 1))
-    c_16 = Conv(weights["inception_3a/3x3_reduce_w_0"], weights["inception_3a/3x3_reduce_b_0"], stride=(1, 1), pad=(0, 0))
-    c_17 = Conv(weights["inception_3a/5x5_w_0"], weights["inception_3a/5x5_b_0"], stride=(1, 1), pad=(2, 2))
-    c_18 = Conv(weights["inception_3a/5x5_reduce_w_0"], weights["inception_3a/5x5_reduce_b_0"], stride=(1, 1), pad=(0, 0))
-    c_19 = Conv(weights["inception_3a/pool_proj_w_0"], weights["inception_3a/pool_proj_b_0"], stride=(1, 1), pad=(0, 0))
-    c_20 = Conv(weights["inception_3b/3x3_w_0"], weights["inception_3b/3x3_b_0"], stride=(1, 1), pad=(1, 1))
-    c_21 = Conv(weights["inception_3b/3x3_reduce_w_0"], weights["inception_3b/3x3_reduce_b_0"], stride=(1, 1), pad=(0, 0))
-    c_22 = Conv(weights["inception_3b/5x5_w_0"], weights["inception_3b/5x5_b_0"], stride=(1, 1), pad=(2, 2))
-    c_23 = Conv(weights["inception_3b/5x5_reduce_w_0"], weights["inception_3b/5x5_reduce_b_0"], stride=(1, 1), pad=(0, 0))
-    c_24 = Conv(weights["inception_3b/pool_proj_w_0"], weights["inception_3b/pool_proj_b_0"], stride=(1, 1), pad=(0, 0))
-    c_25 = Conv(weights["inception_4a/3x3_w_0"], weights["inception_4a/3x3_b_0"], stride=(1, 1), pad=(1, 1))
-    c_26 = Conv(weights["inception_4a/3x3_reduce_w_0"], weights["inception_4a/3x3_reduce_b_0"], stride=(1, 1), pad=(0, 0))
-    c_27 = Conv(weights["inception_4a/5x5_w_0"], weights["inception_4a/5x5_b_0"], stride=(1, 1), pad=(2, 2))
-    c_28 = Conv(weights["inception_4a/5x5_reduce_w_0"], weights["inception_4a/5x5_reduce_b_0"], stride=(1, 1), pad=(0, 0))
-    c_29 = Conv(weights["inception_4a/pool_proj_w_0"], weights["inception_4a/pool_proj_b_0"], stride=(1, 1), pad=(0, 0))
-    c_30 = Conv(weights["inception_4b/3x3_w_0"], weights["inception_4b/3x3_b_0"], stride=(1, 1), pad=(1, 1))
-    c_31 = Conv(weights["inception_4b/3x3_reduce_w_0"], weights["inception_4b/3x3_reduce_b_0"], stride=(1, 1), pad=(0, 0))
-    c_32 = Conv(weights["inception_4b/5x5_w_0"], weights["inception_4b/5x5_b_0"], stride=(1, 1), pad=(2, 2))
-    c_33 = Conv(weights["inception_4b/5x5_reduce_w_0"], weights["inception_4b/5x5_reduce_b_0"], stride=(1, 1), pad=(0, 0))
-    c_34 = Conv(weights["inception_4b/pool_proj_w_0"], weights["inception_4b/pool_proj_b_0"], stride=(1, 1), pad=(0, 0))
-    c_35 = Conv(weights["inception_4c/3x3_w_0"], weights["inception_4c/3x3_b_0"], stride=(1, 1), pad=(1, 1))
-    c_36 = Conv(weights["inception_4c/3x3_reduce_w_0"], weights["inception_4c/3x3_reduce_b_0"], stride=(1, 1), pad=(0, 0))
-    c_37 = Conv(weights["inception_4c/5x5_w_0"], weights["inception_4c/5x5_b_0"], stride=(1, 1), pad=(2, 2))
-    c_38 = Conv(weights["inception_4c/5x5_reduce_w_0"], weights["inception_4c/5x5_reduce_b_0"], stride=(1, 1), pad=(0, 0))
-    c_39 = Conv(weights["inception_4c/pool_proj_w_0"], weights["inception_4c/pool_proj_b_0"], stride=(1, 1), pad=(0, 0))
-    c_40 = Conv(weights["inception_4d/3x3_w_0"], weights["inception_4d/3x3_b_0"], stride=(1, 1), pad=(1, 1))
-    c_41 = Conv(weights["inception_4d/3x3_reduce_w_0"], weights["inception_4d/3x3_reduce_b_0"], stride=(1, 1), pad=(0, 0))
-    c_42 = Conv(weights["inception_4d/5x5_w_0"], weights["inception_4d/5x5_b_0"], stride=(1, 1), pad=(2, 2))
-    c_43 = Conv(weights["inception_4d/5x5_reduce_w_0"], weights["inception_4d/5x5_reduce_b_0"], stride=(1, 1), pad=(0, 0))
-    c_44 = Conv(weights["inception_4d/pool_proj_w_0"], weights["inception_4d/pool_proj_b_0"], stride=(1, 1), pad=(0, 0))
-    c_45 = Conv(weights["inception_4e/3x3_w_0"], weights["inception_4e/3x3_b_0"], stride=(1, 1), pad=(1, 1))
-    c_46 = Conv(weights["inception_4e/3x3_reduce_w_0"], weights["inception_4e/3x3_reduce_b_0"], stride=(1, 1), pad=(0, 0))
-    c_47 = Conv(weights["inception_4e/5x5_w_0"], weights["inception_4e/5x5_b_0"], stride=(1, 1), pad=(2, 2))
-    c_48 = Conv(weights["inception_4e/5x5_reduce_w_0"], weights["inception_4e/5x5_reduce_b_0"], stride=(1, 1), pad=(0, 0))
-    c_49 = Conv(weights["inception_4e/pool_proj_w_0"], weights["inception_4e/pool_proj_b_0"], stride=(1, 1), pad=(0, 0))
-    c_50 = Conv(weights["inception_5a/3x3_w_0"], weights["inception_5a/3x3_b_0"], stride=(1, 1), pad=(1, 1))
-    c_51 = Conv(weights["inception_5a/3x3_reduce_w_0"], weights["inception_5a/3x3_reduce_b_0"], stride=(1, 1), pad=(0, 0))
-    c_52 = Conv(weights["inception_5a/5x5_w_0"], weights["inception_5a/5x5_b_0"], stride=(1, 1), pad=(2, 2))
-    c_53 = Conv(weights["inception_5a/5x5_reduce_w_0"], weights["inception_5a/5x5_reduce_b_0"], stride=(1, 1), pad=(0, 0))
-    c_54 = Conv(weights["inception_5a/pool_proj_w_0"], weights["inception_5a/pool_proj_b_0"], stride=(1, 1), pad=(0, 0))
-    c_55 = Conv(weights["inception_5b/3x3_w_0"], weights["inception_5b/3x3_b_0"], stride=(1, 1), pad=(1, 1))
-    c_56 = Conv(weights["inception_5b/3x3_reduce_w_0"], weights["inception_5b/3x3_reduce_b_0"], stride=(1, 1), pad=(0, 0))
-    c_57 = Conv(weights["inception_5b/5x5_w_0"], weights["inception_5b/5x5_b_0"], stride=(1, 1), pad=(2, 2))
-    c_58 = Conv(weights["inception_5b/5x5_reduce_w_0"], weights["inception_5b/5x5_reduce_b_0"], stride=(1, 1), pad=(0, 0))
-    c_59 = Conv(weights["inception_5b/pool_proj_w_0"], weights["inception_5b/pool_proj_b_0"], stride=(1, 1), pad=(0, 0))
-    ls = Chain(x_60 ->begin 
-            edge_61 = maxpool(relu.(c_12(relu.(c_13(maxpool(relu.(c_14(x_60)), (3, 3), pad=(1, 1), stride=(2, 2)) .+ 0)))) .+ 0, (3, 3), pad=(1, 1), stride=(2, 2))
-            edge_62 = cat(3, relu.(c_11(edge_61)), relu.(c_15(relu.(c_16(edge_61)))), relu.(c_17(relu.(c_18(edge_61)))), relu.(c_19(maxpool(edge_61, (3, 3), pad=(1, 1), stride=(1, 1)))))
-            edge_63 = maxpool(cat(3, relu.(c_10(edge_62)), relu.(c_20(relu.(c_21(edge_62)))), relu.(c_22(relu.(c_23(edge_62)))), relu.(c_24(maxpool(edge_62, (3, 3), pad=(1, 1), stride=(1, 1))))), (3, 3), pad=(1, 1), stride=(2, 2))
-            edge_64 = cat(3, relu.(c_9(edge_63)), relu.(c_25(relu.(c_26(edge_63)))), relu.(c_27(relu.(c_28(edge_63)))), relu.(c_29(maxpool(edge_63, (3, 3), pad=(1, 1), stride=(1, 1)))))
-            edge_65 = cat(3, relu.(c_8(edge_64)), relu.(c_30(relu.(c_31(edge_64)))), relu.(c_32(relu.(c_33(edge_64)))), relu.(c_34(maxpool(edge_64, (3, 3), pad=(1, 1), stride=(1, 1)))))
-            edge_66 = cat(3, relu.(c_7(edge_65)), relu.(c_35(relu.(c_36(edge_65)))), relu.(c_37(relu.(c_38(edge_65)))), relu.(c_39(maxpool(edge_65, (3, 3), pad=(1, 1), stride=(1, 1)))))
-            edge_67 = cat(3, relu.(c_6(edge_66)), relu.(c_40(relu.(c_41(edge_66)))), relu.(c_42(relu.(c_43(edge_66)))), relu.(c_44(maxpool(edge_66, (3, 3), pad=(1, 1), stride=(1, 1)))))
-            edge_68 = maxpool(cat(3, relu.(c_5(edge_67)), relu.(c_45(relu.(c_46(edge_67)))), relu.(c_47(relu.(c_48(edge_67)))), relu.(c_49(maxpool(edge_67, (3, 3), pad=(1, 1), stride=(1, 1))))), (3, 3), pad=(1, 1), stride=(2, 2))
-            edge_69 = cat(3, relu.(c_4(edge_68)), relu.(c_50(relu.(c_51(edge_68)))), relu.(c_52(relu.(c_53(edge_68)))), relu.(c_54(maxpool(edge_68, (3, 3), pad=(1, 1), stride=(1, 1)))))
-            c_1(cat(3, relu.(c_3(edge_69)), relu.(c_55(relu.(c_56(edge_69)))), relu.(c_57(relu.(c_58(edge_69)))), relu.(c_59(maxpool(edge_69, (3, 3), pad=(1, 1), stride=(1, 1))))))
-        end
-    )
+  ls = _googlenet()
+  ls[1].weight.data .= weights["conv1/7x7_s2_w_0"]; ls[1].bias.data .= weights["conv1/7x7_s2_b_0"]
+  ls[3].weight.data .= weights["conv2/3x3_reduce_w_0"]; ls[3].bias.data .= weights["conv2/3x3_reduce_b_0"]
+  ls[4].weight.data .= weights["conv2/3x3_w_0"]; ls[4].bias.data .= weights["conv2/3x3_b_0"]
+  for (a, b) in [(6, "3a"), (7, "3b"), (9, "4a"), (10, "4b"), (11, "4c"), (12, "4d"), (13, "4e"), (15, "5a"), (16, "5b")]
+    ls[a].path_1.weight.data .= weights["inception_$b/1x1_w_0"]; ls[a].path_1.bias.data .= weights["inception_$b/1x1_b_0"]
+    ls[a].path_2[1].weight.data .= weights["inception_$b/3x3_reduce_w_0"]; ls[a].path_2[1].bias.data .= weights["inception_$b/3x3_reduce_b_0"]
+    ls[a].path_2[2].weight.data .= weights["inception_$b/3x3_w_0"]; ls[a].path_2[2].bias.data .= weights["inception_$b/3x3_b_0"]
+    ls[a].path_3[1].weight.data .= weights["inception_$b/5x5_reduce_w_0"]; ls[a].path_3[1].bias.data .= weights["inception_$b/5x5_reduce_b_0"]
+    ls[a].path_3[2].weight.data .= weights["inception_$b/5x5_w_0"]; ls[a].path_3[2].bias.data .= weights["inception_$b/5x5_b_0"]
+    ls[a].path_4[2].weight.data .= weights["inception_$b/pool_proj_w_0"]; ls[a].path_4[2].bias.data .= weights["inception_$b/pool_proj_b_0"]
+  end
+  ls[20].W.data .= transpose(weights["loss3/classifier_w_0"]); ls[20].b.data .= weights["loss3/classifier_b_0"]
   Flux.testmode!(ls)
   return ls
 end
