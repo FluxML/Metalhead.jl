@@ -64,7 +64,7 @@ function densenet_layers()
       for i in 1:n
           for j in [2, 4]
               ls[l][i].layer[j].weight.data .= weights["conv$(c+1)_$i/x$(j÷2)_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:]
-              ls[l][i].layer[j-1].β.data .= weights["conv$(c+1)_$i/x$(j÷2)/bn_w_0"]
+              ls[l][i].layer[j-1].β.data .= weights["conv$(c+1)_$i/x$(j÷2)/bn_b_0"]
               ls[l][i].layer[j-1].γ.data .= weights["conv$(c+1)_$i/x$(j÷2)/bn_w_0"]
           end
       end
@@ -72,7 +72,7 @@ function densenet_layers()
   end
   for i in [5, 7, 9] # Transition Block Conv Layers
     ls[i][2].weight.data .= weights["conv$(i÷2)_blk_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:]
-    ls[i][1].β.data .= weights["conv$(i÷2)_blk/bn_w_0"]
+    ls[i][1].β.data .= weights["conv$(i÷2)_blk/bn_b_0"]
     ls[i][1].γ.data .= weights["conv$(i÷2)_blk/bn_w_0"]
   end
   ls[end-1].W.data .= transpose(squeeze(weights["fc6_w_0"], (1, 2))) # Dense Layers
