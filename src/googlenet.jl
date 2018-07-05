@@ -54,16 +54,16 @@ function googlenet_layers()
     weights[string(ele)] = convert(Array{Float64, N} where N, weight[ele])
   end
   ls = _googlenet()
-  ls[1].weight.data .= weights["conv1/7x7_s2_w_0"]; ls[1].bias.data .= weights["conv1/7x7_s2_b_0"]
-  ls[3].weight.data .= weights["conv2/3x3_reduce_w_0"]; ls[3].bias.data .= weights["conv2/3x3_reduce_b_0"]
-  ls[4].weight.data .= weights["conv2/3x3_w_0"]; ls[4].bias.data .= weights["conv2/3x3_b_0"]
+  ls[1].weight.data .= weights["conv1/7x7_s2_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:]; ls[1].bias.data .= weights["conv1/7x7_s2_b_0"]
+  ls[3].weight.data .= weights["conv2/3x3_reduce_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:]; ls[3].bias.data .= weights["conv2/3x3_reduce_b_0"]
+  ls[4].weight.data .= weights["conv2/3x3_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:]; ls[4].bias.data .= weights["conv2/3x3_b_0"]
   for (a, b) in [(6, "3a"), (7, "3b"), (9, "4a"), (10, "4b"), (11, "4c"), (12, "4d"), (13, "4e"), (15, "5a"), (16, "5b")]
-    ls[a].path_1.weight.data .= weights["inception_$b/1x1_w_0"]; ls[a].path_1.bias.data .= weights["inception_$b/1x1_b_0"]
-    ls[a].path_2[1].weight.data .= weights["inception_$b/3x3_reduce_w_0"]; ls[a].path_2[1].bias.data .= weights["inception_$b/3x3_reduce_b_0"]
-    ls[a].path_2[2].weight.data .= weights["inception_$b/3x3_w_0"]; ls[a].path_2[2].bias.data .= weights["inception_$b/3x3_b_0"]
-    ls[a].path_3[1].weight.data .= weights["inception_$b/5x5_reduce_w_0"]; ls[a].path_3[1].bias.data .= weights["inception_$b/5x5_reduce_b_0"]
-    ls[a].path_3[2].weight.data .= weights["inception_$b/5x5_w_0"]; ls[a].path_3[2].bias.data .= weights["inception_$b/5x5_b_0"]
-    ls[a].path_4[2].weight.data .= weights["inception_$b/pool_proj_w_0"]; ls[a].path_4[2].bias.data .= weights["inception_$b/pool_proj_b_0"]
+    ls[a].path_1.weight.data .= weights["inception_$b/1x1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:]; ls[a].path_1.bias.data .= weights["inception_$b/1x1_b_0"]
+    ls[a].path_2[1].weight.data .= weights["inception_$b/3x3_reduce_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:]; ls[a].path_2[1].bias.data .= weights["inception_$b/3x3_reduce_b_0"]
+    ls[a].path_2[2].weight.data .= weights["inception_$b/3x3_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:]; ls[a].path_2[2].bias.data .= weights["inception_$b/3x3_b_0"]
+    ls[a].path_3[1].weight.data .= weights["inception_$b/5x5_reduce_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:]; ls[a].path_3[1].bias.data .= weights["inception_$b/5x5_reduce_b_0"]
+    ls[a].path_3[2].weight.data .= weights["inception_$b/5x5_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:]; ls[a].path_3[2].bias.data .= weights["inception_$b/5x5_b_0"]
+    ls[a].path_4[2].weight.data .= weights["inception_$b/pool_proj_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:]; ls[a].path_4[2].bias.data .= weights["inception_$b/pool_proj_b_0"]
   end
   ls[20].W.data .= transpose(weights["loss3/classifier_w_0"]); ls[20].b.data .= weights["loss3/classifier_b_0"]
   Flux.testmode!(ls)
