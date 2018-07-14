@@ -4,7 +4,10 @@ module Metalhead
 using Flux, Images, BSON
 
 # Models
-export VGG19, SqueezeNet, DenseNet, ResNet, GoogleNet
+export VGG19, VGG16, VGG13, VGG11, SqueezeNet, DenseNet, ResNet, GoogleNet
+
+# Trained Models Loader
+export trained
 
 # Useful re-export from Images
 export load
