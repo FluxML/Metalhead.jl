@@ -38,7 +38,7 @@ function load_vgg(arr, batchnorm::Bool = false)
   in_chs = 3
   for i in arr
     if i != 0
-      push!(layers, Conv((3, 3), in_chs=>i))
+      push!(layers, Conv((3, 3), in_chs=>i, pad = (1, 1)))
       if batchnorm
         push!(layers, BatchNorm(i))
       end
