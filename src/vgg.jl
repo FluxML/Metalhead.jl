@@ -65,7 +65,7 @@ end
 
 VGG11() = VGG11(load_vgg(vgg_configs["vgg11"]))
 
-trained(::VGG11) = error("Pretrained Weights for VGG11 are not available")
+trained(::typeof(VGG11)) = error("Pretrained Weights for VGG11 are not available")
 
 Base.show(io::IO, ::VGG11) = print(io, "VGG11()")
 
@@ -79,7 +79,7 @@ end
 
 VGG11_BN() = VGG11_BN(load_vgg(vgg_configs["vgg11"], true))
 
-trained(::VGG11_BN) = error("Pretrained Weights for VGG11_BN are not available")
+trained(::typeof(VGG11_BN)) = error("Pretrained Weights for VGG11_BN are not available")
 
 Base.show(io::IO, ::VGG11_BN) = print(io, "VGG11_BN()")
 
@@ -93,7 +93,7 @@ end
 
 VGG13() = VGG13(load_vgg(vgg_configs["vgg13"]))
 
-trained(::VGG13) = error("Pretrained Weights for VGG13 are not available")
+trained(::typeof(VGG13)) = error("Pretrained Weights for VGG13 are not available")
 
 Base.show(io::IO, ::VGG13) = print(io, "VGG13()")
 
@@ -107,7 +107,7 @@ end
 
 VGG13_BN() = VGG13_BN(load_vgg(vgg_configs["vgg13"], true))
 
-trained(::VGG13_BN) = error("Pretrained Weights for VGG13_BN are not available")
+trained(::typeof(VGG13_BN)) = error("Pretrained Weights for VGG13_BN are not available")
 
 Base.show(io::IO, ::VGG13_BN) = print(io, "VGG13_BN()")
 
@@ -121,7 +121,7 @@ end
 
 VGG16() = VGG16(load_vgg(vgg_configs["vgg16"]))
 
-trained(::VGG16) = error("Pretrained Weights for VGG16 are not available")
+trained(::typeof(VGG16)) = error("Pretrained Weights for VGG16 are not available")
 
 Base.show(io::IO, ::VGG16) = print(io, "VGG16()")
 
@@ -135,7 +135,7 @@ end
 
 VGG16_BN() = VGG11_BN(load_vgg(vgg_configs["vgg16"], true))
 
-trained(::VGG16_BN) = error("Pretrained Weights for VGG16_BN are not available")
+trained(::typeof(VGG16_BN)) = error("Pretrained Weights for VGG16_BN are not available")
 
 Base.show(io::IO, ::VGG16_BN) = print(io, "VGG16_BN()")
 
@@ -149,7 +149,7 @@ end
 
 VGG19() = VGG19(load_vgg(vgg_configs["vgg19"]))
 
-trained(::VGG19) = VGG19(trained_vgg19_layers())
+trained(::typeof(VGG19)) = VGG19(trained_vgg19_layers())
 
 Base.show(io::IO, ::VGG19) = print(io, "VGG19()")
 
@@ -163,7 +163,7 @@ end
 
 VGG19_BN() = VGG11_BN(load_vgg(vgg_configs["vgg19"], true))
 
-trained(::VGG19_BN) = error("Pretrained Weights for VGG19_BN are not available")
+trained(::typeof(VGG19_BN)) = error("Pretrained Weights for VGG19_BN are not available")
 
 Base.show(io::IO, ::VGG19_BN) = print(io, "VGG19_BN()")
 
