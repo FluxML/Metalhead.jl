@@ -5,7 +5,8 @@ using Flux, Images, BSON
 
 # Models
 export VGG19, VGG19_BN, VGG16, VGG16_BN, VGG13, VGG13_BN, VGG11, VGG11_BN,
-       SqueezeNet, DenseNet, ResNet, GoogleNet
+       SqueezeNet, DenseNet, ResNet18, ResNet34, ResNet50, ResNet101, ResNet152,
+       GoogleNet
 
 # Trained Models Loader
 export trained
