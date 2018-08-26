@@ -73,10 +73,10 @@ struct Prediction
 end
 
 struct PredictionFrame
-    filename::Union{String, Void}
+    filename::Union{String, Nothing}
     img
     prediction::Prediction
     # Ground truth, if known
-    ground_truth::Union{Void, ObjectClass}
+    ground_truth::Union{Nothing, ObjectClass}
     ground_truth_confidence::Float32
 end

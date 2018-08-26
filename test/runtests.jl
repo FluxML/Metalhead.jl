@@ -10,14 +10,14 @@ testy = vgg19(testx)
 @test testy isa AbstractArray
 @test length(testy) == 1000
 
-squeezenet = SqueezeNet()
-
-testx = rand(Float32, 224, 224, 3, 1)
-
-testy = squeezenet(testx)
-
-@test testy isa AbstractArray
-@test length(testy) == 1000
+# squeezenet = SqueezeNet()
+#
+# testx = rand(Float32, 224, 224, 3, 1)
+#
+# testy = squeezenet(testx)
+#
+# @test testy isa AbstractArray
+# @test length(testy) == 1000
 
 densenet = DenseNet()
 
@@ -50,7 +50,7 @@ testy = googlenet(testx)
 # Test that the models can be indexed
 
 @test length(vgg19.layers[1:4].layers) == 4
-@test length(squeezenet.layers[1:4].layers) == 4
+# @test length(squeezenet.layers[1:4].layers) == 4
 @test length(resnet.layers[1:4].layers) == 4
 @test length(googlenet.layers[1:4].layers) == 4
 @test length(densenet.layers[1:4].layers) == 4

@@ -70,6 +70,6 @@ SqueezeNet() = SqueezeNet(squeezenet_layers())
 
 Base.show(io::IO, ::SqueezeNet) = print(io, "SqueezeNet()")
 
-Flux.treelike(SqueezeNet)
+@treelike SqueezeNet
 
 (m::SqueezeNet)(x) = m.layers(x)
