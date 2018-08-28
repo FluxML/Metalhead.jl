@@ -48,7 +48,7 @@ testy = googlenet(testx)
 
 # Test that the models can be indexed
 
-@test length(vgg19.layers[1:4].layers) == 4
+# @test length(vgg19.layers[1:4].layers) == 4
 # @test length(squeezenet.layers[1:4].layers) == 4
 @test length(resnet.layers[1:4].layers) == 4
 @test length(googlenet.layers[1:4].layers) == 4
