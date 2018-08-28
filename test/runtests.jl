@@ -1,5 +1,4 @@
-using Metalhead
-using Base.Test
+using Metalhead, Test
 
 vgg19 = VGG19()
 
