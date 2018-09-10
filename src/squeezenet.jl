@@ -54,7 +54,7 @@ function squeezenet_layers()
             x -> relu.(x), x->cat(relu.(c_3(x)), relu.(c_27(x)), dims=3),
             Dropout(0.5f0),
             Conv(weights["conv10_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["conv10_b_0"], stride=(1, 1), pad=(0, 0), dilation = (1, 1)),
-            x -> relu.(x), x->mean(x, (1,2)),
+            x -> relu.(x), x->mean(x, dims=[1,2]),
             vec, softmax
             )
 #end
