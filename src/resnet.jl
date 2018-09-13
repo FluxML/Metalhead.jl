@@ -4,7 +4,7 @@ struct ResidualBlock
   shortcut
 end
 
-Flux.treelike(ResidualBlock)
+@treelike ResidualBlock
 
 function ResidualBlock(filters, kernels::Array{Tuple{Int,Int}}, pads::Array{Tuple{Int,Int}}, strides::Array{Tuple{Int,Int}}, shortcut = identity)
   local conv_layers = []
@@ -93,6 +93,6 @@ ResNet() = ResNet(resnet_layers())
 
 Base.show(io::IO, ::ResNet) = print(io, "ResNet()")
 
-Flux.treelike(ResNet)
+@treelike ResNet
 
 (m::ResNet)(x) = m.layers(x)

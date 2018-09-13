@@ -5,7 +5,7 @@ struct InceptionBlock
   path_4
 end
 
-Flux.treelike(InceptionBlock)
+@treelike InceptionBlock
 
 function InceptionBlock(in_chs, chs_1x1, chs_3x3_reduce, chs_3x3, chs_5x5_reduce, chs_5x5, pool_proj)
   path_1 = Conv((1, 1), in_chs=>chs_1x1, relu)
@@ -23,7 +23,7 @@ function InceptionBlock(in_chs, chs_1x1, chs_3x3_reduce, chs_3x3, chs_5x5_reduce
 end
 
 function (m::InceptionBlock)(x)
-  cat(3, m.path_1(x), m.path_2[2](m.path_2[1](x)), m.path_3[2](m.path_3[1](x)), m.path_4[2](m.path_4[1](x)))
+  cat(m.path_1(x), m.path_2[2](m.path_2[1](x)), m.path_3[2](m.path_3[1](x)), m.path_4[2](m.path_4[1](x)), dims = 3)
 end
 
 _googlenet() = Chain(Conv((7, 7), 3=>64, stride = (2, 2), relu, pad = (3, 3)),
@@ -78,6 +78,6 @@ GoogleNet() = GoogleNet(googlenet_layers())
 
 Base.show(io::IO, ::GoogleNet) = print(io, "GoogleNet()")
 
-Flux.treelike(GoogleNet)
+@treelike GoogleNet
 
 (m::GoogleNet)(x) = m.layers(x)
