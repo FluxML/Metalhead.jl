@@ -1,7 +1,7 @@
 __precompile__()
 module Metalhead
 
-using Flux, Images, BSON, REPL, Requires, Statistics
+using Flux, Images, ImageFiltering, BSON, REPL, Requires, Statistics
 using Flux: @treelike
 
 # Models

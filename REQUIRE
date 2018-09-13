@@ -1,6 +1,7 @@
 julia 0.6
 Flux
 Images
+ImageFiltering
 BSON
 Requires
 REPL
