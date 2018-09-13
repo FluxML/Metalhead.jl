@@ -3,3 +3,6 @@ Flux
 Images
 ImageFiltering
 BSON
+Requires
+REPL
+ColorTypes

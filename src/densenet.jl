@@ -2,7 +2,7 @@ struct Bottleneck
   layer
 end
 
-Flux.treelike(Bottleneck)
+@treelike Bottleneck
 
 Bottleneck(in_planes, growth_rate) = Bottleneck(
                                           Chain(BatchNorm(in_planes, relu),
@@ -10,7 +10,7 @@ Bottleneck(in_planes, growth_rate) = Bottleneck(
                                           BatchNorm(4growth_rate, relu),
                                           Conv((3, 3), 4growth_rate=>growth_rate, pad = (1, 1))))
 
-(b::Bottleneck)(x) = cat(3, b.layer(x), x)
+(b::Bottleneck)(x) = cat(b.layer(x), x, dims = 3)
 
 Transition(chs::Pair{<:Int, <:Int}) = Chain(BatchNorm(chs[1], relu),
                                             Conv((1, 1), chs),
@@ -75,7 +75,7 @@ function densenet_layers()
     ls[i][1].β.data .= weights["conv$(i÷2)_blk/bn_b_0"]
     ls[i][1].γ.data .= weights["conv$(i÷2)_blk/bn_w_0"]
   end
-  ls[end-1].W.data .= transpose(squeeze(weights["fc6_w_0"], (1, 2))) # Dense Layers
+  ls[end-1].W.data .= transpose(dropdims(weights["fc6_w_0"], dims = (1, 2))) # Dense Layers
   ls[end-1].b.data .= weights["fc6_b_0"]
   Flux.testmode!(ls)
   return ls
@@ -89,6 +89,6 @@ DenseNet() = DenseNet(densenet_layers())
 
 Base.show(io::IO, ::DenseNet) = print(io, "DenseNet()")
 
-Flux.treelike(DenseNet)
+@treelike DenseNet
 
 (m::DenseNet)(x) = m.layers(x)

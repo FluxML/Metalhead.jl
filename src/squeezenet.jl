@@ -35,26 +35,26 @@ function squeezenet_layers()
     ls = Chain(Conv(weights["conv1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["conv1_b_0"], stride=(2, 2), pad=(0, 0), dilation = (1, 1)),
             x -> relu.(x), x->maxpool(x, (3,3), pad=(0,0), stride=(2,2)),
             Conv(weights["fire2/squeeze1x1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire2/squeeze1x1_b_0"], stride=(1, 1), pad=(0, 0), dilation = (1, 1)),
-            x -> relu.(x), x->cat(3, relu.(c_17(x)), relu.(c_20(x))),
+            x -> relu.(x), x->cat(relu.(c_17(x)), relu.(c_20(x)), dims=3),
             Conv(weights["fire3/squeeze1x1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire3/squeeze1x1_b_0"], stride=(1, 1), pad=(0, 0), dilation = (1, 1)),
-            x -> relu.(x), x->cat(3, relu.(c_15(x)), relu.(c_21(x))),
+            x -> relu.(x), x->cat(relu.(c_15(x)), relu.(c_21(x)), dims=3),
             x->maxpool(x, (3, 3), pad=(0, 0), stride=(2, 2)),
             Conv(weights["fire4/squeeze1x1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire4/squeeze1x1_b_0"], stride=(1, 1), pad=(0, 0), dilation = (1, 1)),
-            x -> relu.(x), x->cat(3, relu.(c_13(x)), relu.(c_22(x))),
+            x -> relu.(x), x->cat(relu.(c_13(x)), relu.(c_22(x)), dims=3),
             Conv(weights["fire5/squeeze1x1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire5/squeeze1x1_b_0"], stride=(1, 1), pad=(0, 0), dilation = (1, 1)),
-            x -> relu.(x), x->cat(3, relu.(c_11(x)), relu.(c_23(x))),
+            x -> relu.(x), x->cat(relu.(c_11(x)), relu.(c_23(x)), dims=3),
             x->maxpool(x, (3, 3), pad=(0, 0), stride=(2, 2)),
             Conv(weights["fire6/squeeze1x1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire6/squeeze1x1_b_0"], stride=(1, 1), pad=(0, 0), dilation = (1, 1)),
-            x -> relu.(x), x->cat(3, relu.(c_9(x)), relu.(c_24(x))),
+            x -> relu.(x), x->cat(relu.(c_9(x)), relu.(c_24(x)), dims=3),
             Conv(weights["fire7/squeeze1x1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire7/squeeze1x1_b_0"], stride=(1, 1), pad=(0, 0), dilation = (1, 1)),
-            x -> relu.(x), x->cat(3, relu.(c_7(x)), relu.(c_25(x))),
+            x -> relu.(x), x->cat(relu.(c_7(x)), relu.(c_25(x)), dims=3),
             Conv(weights["fire8/squeeze1x1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire8/squeeze1x1_b_0"], stride=(1, 1), pad=(0, 0), dilation = (1, 1)),
-            x -> relu.(x), x->cat(3, relu.(c_5(x)), relu.(c_26(x))),
+            x -> relu.(x), x->cat(relu.(c_5(x)), relu.(c_26(x)), dims=3),
             Conv(weights["fire9/squeeze1x1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire9/squeeze1x1_b_0"], stride=(1, 1), pad=(0, 0), dilation = (1, 1)),
-            x -> relu.(x), x->cat(3, relu.(c_3(x)), relu.(c_27(x))),
+            x -> relu.(x), x->cat(relu.(c_3(x)), relu.(c_27(x)), dims=3),
             Dropout(0.5f0),
             Conv(weights["conv10_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["conv10_b_0"], stride=(1, 1), pad=(0, 0), dilation = (1, 1)),
-            x -> relu.(x), x->mean(x, (1,2)),
+            x -> relu.(x), x->mean(x, dims=[1,2]),
             vec, softmax
             )
 #end
@@ -70,6 +70,6 @@ SqueezeNet() = SqueezeNet(squeezenet_layers())
 
 Base.show(io::IO, ::SqueezeNet) = print(io, "SqueezeNet()")
 
-Flux.treelike(SqueezeNet)
+@treelike SqueezeNet
 
 (m::SqueezeNet)(x) = m.layers(x)

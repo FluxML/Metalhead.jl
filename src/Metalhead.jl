@@ -1,7 +1,8 @@
 __precompile__()
 module Metalhead
 
-using Flux, Images, ImageFiltering, BSON
+using Flux, Images, ImageFiltering, BSON, REPL, Requires, Statistics
+using Flux: @treelike
 
 # Models
 export VGG19, SqueezeNet, DenseNet, ResNet, GoogleNet
@@ -17,6 +18,10 @@ export ImageNet, CIFAR10
 
 # Data set utilities
 export trainimgs, testimgs, valimgs, dataset, datasets
+
+function __init__()
+    @require TerminalExtensions="d3a6a179-465e-5219-bd3e-0137f7fd17c7" include("display/terminal_extensions.jl")
+end
 
 include("datasets/utils.jl")
 include("model.jl")
