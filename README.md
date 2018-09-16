@@ -65,4 +65,4 @@ If you are using OS X, it is recommended that you use iTerm2 and install the
 `TerminalExtensions.jl` package. This will allow you to see inference results
 as well as the corresponding images directly in your terminal:
 
-![REPL Screenshot](https://i.imgur.com/hy7LXS5.png)
+![REPL Screenshot](https://i.imgur.com/ruJnFwr.png)
