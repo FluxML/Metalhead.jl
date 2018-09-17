@@ -4,7 +4,7 @@ struct ResidualBlock
   shortcut
 end
 
-Flux.treelike(ResidualBlock)
+@treelike ResidualBlock
 
 function ResidualBlock(filters, kernels::Array{Tuple{Int,Int}}, pads::Array{Tuple{Int,Int}}, strides::Array{Tuple{Int,Int}}, shortcut = identity)
   local conv_layers = []
@@ -104,71 +104,71 @@ resnet_configs =
        "resnet152" => (Bottleneck, [3, 8, 36, 3]))
 
 struct ResNet18 <: ClassificationModel{ImageNet.ImageNet1k}
- layers::Chain
+  layers::Chain
 end
 
 ResNet18() = ResNet18(load_resnet(resnet_configs["resnet18"]...))
 
-trained(::ResNet18) = error("Pretrained Weights for ResNet18 are not available")
+trained(::Type{ResNet18}) = error("Pretrained Weights for ResNet18 are not available")
 
 Base.show(io::IO, ::ResNet18) = print(io, "ResNet18()")
 
-Flux.treelike(ResNet18)
+@treelike ResNet18
 
 (m::ResNet18)(x) = m.layers(x)
 
 struct ResNet34 <: ClassificationModel{ImageNet.ImageNet1k}
- layers::Chain
+  layers::Chain
 end
 
 ResNet34() = ResNet34(load_resnet(resnet_configs["resnet34"]...))
 
-trained(::ResNet34) = error("Pretrained Weights for ResNet34 are not available")
+trained(::Type{ResNet34}) = error("Pretrained Weights for ResNet34 are not available")
 
 Base.show(io::IO, ::ResNet34) = print(io, "ResNet34()")
 
-Flux.treelike(ResNet34)
+@treelike ResNet34
 
 (m::ResNet34)(x) = m.layers(x)
 
 struct ResNet50 <: ClassificationModel{ImageNet.ImageNet1k}
- layers::Chain
+  layers::Chain
 end
 
 ResNet50() = ResNet50(load_resnet(resnet_configs["resnet50"]...))
 
-trained(::ResNet50) = ResNet50(trained_resnet50_layers())
+trained(::Type{ResNet50}) = ResNet50(trained_resnet50_layers())
 
 Base.show(io::IO, ::ResNet50) = print(io, "ResNet50()")
 
-Flux.treelike(ResNet50)
+@treelike ResNet50
 
 (m::ResNet50)(x) = m.layers(x)
 
 struct ResNet101 <: ClassificationModel{ImageNet.ImageNet1k}
- layers::Chain
+  layers::Chain
 end
 
 ResNet101() = ResNet101(load_resnet(resnet_configs["resnet101"]...))
 
-trained(::ResNet101) = error("Pretrained Weights for ResNet101 are not available")
+trained(::Type{ResNet101}) = error("Pretrained Weights for ResNet101 are not available")
 
 Base.show(io::IO, ::ResNet101) = print(io, "ResNet101()")
 
-Flux.treelike(ResNet101)
+@treelike ResNet101
 
 (m::ResNet101)(x) = m.layers(x)
 
 struct ResNet152 <: ClassificationModel{ImageNet.ImageNet1k}
- layers::Chain
+  layers::Chain
 end
 
-ResNet18() = ResNet152(load_resnet(resnet_configs["resnet152"]...))
+ResNet152() = ResNet152(load_resnet(resnet_configs["resnet152"]...))
 
-trained(::ResNet152) = error("Pretrained Weights for ResNet152 are not available")
+trained(::Type{ResNet152}) = error("Pretrained Weights for ResNet152 are not available")
 
 Base.show(io::IO, ::ResNet152) = print(io, "ResNet152()")
 
-Flux.treelike(ResNet152)
+@treelike ResNet152
 
 (m::ResNet152)(x) = m.layers(x)

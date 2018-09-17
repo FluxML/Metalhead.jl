@@ -2,6 +2,7 @@ __precompile__()
 module Metalhead
 
 using Flux, Images, BSON
+using Flux: @treelike
 
 # Models
 export VGG19, VGG19_BN, VGG16, VGG16_BN, VGG13, VGG13_BN, VGG11, VGG11_BN,
