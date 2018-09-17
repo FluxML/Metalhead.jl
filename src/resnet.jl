@@ -74,7 +74,7 @@ function load_resnet(Block, layers, initial_filters::Int = 64, nclasses::Int = 1
   local bottom = []
 
   push!(top, Conv((7,7), 3=>initial_filters, pad = (3,3), stride = (2,2)))
-  push!(top, x -> maxpool(x, (3,3), pad = (1,1), stride = (2,2)))
+  push!(top, MaxPool(x, (3,3), pad = (1,1), stride = (2,2)))
 
   for i in 1:length(layers)
     push!(residual, Block(initial_filters, true, i==1))
@@ -84,7 +84,7 @@ function load_resnet(Block, layers, initial_filters::Int = 64, nclasses::Int = 1
     initial_filters *= 2
   end
 
-  push!(bottom, x -> meanpool(x, (7,7)))
+  push!(bottom, MeanPool(x, (7,7)))
   push!(bottom, x -> reshape(x, :, size(x,4)))
   if Block == Bottleneck
     push!(bottom, (Dense(2048, nclasses)))
