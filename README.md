@@ -47,7 +47,7 @@ the `datasets/`. The `Metalhead.download` function can be used to download these
 (where such automatic download is possible - for other data sets, see `datasets/README.md`),
 e.g.:
 ```
-MetalHead.download(CIFAR10)
+Metalhead.download(CIFAR10)
 ```
 
 Once a dataset is load, it's training, validation, and test images are available using the
