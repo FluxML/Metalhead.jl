@@ -55,7 +55,7 @@ function print_frame_table(image_callback, frames::Vector{PredictionFrame})
                 else
                     ground_truth = p.ground_truth
                     if typeof(pred[1]) != typeof(ground_truth)
-                        if method_exists(convert, Tuple{Type{typeof(pred[1])}, typeof(ground_truth)})
+                        if hasmethod(convert, Tuple{Type{typeof(pred[1])}, typeof(ground_truth)})
                             ground_truth = convert(typeof(pred[1]), ground_truth)
                         else
                             ground_truth = nothing

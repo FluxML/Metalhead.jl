@@ -80,7 +80,7 @@ ground_truth(m, s::Union{AbstractMatrix, AbstractString}, result) = (nothing, 0.
 function ground_truth(m::ClassificationModel{Class}, im::ValidationImage, result) where {Class}
     if typeof(im.ground_truth) == Class
         (im.ground_truth, result[im.ground_truth.class])
-    elseif method_exists(convert, Tuple{Class, typeof(im.ground_truth)})
+    elseif hasmethod(convert, Tuple{Class, typeof(im.ground_truth)})
         (im.ground_truth, result[convert(Class, im.ground_truth).class])
     else
         (im.ground_truth, 0.0)
@@ -95,7 +95,7 @@ function predict(model::ClassificationModel{Class}, im, k = 5) where {Class}
         Prediction([Class(x)=>y for (x,y) in topk(result, k)]),
         ground_truth(model, im, result)...)
 end
-classify(model::ClassificationModel, im) = Flux.argmax(forward(model, load_img(im)), labels(model))
+classify(model::ClassificationModel, im) = Flux.onecold(forward(model, load_img(im)), labels(model))
 
 function predict(model::ClassificationModel{Class},
         im::Vector{<:Union{AbstractMatrix, String, ValidationImage}}, k=5) where Class
