@@ -1,4 +1,4 @@
-import Base.Terminals: CSI
+import REPL.Terminals: CSI
 const inner_width = 45
 const inner_liner = "─"^inner_width
 
@@ -10,20 +10,23 @@ function Base.show(io::IO, frames::Vector{PredictionFrame})
     print_frame_table((args...)->nothing, frames)
 end
 
+print_frame_table(image_callback, frame::PredictionFrame) =
+    print_frame_table(image_callback, [frame])
 function print_frame_table(image_callback, frames::Vector{PredictionFrame})
-    lines, cols = displaysize(STDIN)
+    lines, cols = displaysize(stdin)
     per_row = div(cols-1, 47)
     remaining = length(frames)
     offset = 0
     buf = IOBuffer()
+    io = IOContext(buf, :color => true)
     first_row = min(per_row, remaining)
-    println(buf, "┌",join(("─"^inner_width for i = 1:first_row),"┬"),"┐")
+    println(io, "┌",join(("─"^inner_width for i = 1:first_row),"┬"),"┐")
     while remaining > 0
         this_row = min(per_row, remaining)
         row_frames = frames[(1:this_row) .+ offset]
         if any(p->p.filename !== nothing, row_frames)
-            print(buf, "│")
-            print(buf, join(map(row_frames) do p
+            print(io, "│")
+            print(io, join(map(row_frames) do p
                 sprint() do io
                     fname = p.filename === nothing ? "" : p.filename
                     if length(fname) > inner_width
@@ -36,14 +39,14 @@ function print_frame_table(image_callback, frames::Vector{PredictionFrame})
                     print(io, " "^floor(Int, padding/2), fname, " "^ceil(Int, padding/2))
                 end
             end, "│"))
-            println(buf, "│")
+            println(io, "│")
         end
-        image_callback(buf, row_frames)
-        println(buf, "├",join(("─"^inner_width for i = 1:this_row),"┼"),"┤")
+        image_callback(io, row_frames)
+        println(io, "├",join(("─"^inner_width for i = 1:this_row),"┼"),"┤")
         max_predictions = maximum(map(p->length(p.prediction.sorted_predictions), row_frames))
         any_correct = Symbol[:no for i = 1:this_row]
         for row in 1:max_predictions
-            print(buf, "│")
+            print(io, "│")
             for (col, p) in enumerate(row_frames)
                 this_correct = false
                 pred = p.prediction.sorted_predictions[row]
@@ -52,7 +55,7 @@ function print_frame_table(image_callback, frames::Vector{PredictionFrame})
                 else
                     ground_truth = p.ground_truth
                     if typeof(pred[1]) != typeof(ground_truth)
-                        if method_exists(convert, Tuple{Type{typeof(pred[1])}, typeof(ground_truth)})
+                        if hasmethod(convert, Tuple{Type{typeof(pred[1])}, typeof(ground_truth)})
                             ground_truth = convert(typeof(pred[1]), ground_truth)
                         else
                             ground_truth = nothing
@@ -65,24 +68,24 @@ function print_frame_table(image_callback, frames::Vector{PredictionFrame})
                         any_correct[col] = :mismatch
                     end
                 end
-                print_prediction_row(buf, pred,
+                print_prediction_row(io, pred,
                     annotation = this_correct ? :correct : :none)
-                print(buf," │")
+                print(io," │")
             end
-            println(buf)
+            println(io)
         end
         if !all(x->x===:yes, any_correct)
-            print(buf, "│")
+            print(io, "│")
             for (col, (had, p)) in enumerate(zip(any_correct, row_frames))
                 if had === :yes
-                    print(buf," "^inner_width, "│")
+                    print(io," "^inner_width, "│")
                 else
-                    print_prediction_row(buf, p.ground_truth=>p.ground_truth_confidence,
+                    print_prediction_row(io, p.ground_truth=>p.ground_truth_confidence,
                         annotation = had == :mismatch ? :mismatch : :incorrect)
-                    print(buf," │")
+                    print(io," │")
                 end
             end
-            println(buf)
+            println(io)
         end
         remaining -= this_row
         offset += this_row
@@ -93,12 +96,12 @@ function print_frame_table(image_callback, frames::Vector{PredictionFrame})
                     remaining >= i ? '┤' : '┘' :
                     remaining >= i ? '┼' : '┴')
             end
-            println(buf, join(seps, inner_liner))
+            println(io, join(seps, inner_liner))
         else
-            println(buf, "└",join((inner_liner for i = 1:this_row),"┴"),"┘")
+            println(io, "└",join((inner_liner for i = 1:this_row),"┴"),"┘")
         end
         # Write out at the end of each row
-        write(STDOUT, take!(buf))
+        write(stdout, take!(buf))
     end
 end
 
@@ -110,8 +113,11 @@ function confidence_bar(width, confidence)
         for i = 1:nfull_blocks
             print(io, block_eights[8])
         end
-        print(io, neights == 0 ? ' ' : block_eights[neights])
-        print(io, " "^(width - nfull_blocks - 1))
+        if neights != 0
+            print(io, block_eights[neights])
+            nfull_blocks += 1
+        end
+        print(io, " "^(max(0, width - nfull_blocks)))
     end
 end
 
@@ -128,12 +134,14 @@ function print_prediction_row(io::IO, r::Pair; annotation = :none)
             annotation == :incorrect ? :red :
             annotation == :mismatch ? :yellow :
             error("Unknown annotation")
-    print_with_color(color, io, rpad(label_text, 22))
+    printstyled(io, rpad(label_text, 22); color = color)
     print(io, '│', " ")
     if annotation !== :mismatch
-        print_with_color(color, io, string(
+        r = round(confidence*100, digits=1)
+        printstyled(io, string(
             confidence_bar(15, confidence)),
-            lpad(round(confidence*100, 1), 4), '%')
+            lpad(r ≈ 100 ? 100 : r, 4), '%';
+            color = color)
     else
         print(io, " "^20)
     end
@@ -143,44 +151,5 @@ function Base.show(io::IO, p::Prediction)
     for pred in p.sorted_predictions
         print_prediction_row(io, pred)
         println(io)
-    end
-end
-
-# TerminalExtensions integration
-using Requires
-@require TerminalExtensions begin
-    function Base.display(disp::TerminalExtensions.iTerm2.InlineDisplay, p::PredictionFrame)
-        Base.display(disp, [p])
-    end
-
-    function Base.display(disp::TerminalExtensions.iTerm2.InlineDisplay, frames::Vector{PredictionFrame})
-        print_frame_table(image_display_callback, frames)
-    end
-
-    function image_display_callback(buf, row_frames)
-        aspect_ratios = [size(p.img, 1) / size(p.img, 2) for p in row_frames]
-        # An extra 17/7 which seems to be the default aspect ratio of
-        # an iterm terminal cell.
-        max_image_height = maximum(round.(Int, aspect_ratios .* (inner_width/(17/7))))
-        for i = 1:max_image_height
-            print(buf, "│")
-            for i = 1:length(row_frames)
-                print(buf, CSI, string(inner_width), 'C', "│")
-            end
-            println(buf)
-        end
-        print(buf, CSI, string(1), 'A')
-        print(buf, CSI, string(1), 'C')
-        for p in row_frames
-            print(buf, CSI, string(max_image_height-1), 'A')
-            display_img(buf, p.img, height=string(max_image_height), width = string(inner_width))
-        end
-        println(buf)
-    end
-
-    function display_img(io::IO, img; kwargs...)
-        buf = IOBuffer()
-        show(buf,MIME"image/png"(),img)
-        TerminalExtensions.iTerm2.display_file(take!(buf); io=io, filename="image",inline=true,preserveAspectRatio=true,kwargs...)
     end
 end

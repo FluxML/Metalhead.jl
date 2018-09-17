@@ -47,7 +47,7 @@ the `datasets/`. The `Metalhead.download` function can be used to download these
 (where such automatic download is possible - for other data sets, see `datasets/README.md`),
 e.g.:
 ```
-MetalHead.download(CIFAR10)
+Metalhead.download(CIFAR10)
 ```
 
 Once a dataset is load, it's training, validation, and test images are available using the
@@ -65,4 +65,4 @@ If you are using OS X, it is recommended that you use iTerm2 and install the
 `TerminalExtensions.jl` package. This will allow you to see inference results
 as well as the corresponding images directly in your terminal:
 
-![REPL Screenshot](https://i.imgur.com/hy7LXS5.png)
+![REPL Screenshot](https://i.imgur.com/ruJnFwr.png)

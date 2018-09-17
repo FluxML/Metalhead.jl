@@ -1,5 +1,4 @@
-using Metalhead
-using Base.Test
+using Metalhead, Test
 
 # TODO: Add furthur tests for the newly added untrained models
 # Ex : VGG11, VGG13, VGG16, ResNet18, ResNet34, ResNet101, ResNet152
