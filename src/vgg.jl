@@ -115,6 +115,6 @@ trained(::Type{VGG19}, batchnorm::Bool = false) =
 
 Base.show(io::IO, ::VGG19) = print(io, "VGG19()")
 
-Flux.treelike(VGG19)
+@treelike VGG19
 
 (m::VGG19)(x) = m.layers(x)
