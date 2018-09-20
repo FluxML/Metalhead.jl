@@ -27,8 +27,10 @@ function dataset(which)
         return first(sets)
     elseif which == CIFAR10
         sets = collect(Iterators.filter(x->isa(x, CIFAR10.DataSet), datasets()))
-        isempty(sets) && error("No CIFAR10 dataset available. "*
-            "See datasets/README.md for download instructions")
+        if isempty(sets)
+            download(CIFAR10)
+            sets = collect(Iterators.filter(x->isa(x, CIFAR10.DataSet), datasets()))
+        end
         return first(sets)
     else
         error("Autodetection not supported for $(which)")
