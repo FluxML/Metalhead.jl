@@ -21,6 +21,9 @@ function weights(name)
   BSON.load(joinpath(deps, name))
 end
 
+# TODO: Remove after NNlib supports flip kernel through https://github.com/FluxML/NNlib.jl/pull/53
+flipkernel(x::AbstractArray) = x[end:-1:1, end:-1:1, :, :]
+
 load_img(im::AbstractMatrix{<:Color}) = im
 load_img(str::AbstractString) = load(str)
 load_img(val::ValidationImage) = load_img(val.img)

@@ -53,13 +53,13 @@ function trained_resnet50_layers()
     weights[string(ele)] = convert(Array{Float64, N} where N, weight[ele])
   end
   ls = load_resnet(resnet_configs["resnet50"]...)
-  ls[1].weight.data .= weights["gpu_0/conv1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:]
+  ls[1].weight.data .= flipkernel(weights["gpu_0/conv1_w_0"])
   count = 2
   for j in [3:5, 6:9, 10:15, 16:18]
     for p in j
-      ls[p].conv_layers[1].weight.data .= weights["gpu_0/res$(count)_$(p-j[1])_branch2a_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:]
-      ls[p].conv_layers[2].weight.data .= weights["gpu_0/res$(count)_$(p-j[1])_branch2b_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:]
-      ls[p].conv_layers[3].weight.data .= weights["gpu_0/res$(count)_$(p-j[1])_branch2c_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:]
+      ls[p].conv_layers[1].weight.data .= flipkernel(weights["gpu_0/res$(count)_$(p-j[1])_branch2a_w_0"])
+      ls[p].conv_layers[2].weight.data .= flipkernel(weights["gpu_0/res$(count)_$(p-j[1])_branch2b_w_0"])
+      ls[p].conv_layers[3].weight.data .= flipkernel(weights["gpu_0/res$(count)_$(p-j[1])_branch2c_w_0"])
     end
     count += 1
   end
@@ -74,7 +74,7 @@ function load_resnet(Block, layers, initial_filters::Int = 64, nclasses::Int = 1
   local bottom = []
 
   push!(top, Conv((7,7), 3=>initial_filters, pad = (3,3), stride = (2,2)))
-  push!(top, MaxPool(x, (3,3), pad = (1,1), stride = (2,2)))
+  push!(top, MaxPool((3,3), pad = (1,1), stride = (2,2)))
 
   for i in 1:length(layers)
     push!(residual, Block(initial_filters, true, i==1))
@@ -84,7 +84,7 @@ function load_resnet(Block, layers, initial_filters::Int = 64, nclasses::Int = 1
     initial_filters *= 2
   end
 
-  push!(bottom, MeanPool(x, (7,7)))
+  push!(bottom, MeanPool((7,7)))
   push!(bottom, x -> reshape(x, :, size(x,4)))
   if Block == Bottleneck
     push!(bottom, (Dense(2048, nclasses)))

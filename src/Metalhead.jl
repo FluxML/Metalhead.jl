@@ -5,9 +5,9 @@ using Flux, Images, ImageFiltering, BSON, REPL, Requires, Statistics
 using Flux: @treelike
 
 # Models
-export VGG19, VGG19_BN, VGG16, VGG16_BN, VGG13, VGG13_BN, VGG11, VGG11_BN,
-       SqueezeNet, DenseNet, ResNet18, ResNet34, ResNet50, ResNet101, ResNet152,
-       GoogleNet
+export VGG19, VGG16, VGG13, VGG11, SqueezeNet, DenseNet121,
+       DenseNet169, DenseNet201, DenseNet264, ResNet18,
+       ResNet34, ResNet50, ResNet101, ResNet152, GoogleNet
 
 # Trained Models Loader
 export trained
