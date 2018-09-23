@@ -10,7 +10,7 @@ Bottleneck(in_planes, growth_rate) = Bottleneck(
                                           BatchNorm(4growth_rate, relu),
                                           Conv((3, 3), 4growth_rate=>growth_rate, pad = (1, 1))))
 
-(b::Bottleneck)(x) = cat(3, b.layer(x), x)
+(b::Bottleneck)(x) = cat(b.layer(x), x, dims = 3)
 
 Transition(chs::Pair{<:Int, <:Int}) = Chain(BatchNorm(chs[1], relu),
                                             Conv((1, 1), chs),
@@ -51,7 +51,7 @@ function trained_densenet121_layers()
     ls[i][1].β.data .= weights["conv$(i÷2)_blk/bn_b_0"]
     ls[i][1].γ.data .= weights["conv$(i÷2)_blk/bn_w_0"]
   end
-  ls[end-1].W.data .= transpose(squeeze(weights["fc6_w_0"], (1, 2))) # Dense Layers
+  ls[end-1].W.data .= transpose(dropdims(weights["fc6_w_0"], dims = (1, 2))) # Dense Layers
   ls[end-1].b.data .= weights["fc6_b_0"]
   Flux.testmode!(ls)
   return ls
@@ -123,7 +123,7 @@ DenseNet201() = DenseNet201(load_densenet(densenet_configs["densenet201"]...))
 
 trained(::Type{DenseNet201}) = error("Pretrained Weights for DenseNet201 are not available")
 
-Base.show(io::IO, ::DenseNet264) = print(io, "DenseNet264()")
+Base.show(io::IO, ::DenseNet201) = print(io, "DenseNet201()")
 
 @treelike DenseNet201
 
