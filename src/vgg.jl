@@ -45,7 +45,7 @@ function load_vgg(arr, batchnorm::Bool = false)
       push!(layers, x -> relu.(x))
       in_chs = i
     else
-      push!(layers, MaxPool(x, (2, 2)))
+      push!(layers, MaxPool((2, 2)))
     end
   end
   push!(layers, [x -> reshape(x, :, size(x, 4)), Dense(25088, 4096, relu), Dropout(0.5),
