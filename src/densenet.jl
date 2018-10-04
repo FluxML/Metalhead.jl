@@ -95,7 +95,7 @@ DenseNet121() = DenseNet121(load_densenet(densenet_configs["densenet121"]...))
 
 trained(::Type{DenseNet121}) = DenseNet121(trained_densenet121_layers())
 
-Base.show(io::IO, ::DenseNet121) = print(io, "DenseNet264()")
+Base.show(io::IO, ::DenseNet121) = print(io, "DenseNet121()")
 
 @treelike DenseNet121
 

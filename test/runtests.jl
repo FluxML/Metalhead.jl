@@ -86,7 +86,7 @@ end
 # Test printing of prediction
 @testset "Prediction table display" begin
     x = valimgs(CIFAR10)[1]
-    m = VGG19()
+    m = trained(VGG19)
     predict(m, x)
 end
 
