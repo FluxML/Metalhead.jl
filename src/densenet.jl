@@ -76,7 +76,7 @@ function load_densenet(block, nblocks; growth_rate = 32, reduction = 0.5, num_cl
   num_planes += nblocks[4] * growth_rate
   push!(layers, BatchNorm(num_planes, relu))
 
-  Chain(layers..., x -> MeanPool((7, 7)),
+  Chain(layers..., MeanPool((7, 7)),
         x -> reshape(x, :, size(x, 4)),
         Dense(num_planes, num_classes), softmax)
 end

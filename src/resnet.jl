@@ -28,6 +28,8 @@ function (block::ResidualBlock)(input)
 end
 
 function BasicBlock(filters::Int, downsample::Bool = false, res_top::Bool = false)
+  # NOTE: res_top is set to true if this is the first residual connection of the architecture
+  # If the number of channels is to be halved set the downsample argument to true
   if !downsample || res_top
     return ResidualBlock([filters for i in 1:3], [3,3], [1,1], [1,1])
   end
@@ -36,6 +38,8 @@ function BasicBlock(filters::Int, downsample::Bool = false, res_top::Bool = fals
 end
 
 function Bottleneck(filters::Int, downsample::Bool = false, res_top::Bool = false)
+  # NOTE: res_top is set to true if this is the first residual connection of the architecture
+  # If the number of channels is to be halved set the downsample argument to true
   if !downsample && !res_top
     ResidualBlock([4 * filters, filters, filters, 4 * filters], [1,3,1], [0,1,0], [1,1,1])
   elseif downsample && res_top
