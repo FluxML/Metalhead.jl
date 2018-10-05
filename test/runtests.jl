@@ -17,6 +17,8 @@ using Metalhead, Test
             (Float64, DenseNet201),
             (Float64, DenseNet264)
         ]
+        GC.gc()
+
         model = MODEL()
 
         x_test = rand(T, 224, 224, 3, 1)
@@ -28,9 +30,9 @@ using Metalhead, Test
 
         # Test that the models can be indexed
         @test length(model.layers[1:4].layers) == 4
-
-        GC.gc()
     end
+    GC.gc()
+    display(varinfo())
     # Test if batchnorm models work properly
     for (T, MODEL) in [
             (Float64, VGG11),
@@ -38,6 +40,8 @@ using Metalhead, Test
             (Float64, VGG16),
             (Float64, VGG19)
         ]
+        GC.gc()
+
         model = MODEL(true)
 
         x_test = rand(T, 224, 224, 3, 1)
@@ -49,17 +53,18 @@ using Metalhead, Test
 
         # Test that the models can be indexed
         @test length(model.layers[1:4].layers) == 4
-
-        GC.gc()
     end
 end
 
 @testset "Trained Model Tests" begin
+    display(varinfo())
     for (T, MODEL) in [
             (Float32, VGG19),
             (Float64, ResNet50),
             (Float64, DenseNet121)
         ]
+        GC.gc()
+
         model = trained(MODEL)
 
         x_test = rand(T, 224, 224, 3, 1)
@@ -71,8 +76,6 @@ end
 
         # Test that the models can be indexed
         @test length(model.layers[1:4].layers) == 4
-
-        GC.gc()
     end
 end
 
