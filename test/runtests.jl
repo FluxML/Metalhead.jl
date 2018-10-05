@@ -1,4 +1,4 @@
-using Metalhead, Test, GC
+using Metalhead, Test
 
 # Standardized testing for the models of tomorrow
 @testset "Untrained Model Tests" begin
