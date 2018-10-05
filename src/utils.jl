@@ -47,7 +47,7 @@ function center_crop(im, len)
   return im[div(end,2)-l2:div(end,2)+l2-adjust,div(end,2)-l2:div(end,2)+l2-adjust]
 end
 
-function preprocess(im::AbstractMatrix{<:AbstractRGB})
+function preprocess(T::DataType, im::AbstractMatrix{<:AbstractRGB})
   # Resize such that smallest edge is 256 pixels long
   im = resize_smallest_dimension(im, 256)
 
@@ -62,8 +62,10 @@ function preprocess(im::AbstractMatrix{<:AbstractRGB})
 
   # Convert from CHW (Image.jl's channel ordering) to WHCN (Flux.jl's ordering)
   # and enforce Float32, as that seems important to Flux
-  return Float32.(permutedims(im, (3, 2, 1))[:,:,:,:].*255)
+  return T.(permutedims(im, (3, 2, 1))[:,:,:,:].*255)
 end
+
+preprocess(im::AbstractMatrix{<:AbstractRGB}) = preprocess(Float32, im)
 
 preprocess(im) = preprocess(load(im))
 
