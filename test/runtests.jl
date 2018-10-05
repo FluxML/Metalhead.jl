@@ -1,7 +1,4 @@
-using Metalhead, Test
-
-# TODO: Add furthur tests for the newly added untrained models
-# Ex : VGG11, VGG13, VGG16, ResNet18, ResNet34, ResNet101, ResNet152
+using Metalhead, Test, GC
 
 # Standardized testing for the models of tomorrow
 @testset "Untrained Model Tests" begin
@@ -31,6 +28,8 @@ using Metalhead, Test
 
         # Test that the models can be indexed
         @test length(model.layers[1:4].layers) == 4
+
+        GC.gc()
     end
     # Test if batchnorm models work properly
     for (T, MODEL) in [
@@ -50,6 +49,8 @@ using Metalhead, Test
 
         # Test that the models can be indexed
         @test length(model.layers[1:4].layers) == 4
+
+        GC.gc()
     end
 end
 
@@ -70,6 +71,8 @@ end
 
         # Test that the models can be indexed
         @test length(model.layers[1:4].layers) == 4
+
+        GC.gc()
     end
 end
 
@@ -93,6 +96,7 @@ end
 # Just run the prediction code end-to-end
 # TODO: Set up travis to actually run these
 if length(datasets()) == 2
+    vgg19 = trained(VGG19)
     for dataset in (ImageNet, CIFAR10)
         val1 = valimgs(dataset)[1]
         predict(vgg19, val1)
