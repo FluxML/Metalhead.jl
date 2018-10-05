@@ -1,4 +1,4 @@
-using Metalhead, Test
+using Metalhead, Test, InteractiveUtils
 
 # Standardized testing for the models of tomorrow
 @testset "Untrained Model Tests" begin
