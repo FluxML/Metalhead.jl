@@ -20,6 +20,7 @@ using Metalhead, Test, InteractiveUtils
         GC.gc()
 
         model = MODEL()
+        model = Flux.mapleaves(Flux.Tracker.data, model)
 
         x_test = rand(T, 224, 224, 3, 1)
         y_test = model(x_test)
@@ -43,6 +44,7 @@ using Metalhead, Test, InteractiveUtils
         GC.gc()
 
         model = MODEL(true)
+        model = Flux.mapleaves(Flux.Tracker.data, model)
 
         x_test = rand(T, 224, 224, 3, 1)
         y_test = model(x_test)
@@ -66,6 +68,7 @@ end
         GC.gc()
 
         model = trained(MODEL)
+        model = Flux.mapleaves(Flux.Tracker.data, model)
 
         x_test = rand(T, 224, 224, 3, 1)
         y_test = model(x_test)
