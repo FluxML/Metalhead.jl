@@ -31,7 +31,7 @@ load_squeezenetv1_0() = Chain(Conv((7, 7), 3=>96, relu, stride = (2, 2)),
     Fire(512, 64, 256, 256),
     Dropout(0.5),
     Conv((1, 1), 512=>1000, relu),
-    MeanPool((13, 13), stride = (1, 1)),
+    MeanPool((12, 12), stride = (1, 1)),
     x -> reshape(x, :, size(x, 4)),
     softmax)
 
@@ -49,7 +49,7 @@ load_squeezenetv1_1() = Chain(Conv((3, 3), 3=>64, relu, stride = (2, 2)),
     Fire(512, 64, 256, 256),
     Dropout(0.5),
     Conv((1, 1), 512=>1000, relu),
-    MeanPool((13, 13), stride = (1, 1)),
+    MeanPool((12, 12), stride = (1, 1)),
     x -> reshape(x, :, size(x, 4)),
     softmax)
 

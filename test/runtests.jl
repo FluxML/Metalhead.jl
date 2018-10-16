@@ -34,7 +34,6 @@ using Metalhead, Flux, Test, InteractiveUtils
         @test length(model.layers[1:4].layers) == 4
     end
     GC.gc()
-    display(varinfo())
     # Test if batchnorm models work properly
     for (T, MODEL) in [
             (Float64, VGG19),
@@ -58,7 +57,6 @@ using Metalhead, Flux, Test, InteractiveUtils
         @test length(model.layers[1:4].layers) == 4
     end
     GC.gc()
-    display(varinfo())
     # Test models which have a version parameter
     for (T, version, MODEL) in [
             (Float64, "1.0",SqueezeNet),
@@ -80,11 +78,9 @@ using Metalhead, Flux, Test, InteractiveUtils
         @test length(model.layers[1:4].layers) == 4
     end
     GC.gc()
-    display(varinfo())
 end
 
 @testset "Trained Model Tests" begin
-    display(varinfo())
     for (T, MODEL) in [
             (Float32, VGG19),
             (Float32, SqueezeNet),
