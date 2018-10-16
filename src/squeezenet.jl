@@ -120,7 +120,7 @@ struct SqueezeNet <: ClassificationModel{ImageNet.ImageNet1k}
   layers::Chain
 end
 
-function SqueezeNet(version = "1.1")
+function SqueezeNet(version::String = "1.1")
   if version == "1.0"
     SqueezeNet(load_squeezenetv1_0())
   elseif version == "1.1"
