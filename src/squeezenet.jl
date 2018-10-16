@@ -31,7 +31,9 @@ load_squeezenetv1_0() = Chain(Conv((7, 7), 3=>96, relu, stride = (2, 2)),
     Fire(512, 64, 256, 256),
     Dropout(0.5),
     Conv((1, 1), 512=>1000, relu),
-    MeanPool((13, 13), stride = (1, 1)))
+    MeanPool((13, 13), stride = (1, 1)),
+    x -> reshape(x, :, size(x, 4)),
+    softmax)
 
 load_squeezenetv1_1() = Chain(Conv((3, 3), 3=>64, relu, stride = (2, 2)),
     MaxPool((3, 3), stride = (2, 2)),
@@ -47,7 +49,9 @@ load_squeezenetv1_1() = Chain(Conv((3, 3), 3=>64, relu, stride = (2, 2)),
     Fire(512, 64, 256, 256),
     Dropout(0.5),
     Conv((1, 1), 512=>1000, relu),
-    MeanPool((13, 13), stride = (1, 1)))
+    MeanPool((13, 13), stride = (1, 1)),
+    x -> reshape(x, :, size(x, 4)),
+    softmax)
 
 function trained_squeezenetv1_1_layers()
   weight = Metalhead.weights("squeezenet.bson")
@@ -106,7 +110,7 @@ function trained_squeezenetv1_1_layers()
             Dropout(0.5f0),
             Conv(flipkernel(weights["conv10_w_0"]), weights["conv10_b_0"], stride=(1, 1), pad=(0, 0), dilation = (1, 1)),
             x -> relu.(x), x->mean(x, dims=[1,2]),
-            vec, softmax
+            x -> reshape(x, :, size(x, 4)), softmax
             )
   Flux.testmode!(ls)
   return ls

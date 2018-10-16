@@ -70,7 +70,7 @@ struct GoogleNet <: ClassificationModel{ImageNet.ImageNet1k}
   layers::Chain
 end
 
-GoogleNet() = GoogleNet(load_googlenet)
+GoogleNet() = GoogleNet(load_googlenet())
 
 trained(::Type{GoogleNet}) = GoogleNet(trained_googlenet_layers())
 
