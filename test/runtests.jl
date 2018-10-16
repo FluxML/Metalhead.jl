@@ -15,7 +15,8 @@ using Metalhead, Flux, Test, InteractiveUtils
             (Float64, DenseNet121),
             (Float64, DenseNet169),
             (Float64, DenseNet201),
-            (Float64, DenseNet264)
+            (Float64, DenseNet264),
+            (Float64, GoogleNet)
         ]
         GC.gc()
 
@@ -36,10 +37,10 @@ using Metalhead, Flux, Test, InteractiveUtils
     display(varinfo())
     # Test if batchnorm models work properly
     for (T, MODEL) in [
-            (Float64, VGG11),
-            (Float64, VGG13),
+            (Float64, VGG19),
             (Float64, VGG16),
-            (Float64, VGG19)
+            (Float64, VGG13),
+            (Float64, VGG11)
         ]
         GC.gc()
 
@@ -56,14 +57,40 @@ using Metalhead, Flux, Test, InteractiveUtils
         # Test that the models can be indexed
         @test length(model.layers[1:4].layers) == 4
     end
+    GC.gc()
+    display(varinfo())
+    # Test models which have a version parameter
+    for (T, version, MODEL) in [
+            (Float64, "1.0",SqueezeNet),
+            (Float64, "1.1",SqueezeNet)
+        ]
+        GC.gc()
+
+        model = MODEL(version)
+        model = Flux.mapleaves(Flux.Tracker.data, model)
+
+        x_test = rand(T, 224, 224, 3, 1)
+        y_test = model(x_test)
+
+        # Test that types and shapes work out as we expect
+        @test y_test isa AbstractArray
+        @test length(y_test) == 1000
+
+        # Test that the models can be indexed
+        @test length(model.layers[1:4].layers) == 4
+    end
+    GC.gc()
+    display(varinfo())
 end
 
 @testset "Trained Model Tests" begin
     display(varinfo())
     for (T, MODEL) in [
             (Float32, VGG19),
+            (Float32, SqueezeNet),
             (Float64, ResNet50),
-            (Float64, DenseNet121)
+            (Float64, DenseNet121),
+            (Float64, GoogleNet)
         ]
         GC.gc()
 
