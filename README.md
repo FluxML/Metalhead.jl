@@ -40,6 +40,22 @@ julia> vgg.layers[1:21](x)
   ⋮
 ```
 
+# Available Models for Object Classification
+
+1. VGG - VGG11, VGG13, VGG16, VGG19
+2. ResNet - ResNet18, ResNet34, ResNet50, ResNet101, ResNet152
+3. GoogleNet
+4. SqueezeNet - v1.0 and v1.1
+5. DenseNet - DenseNet121, DenseNet169, DenseNet201, DenseNet264
+
+# Available Pretrained Models for Object Classification
+
+1. VGG19
+2. ResNet50
+3. GoogleNet
+4. SqueezeNet v1.1
+5. DenseNet121
+
 # Working with common datasets
 Metalhead includes support for wokring with several common object recognition datasets.
 The `datasets()` function will attempt to auto-detect any common dataset placed in
