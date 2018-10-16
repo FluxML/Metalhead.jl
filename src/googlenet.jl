@@ -35,7 +35,7 @@ load_googlenet() = Chain(Conv((7, 7), 3=>64, stride = (2, 2), relu, pad = (3, 3)
       InceptionBlock(512, 128, 128, 256, 24, 64, 64),
       InceptionBlock(512, 112, 144, 288, 32, 64, 64),
       InceptionBlock(528, 256, 160, 320, 32, 128, 128),
-      MaxPool(x, (3, 3), stride = (2, 2), pad = (1, 1)),
+      MaxPool((3, 3), stride = (2, 2), pad = (1, 1)),
       InceptionBlock(832, 256, 160, 320, 32, 128, 128),
       InceptionBlock(832, 384, 192, 384, 48, 128, 128),
       Meanpool((7, 7), stride = (1, 1), pad = (0, 0)),
