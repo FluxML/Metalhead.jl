@@ -115,11 +115,46 @@ end
     @test size(x2.img) == (32, 32)
 end
 
-# Test printing of prediction
+# Test printing of predictions.  We show the case of a correct prediction, a
+# slightly incorrect prediction, and a grossly incorrect prediction.  This is
+# mostly use to make sure that our prediction frame display doesn't bitrot
+# too badly.
 @testset "Prediction table display" begin
-    x = valimgs(CIFAR10)[1]
     m = trained(VGG19)
-    predict(m, x)
+    IN_label(name) = findfirst(map(x -> occursin(name, x), Metalhead.ImageNet.imagenet_labels))
+    ground_truth_dict = Dict(
+        "dog.png" => IN_label("Samoyed"),
+        "sky.png" => IN_label("lakeside"),  # <-- this one purposefully slightly incorrect
+        "car.png" => IN_label("carbonara"), # <-- this one purposefully grossly incorrect
+    )
+    for (imgname, label) in ground_truth_dict
+        valimg = Metalhead.ValidationImage(
+            Metalhead.ImageNet.DataSet,
+            0,
+            Metalhead.load_img(joinpath(@__DIR__, "images", imgname)),
+            # Pass in our "fake" ground truth
+            Metalhead.ImageNet.ImageNet1k(label),
+        )
+        result = predict(m, valimg)
+
+        # "Display" our prediction table out to a string
+        io = IOBuffer()
+        show(io, result)
+
+        # Rewind it, take it out as a string
+        seek(io, 0)
+        result_string = read(io, String)
+
+        # Ensure that our ground label at least exists within the output display
+        @test occursin(first(split(ImageNet.imagenet_labels[label], ",")), result_string)
+
+        # Also test the shortcut, `classify()`:
+        if imgname == "dog.png"
+            @test classify(m, valimg) == ImageNet.imagenet_labels[label]
+        else
+            @test classify(m, valimg) != ImageNet.imagenet_labels[label]
+        end
+    end
 end
 
 # Just run the prediction code end-to-end

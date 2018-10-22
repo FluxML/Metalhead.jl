@@ -3,22 +3,22 @@ const inner_width = 45
 const inner_liner = "─"^inner_width
 
 function Base.show(io::IO, frame::PredictionFrame)
-    print_frame_table((args...)->nothing, frame)
+    print_frame_table(io, (args...)->nothing, frame)
 end
 
 function Base.show(io::IO, frames::Vector{PredictionFrame})
-    print_frame_table((args...)->nothing, frames)
+    print_frame_table(io, (args...)->nothing, frames)
 end
 
-print_frame_table(image_callback, frame::PredictionFrame) =
-    print_frame_table(image_callback, [frame])
-function print_frame_table(image_callback, frames::Vector{PredictionFrame})
+function print_frame_table(io::IO, image_callback, frame::PredictionFrame)
+    print_frame_table(io, image_callback, [frame])
+end
+
+function print_frame_table(io::IO, image_callback, frames::Vector{PredictionFrame})
     lines, cols = displaysize(stdin)
     per_row = div(cols-1, 47)
     remaining = length(frames)
     offset = 0
-    buf = IOBuffer()
-    io = IOContext(buf, :color => true)
     first_row = min(per_row, remaining)
     println(io, "┌",join(("─"^inner_width for i = 1:first_row),"┬"),"┐")
     while remaining > 0
@@ -100,8 +100,6 @@ function print_frame_table(image_callback, frames::Vector{PredictionFrame})
         else
             println(io, "└",join((inner_liner for i = 1:this_row),"┴"),"┘")
         end
-        # Write out at the end of each row
-        write(stdout, take!(buf))
     end
 end
 

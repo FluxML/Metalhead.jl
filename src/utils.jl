@@ -102,7 +102,7 @@ classify(model::ClassificationModel, im) = Flux.onecold(forward(model, load_img(
 
 function predict(model::ClassificationModel{Class},
         im::Vector{<:Union{AbstractMatrix, String, ValidationImage}}, k=5) where Class
-    error("predict is not implicitly vectorized. Use boradcast syntax: predict.(model, imgs)")
+    error("predict is not implicitly vectorized. Use broadcast syntax: predict.(model, imgs)")
 end
 
 struct Prediction
