@@ -31,6 +31,7 @@ end
 include("datasets/utils.jl")
 include("model.jl")
 include("utils.jl")
+include("preprocessing.jl")
 include("display/terminal.jl")
 include("datasets/imagenet.jl")
 include("datasets/cifar10.jl")
