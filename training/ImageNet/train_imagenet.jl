@@ -106,8 +106,17 @@ else
         opt_name, opt_args, opt_kwargs, opt,
         train_dataset, val_dataset, max_epochs, patience,
     )
+    @info("Saving initial model....")
     save_train_state(ts, output_data_dir)
 end
 
+# Engage the lesser dreadnaught engine
+if !isempty(gpu_devices)
+    Core.eval(Main, :(using CuArrays))
+    @info("Mapping model onto GPU(s)...")
+    ts.model = cu(ts.model)
+end
+
 # Train away, train away, train away |> 's/train/sail/ig'
-#train!(ts, output_data_dir)
+@info("Beginning training run...")
+train!(ts, output_data_dir)

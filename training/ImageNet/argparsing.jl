@@ -85,7 +85,7 @@ end
 
 if arg_set("--val-dir")
     val_data_dir = args["--val-dir"]
-    @assert isdir(val_data_dir) "valing data '$(val_data_dir)' must exist!"
+    @assert isdir(val_data_dir) "Validation data '$(val_data_dir)' must exist!"
 end
 
 if arg_set("--output-dir")
@@ -161,6 +161,8 @@ if arg_set("--gpus")
     # roflmao
     ENV["CUDA_VISIBLE_DEVICES"] = args["--gpus"]
     gpu_devices = parse.(Int, split(args["--gpus"], ","))
+else
+    gpu_devices = Int[]
 end
 
 if arg_set("--tpu")
