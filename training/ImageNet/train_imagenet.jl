@@ -81,6 +81,11 @@ include("argparsing.jl")
 include("dataset.jl")
 include("training.jl")
 
+# If we're using GPU devices, import CuArrays
+if !isempty(gpu_devices)
+    Core.eval(Main, :(using CuArrays))
+end
+
 ## TODO:
 #  Once https://github.com/FluxML/Flux.jl/pull/379 is merged, implement saving/loading
 #  of optimizer state, so that continued training doesn't kcik out of balance.
@@ -112,7 +117,6 @@ end
 
 # Engage the lesser dreadnaught engine
 if !isempty(gpu_devices)
-    Core.eval(Main, :(using CuArrays))
     @info("Mapping model onto GPU(s)...")
     ts.model = cu(ts.model)
 end
