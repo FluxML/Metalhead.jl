@@ -1,5 +1,7 @@
 using Distributed, Random
 
+include("queuepool.jl")
+
 function recursive_readdir(root::String)
     ret = String[]
     for (r, dirs, files) in walkdir(root)
@@ -61,7 +63,7 @@ struct ImagenetDataset
 
     # Data we calculate once, at startup
     filenames::Vector{String}
-    worker_pool::WorkerPool
+    queue_pool::QueuePool
 
     function ImagenetDataset(dataset_root::String, num_workers::Int, batch_size::Int,
                              data_loader::Function = imagenet_val_data_loader,
@@ -76,17 +78,12 @@ struct ImagenetDataset
 
         # Start our worker pool
         @info("Adding $(num_workers) new data workers...")
-        worker_pool = WorkerPool(addprocs(num_workers))
-
-        # Have the worker threads load necessary packages like Metalhead, Images, etc...
-        @info("Loading worker thread packages...")
-        this_file = @__FILE__
-        Distributed.remotecall_eval(Main, worker_pool.workers, quote
+        queue_pool = QueuePool(num_workers, data_loader, quote
             using Flux, Images, Metalhead
-            include($this_file)
+            include($(@__FILE__))
         end)
 
-        return new(dataset_root, batch_size, num_inflight, data_loader, filenames, worker_pool)
+        return new(dataset_root, batch_size, num_inflight, data_loader, filenames, queue_pool)
     end
 end
 
@@ -97,14 +94,14 @@ end
 
 mutable struct ImagenetIteratorState
     batch_idx::Int
-    batches_inflight::Vector{Vector{Future}}
+    batches_inflight::Vector{Vector{Int}}
     permutation::Vector{Int64}
     
     function ImagenetIteratorState(id::ImagenetDataset)
         @info("Creating IIS with $(length(id.filenames)) images")
         return new(
             1,
-            Vector{Future}[],
+            Vector{Int}[],
             shuffle(1:length(id.filenames)),
         )
     end
@@ -127,9 +124,8 @@ function Base.iterate(id::ImagenetDataset, state=ImagenetIteratorState(id))
         # to our worker pool, bundling the futures together and storing those into our "inflight"
         # batches.
         batch_filenames = [joinpath(id.dataset_root, id.filenames[idx]) for idx in pidxs]
-        next_inflight_batch = remotecall.(Ref(id.data_loader), Ref(id.worker_pool), batch_filenames)
+        next_inflight_batch = push_job!.(Ref(id.queue_pool), batch_filenames) #remotecall.(Ref(id.data_loader), Ref(id.worker_pool), batch_filenames)
         push!(state.batches_inflight, next_inflight_batch)
-        #@show next_inflight_batch
 
         # Increment our way forward through the epoch
         state.batch_idx += id.batch_size
@@ -137,23 +133,7 @@ function Base.iterate(id::ImagenetDataset, state=ImagenetIteratorState(id))
 
     # Next, wait for the currently-being-worked-on batch to be done.
     next_inflight_batch = popfirst!(state.batches_inflight)
-    #@show next_inflight_batch
-    pairs = Tuple[() for idx in 1:id.batch_size]
-    while !all(pairs .!= Ref(()))
-        # Check to see if any of this inflight batch are ready;
-        no_work_done = true
-        for idx in 1:id.batch_size
-            if pairs[idx] == () && isready(next_inflight_batch[idx])
-                no_work_done = false
-                pairs[idx] = fetch(next_inflight_batch[idx])
-            end
-        end
-
-        # If we didn't get any new data this time, sleep for 0.5ms and check for new batches again
-        if no_work_done
-            sleep(0.0005)
-        end
-    end
+    pairs = fetch_result.(Ref(id.queue_pool), next_inflight_batch)
 
     # Collate X's and Y's into big tensors:
     X = cat((p[1] for p in pairs)...; dims=ndims(pairs[1][1]))
