@@ -29,7 +29,7 @@ function QueuePool(num_workers::Int, proc_func::Function, setup::Expr = :nothing
     # Create our QueuePool
     qp = QueuePool(
         workers,
-        RemoteChannel(() -> Channel{Tuple}(queue_size)),
+        RemoteChannel(() -> Channel{Tuple}(Inf)),
         RemoteChannel(() -> Channel{Tuple}(queue_size)),
         RemoteChannel(() -> Channel{Bool}(1)),
         0,
@@ -72,9 +72,12 @@ function worker_task(qp::QueuePool, proc_func)
         try
             # Push x through proc_func to get y
             y = proc_func(x)
-        catch
+        catch e
+            if isa(e, InterruptException)
+                rethrow(e)
+            end
             # Just skip bad processing runs
-            @warn("Failed to run worker task $(qp.proc_func) on $(x)")
+            @warn("Failed to run worker task $(proc_func) on $(x): $(e)")
             continue
         end
 

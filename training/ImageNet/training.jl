@@ -1,4 +1,4 @@
-using Metalhead, Flux, BSON
+using Metalhead, Flux, BSON, CUDAnative
 using Statistics, Printf
 
 ### Stuff that Flux should probably have
@@ -96,7 +96,7 @@ end
 function save_train_state(ts::TrainState, output_dir::AbstractString,
                           should_save_weights::Bool = true)
     if should_save_weights
-        save_model(ts.model, joinpath(output_dir, "weights.bson"))
+        save_model(cpu(ts.model), joinpath(output_dir, "weights.bson"))
     end
     # Next, save training info
     train_status = Dict(
@@ -105,7 +105,7 @@ function save_train_state(ts::TrainState, output_dir::AbstractString,
         :model_args => ts.model_args,
         :model_kwargs => ts.model_kwargs,
         # Can't save the optimizer yet, we'll have to add that later.
-        #:opt => ts.opt,
+        :opt => cpu(ts.opt),
         :opt_name => ts.opt_name,
         :opt_args => ts.opt_args,
         :opt_kwargs => ts.opt_kwargs,
@@ -177,7 +177,7 @@ function load_train_state(output_dir::AbstractString)
     )
 end
 
-function train_epoch!(ts::TrainState)
+function train_epoch!(ts::TrainState, accelerator = identity)
     # Clear out any previous training loss history
     while length(ts.train_loss_history) < ts.epoch
         push!(ts.train_loss_history, Float64[])
@@ -186,32 +186,45 @@ function train_epoch!(ts::TrainState)
 
     batch_idx = 1
     for (x, y) in ts.train_dataset
+        t0 = time()
+        # Load x/y onto our accelerator, if we have one
+        x = accelerator(x)
+        y = accelerator(y)
+        t1 = time()
+
         # Push forward pass
-        y_hat = ts.model(x)
+        y_hat = ts.model(accelerator(x))
+        CUDAnative.synchronize()
 
         # Calculate loss and backprop (Note the `Flux.Optimise.@interrupts` is
         # just to avoid very large backtraces when interrupting a training by
         # hitting CTRL-C.  It limits the backtrace to this function.)
+        t2 = time()
         loss = Flux.crossentropy(y_hat, y)
         Flux.Optimise.@interrupts Flux.back!(loss)
+        CUDAnative.synchronize()
+        t3 = time()
 
         # Update weights
-        ts.opt()
+        update!(ts.opt, params(model))
+        CUDAnative.synchronize()
+        t4 = time()
 
         # Store training loss into loss history
-        ts.train_loss_history[ts.epoch][batch_idx] = Flux.Tracker.data(loss)
+        ts.train_loss_history[ts.epoch][batch_idx] = Flux.Tracker.data(cpu(loss))
 
         # Show a smoothed loss approximation per-minibatch
         smoothed_loss = mean(ts.train_loss_history[ts.epoch][max(batch_idx-50,1):batch_idx])
         println(@sprintf(
-            "[TRAIN %d - %d/%d]: %.2f",
+            "[TRAIN %d - %d/%d]: %.4f (%.3fs, %.3fs, %.3fs, %.3fs)",
             ts.epoch, batch_idx, length(ts.train_dataset), smoothed_loss,
+            t1 - t0, t2 - t1, t3 - t2, t4 - t3,
         ))
         batch_idx += 1
     end
 end
 
-function validate!(ts::TrainState)
+function validate!(ts::TrainState, accelerator = identity)
     # Get the "fast model", 
     fast_model = Flux.mapleaves(Flux.Tracker.data, ts.model)
     Flux.testmode!(fast_model, true)
@@ -219,8 +232,13 @@ function validate!(ts::TrainState)
     avg_loss = 0
     batch_idx = 1
     for (x, y) in ts.val_dataset
+        # move x/y to the accelerator, if necessary
+        x = accelerator(x)
+        y = accelerator(y)
+
+        # Push x through our fast model and calculate loss
         y_hat = fast_model(x)
-        avg_loss += Flux.crossentropy(y_hat, y)
+        avg_loss += cpu(Flux.crossentropy(y_hat, y))
 
         print(@sprintf(
             "\r[VAL %d - %d/%d]: %.2f",
@@ -236,9 +254,13 @@ function validate!(ts::TrainState)
 end
 
 
-function train!(ts::TrainState, output_dir::AbstractString)
+function train!(ts::TrainState, output_dir::AbstractString, accelerator = identity)
     # Initialize best_epoch to epoch 0, with Infinity loss
     best_epoch = (0, Inf)
+
+    # Move model and optimizer to accelerator
+    ts.model = accelerator(ts.model)
+    ts.opt = accelerator(ts.opt)
 
     while ts.epoch < ts.max_epochs
         # Early-stop if we don't improve after `ts.patience` epochs
@@ -248,10 +270,10 @@ function train!(ts::TrainState, output_dir::AbstractString)
         end
 
         # Train for an epoch
-        train_epoch!(ts)
+        train_epoch!(ts, accelerator)
         
         # Validate to see how much we've improved
-        epoch_loss = validate!(ts)
+        epoch_loss = validate!(ts, accelerator)
 
         # Check to see if this epoch is the best we've seen so far
         if epoch_loss < best_epoch[2]

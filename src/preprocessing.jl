@@ -28,6 +28,9 @@ load_img(im::AbstractArray{T, 4}) where {T} = im
 
 # Resize an image such that its smallest dimension is the given length
 function resize_smallest_dimension(im::AbstractArray{T, 4}, len) where {T}
+    # Images.jl doesn't like our batch axis, so drop that temporarily
+    im = im[:,:,:,1]
+
     reduction_factor = len/minimum(size(im)[1:2])
     new_size = size(im)
     new_size = (
@@ -36,12 +39,18 @@ function resize_smallest_dimension(im::AbstractArray{T, 4}, len) where {T}
         new_size[3], # number of channels
     )
     if reduction_factor < 1.0
-        # Images.jl's imresize() needs to first lowpass the image, it won't do it for us
+        # Use restrict() to quarter our size each step, which is much faster
+        # than a single large Gaussian imfilter().
+        while reduction_factor < 0.5
+            im = restrict(im)
+            reduction_factor *= 2
+        end
+        # low-pass filter
         im = imfilter(im, KernelFactors.gaussian(0.75/reduction_factor), Inner())
     end
 
-    # Do this weird indexing thing to appease the Images.jl gods
-    return imresize(im[:,:,:,1], new_size)[:,:,:,:]
+    # Expand the result back up to a 4d tensor
+    return imresize(im, new_size)[:,:,:,:]
 end
 
 
@@ -88,12 +97,17 @@ center crop, and normalization.
 """
 function imagenet_val_preprocess(im)
     # Make sure that `im` is loaded
+    t_0 = time()
     im = load_img(im)
+    t_1 = time()
 
     # Resize such that smallest edge is 256 pixels long, center-crop to
     # 224x224, then normalize channels and return
-    im = center_crop(resize_smallest_dimension(im, 256), 224)
-    return channel_normalize(im)
+    im = resize_smallest_dimension(im, 256)
+    t_2 = time()
+    im = center_crop(im, 224)
+    t_3 = time()
+    return (channel_normalize(im), t_1 - t_0, t_2 - t_1, t_3 - t_2)
 end
 
 

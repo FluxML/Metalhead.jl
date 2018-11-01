@@ -81,9 +81,10 @@ include("argparsing.jl")
 include("dataset.jl")
 include("training.jl")
 
-# If we're using GPU devices, import CuArrays
+# If we're using GPU devices, import CuArrays and set our accelerator
 if !isempty(gpu_devices)
     Core.eval(Main, :(using CuArrays))
+    Core.eval(Flux, :(gpu_adapter = $(CuArrays.cu)))
 end
 
 ## TODO:
@@ -103,7 +104,7 @@ else
     model = model_ctor(model_args...; model_kwargs...)
 
     # Construct optimizer with our user-defined arguments
-    opt = opt_ctor(params(model), opt_args...; opt_kwargs...)
+    opt = opt_ctor(opt_args...; opt_kwargs...)
 
     # Finally, create our TrainState object and immediately save it:
     ts = TrainState(
@@ -112,15 +113,17 @@ else
         train_dataset, val_dataset, max_epochs, patience,
     )
     @info("Saving initial model....")
-    save_train_state(ts, output_data_dir)
+    #save_train_state(ts, output_data_dir)
 end
 
-# Engage the lesser dreadnaught engine
+accelerator = identity
 if !isempty(gpu_devices)
-    @info("Mapping model onto GPU(s)...")
-    ts.model = cu(ts.model)
+    accelerator = Flux.gpu
 end
 
 # Train away, train away, train away |> 's/train/sail/ig'
 @info("Beginning training run...")
-train!(ts, output_data_dir)
+#for (x, y) in ts.train_dataset
+#    @show size(x)
+#end
+train!(ts, output_data_dir, accelerator)
