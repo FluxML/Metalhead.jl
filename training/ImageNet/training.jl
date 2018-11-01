@@ -185,6 +185,8 @@ function train_epoch!(ts::TrainState, accelerator = identity)
     ts.train_loss_history[ts.epoch] = zeros(Float64, length(ts.train_dataset))
 
     batch_idx = 1
+    avg_batch_time = 0.0
+    t_last = time()
     for (x, y) in ts.train_dataset
         t0 = time()
         # Load x/y onto our accelerator, if we have one
@@ -214,13 +216,26 @@ function train_epoch!(ts::TrainState, accelerator = identity)
         # Store training loss into loss history
         ts.train_loss_history[ts.epoch][batch_idx] = Flux.Tracker.data(cpu(loss))
 
+        # Update average batch time
+        t_now = time()
+        avg_batch_time = .99*avg_batch_time + .01*(t_now - t_last)
+        t_last = t_now
+
+        # Calculate ETA
+        time_left = avg_batch_time*(length(ts.train_dataset) - batch_idx)
+        hours = floor(Int,time_left/(60*60))
+        minutes = floor(Int, (time_left - hours*60*60)/60)
+        seconds = time_left - hours*60*60 - minutes*60
+        eta = @sprintf("%dh%dm%ds", hours, minutes, seconds)
+
         # Show a smoothed loss approximation per-minibatch
         smoothed_loss = mean(ts.train_loss_history[ts.epoch][max(batch_idx-50,1):batch_idx])
         println(@sprintf(
-            "[TRAIN %d - %d/%d]: %.4f (%.3fs, %.3fs, %.3fs, %.3fs)",
+            "[TRAIN %d - %d/%d]: avg loss: %.4f, avg time: %.2fs (%.3fs load, %.3fs fwd, %.3fs back, %.3fs opt), ETA: %s ",
             ts.epoch, batch_idx, length(ts.train_dataset), smoothed_loss,
-            t1 - t0, t2 - t1, t3 - t2, t4 - t3,
+            avg_batch_time, t1 - t0, t2 - t1, t3 - t2, t4 - t3, eta,
         ))
+
         batch_idx += 1
     end
 end

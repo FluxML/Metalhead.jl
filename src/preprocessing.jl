@@ -42,7 +42,7 @@ function resize_smallest_dimension(im::AbstractArray{T, 4}, len) where {T}
         # Use restrict() to quarter our size each step, which is much faster
         # than a single large Gaussian imfilter().
         while reduction_factor < 0.5
-            im = cat((restrict(x[:,:,cidx]) for cidx in 1:size(x, 3))..., dims=3)
+            im = cat((restrict(im[:,:,cidx]) for cidx in 1:size(im, 3))..., dims=3)
             reduction_factor *= 2
         end
         # low-pass filter

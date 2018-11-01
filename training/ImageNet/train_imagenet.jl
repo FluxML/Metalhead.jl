@@ -116,7 +116,7 @@ else
         train_dataset, val_dataset, max_epochs, patience,
     )
     @info("Saving initial model....")
-    #save_train_state(ts, output_data_dir)
+    save_train_state(ts, output_data_dir)
 end
 
 
