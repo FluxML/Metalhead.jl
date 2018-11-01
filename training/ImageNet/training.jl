@@ -105,7 +105,7 @@ function save_train_state(ts::TrainState, output_dir::AbstractString,
         :model_args => ts.model_args,
         :model_kwargs => ts.model_kwargs,
         # Can't save the optimizer yet, we'll have to add that later.
-        :opt => cpu(ts.opt),
+        #:opt => cpu(ts.opt),
         :opt_name => ts.opt_name,
         :opt_args => ts.opt_args,
         :opt_kwargs => ts.opt_kwargs,
@@ -206,7 +206,8 @@ function train_epoch!(ts::TrainState, accelerator = identity)
         t3 = time()
 
         # Update weights
-        update!(ts.opt, params(model))
+        #update!(ts.opt, params(model))
+        ts.opt()
         CUDAnative.synchronize()
         t4 = time()
 
@@ -259,8 +260,8 @@ function train!(ts::TrainState, output_dir::AbstractString, accelerator = identi
     best_epoch = (0, Inf)
 
     # Move model and optimizer to accelerator
-    ts.model = accelerator(ts.model)
-    ts.opt = accelerator(ts.opt)
+    #ts.model = accelerator(ts.model)
+    #ts.opt = accelerator(ts.opt)
 
     while ts.epoch < ts.max_epochs
         # Early-stop if we don't improve after `ts.patience` epochs

@@ -81,10 +81,13 @@ include("argparsing.jl")
 include("dataset.jl")
 include("training.jl")
 
+accelerator = identity
 # If we're using GPU devices, import CuArrays and set our accelerator
 if !isempty(gpu_devices)
     Core.eval(Main, :(using CuArrays))
     Core.eval(Flux, :(gpu_adapter = $(CuArrays.cu)))
+
+    accelerator = Flux.gpu
 end
 
 ## TODO:
@@ -101,10 +104,10 @@ else
     val_dataset = ImagenetDataset(val_data_dir, data_workers, batch_size, imagenet_val_data_loader)
 
     # Construct model with our user-defined arguments
-    model = model_ctor(model_args...; model_kwargs...)
+    model = accelerator(model_ctor(model_args...; model_kwargs...))
 
     # Construct optimizer with our user-defined arguments
-    opt = opt_ctor(opt_args...; opt_kwargs...)
+    opt = opt_ctor(params(model), opt_args...; opt_kwargs...)
 
     # Finally, create our TrainState object and immediately save it:
     ts = TrainState(
@@ -116,10 +119,6 @@ else
     #save_train_state(ts, output_data_dir)
 end
 
-accelerator = identity
-if !isempty(gpu_devices)
-    accelerator = Flux.gpu
-end
 
 # Train away, train away, train away |> 's/train/sail/ig'
 @info("Beginning training run...")
