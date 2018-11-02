@@ -60,9 +60,12 @@ Performance options:
                         by `Sys.CPU_THREADS`.
   --gpus=<gpus>         Engage the lesser dreadnought engine for training.
                         Identified by device ID (e.g. `--gpus=0,2,3`).
-  --tpu=<xrt_addr>      Engage the greater dreadnought engine for training.
+  --xrt=<xrt_addr>      Engage the greater dreadnought engine for training.
                         Identified by the XRT endpoint to communicate with,
                         (e.g. `--tpu=localhost:8740`)
+  --xla-device=<dev>    Lock ops to a given XLA device (all devices will be
+                        enumerated, and the first matching device will be 
+                        chosen)
 
 Misc options:
   --help                Print out this help and exit.
@@ -80,15 +83,7 @@ Examples:
 include("argparsing.jl")
 include("dataset.jl")
 include("training.jl")
-
-accelerator = identity
-# If we're using GPU devices, import CuArrays and set our accelerator
-if !isempty(gpu_devices)
-    Core.eval(Main, :(using CuArrays))
-    Core.eval(Flux, :(gpu_adapter = $(CuArrays.cu)))
-
-    accelerator = Flux.gpu
-end
+include("accelerator.jl")
 
 ## TODO:
 #  Once https://github.com/FluxML/Flux.jl/pull/379 is merged, implement saving/loading

@@ -165,6 +165,23 @@ else
     gpu_devices = Int[]
 end
 
-if arg_set("--tpu")
-    tpu_address = args["--tpu"]
+if arg_set("--xrt")
+    xrt_address = args["--xrt"]
+else
+    xrt_address = nothing
+end
+
+if arg_set("--xla-device")
+    if xrt_address === nothing
+        error("Must set `--xrt` endpoint along with --xla-device")
+    end
+    xla_device = args["--xla-device"]
+else
+    xla_device = nothing
+end
+
+if arg_set("--xrt") && arg_set("--gpus")
+    # Choose one or the other, bucko.  If you want to run against an XLA_GPU
+    # device, use `--xrt` and `--xla-device=/XLA_GPU`
+    error("Cannot set both --xrt and --gpus!")
 end
