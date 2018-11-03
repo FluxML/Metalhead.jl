@@ -1,4 +1,4 @@
-using Metalhead, Flux, BSON, CUDAnative
+using Metalhead, Flux, BSON
 using Statistics, Printf
 
 ### Stuff that Flux should probably have
@@ -177,7 +177,7 @@ function load_train_state(output_dir::AbstractString)
     )
 end
 
-function train_epoch!(ts::TrainState, accelerator = identity)
+function train_epoch!(ts::TrainState)
     # Clear out any previous training loss history
     while length(ts.train_loss_history) < ts.epoch
         push!(ts.train_loss_history, Float64[])
@@ -188,33 +188,8 @@ function train_epoch!(ts::TrainState, accelerator = identity)
     avg_batch_time = 0.0
     t_last = time()
     for (x, y) in ts.train_dataset
-        t0 = time()
-        # Load x/y onto our accelerator, if we have one
-        x = accelerator(x)
-        y = accelerator(y)
-        t1 = time()
-
-        # Push forward pass
-        y_hat = ts.model(accelerator(x))
-        CUDAnative.synchronize()
-
-        # Calculate loss and backprop (Note the `Flux.Optimise.@interrupts` is
-        # just to avoid very large backtraces when interrupting a training by
-        # hitting CTRL-C.  It limits the backtrace to this function.)
-        t2 = time()
-        loss = Flux.crossentropy(y_hat, y)
-        Flux.Optimise.@interrupts Flux.back!(loss)
-        CUDAnative.synchronize()
-        t3 = time()
-
-        # Update weights
-        #update!(ts.opt, params(model))
-        ts.opt()
-        CUDAnative.synchronize()
-        t4 = time()
-
         # Store training loss into loss history
-        ts.train_loss_history[ts.epoch][batch_idx] = Flux.Tracker.data(cpu(loss))
+        ts.train_loss_history[ts.epoch][batch_idx] = process_minibatch(model, opt, x, y)
 
         # Update average batch time
         t_now = time()
@@ -231,16 +206,16 @@ function train_epoch!(ts::TrainState, accelerator = identity)
         # Show a smoothed loss approximation per-minibatch
         smoothed_loss = mean(ts.train_loss_history[ts.epoch][max(batch_idx-50,1):batch_idx])
         println(@sprintf(
-            "[TRAIN %d - %d/%d]: avg loss: %.4f, avg time: %.2fs (%.3fs load, %.3fs fwd, %.3fs back, %.3fs opt), ETA: %s ",
+            "[TRAIN %d - %d/%d]: avg loss: %.4f, avg time: %.2fs, ETA: %s ",
             ts.epoch, batch_idx, length(ts.train_dataset), smoothed_loss,
-            avg_batch_time, t1 - t0, t2 - t1, t3 - t2, t4 - t3, eta,
+            avg_batch_time,  eta,
         ))
 
         batch_idx += 1
     end
 end
 
-function validate!(ts::TrainState, accelerator = identity)
+function validate!(ts::TrainState)
     # Get the "fast model", 
     fast_model = Flux.mapleaves(Flux.Tracker.data, ts.model)
     Flux.testmode!(fast_model, true)
@@ -248,10 +223,6 @@ function validate!(ts::TrainState, accelerator = identity)
     avg_loss = 0
     batch_idx = 1
     for (x, y) in ts.val_dataset
-        # move x/y to the accelerator, if necessary
-        x = accelerator(x)
-        y = accelerator(y)
-
         # Push x through our fast model and calculate loss
         y_hat = fast_model(x)
         avg_loss += cpu(Flux.crossentropy(y_hat, y))
@@ -270,13 +241,9 @@ function validate!(ts::TrainState, accelerator = identity)
 end
 
 
-function train!(ts::TrainState, output_dir::AbstractString, accelerator = identity)
+function train!(ts::TrainState, output_dir::AbstractString)
     # Initialize best_epoch to epoch 0, with Infinity loss
     best_epoch = (0, Inf)
-
-    # Move model and optimizer to accelerator
-    #ts.model = accelerator(ts.model)
-    #ts.opt = accelerator(ts.opt)
 
     while ts.epoch < ts.max_epochs
         # Early-stop if we don't improve after `ts.patience` epochs
@@ -286,10 +253,10 @@ function train!(ts::TrainState, output_dir::AbstractString, accelerator = identi
         end
 
         # Train for an epoch
-        train_epoch!(ts, accelerator)
+        train_epoch!(ts)
         
         # Validate to see how much we've improved
-        epoch_loss = validate!(ts, accelerator)
+        epoch_loss = validate!(ts)
 
         # Check to see if this epoch is the best we've seen so far
         if epoch_loss < best_epoch[2]

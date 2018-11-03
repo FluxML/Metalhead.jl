@@ -62,7 +62,7 @@ Performance options:
                         Identified by device ID (e.g. `--gpus=0,2,3`).
   --xrt=<xrt_addr>      Engage the greater dreadnought engine for training.
                         Identified by the XRT endpoint to communicate with,
-                        (e.g. `--tpu=localhost:8740`)
+                        (e.g. `--xrt=localhost:8740`)
   --xla-device=<dev>    Lock ops to a given XLA device (all devices will be
                         enumerated, and the first matching device will be 
                         chosen)
@@ -99,7 +99,9 @@ else
     val_dataset = ImagenetDataset(val_data_dir, data_workers, batch_size, imagenet_val_data_loader)
 
     # Construct model with our user-defined arguments
-    model = accelerator(model_ctor(model_args...; model_kwargs...))
+    # TODO: Fix this `model_to_device()` here; once we are using new optimizer
+    # API, we won't need to do this anymore!!!!
+    model = model_to_device(model_ctor(model_args...; model_kwargs...))
 
     # Construct optimizer with our user-defined arguments
     opt = opt_ctor(params(model), opt_args...; opt_kwargs...)
@@ -113,7 +115,6 @@ else
     @info("Saving initial model....")
     save_train_state(ts, output_data_dir)
 end
-
 
 # Train away, train away, train away |> 's/train/sail/ig'
 @info("Beginning training run...")
