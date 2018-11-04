@@ -1,7 +1,5 @@
 using Metalhead, Flux, Test, InteractiveUtils
 
-run(`ulimit -a`)
-
 # Standardized testing for the models of tomorrow
 @testset "Untrained Model Tests" begin
     for (T, MODEL) in [
