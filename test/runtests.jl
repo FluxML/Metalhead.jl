@@ -34,6 +34,11 @@ run(`ulimit -a`)
 
         # Test that the models can be indexed
         @test length(model.layers[1:4].layers) == 4
+
+        # Make all the allocations nothing for GC to free them
+        model = nothing
+        x_test = nothing
+        y_test = nothing
     end
     GC.gc()
     # Test if batchnorm models work properly
@@ -57,6 +62,11 @@ run(`ulimit -a`)
 
         # Test that the models can be indexed
         @test length(model.layers[1:4].layers) == 4
+
+        # Make all the allocations nothing for GC to free them
+        model = nothing
+        x_test = nothing
+        y_test = nothing
     end
     GC.gc()
     # Test models which have a version parameter
@@ -78,6 +88,11 @@ run(`ulimit -a`)
 
         # Test that the models can be indexed
         @test length(model.layers[1:4].layers) == 4
+
+        # Make all the allocations nothing for GC to free them
+        model = nothing
+        x_test = nothing
+        y_test = nothing
     end
     GC.gc()
 end
@@ -104,6 +119,11 @@ end
 
         # Test that the models can be indexed
         @test length(model.layers[1:4].layers) == 4
+
+        # Make all the allocations nothing for GC to free them
+        model = nothing
+        x_test = nothing
+        y_test = nothing
     end
 end
 
