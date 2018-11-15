@@ -1,31 +1,27 @@
 struct ResidualBlock
-  conv_layers
-  norm_layers
+  layers
   shortcut
 end
 
 @treelike ResidualBlock
 
 function ResidualBlock(filters, kernels::Array{Tuple{Int,Int}}, pads::Array{Tuple{Int,Int}}, strides::Array{Tuple{Int,Int}}, shortcut = identity)
-  local conv_layers = []
-  local norm_layers = []
+  layers = []
   for i in 2:length(filters)
-    push!(conv_layers, Conv(kernels[i-1], filters[i-1]=>filters[i], pad = pads[i-1], stride = strides[i-1]))
-    push!(norm_layers, BatchNorm(filters[i]))
+    push!(layers, Conv(kernels[i-1], filters[i-1]=>filters[i], pad = pads[i-1], stride = strides[i-1]))
+    if i != length(filters)
+      push!(layers, BatchNorm(filters[i], relu))
+    else
+      push!(layers, BatchNorm(filters[i]))
+    end
   end
-  ResidualBlock(Tuple(conv_layers),Tuple(norm_layers),shortcut)
+  ResidualBlock(Chain(layers...), shortcut)
 end
 
 ResidualBlock(filters, kernels::Array{Int}, pads::Array{Int}, strides::Array{Int}, shortcut = identity) =
   ResidualBlock(filters, [(i,i) for i in kernels], [(i,i) for i in pads], [(i,i) for i in strides], shortcut)
 
-function (block::ResidualBlock)(input)
-  local value = copy.(input)
-  for i in 1:length(block.conv_layers)-1
-    value = relu.((block.norm_layers[i])((block.conv_layers[i])(value)))
-  end
-  relu.(((block.norm_layers[end])((block.conv_layers[end])(value))) + block.shortcut(input))
-end
+(r::ResidualBlock)(input) = relu.(r.layers(input) + r.shortcut(input))
 
 function BasicBlock(filters::Int, downsample::Bool = false, res_top::Bool = false)
   # NOTE: res_top is set to true if this is the first residual connection of the architecture
@@ -61,9 +57,9 @@ function trained_resnet50_layers()
   count = 2
   for j in [3:5, 6:9, 10:15, 16:18]
     for p in j
-      ls[p].conv_layers[1].weight.data .= flipkernel(weights["gpu_0/res$(count)_$(p-j[1])_branch2a_w_0"])
-      ls[p].conv_layers[2].weight.data .= flipkernel(weights["gpu_0/res$(count)_$(p-j[1])_branch2b_w_0"])
-      ls[p].conv_layers[3].weight.data .= flipkernel(weights["gpu_0/res$(count)_$(p-j[1])_branch2c_w_0"])
+      ls[p].layers[1].weight.data .= flipkernel(weights["gpu_0/res$(count)_$(p-j[1])_branch2a_w_0"])
+      ls[p].layers[3].weight.data .= flipkernel(weights["gpu_0/res$(count)_$(p-j[1])_branch2b_w_0"])
+      ls[p].layers[5].weight.data .= flipkernel(weights["gpu_0/res$(count)_$(p-j[1])_branch2c_w_0"])
     end
     count += 1
   end
