@@ -97,8 +97,8 @@ end
 
 @testset "Trained Model Tests" begin
     for (T, MODEL) in [
-            (Float32, VGG19),
             (Float32, SqueezeNet),
+            (Float32, VGG19),
             (Float64, ResNet50),
             (Float64, DenseNet121),
             (Float64, GoogleNet)
