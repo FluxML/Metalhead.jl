@@ -32,14 +32,14 @@ function trained_densenet121_layers()
     weights[string(ele)] = convert(Array{Float64, N} where N ,weight[ele])
   end
   ls = load_densenet(densenet_configs["densenet121"]...)
-  ls[1].weight.data .= weights["conv1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:]
+  ls[1].weight.data .= flipkernel(weights["conv1_w_0"])
   ls[2].β.data .= weights["conv1/bn_b_0"]
   ls[2].γ.data .= weights["conv1/bn_w_0"]
   l = 4
   for (c, n) in enumerate([6, 12, 24, 16])
       for i in 1:n
           for j in [2, 4]
-              ls[l][i].layer[j].weight.data .= weights["conv$(c+1)_$i/x$(j÷2)_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:]
+              ls[l][i].layer[j].weight.data .= flipkernel(weights["conv$(c+1)_$i/x$(j÷2)_w_0"])
               ls[l][i].layer[j-1].β.data .= weights["conv$(c+1)_$i/x$(j÷2)/bn_b_0"]
               ls[l][i].layer[j-1].γ.data .= weights["conv$(c+1)_$i/x$(j÷2)/bn_w_0"]
           end
@@ -47,7 +47,7 @@ function trained_densenet121_layers()
       l += 2
   end
   for i in [5, 7, 9] # Transition Block Conv Layers
-    ls[i][2].weight.data .= weights["conv$(i÷2)_blk_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:]
+    ls[i][2].weight.data .= flipkernel(weights["conv$(i÷2)_blk_w_0"])
     ls[i][1].β.data .= weights["conv$(i÷2)_blk/bn_b_0"]
     ls[i][1].γ.data .= weights["conv$(i÷2)_blk/bn_w_0"]
   end

@@ -50,17 +50,38 @@ function trained_resnet50_layers()
   weight = Metalhead.weights("resnet.bson")
   weights = Dict{Any ,Any}()
   for ele in keys(weight)
-    weights[string(ele)] = convert(Array{Float64, N} where N, weight[ele])
+    weights[string(ele)] = weight[ele]
   end
   ls = load_resnet(resnet_configs["resnet50"]...)
-  ls[1].weight.data .= flipkernel(weights["gpu_0/conv1_w_0"])
+  ls[1][1].weight.data .= flipkernel(weights["gpu_0/conv1_w_0"])
+  ls[1][2].σ² .= weights["gpu_0/res_conv1_bn_riv_0"]
+  ls[1][2].layers[2].μ .= weights["gpu_0/res_conv1_bn_rm_0"]
+  ls[1][2].layers[2].β = weights["gpu_0/res_conv1_bn_b_0"]
+  ls[1][2].layers[2].γ = weights["gpu_0/res_conv1_bn_s_0"]
   count = 2
   for j in [3:5, 6:9, 10:15, 16:18]
     for p in j
       ls[p].layers[1].weight.data .= flipkernel(weights["gpu_0/res$(count)_$(p-j[1])_branch2a_w_0"])
+      ls[p].layers[2].σ² .= weights["gpu_0/res$(count)_$(p-j[1])_branch2a_bn_riv_0"]
+      ls[p].layers[2].μ .= weights["gpu_0/res$(count)_$(p-j[1])_branch2a_bn_rm_0"]
+      ls[p].layers[2].β = weights["gpu_0/res$(count)_$(p-j[1])_branch2a_bn_b_0"]
+      ls[p].layers[2].γ = weights["gpu_0/res$(count)_$(p-j[1])_branch2a_bn_s_0"]
       ls[p].layers[3].weight.data .= flipkernel(weights["gpu_0/res$(count)_$(p-j[1])_branch2b_w_0"])
+      ls[p].layers[4].σ² .= weights["gpu_0/res$(count)_$(p-j[1])_branch2b_bn_riv_0"]
+      ls[p].layers[4].μ .= weights["gpu_0/res$(count)_$(p-j[1])_branch2b_bn_rm_0"]
+      ls[p].layers[4].β = weights["gpu_0/res$(count)_$(p-j[1])_branch2b_bn_b_0"]
+      ls[p].layers[4].γ = weights["gpu_0/res$(count)_$(p-j[1])_branch2b_bn_s_0"]
       ls[p].layers[5].weight.data .= flipkernel(weights["gpu_0/res$(count)_$(p-j[1])_branch2c_w_0"])
+      ls[p].layers[6].σ² .= weights["gpu_0/res$(count)_$(p-j[1])_branch2c_bn_riv_0"]
+      ls[p].layers[6].μ .= weights["gpu_0/res$(count)_$(p-j[1])_branch2c_bn_rm_0"]
+      ls[p].layers[6].β = weights["gpu_0/res$(count)_$(p-j[1])_branch2c_bn_b_0"]
+      ls[p].layers[6].γ = weights["gpu_0/res$(count)_$(p-j[1])_branch2c_bn_s_0"]
     end
+    ls[j[1]].shortcut[1].weight.data .= flipkernel(weights["gpu_0/res$(count)_0_branch1_w_0"])
+    ls[j[1]].shortcut[2].σ² .= weights["gpu_0/res$(count)_0_branch1_bn_riv_0"]
+    ls[j[1]].shortcut[2].μ .= weights["gpu_0/res$(count)_0_branch1_bn_rm_0"]
+    ls[j[1]].shortcut[2].β = weights["gpu_0/res$(count)_0_branch1_bn_b_0"]
+    ls[j[1]].shortcut[2].γ = weights["gpu_0/res$(count)_0_branch1_bn_s_0"]
     count += 1
   end
   ls[21].W.data .= transpose(weights["gpu_0/pred_w_0"]); ls[21].b.data .= weights["gpu_0/pred_b_0"]
@@ -73,7 +94,8 @@ function load_resnet(Block, layers, initial_filters::Int = 64, nclasses::Int = 1
   local residual = []
   local bottom = []
 
-  push!(top, Conv((7,7), 3=>initial_filters, pad = (3,3), stride = (2,2)))
+  push!(top, Chain(Conv((7,7), 3=>initial_filters, pad = (3,3), stride = (2,2)),
+                   BatchNorm(initial_filters)))
   push!(top, MaxPool((3,3), pad = (1,1), stride = (2,2)))
 
   for i in 1:length(layers)
