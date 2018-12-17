@@ -55,9 +55,9 @@ function trained_resnet50_layers()
   ls = load_resnet(resnet_configs["resnet50"]...)
   ls[1][1].weight.data .= flipkernel(weights["gpu_0/conv1_w_0"])
   ls[1][2].σ² .= weights["gpu_0/res_conv1_bn_riv_0"]
-  ls[1][2].layers[2].μ .= weights["gpu_0/res_conv1_bn_rm_0"]
-  ls[1][2].layers[2].β = weights["gpu_0/res_conv1_bn_b_0"]
-  ls[1][2].layers[2].γ = weights["gpu_0/res_conv1_bn_s_0"]
+  ls[1][2].μ .= weights["gpu_0/res_conv1_bn_rm_0"]
+  ls[1][2].β = weights["gpu_0/res_conv1_bn_b_0"]
+  ls[1][2].γ = weights["gpu_0/res_conv1_bn_s_0"]
   count = 2
   for j in [3:5, 6:9, 10:15, 16:18]
     for p in j
