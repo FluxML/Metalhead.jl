@@ -29,12 +29,14 @@ function trained_densenet121_layers()
   weight = Metalhead.weights("densenet.bson")
   weights = Dict{Any, Any}()
   for ele in keys(weight)
-    weights[string(ele)] = convert(Array{Float64, N} where N ,weight[ele])
+    weights[string(ele)] = weight[ele]
   end
   ls = load_densenet(densenet_configs["densenet121"]...)
   ls[1].weight.data .= flipkernel(weights["conv1_w_0"])
   ls[2].β.data .= weights["conv1/bn_b_0"]
   ls[2].γ.data .= weights["conv1/bn_w_0"]
+  ls[2].σ² .= weights["conv1/bn_var_0"]
+  ls[2].μ .= weights["conv1/bn_mean_0"]
   l = 4
   for (c, n) in enumerate([6, 12, 24, 16])
       for i in 1:n
@@ -42,6 +44,8 @@ function trained_densenet121_layers()
               ls[l][i].layer[j].weight.data .= flipkernel(weights["conv$(c+1)_$i/x$(j÷2)_w_0"])
               ls[l][i].layer[j-1].β.data .= weights["conv$(c+1)_$i/x$(j÷2)/bn_b_0"]
               ls[l][i].layer[j-1].γ.data .= weights["conv$(c+1)_$i/x$(j÷2)/bn_w_0"]
+              ls[l][i].layer[j-1].σ² .= weights["conv$(c+1)_$i/x$(j÷2)/bn_var_0"]
+              ls[l][i].layer[j-1].μ .= weights["conv$(c+1)_$i/x$(j÷2)/bn_mean_0"]
           end
       end
       l += 2
@@ -50,7 +54,13 @@ function trained_densenet121_layers()
     ls[i][2].weight.data .= flipkernel(weights["conv$(i÷2)_blk_w_0"])
     ls[i][1].β.data .= weights["conv$(i÷2)_blk/bn_b_0"]
     ls[i][1].γ.data .= weights["conv$(i÷2)_blk/bn_w_0"]
+    ls[i][1].σ² .= weights["conv$(i÷2)_blk/bn_var_0"]
+    ls[i][1].μ .= weights["conv$(i÷2)_blk/bn_mean_0"]
   end
+  ls[11].β.data .= weights["conv5_blk/bn_b_0"]
+  ls[11].γ.data .= weights["conv5_blk/bn_w_0"]
+  ls[11].σ² .= weights["conv5_blk/bn_var_0"]
+  ls[11].μ .= weights["conv5_blk/bn_mean_0"]
   ls[end-1].W.data .= transpose(dropdims(weights["fc6_w_0"], dims = (1, 2))) # Dense Layers
   ls[end-1].b.data .= weights["fc6_b_0"]
   Flux.testmode!(ls)

@@ -47,7 +47,7 @@ function trained_googlenet_layers()
   weight = Metalhead.weights("googlenet.bson")
   weights = Dict{Any, Any}()
   for ele in keys(weight)
-    weights[string(ele)] = convert(Array{Float64, N} where N, weight[ele])
+    weights[string(ele)] = weight[ele]
   end
   ls = load_googlenet()
   ls[1].weight.data .= flipkernel(weights["conv1/7x7_s2_w_0"]); ls[1].bias.data .= weights["conv1/7x7_s2_b_0"]

@@ -56,32 +56,32 @@ function trained_resnet50_layers()
   ls[1][1].weight.data .= flipkernel(weights["gpu_0/conv1_w_0"])
   ls[1][2].σ² .= weights["gpu_0/res_conv1_bn_riv_0"]
   ls[1][2].μ .= weights["gpu_0/res_conv1_bn_rm_0"]
-  ls[1][2].β = weights["gpu_0/res_conv1_bn_b_0"]
-  ls[1][2].γ = weights["gpu_0/res_conv1_bn_s_0"]
+  ls[1][2].β.data .= weights["gpu_0/res_conv1_bn_b_0"]
+  ls[1][2].γ.data .= weights["gpu_0/res_conv1_bn_s_0"]
   count = 2
   for j in [3:5, 6:9, 10:15, 16:18]
     for p in j
       ls[p].layers[1].weight.data .= flipkernel(weights["gpu_0/res$(count)_$(p-j[1])_branch2a_w_0"])
       ls[p].layers[2].σ² .= weights["gpu_0/res$(count)_$(p-j[1])_branch2a_bn_riv_0"]
       ls[p].layers[2].μ .= weights["gpu_0/res$(count)_$(p-j[1])_branch2a_bn_rm_0"]
-      ls[p].layers[2].β = weights["gpu_0/res$(count)_$(p-j[1])_branch2a_bn_b_0"]
-      ls[p].layers[2].γ = weights["gpu_0/res$(count)_$(p-j[1])_branch2a_bn_s_0"]
+      ls[p].layers[2].β.data .= weights["gpu_0/res$(count)_$(p-j[1])_branch2a_bn_b_0"]
+      ls[p].layers[2].γ.data .= weights["gpu_0/res$(count)_$(p-j[1])_branch2a_bn_s_0"]
       ls[p].layers[3].weight.data .= flipkernel(weights["gpu_0/res$(count)_$(p-j[1])_branch2b_w_0"])
       ls[p].layers[4].σ² .= weights["gpu_0/res$(count)_$(p-j[1])_branch2b_bn_riv_0"]
       ls[p].layers[4].μ .= weights["gpu_0/res$(count)_$(p-j[1])_branch2b_bn_rm_0"]
-      ls[p].layers[4].β = weights["gpu_0/res$(count)_$(p-j[1])_branch2b_bn_b_0"]
-      ls[p].layers[4].γ = weights["gpu_0/res$(count)_$(p-j[1])_branch2b_bn_s_0"]
+      ls[p].layers[4].β.data .= weights["gpu_0/res$(count)_$(p-j[1])_branch2b_bn_b_0"]
+      ls[p].layers[4].γ.data .= weights["gpu_0/res$(count)_$(p-j[1])_branch2b_bn_s_0"]
       ls[p].layers[5].weight.data .= flipkernel(weights["gpu_0/res$(count)_$(p-j[1])_branch2c_w_0"])
       ls[p].layers[6].σ² .= weights["gpu_0/res$(count)_$(p-j[1])_branch2c_bn_riv_0"]
       ls[p].layers[6].μ .= weights["gpu_0/res$(count)_$(p-j[1])_branch2c_bn_rm_0"]
-      ls[p].layers[6].β = weights["gpu_0/res$(count)_$(p-j[1])_branch2c_bn_b_0"]
-      ls[p].layers[6].γ = weights["gpu_0/res$(count)_$(p-j[1])_branch2c_bn_s_0"]
+      ls[p].layers[6].β.data .= weights["gpu_0/res$(count)_$(p-j[1])_branch2c_bn_b_0"]
+      ls[p].layers[6].γ.data .= weights["gpu_0/res$(count)_$(p-j[1])_branch2c_bn_s_0"]
     end
     ls[j[1]].shortcut[1].weight.data .= flipkernel(weights["gpu_0/res$(count)_0_branch1_w_0"])
     ls[j[1]].shortcut[2].σ² .= weights["gpu_0/res$(count)_0_branch1_bn_riv_0"]
     ls[j[1]].shortcut[2].μ .= weights["gpu_0/res$(count)_0_branch1_bn_rm_0"]
-    ls[j[1]].shortcut[2].β = weights["gpu_0/res$(count)_0_branch1_bn_b_0"]
-    ls[j[1]].shortcut[2].γ = weights["gpu_0/res$(count)_0_branch1_bn_s_0"]
+    ls[j[1]].shortcut[2].β.data .= weights["gpu_0/res$(count)_0_branch1_bn_b_0"]
+    ls[j[1]].shortcut[2].γ.data .= weights["gpu_0/res$(count)_0_branch1_bn_s_0"]
     count += 1
   end
   ls[21].W.data .= transpose(weights["gpu_0/pred_w_0"]); ls[21].b.data .= weights["gpu_0/pred_b_0"]
