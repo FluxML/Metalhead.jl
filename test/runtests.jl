@@ -69,8 +69,8 @@ using Metalhead, Flux, Test, InteractiveUtils
     GC.gc()
     # Test models which have a version parameter
     for (T, version, MODEL) in [
-            (Float64, "1.0",SqueezeNet),
-            (Float64, "1.1",SqueezeNet)
+            (Float64, "1.0", SqueezeNet),
+            (Float64, "1.1", SqueezeNet)
         ]
         GC.gc()
 
@@ -100,8 +100,8 @@ end
             (Float32, SqueezeNet),
             (Float32, VGG19),
             (Float32, ResNet50),
-            (Float64, DenseNet121),
-            (Float64, GoogleNet)
+            (Float32, DenseNet121),
+            (Float32, GoogleNet)
         ]
         GC.gc()
 
