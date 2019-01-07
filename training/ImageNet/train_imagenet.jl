@@ -60,12 +60,6 @@ Performance options:
                         by `Sys.CPU_THREADS`.
   --gpus=<gpus>         Engage the lesser dreadnought engine for training.
                         Identified by device ID (e.g. `--gpus=0,2,3`).
-  --xrt=<xrt_addr>      Engage the greater dreadnought engine for training.
-                        Identified by the XRT endpoint to communicate with,
-                        (e.g. `--xrt=localhost:8740`)
-  --xla-device=<dev>    Lock ops to a given XLA device (all devices will be
-                        enumerated, and the first matching device will be 
-                        chosen)
 
 Misc options:
   --help                Print out this help and exit.
@@ -118,7 +112,4 @@ end
 
 # Train away, train away, train away |> 's/train/sail/ig'
 @info("Beginning training run...")
-#for (x, y) in ts.train_dataset
-#    @show size(x)
-#end
-train!(ts, output_data_dir, accelerator)
+train!(ts, output_data_dir)

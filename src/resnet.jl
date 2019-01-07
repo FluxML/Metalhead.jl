@@ -95,7 +95,7 @@ function load_resnet(Block, layers, initial_filters::Int = 64, nclasses::Int = 1
   else
     push!(bottom, (Dense(512, nclasses)))
   end
-  push!(bottom, softmax)
+  #push!(bottom, softmax)
 
   Chain(top..., residual..., bottom...)
 end

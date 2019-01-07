@@ -39,7 +39,7 @@ function parse_option_list(optlist::String)
         end
         return data
     end
-    
+
     # Give automatic data type parsing the old college try.
     parsify(data::Pair) = (data.first => floatify(data.second))
     function parsify(data)
@@ -125,7 +125,7 @@ else
     # later even if no options have been set
     model_args = ()
     model_kwargs = ()
-end    
+end
 
 # Get our model constructor
 if arg_set("--model")
@@ -163,25 +163,4 @@ if arg_set("--gpus")
     gpu_devices = parse.(Int, split(args["--gpus"], ","))
 else
     gpu_devices = Int[]
-end
-
-if arg_set("--xrt")
-    xrt_address = args["--xrt"]
-else
-    xrt_address = nothing
-end
-
-if arg_set("--xla-device")
-    if xrt_address === nothing
-        error("Must set `--xrt` endpoint along with --xla-device")
-    end
-    xla_device = args["--xla-device"]
-else
-    xla_device = nothing
-end
-
-if arg_set("--xrt") && arg_set("--gpus")
-    # Choose one or the other, bucko.  If you want to run against an XLA_GPU
-    # device, use `--xrt` and `--xla-device=/XLA_GPU`
-    error("Cannot set both --xrt and --gpus!")
 end
