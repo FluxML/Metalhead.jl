@@ -1,6 +1,6 @@
 # Image datasets
 
-Drop image datasets in this folder for auto-dection support
+Drop image datasets in this folder for auto-detection support
 using `Metalhead.datasets()`. That function will attempt to
 auto-detect any standard datasets present in this folder and
 make them easily available. This file, lists, for each data
