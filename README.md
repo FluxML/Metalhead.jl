@@ -41,7 +41,7 @@ julia> vgg.layers[1:21](x)
 ```
 
 # Working with common datasets
-Metalhead includes support for wokring with several common object recognition datasets.
+Metalhead includes support for working with several common object recognition datasets.
 The `datasets()` function will attempt to auto-detect any common dataset placed in
 the `datasets/`. The `Metalhead.download` function can be used to download these datasets
 (where such automatic download is possible - for other data sets, see `datasets/README.md`),
