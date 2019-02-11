@@ -50,7 +50,7 @@ e.g.:
 Metalhead.download(CIFAR10)
 ```
 
-Once a dataset is load, it's training, validation, and test images are available using the
+Once a dataset is loaded, it's training, validation, and test images are available using the
 `trainimgs`, `valimgs`, and `testimgs` functions. E.g.
 
 ```
