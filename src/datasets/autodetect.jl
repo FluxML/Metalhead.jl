@@ -10,6 +10,9 @@ function datasets()
         elseif entry == "cifar-10-batches-bin"
             push!(datasets, CIFAR10.BinPackedFS(path))
             continue
+        elseif entry == "VOC2012"
+            push!(datasets, PascalVOC.RawFS(string(path,"/VOC2012/")))
+            continue
         end
     end
     datasets
@@ -32,6 +35,14 @@ function dataset(which)
             sets = collect(Iterators.filter(x->isa(x, CIFAR10.DataSet), datasets()))
         end
         return first(sets)
+    elseif which == PascalVOC
+        sets = collect(Iterators.filter(x->isa(x, PascalVOC.DataSet), datasets()))
+        if isempty(sets)
+            download(PascalVOC)
+            sets = collect(Iterators.filter(x->isa(x, PascalVOC.DataSet), datasets()))
+        end
+        PascalVOC.check_populate_xml_file_names()
+        return first(sets)
     else
         error("Autodetection not supported for $(which)")
     end
@@ -39,6 +50,10 @@ end
 valimgs(m::Module) = valimgs(dataset(m))
 testimgs(m::Module) = testimgs(dataset(m))
 trainimgs(m::Module) = trainimgs(dataset(m))
+
+valimgs_box(m::Module) = valimgs_box(dataset(m))
+testimgs_box(m::Module) = testimgs_box(dataset(m))
+trainimgs_box(m::Module) = trainimgs_box(dataset(m))
 
 function download(which)
     if which === ImageNet
@@ -52,6 +67,8 @@ function download(which)
             end
             run(`tar -xzvf $local_path -C $dir_path`)
         end
+    elseif which == PascalVOC
+        error("PascalVOC is not automatiacally downloadable. See instructions in datasets/README.md")
     else
         error("Download not supported for $(which)")
     end
