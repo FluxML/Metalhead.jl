@@ -5,7 +5,12 @@ using Flux, Images, ImageFiltering, BSON, REPL, Requires, Statistics
 using Flux: @treelike
 
 # Models
-export VGG19, SqueezeNet, DenseNet, ResNet, GoogleNet
+export VGG19, VGG16, VGG13, VGG11, SqueezeNet, DenseNet121,
+       DenseNet169, DenseNet201, DenseNet264, ResNet18,
+       ResNet34, ResNet50, ResNet101, ResNet152, GoogleNet
+
+# Trained Models Loader
+export trained
 
 # Useful re-export from Images
 export load
@@ -30,7 +35,7 @@ include("display/terminal.jl")
 include("datasets/imagenet.jl")
 include("datasets/cifar10.jl")
 include("datasets/autodetect.jl")
-include("vgg19.jl")
+include("vgg.jl")
 include("squeezenet.jl")
 include("densenet.jl")
 include("resnet.jl")

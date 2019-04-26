@@ -14,7 +14,7 @@ Bottleneck(in_planes, growth_rate) = Bottleneck(
 
 Transition(chs::Pair{<:Int, <:Int}) = Chain(BatchNorm(chs[1], relu),
                                             Conv((1, 1), chs),
-                                            x -> meanpool(x, (2, 2)))
+                                            MeanPool((2, 2)))
 
 function _make_dense_layers(block, in_planes, growth_rate, nblock)
   local layers = []
@@ -25,12 +25,54 @@ function _make_dense_layers(block, in_planes, growth_rate, nblock)
   Chain(layers...)
 end
 
-function _densenet(nblocks = [6, 12, 24, 16]; block = Bottleneck, growth_rate = 32, reduction = 0.5, num_classes = 1000)
+function trained_densenet121_layers()
+  weight = Metalhead.weights("densenet.bson")
+  weights = Dict{Any, Any}()
+  for ele in keys(weight)
+    weights[string(ele)] = weight[ele]
+  end
+  ls = load_densenet(densenet_configs["densenet121"]...)
+  ls[1].weight.data .= flipkernel(weights["conv1_w_0"])
+  ls[2].β.data .= weights["conv1/bn_b_0"]
+  ls[2].γ.data .= weights["conv1/bn_w_0"]
+  ls[2].σ² .= weights["conv1/bn_var_0"]
+  ls[2].μ .= weights["conv1/bn_mean_0"]
+  l = 4
+  for (c, n) in enumerate([6, 12, 24, 16])
+      for i in 1:n
+          for j in [2, 4]
+              ls[l][i].layer[j].weight.data .= flipkernel(weights["conv$(c+1)_$i/x$(j÷2)_w_0"])
+              ls[l][i].layer[j-1].β.data .= weights["conv$(c+1)_$i/x$(j÷2)/bn_b_0"]
+              ls[l][i].layer[j-1].γ.data .= weights["conv$(c+1)_$i/x$(j÷2)/bn_w_0"]
+              ls[l][i].layer[j-1].σ² .= weights["conv$(c+1)_$i/x$(j÷2)/bn_var_0"]
+              ls[l][i].layer[j-1].μ .= weights["conv$(c+1)_$i/x$(j÷2)/bn_mean_0"]
+          end
+      end
+      l += 2
+  end
+  for i in [5, 7, 9] # Transition Block Conv Layers
+    ls[i][2].weight.data .= flipkernel(weights["conv$(i÷2)_blk_w_0"])
+    ls[i][1].β.data .= weights["conv$(i÷2)_blk/bn_b_0"]
+    ls[i][1].γ.data .= weights["conv$(i÷2)_blk/bn_w_0"]
+    ls[i][1].σ² .= weights["conv$(i÷2)_blk/bn_var_0"]
+    ls[i][1].μ .= weights["conv$(i÷2)_blk/bn_mean_0"]
+  end
+  ls[11].β.data .= weights["conv5_blk/bn_b_0"]
+  ls[11].γ.data .= weights["conv5_blk/bn_w_0"]
+  ls[11].σ² .= weights["conv5_blk/bn_var_0"]
+  ls[11].μ .= weights["conv5_blk/bn_mean_0"]
+  ls[end-1].W.data .= transpose(dropdims(weights["fc6_w_0"], dims = (1, 2))) # Dense Layers
+  ls[end-1].b.data .= weights["fc6_b_0"]
+  Flux.testmode!(ls)
+  return ls
+end
+
+function load_densenet(block, nblocks; growth_rate = 32, reduction = 0.5, num_classes = 1000)
   num_planes = 2growth_rate
   layers = []
   push!(layers, Conv((7, 7), 3=>num_planes, stride = (2, 2), pad = (3, 3)))
   push!(layers, BatchNorm(num_planes, relu))
-  push!(layers, x -> maxpool(x, (3, 3), stride = (2, 2), pad = (1, 1)))
+  push!(layers, MaxPool((3, 3), stride = (2, 2), pad = (1, 1)))
 
   for i in 1:3
     push!(layers, _make_dense_layers(block, num_planes, growth_rate, nblocks[i]))
@@ -44,51 +86,69 @@ function _densenet(nblocks = [6, 12, 24, 16]; block = Bottleneck, growth_rate = 
   num_planes += nblocks[4] * growth_rate
   push!(layers, BatchNorm(num_planes, relu))
 
-  Chain(layers..., x -> meanpool(x, (7, 7)),
+  Chain(layers..., MeanPool((7, 7)),
         x -> reshape(x, :, size(x, 4)),
         Dense(num_planes, num_classes), softmax)
 end
 
-function densenet_layers()
-  weight = Metalhead.weights("densenet.bson")
-  weights = Dict{Any, Any}()
-  for ele in keys(weight)
-    weights[string(ele)] = convert(Array{Float64, N} where N ,weight[ele])
-  end
-  ls = _densenet()
-  ls[1].weight.data .= weights["conv1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:]
-  ls[2].β.data .= weights["conv1/bn_b_0"]
-  ls[2].γ.data .= weights["conv1/bn_w_0"]
-  l = 4
-  for (c, n) in enumerate([6, 12, 24, 16])
-      for i in 1:n
-          for j in [2, 4]
-              ls[l][i].layer[j].weight.data .= weights["conv$(c+1)_$i/x$(j÷2)_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:]
-              ls[l][i].layer[j-1].β.data .= weights["conv$(c+1)_$i/x$(j÷2)/bn_b_0"]
-              ls[l][i].layer[j-1].γ.data .= weights["conv$(c+1)_$i/x$(j÷2)/bn_w_0"]
-          end
-      end
-      l += 2
-  end
-  for i in [5, 7, 9] # Transition Block Conv Layers
-    ls[i][2].weight.data .= weights["conv$(i÷2)_blk_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:]
-    ls[i][1].β.data .= weights["conv$(i÷2)_blk/bn_b_0"]
-    ls[i][1].γ.data .= weights["conv$(i÷2)_blk/bn_w_0"]
-  end
-  ls[end-1].W.data .= transpose(dropdims(weights["fc6_w_0"], dims = (1, 2))) # Dense Layers
-  ls[end-1].b.data .= weights["fc6_b_0"]
-  Flux.testmode!(ls)
-  return ls
-end
+densenet_configs =
+  Dict("densenet121" => (Bottleneck, [6, 12, 24, 16]),
+       "densenet169" => (Bottleneck, [6, 12, 32, 32]),
+       "densenet201" => (Bottleneck, [6, 12, 48, 32]),
+       "densenet264" => (Bottleneck, [6, 12, 64, 48]))
 
-struct DenseNet <: ClassificationModel{ImageNet.ImageNet1k}
+struct DenseNet121 <: ClassificationModel{ImageNet.ImageNet1k}
   layers::Chain
 end
 
-DenseNet() = DenseNet(densenet_layers())
+DenseNet121() = DenseNet121(load_densenet(densenet_configs["densenet121"]...))
 
-Base.show(io::IO, ::DenseNet) = print(io, "DenseNet()")
+trained(::Type{DenseNet121}) = DenseNet121(trained_densenet121_layers())
 
-@treelike DenseNet
+Base.show(io::IO, ::DenseNet121) = print(io, "DenseNet121()")
 
-(m::DenseNet)(x) = m.layers(x)
+@treelike DenseNet121
+
+(m::DenseNet121)(x) = m.layers(x)
+
+struct DenseNet169 <: ClassificationModel{ImageNet.ImageNet1k}
+  layers::Chain
+end
+
+DenseNet169() = DenseNet169(load_densenet(densenet_configs["densenet169"]...))
+
+trained(::Type{DenseNet169}) = error("Pretrained Weights for DenseNet169 are not available")
+
+Base.show(io::IO, ::DenseNet169) = print(io, "DenseNet169()")
+
+@treelike DenseNet169
+
+(m::DenseNet169)(x) = m.layers(x)
+
+struct DenseNet201 <: ClassificationModel{ImageNet.ImageNet1k}
+  layers::Chain
+end
+
+DenseNet201() = DenseNet201(load_densenet(densenet_configs["densenet201"]...))
+
+trained(::Type{DenseNet201}) = error("Pretrained Weights for DenseNet201 are not available")
+
+Base.show(io::IO, ::DenseNet201) = print(io, "DenseNet201()")
+
+@treelike DenseNet201
+
+(m::DenseNet201)(x) = m.layers(x)
+
+struct DenseNet264 <: ClassificationModel{ImageNet.ImageNet1k}
+  layers::Chain
+end
+
+DenseNet264() = DenseNet264(load_densenet(densenet_configs["densenet264"]..., growth_rate=48))
+
+trained(::Type{DenseNet264}) = error("Pretrained Weights for DenseNet264 are not available")
+
+Base.show(io::IO, ::DenseNet264) = print(io, "DenseNet264()")
+
+@treelike DenseNet264
+
+(m::DenseNet264)(x) = m.layers(x)
