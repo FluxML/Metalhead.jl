@@ -13,7 +13,7 @@ Bottleneck(in_planes, growth_rate) = Bottleneck(Chain(BatchNorm(in_planes, relu)
 
 Transition(chs::Pair{<:Int,<:Int}) = Chain(BatchNorm(chs[1], relu),
                                             Conv((1, 1), chs),
-                                            x->meanpool(x, (2, 2)))
+                                            MeanPool((2, 2)))
 
 function _make_dense_layers(block, in_planes, growth_rate, nblock)
     local layers = []
@@ -43,7 +43,7 @@ function _densenet(nblocks = [6, 12, 24, 16]; block = Bottleneck, growth_rate = 
     num_planes += nblocks[4] * growth_rate
     push!(layers, BatchNorm(num_planes, relu))
 
-    Chain(layers..., x->meanpool(x, (7, 7)),
+    Chain(layers..., MeanPool((7, 7)),
         x->reshape(x, :, size(x, 4)),
         Dense(num_planes, num_classes), softmax)
 end

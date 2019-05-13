@@ -42,7 +42,7 @@ _googlenet() = Chain(Conv((7, 7), 3=>64, stride = (2, 2), relu, pad = (3, 3)),
       MaxPool((3, 3), stride = (2, 2), pad = (1, 1)),
       InceptionBlock(832, 256, 160, 320, 32, 128, 128),
       InceptionBlock(832, 384, 192, 384, 48, 128, 128),
-      x -> meanpool(x, (7, 7), stride = (1, 1), pad = (0, 0)),
+      MeanPool((7, 7), stride = (1, 1), pad = (0, 0)),
       x -> reshape(x, :, size(x, 4)),
       Dropout(0.4),
       Dense(1024, 1000), softmax)
