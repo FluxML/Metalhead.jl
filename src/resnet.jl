@@ -44,7 +44,7 @@ function resnet50()
   local layer_arr = []
 
   push!(layer_arr, Conv((7,7), 3=>64, pad = (3,3), stride = (2,2)))
-  push!(layer_arr, x -> maxpool(x, (3,3), pad = (1,1), stride = (2,2)))
+  push!(layer_arr, MaxPool((3,3), pad = (1,1), stride = (2,2)))
 
   initial_filters = 64
   for i in 1:length(layers)
@@ -55,7 +55,7 @@ function resnet50()
     initial_filters *= 2
   end
 
-  push!(layer_arr, x -> meanpool(x, (7,7)))
+  push!(layer_arr, MeanPool((7,7)))
   push!(layer_arr, x -> reshape(x, :, size(x,4)))
   push!(layer_arr, (Dense(2048, 1000)))
   push!(layer_arr, softmax)
