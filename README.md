@@ -59,6 +59,14 @@ julia> valimgs(dataset(ImageNet))[rand(1:50000, 10)]
 
 will fetch 10 random validation images from the ImageNet data set.
 
+For working with the PascalVOC dataset, use the `trainimgs_box` interface to access the data
+
+```
+julia> trainimgs_box(dataset(PascalVOC))[1]
+```
+
+will give the first training image along with the objects and their bounding boxes.
+
 # Inline Images at the REPL
 
 If you are using OS X, it is recommended that you use iTerm2 and install the

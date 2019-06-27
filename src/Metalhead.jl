@@ -14,10 +14,11 @@ export load
 export predict, classify
 
 # Data Sets
-export ImageNet, CIFAR10
+export ImageNet, CIFAR10, PascalVOC
 
 # Data set utilities
 export trainimgs, testimgs, valimgs, dataset, datasets
+export trainimgs_box, testimgs_box, valimgs_box
 
 function __init__()
     @require TerminalExtensions="d3a6a179-465e-5219-bd3e-0137f7fd17c7" include("display/terminal_extensions.jl")
@@ -29,6 +30,7 @@ include("utils.jl")
 include("display/terminal.jl")
 include("datasets/imagenet.jl")
 include("datasets/cifar10.jl")
+include("datasets/pascalvoc.jl")
 include("datasets/autodetect.jl")
 include("vgg19.jl")
 include("squeezenet.jl")

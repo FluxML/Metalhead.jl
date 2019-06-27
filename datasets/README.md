@@ -27,3 +27,7 @@ able to resume downloads.
 
 We support the CIFAR-10 dataset in binary format from https://www.cs.toronto.edu/~kriz/cifar.html. Simply download the archive from https://www.cs.toronto.edu/~kriz/cifar-10-binary.tar.gz and move the resulting `cifar-10-batches-bin` folder here
 for autodetection to support it.
+
+# PascalVOC-2012
+
+The zip file needs to be downloaded from https://www.kaggle.com/huanghanchina/pascal-voc-2012/downloads/pascal-voc-2012.zip/1 . unzip the file and move the 'VOC2012' here.
