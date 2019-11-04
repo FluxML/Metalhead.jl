@@ -66,6 +66,7 @@ function preprocess(im::AbstractMatrix{<:AbstractRGB})
 end
 
 preprocess(im) = preprocess(load(im))
+preprocess(im::AbstractMatrix) = preprocess(RGB.(im))
 
 forward(model, im) = vec(model(preprocess(RGB.(im))))
 
