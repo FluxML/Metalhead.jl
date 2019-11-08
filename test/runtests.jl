@@ -9,6 +9,7 @@ using Metalhead, Test
             (Float64, DenseNet),
             (Float64, GoogleNet),
         ]
+	@info "Testing $(MODEL)..."
         model = MODEL()
 
         x_test = rand(T, 224, 224, 3, 1)
