@@ -1,6 +1,7 @@
 using Metalhead, Test
 
 # Standardized testing for the models of tomorrow
+@info "Starting Basic Models Tests..."
 @testset "Basic Model Tests" begin
     for (T, MODEL) in [
             (Float32, VGG19),
@@ -8,6 +9,7 @@ using Metalhead, Test
             (Float64, DenseNet),
             (Float64, GoogleNet),
         ]
+	@info "Testing $(MODEL)..."
         model = MODEL()
 
         x_test = rand(T, 224, 224, 3, 1)
@@ -23,6 +25,7 @@ using Metalhead, Test
 end
 
 # Test proper download and functioning of CIFAR10
+@info "Starting CIFAR10 tests..."
 @testset "CIFAR dataset tests" begin
     x1 = trainimgs(CIFAR10)[1]
     x2 = valimgs(CIFAR10)[1]
@@ -33,6 +36,7 @@ end
 end
 
 # Test printing of prediction
+@info "Testing Prediction on CIFAR10..."
 @testset "Prediction table display" begin
     x = valimgs(CIFAR10)[1]
     m = VGG19()
