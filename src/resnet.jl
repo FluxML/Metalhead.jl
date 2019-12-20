@@ -4,7 +4,7 @@ struct ResidualBlock
   shortcut
 end
 
-@treelike ResidualBlock
+@functor ResidualBlock
 
 function ResidualBlock(filters, kernels::Array{Tuple{Int,Int}}, pads::Array{Tuple{Int,Int}}, strides::Array{Tuple{Int,Int}}, shortcut = identity)
   local conv_layers = []
