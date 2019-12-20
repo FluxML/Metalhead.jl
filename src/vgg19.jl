@@ -29,7 +29,6 @@ function vgg19_layers()
     Dropout(0.5f0),
     Dense(ws[:fc8_w_0]', ws[:fc8_b_0]),
     softmax)
-  Flux.testmode!(ls)
   return ls
 end
 
