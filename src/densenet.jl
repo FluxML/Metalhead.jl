@@ -2,7 +2,7 @@ struct Bottleneck
     layer
 end
 
-@treelike Bottleneck
+@functor Bottleneck
 
 Bottleneck(in_planes, growth_rate) = Bottleneck(Chain(BatchNorm(in_planes, relu),
                                           Conv((1, 1), in_planes => 4growth_rate),
@@ -55,28 +55,27 @@ function densenet_layers()
         weights[string(ele)] = convert(Array{Float64,N} where N, weight[ele])
     end
     ls = _densenet()
-    ls[1].weight.data .= weights["conv1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:]
-    ls[2].β.data .= weights["conv1/bn_b_0"]
-    ls[2].γ.data .= weights["conv1/bn_w_0"]
+    ls[1].weight .= weights["conv1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:]
+    ls[2].β .= weights["conv1/bn_b_0"]
+    ls[2].γ .= weights["conv1/bn_w_0"]
     l = 4
     for (c, n) in enumerate([6, 12, 24, 16])
         for i in 1:n
             for j in [2, 4]
-                ls[l][i].layer[j].weight.data .= weights["conv$(c + 1)_$i/x$(j ÷ 2)_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:]
-                ls[l][i].layer[j - 1].β.data .= weights["conv$(c + 1)_$i/x$(j ÷ 2)/bn_b_0"]
-                ls[l][i].layer[j - 1].γ.data .= weights["conv$(c + 1)_$i/x$(j ÷ 2)/bn_w_0"]
+                ls[l][i].layer[j].weight .= weights["conv$(c + 1)_$i/x$(j ÷ 2)_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:]
+                ls[l][i].layer[j - 1].β .= weights["conv$(c + 1)_$i/x$(j ÷ 2)/bn_b_0"]
+                ls[l][i].layer[j - 1].γ .= weights["conv$(c + 1)_$i/x$(j ÷ 2)/bn_w_0"]
             end
         end
         l += 2
     end
     for i in [5, 7, 9] # Transition Block Conv Layers
-        ls[i][2].weight.data .= weights["conv$(i ÷ 2)_blk_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:]
-        ls[i][1].β.data .= weights["conv$(i ÷ 2)_blk/bn_b_0"]
-        ls[i][1].γ.data .= weights["conv$(i ÷ 2)_blk/bn_w_0"]
+        ls[i][2].weight .= weights["conv$(i ÷ 2)_blk_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:]
+        ls[i][1].β .= weights["conv$(i ÷ 2)_blk/bn_b_0"]
+        ls[i][1].γ .= weights["conv$(i ÷ 2)_blk/bn_w_0"]
     end
-    ls[end - 1].W.data .= transpose(dropdims(weights["fc6_w_0"], dims = (1, 2))) # Dense Layers
-    ls[end - 1].b.data .= weights["fc6_b_0"]
-    Flux.testmode!(ls)
+    ls[end - 1].W .= transpose(dropdims(weights["fc6_w_0"], dims = (1, 2))) # Dense Layers
+    ls[end - 1].b .= weights["fc6_b_0"]
     return ls
 end
 
@@ -88,6 +87,6 @@ DenseNet() = DenseNet(densenet_layers())
 
 Base.show(io::IO, ::DenseNet) = print(io, "DenseNet()")
 
-@treelike DenseNet
+@functor DenseNet
 
 (m::DenseNet)(x) = m.layers(x)

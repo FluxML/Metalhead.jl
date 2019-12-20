@@ -40,6 +40,6 @@ VGG19() = VGG19(vgg19_layers())
 
 Base.show(io::IO, ::VGG19) = print(io, "VGG19()")
 
-@treelike VGG19
+@functor VGG19
 
 (m::VGG19)(x) = m.layers(x)
