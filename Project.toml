@@ -19,7 +19,7 @@ ImageFiltering = "0.6"
 Images = "0"
 BSON = "0.2"
 ColorTypes = "0.8"
-Requires = "0.5"
+Requires = "0.5, 1.0"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
