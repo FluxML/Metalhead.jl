@@ -58,7 +58,6 @@ function squeezenet_layers()
             vec, softmax
             )
 #end
-  Flux.testmode!(ls)
   return ls
 end
 
@@ -70,6 +69,6 @@ SqueezeNet() = SqueezeNet(squeezenet_layers())
 
 Base.show(io::IO, ::SqueezeNet) = print(io, "SqueezeNet()")
 
-@treelike SqueezeNet
+@functor SqueezeNet
 
 (m::SqueezeNet)(x) = m.layers(x)

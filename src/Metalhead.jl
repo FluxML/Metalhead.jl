@@ -2,7 +2,7 @@ __precompile__()
 module Metalhead
 
 using Flux, Images, ImageFiltering, BSON, REPL, Requires, Statistics
-using Flux: @treelike
+using Flux: @functor
 
 # Models
 export VGG19, SqueezeNet, DenseNet, ResNet, GoogleNet

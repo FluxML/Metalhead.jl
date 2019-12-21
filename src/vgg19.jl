@@ -29,7 +29,6 @@ function vgg19_layers()
     Dropout(0.5f0),
     Dense(ws[:fc8_w_0]', ws[:fc8_b_0]),
     softmax)
-  Flux.testmode!(ls)
   return ls
 end
 
@@ -41,6 +40,6 @@ VGG19() = VGG19(vgg19_layers())
 
 Base.show(io::IO, ::VGG19) = print(io, "VGG19()")
 
-@treelike VGG19
+@functor VGG19
 
 (m::VGG19)(x) = m.layers(x)
