@@ -63,15 +63,15 @@ version = "2.1.0"
 
 [[CUDAdrv]]
 deps = ["CEnum", "CUDAapi", "Printf"]
-git-tree-sha1 = "0f39fddace3324707469ace7fbcbc7b28d5cf921"
+git-tree-sha1 = "72125a129271313b0f0197406585ab1c2e611f9d"
 uuid = "c5f51814-7f29-56b8-a69c-e4d8f6be1fde"
-version = "4.0.4"
+version = "5.0.0"
 
 [[CUDAnative]]
 deps = ["Adapt", "CEnum", "CUDAapi", "CUDAdrv", "DataStructures", "InteractiveUtils", "LLVM", "Libdl", "Printf", "TimerOutputs"]
-git-tree-sha1 = "a67b38619d1fa131027bac1c4a81f0012254d1fd"
+git-tree-sha1 = "6e11d5c2c91fc623952e94c4fb73f9c4db74795a"
 uuid = "be33ccc6-a3ff-5ff2-a52e-74243cff1e17"
-version = "2.6.0"
+version = "2.7.0"
 
 [[CatIndices]]
 deps = ["CustomUnitRanges", "OffsetArrays", "Test"]
@@ -135,9 +135,9 @@ version = "0.5.0"
 
 [[CuArrays]]
 deps = ["AbstractFFTs", "Adapt", "CEnum", "CUDAapi", "CUDAdrv", "CUDAnative", "DataStructures", "GPUArrays", "Libdl", "LinearAlgebra", "MacroTools", "NNlib", "Printf", "Random", "Requires", "SparseArrays", "TimerOutputs"]
-git-tree-sha1 = "e99db1397ce85975203a9d736ab37534730996ca"
+git-tree-sha1 = "51fbe053dea29ed2513e02d38380007310cf4c4b"
 uuid = "3a865a2d-5b23-5a0f-bc46-62713ec82fae"
-version = "1.5.0"
+version = "1.6.0"
 
 [[CustomUnitRanges]]
 deps = ["Test"]
@@ -393,10 +393,10 @@ version = "0.4.3"
 uuid = "a63ad114-7e13-5084-954f-fe012c677804"
 
 [[NNlib]]
-deps = ["Libdl", "LinearAlgebra", "Requires", "Statistics", "TimerOutputs"]
-git-tree-sha1 = "0c667371391fc6bb31f7f12f96a56a17098b3de8"
+deps = ["BinaryProvider", "Libdl", "LinearAlgebra", "Requires", "Statistics"]
+git-tree-sha1 = "f3021e1633f70171afd35f0425ff905144c1ccc2"
 uuid = "872c559c-99b0-510c-b3b7-b6c96a88d5cd"
-version = "0.6.0"
+version = "0.6.1"
 
 [[NaNMath]]
 git-tree-sha1 = "928b8ca9b2791081dc71a51c55347c27c618760f"
@@ -465,10 +465,10 @@ uuid = "189a3867-3050-52da-a836-e630ba90ab69"
 version = "0.2.0"
 
 [[Requires]]
-deps = ["Test"]
-git-tree-sha1 = "f6fbf4ba64d295e146e49e021207993b6b48c7d1"
+deps = ["UUIDs"]
+git-tree-sha1 = "999513b7dea8ac17359ed50ae8ea089e4464e35e"
 uuid = "ae029012-a4dd-5104-9daa-d747884805df"
-version = "0.5.2"
+version = "1.0.0"
 
 [[Rotations]]
 deps = ["LinearAlgebra", "StaticArrays", "Statistics"]
