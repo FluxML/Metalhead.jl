@@ -1,97 +1,100 @@
-struct ResidualBlock
-  conv_layers
-  norm_layers
-  shortcut
+basicblock(inplanes, outplanes, downsample = false) = downsample ?
+  Chain(Conv((3, 3), inplanes => outplanes[1], stride = 2, pad = 1),
+        BatchNorm(outplanes[1], relu),
+        Conv((3, 3), outplanes[1] => outplanes[2], stride = 1, pad = 1),
+        BatchNorm(outplanes[2], relu)) :
+  Chain(Conv((3, 3), inplanes => outplanes[1], stride = 1, pad = 1),
+        BatchNorm(outplanes[1], relu),
+        Conv((3, 3), outplanes[1] => outplanes[2], stride = 1, pad = 1),
+        BatchNorm(outplanes[2], relu))
+
+bottleneck(inplanes, outplanes, downsample = false) = downsample ?
+  Chain(Conv((1, 1), inplanes => outplanes[1], stride = 2),
+        BatchNorm(outplanes[1], relu),
+        Conv((3, 3), outplanes[1] => outplanes[2], stride = 1, pad = 1),
+        BatchNorm(outplanes[2], relu),
+        Conv((1, 1), outplanes[2] => outplanes[3], stride = 1),
+        BatchNorm(outplanes[3], relu)) :
+  Chain(Conv((1, 1), inplanes => outplanes[1], stride = 1),
+        BatchNorm(outplanes[1], relu),
+        Conv((3, 3), outplanes[1] => outplanes[2], stride = 1, pad = 1),
+        BatchNorm(outplanes[2], relu),
+        Conv((1, 1), outplanes[2] => outplanes[3], stride = 1),
+        BatchNorm(outplanes[3], relu))
+
+function projection(inplanes, outplanes, downsample = false)
+  shortcut = downsample ? 
+    Chain(Conv((1, 1), inplanes => outplanes, stride = 2),
+          BatchNorm((outplanes), relu)) :
+    Chain(Conv((1, 1), inplanes => outplanes, stride = 1),
+          BatchNorm((outplanes), relu))
+  return (x, y) -> x + shortcut(y)
 end
 
-@functor ResidualBlock
-
-function ResidualBlock(filters, kernels::Array{Tuple{Int,Int}}, pads::Array{Tuple{Int,Int}}, strides::Array{Tuple{Int,Int}}, shortcut = identity)
-  local conv_layers = []
-  local norm_layers = []
-  for i in 2:length(filters)
-    push!(conv_layers, Conv(kernels[i-1], filters[i-1]=>filters[i], pad = pads[i-1], stride = strides[i-1]))
-    push!(norm_layers, BatchNorm(filters[i]))
-  end
-  ResidualBlock(Tuple(conv_layers),Tuple(norm_layers),shortcut)
-end
-
-function ResidualBlock(filters, kernels::Array{Int}, pads::Array{Int}, strides::Array{Int}, shortcut = identity)
-  ResidualBlock(filters, [(i,i) for i in kernels], [(i,i) for i in pads], [(i,i) for i in strides], shortcut)
-end
-
-function (block::ResidualBlock)(input)
-  local value = copy.(input)
-  for i in 1:length(block.conv_layers)-1
-    value = relu.((block.norm_layers[i])((block.conv_layers[i])(value)))
-  end
-  relu.(((block.norm_layers[end])((block.conv_layers[end])(value))) + block.shortcut(input))
-end
-
-function Bottleneck(filters::Int, downsample::Bool = false, res_top::Bool = false)
-  if(!downsample && !res_top)
-    return ResidualBlock([4 * filters, filters, filters, 4 * filters], [1,3,1], [0,1,0], [1,1,1])
-  elseif(downsample && res_top)
-    return ResidualBlock([filters, filters, filters, 4 * filters], [1,3,1], [0,1,0], [1,1,1], Chain(Conv((1,1), filters=>4 * filters, pad = (0,0), stride = (1,1)), BatchNorm(4 * filters)))
+# array -> PaddedView(0, array, outplanes) for zero padding arrays
+function identity(inplanes, outplanes)
+  if outplanes[end] > inplanes
+    pool = MaxPool((1, 1), stride = 2)
+    return (x, y) -> begin
+      y = pool(y)
+      y = cat(y, zeros(eltype(y), size(y, 1), size(y, 2), outplanes[end] - inplanes, size(y, 4)); dims = 3)
+      x + y
+    end
   else
-    shortcut = Chain(Conv((1,1), 2 * filters=>4 * filters, pad = (0,0), stride = (2,2)), BatchNorm(4 * filters))
-    return ResidualBlock([2 * filters, filters, filters, 4 * filters], [1,3,1], [0,1,0], [1,1,2], shortcut)
+    return +
   end
 end
 
-function resnet50()
-  local layers = [3, 4, 6, 3]
-  local layer_arr = []
-
-  push!(layer_arr, Conv((7,7), 3=>64, pad = (3,3), stride = (2,2)))
-  push!(layer_arr, MaxPool((3,3), pad = (1,1), stride = (2,2)))
-
-  initial_filters = 64
-  for i in 1:length(layers)
-    push!(layer_arr, Bottleneck(initial_filters, true, i==1))
-    for j in 2:layers[i]
-      push!(layer_arr, Bottleneck(initial_filters))
+function resnet(block, shortcut_config, channel_config, block_config)
+  inplanes = 64
+  baseplanes = 64
+  layers = []
+  push!(layers, Conv((7, 7), 3=>inplanes, stride=(2, 2), pad=(3, 3)))
+  push!(layers, BatchNorm(inplanes, relu))
+  push!(layers, MaxPool((3, 3), stride=(2, 2), pad=(1, 1)))
+  for (i, nrepeats) in enumerate(block_config)
+    outplanes = baseplanes .* channel_config
+    if shortcut_config == :A
+      push!(layers, SkipConnection(block(inplanes, outplanes, i != 1),
+                                   identity(inplanes, outplanes)))
+    elseif shortcut_config == :B || shortcut_config == :C
+      push!(layers, SkipConnection(block(inplanes, outplanes, i != 1),
+                                   projection(inplanes, outplanes[end], i != 1)))
     end
-    initial_filters *= 2
-  end
-
-  push!(layer_arr, MeanPool((7,7)))
-  push!(layer_arr, x -> reshape(x, :, size(x,4)))
-  push!(layer_arr, (Dense(2048, 1000)))
-  push!(layer_arr, softmax)
-
-  Chain(layer_arr...)
-end
-
-function resnet_layers()
-  weight = Metalhead.weights("resnet.bson")
-  weights = Dict{Any ,Any}()
-  for ele in keys(weight)
-    weights[string(ele)] = convert(Array{Float64, N} where N, weight[ele])
-  end
-  ls = resnet50()
-  ls[1].weight .= weights["gpu_0/conv1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:]
-  count = 2
-  for j in [3:5, 6:9, 10:15, 16:18]
-    for p in j
-      ls[p].conv_layers[1].weight .= weights["gpu_0/res$(count)_$(p-j[1])_branch2a_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:]
-      ls[p].conv_layers[2].weight .= weights["gpu_0/res$(count)_$(p-j[1])_branch2b_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:]
-      ls[p].conv_layers[3].weight .= weights["gpu_0/res$(count)_$(p-j[1])_branch2c_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:]
+    inplanes = outplanes[end]
+    for j in 2:nrepeats
+      if shortcut_config == :A || shortcut_config == :B
+        push!(layers, SkipConnection(block(inplanes, outplanes, false),
+                                     identity(inplanes, outplanes[end])))
+      elseif shortcut_config == :C
+        push!(layers, SkipConnection(block(inplanes, outplanes, false),
+                                     projection(inplanes, outplanes, false)))
+      end
+      inplanes = outplanes[end]
     end
-    count += 1
+    baseplanes *= 2
   end
-  ls[21].W .= transpose(weights["gpu_0/pred_w_0"]); ls[21].b .= weights["gpu_0/pred_b_0"]
-  return ls
+  push!(layers, AdaptiveMeanPool((1, 1)))
+  push!(layers, flatten)
+  push!(layers, Dense(inplanes, 1000))
+  layers = Chain(layers...)
+  Flux.testmode!(layers, false)
+  return layers
 end
 
-struct ResNet <: ClassificationModel{ImageNet.ImageNet1k}
-  layers::Chain
-end
+const resnet_config =
+Dict("resnet18" => ([1, 1], [2, 2, 2, 2]),
+     "resnet34" => ([1, 1], [3, 4, 6, 3]),
+     "resnet50" => ([1, 1, 4], [3, 4, 6, 3]),
+     "resnet101" => ([1, 1, 4], [3, 4, 23, 3]),
+     "resnet152" => ([1, 1, 4], [3, 8, 36, 3]))
 
-ResNet() = ResNet(resnet_layers())
+resnet18() = resnet(basicblock, :A, resnet_config["resnet18"]...)
 
-Base.show(io::IO, ::ResNet) = print(io, "ResNet()")
+resnet34() = resnet(basicblock, :A, resnet_config["resnet34"]...)
 
-@functor ResNet
+resnet50() = resnet(bottleneck, :B, resnet_config["resnet50"]...)
 
-(m::ResNet)(x) = m.layers(x)
+resnet101() = resnet(bottleneck, :B, resnet_config["resnet101"]...)
+
+resnet152() = resnet(bottleneck, :B, resnet_config["resnet152"]...)
