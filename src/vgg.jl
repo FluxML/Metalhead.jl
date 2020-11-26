@@ -26,7 +26,7 @@ function convolutional_layers(config, batchnorm, inchannels)
   layers = []
   ifilters = inchannels
   for c in config
-    push!(layers, vgg_block(ifilters, c..., batchnorm)...)
+    append!(layers, vgg_block(ifilters, c..., batchnorm))
     push!(layers, MaxPool((2,2)))
     ifilters, _ = c
   end

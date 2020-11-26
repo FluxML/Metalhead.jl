@@ -1,18 +1,13 @@
-using Flux
-
 function bottleneck(inplanes, growth_rate)
     inner_channels = 4 * growth_rate
     m = Chain(conv_bn((1, 1), inplanes, inner_channels; usebias=false, rev=true)...,
               conv_bn((3, 3), inner_channels, growth_rate; pad=1, usebias=false, rev=true)...)
 
-    layer = x -> begin
-        y = m(x)
-        return cat(x, y; dims=3)
-    end
+    SkipConnection(m, (mx, x) -> cat(x, mx; dims=3))
 end
 
-transition(inplanes, outplanes) = Chain(conv_bn((1, 1), inplanes, outplanes; usebias=false, rev=true)...,
-                                        MeanPool((2, 2)))
+transition(inplanes, outplanes) = (conv_bn((1, 1), inplanes, outplanes; usebias=false, rev=true)...,
+                                   MeanPool((2, 2)))
 
 function make_dense_block(inplanes, growth_rate, nblock)
     layers = []
@@ -20,10 +15,9 @@ function make_dense_block(inplanes, growth_rate, nblock)
         push!(layers, bottleneck(inplanes, growth_rate))
         inplanes += growth_rate
     end
-    Chain(layers...)
+    return layers
 end
 
-# densenet-121
 function densenet(nblocks=(6, 12, 24, 16); growth_rate=32, reduction=0.5, num_classes=1000)
     num_planes = 2 * growth_rate
     layers = []
@@ -31,14 +25,14 @@ function densenet(nblocks=(6, 12, 24, 16); growth_rate=32, reduction=0.5, num_cl
     push!(layers, MaxPool((3, 3), stride=2, pad=(1, 1)))
 
     for i in 1:3
-        push!(layers, make_dense_block(num_planes, growth_rate, nblocks[i]))
+        append!(layers, make_dense_block(num_planes, growth_rate, nblocks[i]))
         num_planes += nblocks[i] * growth_rate
         out_planes = Int(floor(num_planes * reduction))
-        push!(layers, transition(num_planes, out_planes))
+        append!(layers, transition(num_planes, out_planes))
         num_planes = out_planes
     end
 
-    push!(layers, make_dense_block(num_planes, growth_rate, nblocks[4]))
+    append!(layers, make_dense_block(num_planes, growth_rate, nblocks[4]))
     num_planes += nblocks[4] * growth_rate
     push!(layers, BatchNorm(num_planes, relu))
 
