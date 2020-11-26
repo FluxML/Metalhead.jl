@@ -1,4 +1,4 @@
-using Flux: convfilter, Zeros, outdims
+using Flux: convfilter, outdims
 
 # Build a VGG block
 #  ifilters: number of input filters
@@ -10,10 +10,7 @@ function vgg_block(ifilters, ofilters, depth, batchnorm)
   layers = []
   for l in 1:depth
     if batchnorm
-      w = convfilter(k, ifilters=>ofilters)
-      b = Zeros()
-      push!(layers, Conv(weight=w, bias=b, pad=p))
-      push!(layers, BatchNorm(ofilters, relu))
+      append!(layers, conv_bn(k, ifilters, ofilters; pad=p, usebias=false))
     else
       push!(layers, Conv(k, ifilters=>ofilters, relu, pad=p))
     end

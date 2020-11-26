@@ -1,22 +1,15 @@
-function conv_block(kernelsize::Tuple{Int64,Int64}, inplanes::Int64, outplanes::Int64; stride::Int64=1, pad::Union{Int64,Tuple{Int64,Int64}}=0)
-    conv_layer = []
-    push!(conv_layer, Conv(kernelsize, inplanes => outplanes, stride=stride, pad=pad))
-    push!(conv_layer, BatchNorm(outplanes, relu))
-    return conv_layer
-end
-
 function inception_a(inplanes, pool_proj)
-    branch1x1 = Chain(conv_block((1, 1), inplanes, 64)...)
+    branch1x1 = Chain(conv_bn((1, 1), inplanes, 64)...)
     
-    branch5x5 = Chain(conv_block((1, 1), inplanes, 48)...,
-                      conv_block((5, 5), 48, 64; pad=2)...)
+    branch5x5 = Chain(conv_bn((1, 1), inplanes, 48)...,
+                      conv_bn((5, 5), 48, 64; pad=2)...)
 
-    branch3x3 = Chain(conv_block((1, 1), inplanes, 64)..., 
-                      conv_block((3, 3), 64, 96; pad=1)...,
-                      conv_block((3, 3), 96, 96; pad=1)...)
+    branch3x3 = Chain(conv_bn((1, 1), inplanes, 64)..., 
+                      conv_bn((3, 3), 64, 96; pad=1)...,
+                      conv_bn((3, 3), 96, 96; pad=1)...)
 
     branch_pool = Chain(MeanPool((3, 3), pad=1, stride=1),
-                        conv_block((1, 1), inplanes, pool_proj)...)
+                        conv_bn((1, 1), inplanes, pool_proj)...)
 
     layer = x -> begin 
         y1 = branch1x1(x)
@@ -29,11 +22,11 @@ function inception_a(inplanes, pool_proj)
 end
 
 function inception_b(inplanes)
-    branch3x3_1 = Chain(conv_block((3, 3), inplanes, 384; stride=2)...)
+    branch3x3_1 = Chain(conv_bn((3, 3), inplanes, 384; stride=2)...)
 
-    branch3x3_2 = Chain(conv_block((1, 1), inplanes, 64)...,
-                        conv_block((3, 3), 64, 96; pad=1)...,
-                        conv_block((3, 3), 96, 96; stride=2)...)
+    branch3x3_2 = Chain(conv_bn((1, 1), inplanes, 64)...,
+                        conv_bn((3, 3), 64, 96; pad=1)...,
+                        conv_bn((3, 3), 96, 96; stride=2)...)
 
     branch_pool = Chain(MaxPool((3, 3), stride=2))
 
@@ -47,20 +40,20 @@ function inception_b(inplanes)
 end
 
 function inception_c(inplanes, c7)
-    branch1x1 = Chain(conv_block((1, 1), inplanes, 192)...)
+    branch1x1 = Chain(conv_bn((1, 1), inplanes, 192)...)
 
-    branch7x7_1 = Chain(conv_block((1, 1), inplanes, c7)...,
-                        conv_block((1, 7), c7, c7; pad=(0, 3))...,
-                        conv_block((7, 1), c7, 192; pad=(3, 0))...)
+    branch7x7_1 = Chain(conv_bn((1, 1), inplanes, c7)...,
+                        conv_bn((1, 7), c7, c7; pad=(0, 3))...,
+                        conv_bn((7, 1), c7, 192; pad=(3, 0))...)
 
-    branch7x7_2 = Chain(conv_block((1, 1), inplanes, c7)...,
-                        conv_block((7, 1), c7, c7; pad=(3, 0))...,
-                        conv_block((1, 7), c7, c7; pad=(0, 3))...,
-                        conv_block((7, 1), c7, c7; pad=(3, 0))...,
-                        conv_block((1, 7), c7, 192; pad=(0, 3))...)
+    branch7x7_2 = Chain(conv_bn((1, 1), inplanes, c7)...,
+                        conv_bn((7, 1), c7, c7; pad=(3, 0))...,
+                        conv_bn((1, 7), c7, c7; pad=(0, 3))...,
+                        conv_bn((7, 1), c7, c7; pad=(3, 0))...,
+                        conv_bn((1, 7), c7, 192; pad=(0, 3))...)
 
     branch_pool = Chain(MeanPool((3, 3), pad=1, stride=1), 
-                        conv_block((1, 1), inplanes, 192)...)
+                        conv_bn((1, 1), inplanes, 192)...)
 
     layer = x -> begin
         y1 = branch1x1(x)
@@ -73,13 +66,13 @@ function inception_c(inplanes, c7)
 end
 
 function inception_d(inplanes)
-    branch3x3 = Chain(conv_block((1, 1), inplanes, 192)...,
-                      conv_block((3, 3), 192, 320; stride=2)...)
+    branch3x3 = Chain(conv_bn((1, 1), inplanes, 192)...,
+                      conv_bn((3, 3), 192, 320; stride=2)...)
 
-    branch7x7x3 = Chain(conv_block((1, 1), inplanes, 192)...,
-                        conv_block((1, 7), 192, 192; pad=(0, 3))...,
-                        conv_block((7, 1), 192, 192; pad=(3, 0))...,
-                        conv_block((3, 3), 192, 192; stride=2)...)
+    branch7x7x3 = Chain(conv_bn((1, 1), inplanes, 192)...,
+                        conv_bn((1, 7), 192, 192; pad=(0, 3))...,
+                        conv_bn((7, 1), 192, 192; pad=(3, 0))...,
+                        conv_bn((3, 3), 192, 192; stride=2)...)
 
     branch_pool = Chain(MaxPool((3, 3), stride=2))
 
@@ -93,19 +86,19 @@ function inception_d(inplanes)
 end
 
 function inception_e(inplanes)
-    branch1x1 = Chain(conv_block((1, 1), inplanes, 320)...)
+    branch1x1 = Chain(conv_bn((1, 1), inplanes, 320)...)
 
-    branch3x3_1 = Chain(conv_block((1, 1), inplanes, 384)...)
-    branch3x3_1a = Chain(conv_block((1, 3), 384, 384; pad=(0, 1))...)
-    branch3x3_1b = Chain(conv_block((3, 1), 384, 384; pad=(1, 0))...)
+    branch3x3_1 = Chain(conv_bn((1, 1), inplanes, 384)...)
+    branch3x3_1a = Chain(conv_bn((1, 3), 384, 384; pad=(0, 1))...)
+    branch3x3_1b = Chain(conv_bn((3, 1), 384, 384; pad=(1, 0))...)
 
-    branch3x3_2 = Chain(conv_block((1, 1), inplanes, 448)...,
-                        conv_block((3, 3), 448, 384; pad=1)...)
-    branch3x3_2a = Chain(conv_block((1, 3), 384, 384; pad=(0, 1))...)
-    branch3x3_2b = Chain(conv_block((3, 1), 384, 384; pad=(1, 0))...)
+    branch3x3_2 = Chain(conv_bn((1, 1), inplanes, 448)...,
+                        conv_bn((3, 3), 448, 384; pad=1)...)
+    branch3x3_2a = Chain(conv_bn((1, 3), 384, 384; pad=(0, 1))...)
+    branch3x3_2b = Chain(conv_bn((3, 1), 384, 384; pad=(1, 0))...)
 
     branch_pool = Chain(MeanPool((3, 3), pad=1, stride=1),
-                        conv_block((1, 1), inplanes, 192)...)
+                        conv_bn((1, 1), inplanes, 192)...)
 
     layer = x -> begin
         y1 = branch1x1(x)
@@ -123,12 +116,12 @@ function inception_e(inplanes)
 end
 
 function inception3()
-    layer = Chain(conv_block((3, 3), 3, 32; stride=2)...,
-                  conv_block((3, 3), 32, 32)...,
-                  conv_block((3, 3), 32, 64; pad=1)...,
+    layer = Chain(conv_bn((3, 3), 3, 32; stride=2)...,
+                  conv_bn((3, 3), 32, 32)...,
+                  conv_bn((3, 3), 32, 64; pad=1)...,
                   MaxPool((3, 3), stride=2),
-                  conv_block((1, 1), 64, 80)...,
-                  conv_block((3, 3), 80, 192)...,
+                  conv_bn((1, 1), 64, 80)...,
+                  conv_bn((3, 3), 80, 192)...,
                   MaxPool((3, 3), stride=2),
                   inception_a(192, 32),
                   inception_a(256, 64),

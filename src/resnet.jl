@@ -1,33 +1,21 @@
 basicblock(inplanes, outplanes, downsample = false) = downsample ?
-  Chain(Conv((3, 3), inplanes => outplanes[1], stride = 2, pad = 1),
-        BatchNorm(outplanes[1], relu),
-        Conv((3, 3), outplanes[1] => outplanes[2], stride = 1, pad = 1),
-        BatchNorm(outplanes[2], relu)) :
-  Chain(Conv((3, 3), inplanes => outplanes[1], stride = 1, pad = 1),
-        BatchNorm(outplanes[1], relu),
-        Conv((3, 3), outplanes[1] => outplanes[2], stride = 1, pad = 1),
-        BatchNorm(outplanes[2], relu))
+  Chain(conv_bn((3, 3), inplanes, outplanes[1]; stride=2, pad=1)...,
+        conv_bn((3, 3), outplanes[1], outplanes[2]; stride=1, pad=1)...) :
+  Chain(conv_bn((3, 3), inplanes, outplanes[1]; stride=1, pad=1)...,
+        conv_bn((3, 3), outplanes[1], outplanes[2]; stride=1, pad=1)...)
 
 bottleneck(inplanes, outplanes, downsample = false) = downsample ?
-  Chain(Conv((1, 1), inplanes => outplanes[1], stride = 2),
-        BatchNorm(outplanes[1], relu),
-        Conv((3, 3), outplanes[1] => outplanes[2], stride = 1, pad = 1),
-        BatchNorm(outplanes[2], relu),
-        Conv((1, 1), outplanes[2] => outplanes[3], stride = 1),
-        BatchNorm(outplanes[3], relu)) :
-  Chain(Conv((1, 1), inplanes => outplanes[1], stride = 1),
-        BatchNorm(outplanes[1], relu),
-        Conv((3, 3), outplanes[1] => outplanes[2], stride = 1, pad = 1),
-        BatchNorm(outplanes[2], relu),
-        Conv((1, 1), outplanes[2] => outplanes[3], stride = 1),
-        BatchNorm(outplanes[3], relu))
+  Chain(conv_bn((1, 1), inplanes, outplanes[1]; stride=2)...,
+        conv_bn((3, 3), outplanes[1], outplanes[2]; stride=1, pad=1)...,
+        conv_bn((1, 1), outplanes[2], outplanes[3]; stride=1)...) :
+  Chain(conv_bn((1, 1), inplanes, outplanes[1]; stride=1)...,
+        conv_bn((3, 3), outplanes[1], outplanes[2]; stride=1, pad=1)...,
+        conv_bn((1, 1), outplanes[2], outplanes[3]; stride=1)...)
 
 function projection(inplanes, outplanes, downsample = false)
   shortcut = downsample ? 
-    Chain(Conv((1, 1), inplanes => outplanes, stride = 2),
-          BatchNorm((outplanes), relu)) :
-    Chain(Conv((1, 1), inplanes => outplanes, stride = 1),
-          BatchNorm((outplanes), relu))
+    Chain(conv_bn((1, 1), inplanes, outplanes; stride=2)...) :
+    Chain(conv_bn((1, 1), inplanes, outplanes; stride=1)...)
   return (x, y) -> x + shortcut(y)
 end
 
@@ -49,8 +37,7 @@ function resnet(block, shortcut_config, channel_config, block_config)
   inplanes = 64
   baseplanes = 64
   layers = []
-  push!(layers, Conv((7, 7), 3=>inplanes, stride=(2, 2), pad=(3, 3)))
-  push!(layers, BatchNorm(inplanes, relu))
+  append!(layers, conv_bn((7, 7), 3, inplanes; stride=2, pad=(3, 3)))
   push!(layers, MaxPool((3, 3), stride=(2, 2), pad=(1, 1)))
   for (i, nrepeats) in enumerate(block_config)
     outplanes = baseplanes .* channel_config
