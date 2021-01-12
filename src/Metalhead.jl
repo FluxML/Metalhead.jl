@@ -1,6 +1,7 @@
 module Metalhead
 
 using Flux
+using Flux: outputsize
 
 # Models
 include("utilities.jl")

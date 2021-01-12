@@ -12,11 +12,9 @@ end
     @test size(m(rand(Float32, imsize..., 3, 50))) == (1000, 50)
 end
 
-@testset "ResNet" begin
-    for model in [resnet18, resnet34, resnet50, resnet101, resnet152]
-        m = model()
-        @test size(m(rand(Float32, 256, 256, 3, 50))) == (1000, 50)
-    end
+@testset "ResNet ($model)" for model in [resnet18, resnet34, resnet50, resnet101, resnet152]
+    m = model()
+    @test size(m(rand(Float32, 256, 256, 3, 50))) == (1000, 50)
 end
 
 @testset "GoogLeNet" begin

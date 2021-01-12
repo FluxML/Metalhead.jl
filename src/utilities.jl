@@ -1,4 +1,6 @@
-function conv_bn(kernelsize::Tuple{Int64,Int64}, inplanes::Int64, outplanes::Int64; stride::Int64=1, pad::Union{Int64,Tuple{Int64,Int64}}=0, usebias::Bool=true, rev::Bool=false)
+function conv_bn(kernelsize::Tuple{Int64,Int64}, inplanes::Int64, outplanes::Int64;
+                 stride::Int64=1, pad::Union{Int64,Tuple{Int64,Int64}}=0,
+                 usebias::Bool=true, rev::Bool=false)
     conv_layer = []
     if usebias
         push!(conv_layer, Conv(kernelsize, inplanes => outplanes, stride=stride, pad=pad))

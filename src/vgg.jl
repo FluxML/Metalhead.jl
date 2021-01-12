@@ -52,7 +52,7 @@ end
 
 function vgg(imsize; config, inchannels, batchnorm=false, nclasses, fcsize, dropout)
   conv = convolutional_layers(config, batchnorm, inchannels)
-  imsize = foldl((insize, layer) -> outdims(layer, insize), conv; init = imsize)
+  imsize = outputsize(conv, (imsize..., inchannels); padbatch=true)[1:2]
   class = classifier_layers((imsize..., config[end][1]), nclasses, fcsize, dropout)
   return Chain(conv..., class...)
 end
