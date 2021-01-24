@@ -61,7 +61,15 @@ for model in MODELS
   @everywhere m = $(model)() |> gpu
   opt = Flux.Optimiser(WeightDecay(1e-4), Momentum())
   schedule = Exp(λ = 1e-1, γ = 0.9)
-  cbs = Flux.throttle(() -> @show(@fetchfrom(gpus[1], accuracy(CuIterator(val_loader), m))), 240)
+  cbs = Flux.throttle(() -> @show(
+                              @sync(@fetchfrom(gpuworkers[1], accuracy(CuIterator(val_loader), m)))),
+                      240)
         #  Flux.throttle(() -> (GC.gc(); CUDA.reclaim()), 30)]
-  train!(train_loader, m, opt; loss=ploss, nepochs=1, schedule=schedule, cb=cbs)
+  for i in 1:10
+    @info "Pass $i / 10..."
+    train!(train_loader, m, opt; loss=ploss, nepochs=1, schedule=schedule, cb=cbs)
+    @sync @spawnat gpuworkers[1] begin
+      checkpoint = m |> cpu
+      @save "../pretrain-weights/$model.bson" checkpoint
+    end
 end

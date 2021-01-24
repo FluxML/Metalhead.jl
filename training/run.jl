@@ -5,21 +5,26 @@ using MAT, Images, FileIO
 using MLDataPattern, DataLoaders, DataAugmentation
 using Statistics: mean
 using ParameterSchedulers
+using BSON: @save
 
 import LearnBase
 
 include("imagenet.jl")
 include("loops.jl")
 
-const DATADIR = "/group/ece/ececompeng/lipasti/libraries/datasets/raw-data"
+const DATADIR = "/home/datasets/ILSVRC"
+const TRAINDIR = joinpath(DATADIR, "Data/CLS-LOC/train")
+const TRAINMETA = joinpath("/home/darsnack/train.txt")
+const VALDIR = joinpath(DATADIR, "Data/CLS-LOC/val")
+const VALMETA = joinpath("/home/darsnack/val.txt")
 const MODELS = [alexnet]
 
-train_dataset = shuffleobs(ImageNet(folder=DATADIR))
-test_dataset, val_dataset = splitobs(shuffleobs(ImageNet(folder=DATADIR, train=false)); at = 0.05)
+train_dataset = shuffleobs(ImageNet(folder=TRAINDIR, metadata=TRAINMETA))
+val_dataset = shuffleobs(ImageNet(folder=VALDIR, metadata=VALMETA))
 
 bs = 512
 train_loader = DataLoaders.DataLoader(train_dataset, bs)
-test_loader = DataLoaders.DataLoader(test_dataset, bs)
+val_loader = DataLoaders.DataLoader(val_dataset, bs)
 
 loss(ŷ, y) = Flux.Losses.logitcrossentropy(ŷ, y)
 loss(x, y, m) = loss(m(x), y)
@@ -31,7 +36,12 @@ for model in MODELS
   m = model() |> gpu
   opt = Flux.Optimiser(WeightDecay(1e-4), Momentum())
   schedule = Exp(λ = 1e-1, γ = 0.9)
-  cbs = Flux.throttle(() -> @show(accuracy(CuIterator(test_loader), m)), 240)
+  cbs = Flux.throttle(() -> @show(accuracy(CuIterator(val_loader), m)), 240)
         #  Flux.throttle(() -> (GC.gc(); CUDA.reclaim()), 30)]
-  train!(CuIterator(train_loader), m, opt; loss=loss, nepochs=1, schedule=schedule, cb=cbs)
+  for i in 1:10
+    @info "Pass $i / 10..."
+    train!(CuIterator(train_loader), m, opt; loss=loss, nepochs=10, schedule=schedule, cb=cbs)
+    checkpoint = m |> cpu
+    @save "../pretrain-weights/$model.bson" checkpoint
+  end
 end
