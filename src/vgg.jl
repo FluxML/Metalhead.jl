@@ -46,7 +46,7 @@ function classifier_layers(imsize, nclasses, fcsize, dropout)
   push!(layers, Dense(fcsize, fcsize, relu))
   push!(layers, Dropout(dropout))
   push!(layers, Dense(fcsize, nclasses))
-  push!(layers, softmax)
+
   return layers
 end
 

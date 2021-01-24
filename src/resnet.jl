@@ -12,24 +12,20 @@ bottleneck(inplanes, outplanes, downsample = false) = downsample ?
         conv_bn((3, 3), outplanes[1], outplanes[2]; stride=1, pad=1)...,
         conv_bn((1, 1), outplanes[2], outplanes[3]; stride=1)...)
 
-function projection(inplanes, outplanes, downsample = false)
-  shortcut = downsample ? 
-    Chain(conv_bn((1, 1), inplanes, outplanes; stride=2)...) :
-    Chain(conv_bn((1, 1), inplanes, outplanes; stride=1)...)
-  return (x, y) -> x + shortcut(y)
-end
+skip_projection(inplanes, outplanes, downsample = false) = downsample ? 
+  Chain(conv_bn((1, 1), inplanes, outplanes; stride=2)...) :
+  Chain(conv_bn((1, 1), inplanes, outplanes; stride=1)...)
 
 # array -> PaddedView(0, array, outplanes) for zero padding arrays
-function identity(inplanes, outplanes)
+function skip_identity(inplanes, outplanes)
   if outplanes[end] > inplanes
-    pool = MaxPool((1, 1), stride = 2)
-    return (x, y) -> begin
-      y = pool(y)
-      y = cat(y, zeros(eltype(y), size(y, 1), size(y, 2), outplanes[end] - inplanes, size(y, 4)); dims = 3)
-      x + y
-    end
+    return Chain(MaxPool((1, 1), stride = 2),
+                 y -> cat(y, zeros(eltype(y),
+                                   size(y, 1),
+                                   size(y, 2),
+                                   outplanes[end] - inplanes, size(y, 4)); dims = 3))
   else
-    return +
+    return identity
   end
 end
 
@@ -42,20 +38,20 @@ function resnet(block, shortcut_config, channel_config, block_config)
   for (i, nrepeats) in enumerate(block_config)
     outplanes = baseplanes .* channel_config
     if shortcut_config == :A
-      push!(layers, SkipConnection(block(inplanes, outplanes, i != 1),
-                                   identity(inplanes, outplanes)))
+      push!(layers, Parallel(+, block(inplanes, outplanes, i != 1),
+                                skip_identity(inplanes, outplanes)))
     elseif shortcut_config == :B || shortcut_config == :C
-      push!(layers, SkipConnection(block(inplanes, outplanes, i != 1),
-                                   projection(inplanes, outplanes[end], i != 1)))
+      push!(layers, Parallel(+, block(inplanes, outplanes, i != 1),
+                                skip_projection(inplanes, outplanes[end], i != 1)))
     end
     inplanes = outplanes[end]
     for j in 2:nrepeats
       if shortcut_config == :A || shortcut_config == :B
-        push!(layers, SkipConnection(block(inplanes, outplanes, false),
-                                     identity(inplanes, outplanes[end])))
+        push!(layers, Parallel(+, block(inplanes, outplanes, false),
+                                  skip_identity(inplanes, outplanes[end])))
       elseif shortcut_config == :C
-        push!(layers, SkipConnection(block(inplanes, outplanes, false),
-                                     projection(inplanes, outplanes, false)))
+        push!(layers, Parallel(+, block(inplanes, outplanes, false),
+                                  skip_projection(inplanes, outplanes, false)))
       end
       inplanes = outplanes[end]
     end
@@ -65,16 +61,16 @@ function resnet(block, shortcut_config, channel_config, block_config)
   push!(layers, flatten)
   push!(layers, Dense(inplanes, 1000))
   layers = Chain(layers...)
-  Flux.testmode!(layers, false)
+
   return layers
 end
 
 const resnet_config =
-Dict("resnet18" => ([1, 1], [2, 2, 2, 2]),
-     "resnet34" => ([1, 1], [3, 4, 6, 3]),
-     "resnet50" => ([1, 1, 4], [3, 4, 6, 3]),
-     "resnet101" => ([1, 1, 4], [3, 4, 23, 3]),
-     "resnet152" => ([1, 1, 4], [3, 8, 36, 3]))
+  Dict("resnet18" => ([1, 1], [2, 2, 2, 2]),
+      "resnet34" => ([1, 1], [3, 4, 6, 3]),
+      "resnet50" => ([1, 1, 4], [3, 4, 6, 3]),
+      "resnet101" => ([1, 1, 4], [3, 4, 23, 3]),
+      "resnet152" => ([1, 1, 4], [3, 8, 36, 3]))
 
 resnet18() = resnet(basicblock, :A, resnet_config["resnet18"]...)
 
