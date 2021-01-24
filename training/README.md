@@ -1,33 +1,27 @@
 # Training scripts
 
-This folder isn't part of Metalhead.jl. The scripts are used to train the models in Metalhead.jl to create the pretrained weight artifacts.
+This folder isn't part of Metalhead.jl. The scripts are used to train the models in Metalhead.jl to create the pre-trained weight artifacts.
 
 ## ImageNet setup
 
-The ImageNet dataset must be manually downloaded and organized in the following structure:
-```
-root
-\__ train
-    \__ nXXXXX (image subdirectories, XXXXX is the WNID)
-        \__ nXXXXX_YYY.JPEG
-        ...
-    \__ nXXXXX
-    ...
-\__ val
-    \__ nXXXXX (image subdirectories, XXXXX is the WNID)
-        \__ nXXXXX_YYY.JPEG
-        ...
-    ...
-\__ meta.mat (class index to string label map)
-```
-The `root` directory is specified to constructor as `ImageNet(folder = root)`. You can also specify a different MAT file for the class label metadata with `ImageNet(folder = root, class_metadata = other.mat)` (note this should be relative to `root`).
+The ImageNet dataset must be manually downloaded and organized in any structure. `ImageNet(;folder, metadata)` can represent a single dataset (train/test/val), and the structure of your ImageNet data folder is embedded into the `metadata` keyword argument.
 
-The `meta.mat` file should be a MAT structured as:
-```
-"synsets"
-\__ "WNID": Vector{String}
-\__ "words": Vector{String} (class labels)
-\__ "ILSVRC2012_ID": Vector{Int} (class indices)
+The `metadata` keyword should point to a file organized as follows:
+```txt
+<relative path to image> <label index>
+<relative path to image> <label index>
+...
 ```
 
-By default, `ImageNet(folder = root)` returns the training dataset. You can use `ImageNet(folder = root, train = false)` to get the validation dataset.
+For example we have our data under `/mnt/imagenet/train` and a `/mnt/imagenet/train_labels.txt` metadata file:
+```txt
+n01440764/n01440764_10026.JPEG 449
+n01440764/n01440764_10027.JPEG 449
+n01440764/n01440764_10029.JPEG 449
+n01440764/n01440764_10040.JPEG 449
+...
+```
+Then we invoke `ImageNet(folder = "/mnt/imagenet/train", metadata = "/mnt/imagenet/train_labels.txt")`. The ordering of the images will be according to the metadata file.
+
+### Generating metadata
+
