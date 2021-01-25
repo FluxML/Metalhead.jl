@@ -17,6 +17,8 @@ To get the dataset go to http://image-net.org/download-images
 and sign up for an account. Then you may submit a request. After your request
 gets approved then you will be able to download the dataset.
 
+After downloading, unpack the file `imagenet_object_localization.tar.gz` and move the resulting `ILSVRC` folder here.
+
 For more information visit http://image-net.org/download-faq
 
 # CIFAR-10
