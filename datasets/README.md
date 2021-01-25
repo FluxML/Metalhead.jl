@@ -9,19 +9,17 @@ is suitable for auto-detection.
 
 # ImageNet
 
-As of 2017, the `ILSVRC` competition is being run through Kaggle
-and the standard ILSVRC2012 (also known as ImageNet-1k) dataset
-is available for download from Kaggle at
-https://www.kaggle.com/c/imagenet-object-localization-challenge/data.
-Download the file `imagenet_object_localization.tar.gz`, unpack
-it and move the resulting `ILSVRC` folder here.
+As of 2020, the ImageNet dataset is not openly available.
+ImageNet website http://image-net.org makes the images available
+only for non-commercial research and/or educational purposes.
 
-Please note that the file is 154GB, so downloading it may take a while.
-Kaggle provides an official command line interface (https://github.com/Kaggle/kaggle-api),
-which is able to download the data. However, it does not support download
-resumption, which can be problematic for a dataset this size. However, there
-is an unofficial API at https://github.com/floydwch/kaggle-cli, which is
-able to resume downloads.
+To get the dataset go to http://image-net.org/download-images
+and sign up for an account. Then you may submit a request. After your request
+gets approved then you will be able to download the dataset.
+
+After downloading, unpack the file `imagenet_object_localization.tar.gz` and move the resulting `ILSVRC` folder here.
+
+For more information visit http://image-net.org/download-faq
 
 # CIFAR-10
 
