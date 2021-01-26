@@ -14,6 +14,7 @@ end
 gpuworkers = asyncmap((zip(workers(), gpus))) do (p, d)
   remotecall_wait(p) do
     device!(d)
+    return p
   end
 end
 
@@ -59,8 +60,8 @@ end
 for model in MODELS
   @info "Training $model..."
   @everywhere m = $(model)() |> gpu
-  opt = Flux.Optimiser(WeightDecay(1e-4), Momentum())
-  schedule = Exp(λ = 1e-1, γ = 0.9)
+  opt = Flux.Optimiser(WeightDecay(1e-4), ADAM())
+  schedule = Exp(λ = 5e-2, γ = 0.8)
   cbs = Flux.throttle(() -> @show(
                               @sync(@fetchfrom(gpuworkers[1], accuracy(CuIterator(val_loader), m)))),
                       240)
@@ -70,6 +71,6 @@ for model in MODELS
     train!(train_loader, m, opt; loss=ploss, nepochs=1, schedule=schedule, cb=cbs)
     @sync @spawnat gpuworkers[1] begin
       checkpoint = m |> cpu
-      @save "../pretrain-weights/$model.bson" checkpoint
+      @save "./pretrain-weights/$model.bson" checkpoint
     end
 end

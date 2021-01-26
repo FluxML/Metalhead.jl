@@ -34,9 +34,9 @@ accuracy(data, m) = mean(accuracy(x, y, m) for (x, y) in data)
 for model in MODELS
   @info "Training $model..."
   m = model() |> gpu
-  opt = Flux.Optimiser(WeightDecay(1e-4), Momentum())
-  schedule = Exp(λ = 1e-1, γ = 0.9)
-  cbs = Flux.throttle(() -> @show(accuracy(CuIterator(val_loader), m)), 240)
+  opt = Flux.Optimiser(WeightDecay(1e-4), ADAM())
+  schedule = Exp(λ = 5e-2, γ = 0.8)
+  cbs = Flux.throttle(() -> @show(accuracy(CuIterator(val_loader), m)), 60*60)
         #  Flux.throttle(() -> (GC.gc(); CUDA.reclaim()), 30)]
   for i in 1:10
     @info "Pass $i / 10..."
