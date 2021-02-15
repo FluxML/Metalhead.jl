@@ -26,6 +26,7 @@ end
   using MLDataPattern, DataLoaders, DataAugmentation
   using Statistics: mean
   using ParameterSchedulers
+  using BSON: @save
 
   import LearnBase
 
@@ -48,7 +49,7 @@ const MODELS = [alexnet]
 train_dataset = shuffleobs(ImageNet(folder=TRAINDIR, metadata=TRAINMETA))
 val_dataset = shuffleobs(ImageNet(folder=VALDIR, metadata=VALMETA))
 
-bs = 512 * ngpus
+bs = 128 * ngpus
 train_loader = DataLoaders.DataLoader(train_dataset, bs)
 val_loader = DataLoaders.DataLoader(val_dataset, bs)
 
@@ -61,7 +62,7 @@ for model in MODELS
   @info "Training $model..."
   @everywhere m = $(model)() |> gpu
   opt = Flux.Optimiser(WeightDecay(1e-4), ADAM())
-  schedule = Exp(λ = 5e-2, γ = 0.8)
+  schedule = Exp(λ = opt[2].eta, γ = 0.8)
   cbs = Flux.throttle(() -> @show(
                               @sync(@fetchfrom(gpuworkers[1], accuracy(CuIterator(val_loader), m)))),
                       240)
@@ -73,4 +74,5 @@ for model in MODELS
       checkpoint = m |> cpu
       @save "./pretrain-weights/$model.bson" checkpoint
     end
+  end
 end

@@ -7,7 +7,7 @@ function train!(data, m, opt; loss, nepochs, schedule, cb)
   cb = Flux.Optimise.runall(cb)
   nbatches = nobs(data)
   for epoch in 1:nepochs
-    opt[2].eta = schedule[epoch]
+    opt[2].eta = next!(schedule)
     @info "Epoch $epoch (η = $(opt[2].eta))..."
     for (i, (x, y)) in enumerate(data)
       gs = Flux.gradient(ps) do

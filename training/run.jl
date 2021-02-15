@@ -22,7 +22,7 @@ const MODELS = [alexnet]
 train_dataset = shuffleobs(ImageNet(folder=TRAINDIR, metadata=TRAINMETA))
 val_dataset = shuffleobs(ImageNet(folder=VALDIR, metadata=VALMETA))
 
-bs = 512
+bs = 128
 train_loader = DataLoaders.DataLoader(train_dataset, bs)
 val_loader = DataLoaders.DataLoader(val_dataset, bs)
 
@@ -34,8 +34,8 @@ accuracy(data, m) = mean(accuracy(x, y, m) for (x, y) in data)
 for model in MODELS
   @info "Training $model..."
   m = model() |> gpu
-  opt = Flux.Optimiser(WeightDecay(1e-4), ADAM())
-  schedule = Exp(λ = 5e-2, γ = 0.8)
+  opt = Flux.Optimiser(WeightDecay(1e-4), ADAM(1e-2))
+  schedule = ScheduleIterator(Step(λ = opt[2].eta, γ = 0.5, step_sizes = fill(2, 50)))
   cbs = Flux.throttle(() -> @show(accuracy(CuIterator(val_loader), m)), 60*60)
         #  Flux.throttle(() -> (GC.gc(); CUDA.reclaim()), 30)]
   for i in 1:10

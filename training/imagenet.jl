@@ -4,6 +4,8 @@ struct ImageNet
   order::Vector{String}
 end
 
+const IMG_MEAN = (0.485, 0.456, 0.406)
+const IMG_STDDEV = (0.229, 0.224, 0.225)
 const CMYK_IMAGES = [
   # "n01739381_1309.JPEG",
   # "n02077923_14822.JPEG",
@@ -54,7 +56,7 @@ function LearnBase.getobs(dataset::ImageNet, i)
   else
     data = Image(RGB.(load(file)))
   end
-  tfm = CenterResizeCrop((224, 224)) |> ImageToTensor()
+  tfm = CenterResizeCrop((224, 224)) |> ImageToTensor() |> Normalize(IMG_MEAN, IMG_STDDEV)
   data = itemdata(apply(tfm, data))
 
   label = convert(Array{Float32}, Flux.onehot(dataset.class_map[subpath], labels(dataset)))
