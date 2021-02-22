@@ -1,20 +1,20 @@
 basicblock(inplanes, outplanes, downsample = false) = downsample ?
-  Chain(conv_bn((3, 3), inplanes, outplanes[1]; stride=2, pad=1)...,
-        conv_bn((3, 3), outplanes[1], outplanes[2]; stride=1, pad=1)...) :
-  Chain(conv_bn((3, 3), inplanes, outplanes[1]; stride=1, pad=1)...,
-        conv_bn((3, 3), outplanes[1], outplanes[2]; stride=1, pad=1)...)
+  Chain(conv_bn((3, 3), inplanes, outplanes[1]; stride=2, pad=1, usebias=false)...,
+        conv_bn((3, 3), outplanes[1], outplanes[2]; stride=1, pad=1, usebias=false)...) :
+  Chain(conv_bn((3, 3), inplanes, outplanes[1]; stride=1, pad=1, usebias=false)...,
+        conv_bn((3, 3), outplanes[1], outplanes[2]; stride=1, pad=1, usebias=false)...)
 
 bottleneck(inplanes, outplanes, downsample = false) = downsample ?
-  Chain(conv_bn((1, 1), inplanes, outplanes[1]; stride=2)...,
-        conv_bn((3, 3), outplanes[1], outplanes[2]; stride=1, pad=1)...,
-        conv_bn((1, 1), outplanes[2], outplanes[3]; stride=1)...) :
-  Chain(conv_bn((1, 1), inplanes, outplanes[1]; stride=1)...,
-        conv_bn((3, 3), outplanes[1], outplanes[2]; stride=1, pad=1)...,
-        conv_bn((1, 1), outplanes[2], outplanes[3]; stride=1)...)
+  Chain(conv_bn((1, 1), inplanes, outplanes[1]; stride=2, usebias=false)...,
+        conv_bn((3, 3), outplanes[1], outplanes[2]; stride=1, pad=1, usebias=false)...,
+        conv_bn((1, 1), outplanes[2], outplanes[3]; stride=1, usebias=false)...) :
+  Chain(conv_bn((1, 1), inplanes, outplanes[1]; stride=1, usebias=false)...,
+        conv_bn((3, 3), outplanes[1], outplanes[2]; stride=1, pad=1, usebias=false)...,
+        conv_bn((1, 1), outplanes[2], outplanes[3]; stride=1, usebias=false)...)
 
 skip_projection(inplanes, outplanes, downsample = false) = downsample ? 
-  Chain(conv_bn((1, 1), inplanes, outplanes; stride=2)...) :
-  Chain(conv_bn((1, 1), inplanes, outplanes; stride=1)...)
+  Chain(conv_bn((1, 1), inplanes, outplanes; stride=2, usebias=false)...) :
+  Chain(conv_bn((1, 1), inplanes, outplanes; stride=1, usebias=false)...)
 
 # array -> PaddedView(0, array, outplanes) for zero padding arrays
 function skip_identity(inplanes, outplanes)
