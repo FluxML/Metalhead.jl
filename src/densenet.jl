@@ -42,10 +42,10 @@ function densenet(nblocks=(6, 12, 24, 16); growth_rate=32, reduction=0.5, num_cl
                Dense(num_planes, num_classes))
 end
 
-densenet_121() = densenet()
+densenet121() = densenet()
 
-densenet_161() = densenet((6, 12, 36, 24); growth_rate=64)
+densenet161() = densenet((6, 12, 36, 24); growth_rate=64)
 
-densenet_169() = densenet((6, 12, 32, 32))
+densenet169() = densenet((6, 12, 32, 32))
 
-densenet_201() = densenet((6, 12, 48, 32))
+densenet201() = densenet((6, 12, 48, 32))
