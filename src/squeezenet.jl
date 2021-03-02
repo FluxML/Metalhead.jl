@@ -9,7 +9,7 @@ function fire(inplanes, squeeze_planes, expand1x1_planes, expand3x3_planes)
                         branch_3))
 end
 
-function squeezenet()
+function squeezenet(; pretrain=false)
   layers = Chain(Conv((3, 3), 3 => 64, relu, stride=2),
                  MaxPool((3, 3), stride=2),
                  fire(64, 16, 64, 64),
@@ -27,5 +27,6 @@ function squeezenet()
                  AdaptiveMeanPool((1, 1)),
                  flatten)
 
+  pretrain && Flux.loadparams!(layers, weights("squeezenet"))
   return layers
 end

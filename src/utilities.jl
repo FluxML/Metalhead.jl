@@ -18,3 +18,6 @@ function conv_bn(kernelsize::Tuple{Int64,Int64}, inplanes::Int64, outplanes::Int
 end
 
 cat_channels(x, y) = cat(x, y; dims=3)
+
+weights(model) = BSON.load(joinpath(@artifact_str(model), "$model.bson"))[:weights]
+pretrain_error(model) = error("No pre-trained weights available for $model.")

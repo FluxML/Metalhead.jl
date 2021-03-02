@@ -90,7 +90,7 @@ function inception_e(inplanes)
                   branch_pool)
 end
 
-function inception3()
+function inception3(; pretrain=false)
   layer = Chain(conv_bn((3, 3), 3, 32; stride=2)...,
                 conv_bn((3, 3), 32, 32)...,
                 conv_bn((3, 3), 32, 64; pad=1)...,
@@ -114,5 +114,6 @@ function inception3()
                 flatten,
                 Dense(2048, 1000))
 
+  pretrain && pretrain_error("inception")
   return layer
 end

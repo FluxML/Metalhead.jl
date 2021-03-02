@@ -42,10 +42,29 @@ function densenet(nblocks=(6, 12, 24, 16); growth_rate=32, reduction=0.5, num_cl
                Dense(num_planes, num_classes))
 end
 
-densenet121() = densenet()
+function densenet121(; pretrain=false)
+  model = densenet()
 
-densenet161() = densenet((6, 12, 36, 24); growth_rate=64)
+  pretrain && Flux.loadparams!(model, weights("densenet121"))
+end
 
-densenet169() = densenet((6, 12, 32, 32))
+function densenet161(; pretrain=false)
+  model = densenet((6, 12, 36, 24); growth_rate=64)
 
-densenet201() = densenet((6, 12, 48, 32))
+  pretrain && pretrain_error("densenet161")
+  return model
+end
+
+function densenet169(; pretrain=false)
+  model = densenet((6, 12, 32, 32))
+
+  pretrain && pretrain_error("densenet169")
+  return model
+end
+
+function densenet201(; pretrain=false)
+  model = densenet((6, 12, 48, 32))
+
+  pretrain && pretrain_error("densenet201")
+  return model
+end

@@ -2,6 +2,8 @@ module Metalhead
 
 using Flux
 using Flux: outputsize
+using BSON
+using Pkg.Artifacts
 
 # Models
 include("utilities.jl")

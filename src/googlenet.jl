@@ -14,7 +14,7 @@ function inceptionblock(inplanes, out_1x1, red_3x3, out_3x3, red_5x5, out_5x5, p
                     branch1, branch2, branch3, branch4)
 end
   
-function googlenet()
+function googlenet(; pretrain=false)
   layers = Chain(Conv((7, 7), 3 => 64; stride=2, pad=3),
                  MaxPool((3, 3), stride=2, pad=1),
                  Conv((1, 1), 64 => 64),
@@ -36,5 +36,6 @@ function googlenet()
                  Dropout(0.4),
                  Dense(1024, 1000))
 
+  pretrain && Flux.loadparams!(layers, weights("googlenet"))
   return layers
 end  

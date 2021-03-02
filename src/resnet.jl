@@ -60,9 +60,8 @@ function resnet(block, shortcut_config, channel_config, block_config)
   push!(layers, AdaptiveMeanPool((1, 1)))
   push!(layers, flatten)
   push!(layers, Dense(inplanes, 1000))
-  layers = Chain(layers...)
 
-  return layers
+  return Chain(layers...)
 end
 
 const resnet_config =
@@ -72,12 +71,36 @@ const resnet_config =
       "resnet101" => ([1, 1, 4], [3, 4, 23, 3]),
       "resnet152" => ([1, 1, 4], [3, 8, 36, 3]))
 
-resnet18() = resnet(basicblock, :A, resnet_config["resnet18"]...)
+function resnet18(; pretrain=false)
+  model = resnet(basicblock, :A, resnet_config["resnet18"]...)
 
-resnet34() = resnet(basicblock, :A, resnet_config["resnet34"]...)
+  pretrain && pretrain_error("resnet18")
+  return model
+end
 
-resnet50() = resnet(bottleneck, :B, resnet_config["resnet50"]...)
+function resnet34(; pretrain=false)
+  model = resnet(basicblock, :A, resnet_config["resnet34"]...)
 
-resnet101() = resnet(bottleneck, :B, resnet_config["resnet101"]...)
+  pretrain && pretrain_error("resnet34")
+  return model
+end
 
-resnet152() = resnet(bottleneck, :B, resnet_config["resnet152"]...)
+function resnet50(; pretrain=false)
+  model = resnet(bottleneck, :B, resnet_config["resnet50"]...)
+
+  pretrain && Flux.loadparams!(model, weights("resnet50"))
+end
+
+function resnet101(; pretrain=false)
+  model = resnet(bottleneck, :B, resnet_config["resnet101"]...)
+
+  pretrain && pretrain_error("resnet101")
+  return model
+end
+
+function resnet152(; pretrain=false)
+  model = resnet(bottleneck, :B, resnet_config["resnet152"]...)
+
+  pretrain && pretrain_error("resnet152")
+  return model
+end
