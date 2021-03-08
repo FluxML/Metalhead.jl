@@ -1,3 +1,17 @@
+"""
+    inceptionblock(inplanes, out_1x1, red_3x3, out_3x3, red_5x5, out_3x3, pool_proj)
+
+Create an inception module for use in GoogLeNet (ref: https://arxiv.org/abs/1409.4842v1).
+
+# Arguments
+- `inplanes`: the number of input feature maps
+- `out_1x1`: the number of output feature maps for the 1x1 convolution (branch 1)
+- `red_3x3`: the number of output feature maps for the 3x3 reduction convolution (branch 2)
+- `out_3x3`: the number of output feature maps for the 3x3 convolution (branch 2)
+- `red_5x5`: the number of output feature maps for the 5x5 reduction convolution (branch 3)
+- `out_5x5`: the number of output feature maps for the 5x5 convolution (branch 3)
+- `pool_proj`: the number of output feature maps for the pooling projection (branch 4)
+"""
 function inceptionblock(inplanes, out_1x1, red_3x3, out_3x3, red_5x5, out_5x5, pool_proj)
     branch1 = Chain(Conv((1, 1), inplanes => out_1x1))
   
@@ -13,7 +27,14 @@ function inceptionblock(inplanes, out_1x1, red_3x3, out_3x3, red_5x5, out_5x5, p
     return Parallel(cat_channels,
                     branch1, branch2, branch3, branch4)
 end
-  
+
+"""
+    googlenet(; pretrain=false)
+
+Create an Inception-v1 model (commonly referred to as GoogLeNet)
+(ref: https://arxiv.org/abs/1409.4842v1).
+Set `pretrain=true` to load the model with pre-trained weights for ImageNet.
+"""
 function googlenet(; pretrain=false)
   layers = Chain(Conv((7, 7), 3 => 64; stride=2, pad=3),
                  MaxPool((3, 3), stride=2, pad=1),

@@ -1,3 +1,13 @@
+"""
+    inception_a(inplanes, pool_proj)
+
+Create an Inception-v3 style-A module
+(ref: Fig. 5 in https://arxiv.org/abs/1512.00567v3).
+
+# Arguments
+- `inplanes`: number of input feature maps
+- `pool_proj`: the number of output feature maps for the pooling projection
+"""
 function inception_a(inplanes, pool_proj)
   branch1x1 = Chain(conv_bn((1, 1), inplanes, 64)...)
   
@@ -15,6 +25,15 @@ function inception_a(inplanes, pool_proj)
                   branch1x1, branch5x5, branch3x3, branch_pool)
 end
 
+"""
+    inception_b(inplanes)
+
+Create an Inception-v3 style-B module
+(ref: Fig. 10 in https://arxiv.org/abs/1512.00567v3).
+
+# Arguments
+- `inplanes`: number of input feature maps
+"""
 function inception_b(inplanes)
   branch3x3_1 = Chain(conv_bn((3, 3), inplanes, 384; stride=2)...)
 
@@ -28,18 +47,29 @@ function inception_b(inplanes)
                   branch3x3_1, branch3x3_2, branch_pool)
 end
 
-function inception_c(inplanes, c7)
+"""
+    inception_c(inplanes, inner_planes, n=7)
+
+Create an Inception-v3 style-C module
+(ref: Fig. 6 in https://arxiv.org/abs/1512.00567v3).
+
+# Arguments
+- `inplanes`: number of input feature maps
+- `inner_planes`: the number of output feature maps within each branch
+- `n`: the "grid size" (kernel size) for the convolution layers
+"""
+function inception_c(inplanes, inner_planes, n=7)
   branch1x1 = Chain(conv_bn((1, 1), inplanes, 192)...)
 
-  branch7x7_1 = Chain(conv_bn((1, 1), inplanes, c7)...,
-                      conv_bn((1, 7), c7, c7; pad=(0, 3))...,
-                      conv_bn((7, 1), c7, 192; pad=(3, 0))...)
+  branch7x7_1 = Chain(conv_bn((1, 1), inplanes, inner_planes)...,
+                      conv_bn((1, n), inner_planes, inner_planes; pad=(0, 3))...,
+                      conv_bn((n, 1), inner_planes, 192; pad=(3, 0))...)
 
-  branch7x7_2 = Chain(conv_bn((1, 1), inplanes, c7)...,
-                      conv_bn((7, 1), c7, c7; pad=(3, 0))...,
-                      conv_bn((1, 7), c7, c7; pad=(0, 3))...,
-                      conv_bn((7, 1), c7, c7; pad=(3, 0))...,
-                      conv_bn((1, 7), c7, 192; pad=(0, 3))...)
+  branch7x7_2 = Chain(conv_bn((1, 1), inplanes, inner_planes)...,
+                      conv_bn((n, 1), inner_planes, inner_planes; pad=(3, 0))...,
+                      conv_bn((1, n), inner_planes, inner_planes; pad=(0, 3))...,
+                      conv_bn((n, 1), inner_planes, inner_planes; pad=(3, 0))...,
+                      conv_bn((1, n), inner_planes, 192; pad=(0, 3))...)
 
   branch_pool = Chain(MeanPool((3, 3), pad=1, stride=1), 
                       conv_bn((1, 1), inplanes, 192)...)
@@ -48,6 +78,15 @@ function inception_c(inplanes, c7)
                   branch1x1, branch7x7_1, branch7x7_2, branch_pool)
 end
 
+"""
+    inception_d(inplanes)
+
+Create an Inception-v3 style-D module
+(ref: https://github.com/pytorch/vision/blob/6db1569c89094cf23f3bc41f79275c45e9fcb3f3/torchvision/models/inception.py#L322).
+
+# Arguments
+- `inplanes`: number of input feature maps
+"""
 function inception_d(inplanes)
   branch3x3 = Chain(conv_bn((1, 1), inplanes, 192)...,
                     conv_bn((3, 3), 192, 320; stride=2)...)
@@ -63,6 +102,15 @@ function inception_d(inplanes)
                   branch3x3, branch7x7x3, branch_pool)
 end
 
+"""
+    inception_e(inplanes)
+
+Create an Inception-v3 style-E module
+(ref: Fig. 7 in https://arxiv.org/abs/1512.00567v3).
+
+# Arguments
+- `inplanes`: number of input feature maps
+"""
 function inception_e(inplanes)
   branch1x1 = Chain(conv_bn((1, 1), inplanes, 320)...)
 
@@ -90,6 +138,14 @@ function inception_e(inplanes)
                   branch_pool)
 end
 
+"""
+    inception3(; pretrain=false)
+
+Create an Inception-v3 model (ref: https://arxiv.org/abs/1512.00567v3).
+
+!!! warning
+    `inception3` does not currently support pretrained weights.
+"""
 function inception3(; pretrain=false)
   layer = Chain(conv_bn((3, 3), 3, 32; stride=2)...,
                 conv_bn((3, 3), 32, 32)...,
@@ -114,6 +170,6 @@ function inception3(; pretrain=false)
                 flatten,
                 Dense(2048, 1000))
 
-  pretrain && pretrain_error("inception")
+  pretrain && pretrain_error("inception3")
   return layer
 end

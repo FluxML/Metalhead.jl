@@ -1,3 +1,14 @@
+"""
+    fire(inplanes, squeeze_planes, expand1x1_planes, expand3x3_planes)
+
+Create a fire module (ref: https://arxiv.org/abs/1602.07360v4).
+
+# Arguments
+- `inplanes`: number of input feature maps
+- `squeeze_planes`: number of intermediate feature maps
+- `expand1x1_planes`: number of output feature maps for the 1x1 expansion convolution
+- `expand3x3_planes`: number of output feature maps for the 3x3 expansion convolution
+"""
 function fire(inplanes, squeeze_planes, expand1x1_planes, expand3x3_planes)
   branch_1 = Conv((1, 1), inplanes => squeeze_planes, relu)
   branch_2 = Conv((1, 1), squeeze_planes => expand1x1_planes, relu)
@@ -9,6 +20,12 @@ function fire(inplanes, squeeze_planes, expand1x1_planes, expand3x3_planes)
                         branch_3))
 end
 
+"""
+    squeezenet(; pretrain=false)
+
+Create a SqueezeNet (ref: https://arxiv.org/abs/1602.07360v4).
+Set `pretrain=true` to load the model with pre-trained weights for ImageNet.
+"""
 function squeezenet(; pretrain=false)
   layers = Chain(Conv((3, 3), 3 => 64, relu, stride=2),
                  MaxPool((3, 3), stride=2),

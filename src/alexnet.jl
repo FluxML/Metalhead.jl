@@ -1,3 +1,12 @@
+"""
+    alexnet(; pretrain=false)
+
+Create an AlexNet model
+(ref: https://papers.nips.cc/paper/2012/file/c399862d3b9d6b76c8436e924a68c45b-Paper.pdf)
+
+!!! warning
+    `alexnet` does not currently support pretrained weights
+"""
 function alexnet(; pretrain=false)
   layers = Chain(Conv((11, 11), 3=>64, stride=(4, 4), relu, pad=(2, 2)),
                   MaxPool((3, 3), stride=(2, 2)),
