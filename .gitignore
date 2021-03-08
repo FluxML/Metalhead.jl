@@ -3,5 +3,6 @@
 *.jl.mem
 *.bson
 
-# pretrain weights
-./training/pretrain-weights/*
+# manifests
+docs/Manifest.toml
+Manifest.toml

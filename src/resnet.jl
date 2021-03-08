@@ -1,7 +1,8 @@
 """
     basicblock(inplanes, outplanes, downsample = false)
 
-Create a basic residual block (ref: https://arxiv.org/abs/1512.03385v1).
+Create a basic residual block
+([reference](https://arxiv.org/abs/1512.03385v1)).
 
 # Arguments:
 - `inplanes`: the number of input feature maps
@@ -18,7 +19,8 @@ basicblock(inplanes, outplanes, downsample = false) = downsample ?
 """
     bottleneck(inplanes, outplanes, downsample = false)
 
-Create a bottleneck residual block (ref: https://arxiv.org/abs/1512.03385v1).
+Create a bottleneck residual block
+([reference](https://arxiv.org/abs/1512.03385v1)).
 
 # Arguments:
 - `inplanes`: the number of input feature maps
@@ -37,7 +39,8 @@ bottleneck(inplanes, outplanes, downsample = false) = downsample ?
 """
     skip_projection(inplanes, outplanes, downsample = false)
 
-Create a skip projection (ref: https://arxiv.org/abs/1512.03385v1).
+Create a skip projection
+([reference](https://arxiv.org/abs/1512.03385v1)).
 
 # Arguments:
 - `inplanes`: the number of input feature maps
@@ -52,7 +55,8 @@ skip_projection(inplanes, outplanes, downsample = false) = downsample ?
 """
     skip_identity(inplanes, outplanes)
 
-Create a identity projection (ref: https://arxiv.org/abs/1512.03385v1).
+Create a identity projection
+([reference](https://arxiv.org/abs/1512.03385v1)).
 
 # Arguments:
 - `inplanes`: the number of input feature maps
@@ -73,7 +77,8 @@ end
 """
     resnet(block, shortcut_config, channel_config, block_config)
 
-Create a ResNet model (ref: https://arxiv.org/abs/1512.03385v1).
+Create a ResNet model
+([reference](https://arxiv.org/abs/1512.03385v1)).
 
 # Arguments
 - `block`: a function with input `(inplanes, outplanes downsample=false)` that returns
@@ -127,7 +132,8 @@ const resnet_config =
 """
     resnet18(; pretrain=false)
    
-Create a ResNet-18 model (ref: https://arxiv.org/abs/1512.03385v1).
+Create a ResNet-18 model
+([reference](https://arxiv.org/abs/1512.03385v1)).
 
 !!! warning
     `resnet18` does not currently support pretrained weights.
@@ -144,7 +150,8 @@ end
 """
     resnet34(; pretrain=false)
    
-Create a ResNet-34 model (ref: https://arxiv.org/abs/1512.03385v1).
+Create a ResNet-34 model
+([reference](https://arxiv.org/abs/1512.03385v1)).
 
 !!! warning
     `resnet34` does not currently support pretrained weights.
@@ -161,7 +168,8 @@ end
 """
     resnet50(; pretrain=false)
    
-Create a ResNet-50 model (ref: https://arxiv.org/abs/1512.03385v1).
+Create a ResNet-50 model
+([reference](https://arxiv.org/abs/1512.03385v1)).
 Set `pretrain=true` to load the model with pre-trained weights for ImageNet.
 
 See also [`Metalhead.resnet`](#).
@@ -176,7 +184,8 @@ end
 """
     resnet101(; pretrain=false)
    
-Create a ResNet-101 model (ref: https://arxiv.org/abs/1512.03385v1).
+Create a ResNet-101 model
+([reference](https://arxiv.org/abs/1512.03385v1)).
 
 !!! warning
     `resnet101` does not currently support pretrained weights.
@@ -193,7 +202,8 @@ end
 """
     resnet152(; pretrain=false)
    
-Create a ResNet-152 model (ref: https://arxiv.org/abs/1512.03385v1).
+Create a ResNet-152 model
+([reference](https://arxiv.org/abs/1512.03385v1)).
 
 !!! warning
     `resnet152` does not currently support pretrained weights.

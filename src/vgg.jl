@@ -3,7 +3,8 @@ using Flux: convfilter, outdims
 """
     vgg_block(ifilters, ofilters, depth, batchnorm)
 
-A VGG block of convolution layers (ref: https://arxiv.org/abs/1409.1556v6).
+A VGG block of convolution layers
+([reference](https://arxiv.org/abs/1409.1556v6)).
 
 # Arguments
 - `ifilters`: number of input feature maps
@@ -29,7 +30,8 @@ end
 """
     vgg_convolutional_layers(config, batchnorm, inchannels)
 
-Create VGG convolution layers (ref: https://arxiv.org/abs/1409.1556v6).
+Create VGG convolution layers
+([reference](https://arxiv.org/abs/1409.1556v6)).
 
 # Arguments
 - `config`: vector of tuples `(output_channels, num_convolutions)`
@@ -51,7 +53,8 @@ end
 """
     vgg_classifier_layers(imsize, nclasses, fcsize, dropout)
 
-Create VGG classifier (fully connected) layers (ref: https://arxiv.org/abs/1409.1556v6).
+Create VGG classifier (fully connected) layers
+([reference](https://arxiv.org/abs/1409.1556v6)).
 
 # Arguments
 - `imsize`: tuple `(width, height, channels)` indicating the size after
@@ -75,7 +78,8 @@ end
 """
     vgg(imsize; config, inchannels, batchnorm=false, nclasses, fcsize, dropout)
 
-Create a VGG model (ref: https://arxiv.org/abs/1409.1556v6).
+Create a VGG model
+([reference](https://arxiv.org/abs/1409.1556v6)).
 
 # Arguments
 - `imsize`: input image width and height as a tuple
@@ -103,7 +107,8 @@ const vgg_config = Dict(:A => [(64,1), (128,1), (256,2), (512,2), (512,2)],
 """
     vgg11(imsize=(224, 224); inchannels=3, nclasses=1000, fcsize=4096, dropout=0.5, pretrain=false)
 
-Create a VGG-11 style model (ref: https://arxiv.org/abs/1409.1556v6).
+Create a VGG-11 style model
+([reference](https://arxiv.org/abs/1409.1556v6)).
 
 !!! warning
     `vgg11` does not currently support pretrained weights.
@@ -131,7 +136,8 @@ end
 """
     vgg11bn(imsize=(224, 224); inchannels=3, nclasses=1000, fcsize=4096, dropout=0.5, pretrain=false)
 
-Create a VGG-11 style model with batch normalization (ref: https://arxiv.org/abs/1409.1556v6).
+Create a VGG-11 style model with batch normalization
+([reference](https://arxiv.org/abs/1409.1556v6)).
 
 !!! warning
     `vgg11bn` does not currently support pretrained weights.
@@ -160,7 +166,8 @@ end
 """
     vgg13(imsize=(224, 224); inchannels=3, nclasses=1000, fcsize=4096, dropout=0.5, pretrain=false)
 
-Create a VGG-13 style model (ref: https://arxiv.org/abs/1409.1556v6).
+Create a VGG-13 style model
+([reference](https://arxiv.org/abs/1409.1556v6)).
 
 !!! warning
     `vgg13` does not currently support pretrained weights.
@@ -188,7 +195,8 @@ end
 """
     vgg13bn(imsize=(224, 224); inchannels=3, nclasses=1000, fcsize=4096, dropout=0.5, pretrain=false)
 
-Create a VGG-13 style model with batch normalization (ref: https://arxiv.org/abs/1409.1556v6).
+Create a VGG-13 style model with batch normalization
+([reference](https://arxiv.org/abs/1409.1556v6)).
 
 !!! warning
     `vgg13bn` does not currently support pretrained weights.
@@ -217,7 +225,8 @@ end
 """
     vgg16(imsize=(224, 224); inchannels=3, nclasses=1000, fcsize=4096, dropout=0.5, pretrain=false)
 
-Create a VGG-16 style model (ref: https://arxiv.org/abs/1409.1556v6).
+Create a VGG-16 style model
+([reference](https://arxiv.org/abs/1409.1556v6)).
 
 !!! warning
     `vgg16` does not currently support pretrained weights.
@@ -245,7 +254,8 @@ end
 """
     vgg16bn(imsize=(224, 224); inchannels=3, nclasses=1000, fcsize=4096, dropout=0.5, pretrain=false)
 
-Create a VGG-16 style model with batch normalization (ref: https://arxiv.org/abs/1409.1556v6).
+Create a VGG-16 style model with batch normalization
+([reference](https://arxiv.org/abs/1409.1556v6)).
 
 !!! warning
     `vgg16bn` does not currently support pretrained weights.
@@ -274,7 +284,8 @@ end
 """
     vgg19(imsize=(224, 224); inchannels=3, nclasses=1000, fcsize=4096, dropout=0.5, pretrain=false)
 
-Create a VGG-19 style model (ref: https://arxiv.org/abs/1409.1556v6).
+Create a VGG-19 style model
+([reference](https://arxiv.org/abs/1409.1556v6)).
 
 # Arguments
 - `imsize`: input image size as `(width, height)`
@@ -299,7 +310,8 @@ end
 """
     vgg19bn(imsize=(224, 224); inchannels=3, nclasses=1000, fcsize=4096, dropout=0.5, pretrain=false)
 
-Create a VGG-19 style model with batch normalization (ref: https://arxiv.org/abs/1409.1556v6).
+Create a VGG-19 style model with batch normalization
+([reference](https://arxiv.org/abs/1409.1556v6)).
 
 !!! warning
     `vgg19bn` does not currently support pretrained weights.

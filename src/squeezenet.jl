@@ -1,7 +1,8 @@
 """
     fire(inplanes, squeeze_planes, expand1x1_planes, expand3x3_planes)
 
-Create a fire module (ref: https://arxiv.org/abs/1602.07360v4).
+Create a fire module
+([reference](https://arxiv.org/abs/1602.07360v4)).
 
 # Arguments
 - `inplanes`: number of input feature maps
@@ -23,7 +24,8 @@ end
 """
     squeezenet(; pretrain=false)
 
-Create a SqueezeNet (ref: https://arxiv.org/abs/1602.07360v4).
+Create a SqueezeNet
+([reference](https://arxiv.org/abs/1602.07360v4)).
 Set `pretrain=true` to load the model with pre-trained weights for ImageNet.
 """
 function squeezenet(; pretrain=false)

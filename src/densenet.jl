@@ -1,7 +1,8 @@
 """
     dense_bottleneck(inplanes, growth_rate)
 
-Create a Densenet bottleneck layer (ref: https://arxiv.org/abs/1608.06993).
+Create a Densenet bottleneck layer
+([reference](https://arxiv.org/abs/1608.06993)).
 
 # Arguments
 - `inplanes`: number of input feature maps
@@ -19,7 +20,8 @@ end
 """
     transition(inplanes, outplanes)
 
-Create a DenseNet transition sequence (ref: https://arxiv.org/abs/1608.06993).
+Create a DenseNet transition sequence
+([reference](https://arxiv.org/abs/1608.06993)).
 
 # Arguments
 - `inplanes`: number of input feature maps
@@ -32,7 +34,7 @@ transition(inplanes, outplanes) = (conv_bn((1, 1), inplanes, outplanes; usebias=
     dense_block(inplanes, growth_rate, nblock)
 
 Create a sequence of `nblock` DesNet bottlenecks with `growth_rate`
-(ref: https://arxiv.org/abs/1608.06993).
+([reference](https://arxiv.org/abs/1608.06993)).
 
 # Arguments
 - `inplanes`: number of input feature maps to the full sequence
@@ -51,7 +53,8 @@ end
 """
     densenet(nblocks=(6, 12, 24, 16); growth_rate=32, reduction=0.5, num_classes=1000)
 
-Create a DenseNet model (ref: https://arxiv.org/abs/1608.06993).
+Create a DenseNet model
+([reference](https://arxiv.org/abs/1608.06993)).
 
 # Arguments
 - `nblocks`: number of dense blocks between transitions
@@ -86,7 +89,8 @@ end
 """
     densenet121(; pretrain=false)
 
-Create a DenseNet-121 model (ref: https://arxiv.org/abs/1608.06993).
+Create a DenseNet-121 model
+([reference](https://arxiv.org/abs/1608.06993)).
 Set `pretrain=true` to load the model with pre-trained weights for ImageNet.
 
 See also [`Metalhead.densenet`](#).
@@ -100,7 +104,8 @@ end
 """
     densenet161(; pretrain=false)
 
-Create a DenseNet-161 model (ref: https://arxiv.org/abs/1608.06993).
+Create a DenseNet-161 model
+([reference](https://arxiv.org/abs/1608.06993)).
 
 !!! warning
     `densenet161` does not currently support pretrained weights.
@@ -117,7 +122,8 @@ end
 """
     densenet169(; pretrain=false)
 
-Create a DenseNet-169 model (ref: https://arxiv.org/abs/1608.06993).
+Create a DenseNet-169 model
+([reference](https://arxiv.org/abs/1608.06993)).
 
 !!! warning
     `densenet169` does not currently support pretrained weights.
@@ -134,7 +140,8 @@ end
 """
     densenet201(; pretrain=false)
 
-Create a DenseNet-201 model (ref: https://arxiv.org/abs/1608.06993).
+Create a DenseNet-201 model
+([reference](https://arxiv.org/abs/1608.06993)).
 
 !!! warning
     `densenet201` does not currently support pretrained weights.

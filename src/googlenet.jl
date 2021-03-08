@@ -1,7 +1,8 @@
 """
     inceptionblock(inplanes, out_1x1, red_3x3, out_3x3, red_5x5, out_3x3, pool_proj)
 
-Create an inception module for use in GoogLeNet (ref: https://arxiv.org/abs/1409.4842v1).
+Create an inception module for use in GoogLeNet
+([reference](https://arxiv.org/abs/1409.4842v1)).
 
 # Arguments
 - `inplanes`: the number of input feature maps
@@ -32,7 +33,7 @@ end
     googlenet(; pretrain=false)
 
 Create an Inception-v1 model (commonly referred to as GoogLeNet)
-(ref: https://arxiv.org/abs/1409.4842v1).
+([reference](https://arxiv.org/abs/1409.4842v1)).
 Set `pretrain=true` to load the model with pre-trained weights for ImageNet.
 """
 function googlenet(; pretrain=false)
