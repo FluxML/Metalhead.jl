@@ -19,5 +19,5 @@ end
 
 cat_channels(x, y) = cat(x, y; dims=3)
 
-weights(model) = BSON.load(joinpath(@artifact_str(model), "$model.bson"))[:weights]
-pretrain_error(model) = error("No pre-trained weights available for $model.")
+weights(model) = BSON.load(joinpath(@artifact_str(model), "$model.bson"), @__MODULE__)[:weights]
+pretrain_error(model) = throw(ArgumentError("No pre-trained weights available for $model."))

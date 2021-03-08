@@ -1,7 +1,7 @@
 module Metalhead
 
 using Flux
-using Flux: outputsize
+using Flux: outputsize, Zygote
 using BSON
 using Pkg.Artifacts
 
