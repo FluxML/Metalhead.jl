@@ -25,6 +25,9 @@ data = [(rand(Float32, 224, 224, 3, batchsize), onehotbatch(rand(1:1000), 1:1000
 opt = ADAM()
 ps = Flux.params(model)
 loss(x, y, m) = Flux.Losses.logitcrossentropy(m(x), y)
-cb = () -> @show mean(loss(x, y, model) for (x, y) in data)
-Flux.train!((x, y) -> loss(x, y, model), ps, data, opt; cb = cb)
+for (i, (x, y)) in enumerate(data)
+    @info "Starting batch $i ..."
+    gs = gradient(() -> loss(x, y, model), ps)
+    Flux.update!(opt, ps, gs)
+end
 ```
