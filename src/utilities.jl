@@ -19,9 +19,11 @@ function conv_bn(kernelsize::Tuple{Int64,Int64}, inplanes::Int64, outplanes::Int
                  usebias::Bool=true, rev::Bool=false)
   conv_layer = []
   if usebias
-    push!(conv_layer, Conv(kernelsize, inplanes => outplanes, stride=stride, pad=pad))
+    push!(conv_layer, Conv(kernelsize, inplanes => outplanes,
+                           stride=stride, pad=pad, init=Flux.kaiming_normal))
   else
-    push!(conv_layer, Conv(kernelsize, inplanes => outplanes, stride=stride, pad=pad, bias=Flux.Zeros()))
+    push!(conv_layer, Conv(kernelsize, inplanes => outplanes,
+                           stride=stride, pad=pad, init=Flux.kaiming_normal, bias=Flux.Zeros()))
   end
 
   if rev
