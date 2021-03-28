@@ -27,4 +27,4 @@ function alexnet(; pretrain=false)
   pretrain && pretrain_error("alexnet")  
 
   return layers
-end  
+end
