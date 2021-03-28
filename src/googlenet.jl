@@ -60,4 +60,4 @@ function googlenet(; pretrain=false)
 
   pretrain && Flux.loadparams!(layers, weights("googlenet"))
   return layers
-end  
+end
