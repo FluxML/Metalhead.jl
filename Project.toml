@@ -9,6 +9,7 @@ Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 
 [compat]
 BSON = "0.3.2"
+Flux = "0.12"
 julia = "1.4"
 
 [extras]
