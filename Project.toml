@@ -1,6 +1,6 @@
 name = "Metalhead"
 uuid = "dbeba491-748d-5e0e-a39e-b530a07fa0cc"
-version = "0.5.2"
+version = "0.5.3"
 
 [deps]
 BSON = "fbb218c0-5317-5bc6-957e-2ee96dd4b1f0"
