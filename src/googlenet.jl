@@ -30,13 +30,12 @@ function inceptionblock(inplanes, out_1x1, red_3x3, out_3x3, red_5x5, out_5x5, p
 end
 
 """
-    googlenet(; pretrain=false)
+    googlenet()
 
 Create an Inception-v1 model (commonly referred to as GoogLeNet)
 ([reference](https://arxiv.org/abs/1409.4842v1)).
-Set `pretrain=true` to load the model with pre-trained weights for ImageNet.
 """
-function googlenet(; pretrain=false)
+function googlenet()
   layers = Chain(Conv((7, 7), 3 => 64; stride=2, pad=3),
                  MaxPool((3, 3), stride=2, pad=1),
                  Conv((1, 1), 64 => 64),
@@ -58,6 +57,27 @@ function googlenet(; pretrain=false)
                  Dropout(0.4),
                  Dense(1024, 1000))
 
-  pretrain && Flux.loadparams!(layers, weights("googlenet"))
   return layers
 end
+
+"""
+    GoogLeNet(; pretrain=false)
+
+Create an Inception-v1 model (commonly referred to as `GoogLeNet`)
+([reference](https://arxiv.org/abs/1409.4842v1)).
+Set `pretrain=true` to load the model with pre-trained weights for ImageNet.
+
+See also [`googlenet`](#).
+"""
+struct GoogLeNet{T}
+  layers::T
+
+  function GoogLeNet(; pretrain=false)
+    layers = googlenet()
+
+    pretrain && Flux.loadparams!(layers, weights("googlenet"))
+    new{typeof(layers)}(layers)
+  end
+end
+
+(m::GoogLeNet)(x) = m.layers(x)

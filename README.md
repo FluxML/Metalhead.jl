@@ -14,23 +14,23 @@
 
 | Model Name     | Function           | Pre-trained? |
 |:---------------|:-------------------|:------------:|
-| VGG-11         | [`vgg11`](#)       | N            |
-| VGG-11 (w/ BN) | [`vgg11bn`](#)     | N            |
-| VGG-13         | [`vgg13`](#)       | N            |
-| VGG-13 (w/ BN) | [`vgg13bn`](#)     | N            |
-| VGG-16         | [`vgg16`](#)       | N            |
-| VGG-16 (w/ BN) | [`vgg16bn`](#)     | N            |
-| VGG-19         | [`vgg19`](#)       | Y            |
-| VGG-19 (w/ BN) | [`vgg19bn`](#)     | N            |
-| ResNet-18      | [`resnet18`](#)    | N            |
-| ResNet-34      | [`resnet34`](#)    | N            |
-| ResNet-50      | [`resnet50`](#)    | Y            |
-| ResNet-101     | [`resnet101`](#)   | N            |
-| ResNet-152     | [`resnet152`](#)   | N            |
-| GoogLeNet      | [`googlenet`](#)   | Y            |
-| Inception-v3   | [`inception3`](#)  | N            |
-| SqueezeNet     | [`squeezenet`](#)  | Y            |
-| DenseNet-121   | [`densenet121`](#) | Y            |
-| DenseNet-161   | [`densenet161`](#) | N            |
-| DenseNet-169   | [`densenet169`](#) | N            |
-| DenseNet-201   | [`densenet201`](#) | N            |
+| VGG-11         | [`VGG11`](#)       | N            |
+| VGG-11 (w/ BN) | [`VGG11`](#)       | N            |
+| VGG-13         | [`VGG13`](#)       | N            |
+| VGG-13 (w/ BN) | [`VGG13`](#)       | N            |
+| VGG-16         | [`VGG16`](#)       | N            |
+| VGG-16 (w/ BN) | [`VGG16`](#)       | N            |
+| VGG-19         | [`VGG19`](#)       | Y            |
+| VGG-19 (w/ BN) | [`VGG19`](#)       | N            |
+| ResNet-18      | [`ResNet18`](#)    | N            |
+| ResNet-34      | [`ResNet34`](#)    | N            |
+| ResNet-50      | [`ResNet50`](#)    | Y            |
+| ResNet-101     | [`ResNet101`](#)   | N            |
+| ResNet-152     | [`ResNet152`](#)   | N            |
+| GoogLeNet      | [`GoogLeNet`](#)   | Y            |
+| Inception-v3   | [`Inception3`](#)  | N            |
+| SqueezeNet     | [`SqueezeNet`](#)  | Y            |
+| DenseNet-121   | [`DenseNet121`](#) | Y            |
+| DenseNet-161   | [`DenseNet161`](#) | N            |
+| DenseNet-169   | [`DenseNet169`](#) | N            |
+| DenseNet-201   | [`DenseNet201`](#) | N            |

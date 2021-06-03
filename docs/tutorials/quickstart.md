@@ -10,14 +10,13 @@ Using a model from Metalhead is as simple as selecting a model from the table of
 ```julia
 using Flux, Metalhead
 
-model = resnet50(pretrain=true)
+model = ResNet50(pretrain=true)
 ```
 
 Now, we can use this model with Flux like any other model. Below, we train it on some randomly generated data.
 {cell=quickstart}
 ```julia
 using Flux: onehotbatch
-using Statistics: mean
 
 batchsize = 8
 data = [(rand(Float32, 224, 224, 3, batchsize), onehotbatch(rand(1:1000), 1:1000))

@@ -1,13 +1,10 @@
 """
-    alexnet(; pretrain=false)
+    alexnet()
 
 Create an AlexNet model
 ([reference](https://papers.nips.cc/paper/2012/file/c399862d3b9d6b76c8436e924a68c45b-Paper.pdf))
-
-!!! warning
-    `alexnet` does not currently support pretrained weights.
 """
-function alexnet(; pretrain=false)
+function alexnet()
   layers = Chain(Conv((11, 11), 3=>64, stride=(4, 4), relu, pad=(2, 2)),
                  MaxPool((3, 3), stride=(2, 2)),
                  Conv((5, 5), 64=>192, relu, pad=(2, 2)),
@@ -24,7 +21,27 @@ function alexnet(; pretrain=false)
                  Dense(4096, 4096, relu),
                  Dense(4096, 1000))
 
-  pretrain && pretrain_error("alexnet")  
-
   return layers
 end
+
+"""
+    AlexNet(; pretrain=false)
+
+Create a `AlexNet`.
+See also [`alexnet`](#).
+
+!!! warning
+    `AlexNet` does not currently support pretrained weights.
+"""
+struct AlexNet{T}
+  layers::T
+
+  function AlexNet(; pretrain=false)
+    layers = alexnet()
+
+    pretrain && pretrain_error("AlexNet")
+    new{typeof(layers)}(layers)
+  end
+end
+
+(m::AlexNet)(x) = m.layers(x)

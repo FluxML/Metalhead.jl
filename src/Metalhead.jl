@@ -15,10 +15,10 @@ include("inception.jl")
 include("squeezenet.jl")
 include("densenet.jl")
 
-export  alexnet,
-        vgg11, vgg11bn, vgg13, vgg13bn, vgg16, vgg16bn, vgg19, vgg19bn,
-        resnet18, resnet34, resnet50, resnet101, resnet152,
-        googlenet, inception3, squeezenet,
-        densenet121, densenet161, densenet169, densenet201
+export  AlexNet,
+        VGG, VGG11, VGG13, VGG16, VGG19,
+        ResNet, ResNet18, ResNet34, ResNet50, ResNet101, ResNet152,
+        GoogLeNet, Inception3, SqueezeNet,
+        DenseNet, DenseNet121, DenseNet161, DenseNet169, DenseNet201
 
 end # module

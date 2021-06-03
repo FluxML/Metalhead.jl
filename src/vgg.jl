@@ -105,234 +105,140 @@ const vgg_config = Dict(:A => [(64,1), (128,1), (256,2), (512,2), (512,2)],
                         :E => [(64,2), (128,2), (256,4), (512,4), (512,4)])
 
 """
-    vgg11(imsize=(224, 224); inchannels=3, nclasses=1000, fcsize=4096, dropout=0.5, pretrain=false)
+    VGG{BN}(imsize=(224, 224); config, inchannels, nclasses, fcsize, dropout)
+
+Create a `VGG` model
+([reference](https://arxiv.org/abs/1409.1556v6)).
+See also [`vgg`](#).
+
+Set `BN` to `true` to enable batch normalization after
+convolution layers. Defaults to `false`.
+
+# Arguments
+- `imsize`: input image width and height as a tuple
+- `config`: the configuration for the convolution layers
+            (see [`Metalhead.vgg_convolutional_layers`](#))
+- `inchannels`: number of input channels
+- `nclasses`: number of output classes
+- `fcsize`: intermediate fully connected layer size
+            (see [`Metalhead.vgg_classifier_layers`](#))
+- `dropout`: dropout level between fully connected layers
+"""
+struct VGG{BN, T}
+  layers::T
+
+  function VGG{BN}(imsize=(224, 224); config, inchannels, nclasses, fcsize, dropout) where BN
+    layers = vgg(imsize; config=config,
+                          inchannels=inchannels,
+                          nclasses=nclasses,
+                          fcsize=fcsize,
+                          dropout=dropout,
+                          batchnorm=BN)
+    
+    new{BN, typeof(layers)}(layers)
+  end
+end
+
+VGG(imsize=(224, 224); kwargs...) = VGG{false}(imsize; kwargs...)
+
+(m::VGG)(x) = m.layers(x)
+
+"""
+    VGG11(; pretrain=false, batchnorm=false)
 
 Create a VGG-11 style model
 ([reference](https://arxiv.org/abs/1409.1556v6)).
+See also [`VGG`](#).
 
 !!! warning
-    `vgg11` does not currently support pretrained weights.
+    `VGG11` does not currently support pretrained weights.
 
 # Arguments
-- `imsize`: input image size as `(width, height)`
-- `inchannels`: number of input channels
-- `nclasses`: number of output classes
-- `fcsize`: intermediate fully connected layer size
-            (see [`Metalhead.vgg_classifier_layers`](#))
-- `dropout`: dropout level between fully connected layers
 - `pretrain`: set to `true` to load pre-trained model weights for ImageNet
 """
-function vgg11(imsize=(224, 224); inchannels=3, nclasses=1000, fcsize=4096, dropout=0.5, pretrain=false)
-  model = vgg(imsize; config=vgg_config[:A],
-                      inchannels=inchannels,
-                      nclasses=nclasses,
-                      fcsize=fcsize,
-                      dropout=dropout)
+function VGG11(; pretrain=false, batchnorm=false)
+  model = VGG{batchnorm}((224, 224); config=vgg_config[:A],
+                                     inchannels=3,
+                                     nclasses=1000,
+                                     fcsize=4096,
+                                     dropout=0.5)
 
-  pretrain && pretrain_error("vgg11")
+  pretrain && pretrain_error("VGG11{BN=$batchnorm}")
   return model
 end
 
 """
-    vgg11bn(imsize=(224, 224); inchannels=3, nclasses=1000, fcsize=4096, dropout=0.5, pretrain=false)
+    VGG13(; pretrain=false, batchnorm=false)
 
-Create a VGG-11 style model with batch normalization
+Create a VGG-11 style model
 ([reference](https://arxiv.org/abs/1409.1556v6)).
+See also [`VGG`](#).
 
 !!! warning
-    `vgg11bn` does not currently support pretrained weights.
+    `VGG13` does not currently support pretrained weights.
 
 # Arguments
-- `imsize`: input image size as `(width, height)`
-- `inchannels`: number of input channels
-- `nclasses`: number of output classes
-- `fcsize`: intermediate fully connected layer size
-            (see [`Metalhead.vgg_classifier_layers`](#))
-- `dropout`: dropout level between fully connected layers
 - `pretrain`: set to `true` to load pre-trained model weights for ImageNet
 """
-function vgg11bn(imsize=(224, 224); inchannels=3, nclasses=1000, fcsize=4096, dropout=0.5, pretrain=false)
-  model = vgg(imsize; config=vgg_config[:A],
-                      batchnorm=true,
-                      inchannels=inchannels,
-                      nclasses=nclasses,
-                      fcsize=fcsize,
-                      dropout=dropout)
+function VGG13(; pretrain=false, batchnorm=false)
+  model = VGG{batchnorm}((224, 224); config=vgg_config[:B],
+                                     inchannels=3,
+                                     nclasses=1000,
+                                     fcsize=4096,
+                                     dropout=0.5)
 
-  pretrain && pretrain_error("vgg11bn")
+  pretrain && pretrain_error("VGG13{BN=$batchnorm}")
   return model
 end
 
 """
-    vgg13(imsize=(224, 224); inchannels=3, nclasses=1000, fcsize=4096, dropout=0.5, pretrain=false)
+    VGG16(; pretrain=false, batchnorm=false)
 
-Create a VGG-13 style model
+Create a VGG-11 style model
 ([reference](https://arxiv.org/abs/1409.1556v6)).
+See also [`VGG`](#).
 
 !!! warning
-    `vgg13` does not currently support pretrained weights.
+    `VGG16` does not currently support pretrained weights.
 
 # Arguments
-- `imsize`: input image size as `(width, height)`
-- `inchannels`: number of input channels
-- `nclasses`: number of output classes
-- `fcsize`: intermediate fully connected layer size
-            (see [`Metalhead.vgg_classifier_layers`](#))
-- `dropout`: dropout level between fully connected layers
 - `pretrain`: set to `true` to load pre-trained model weights for ImageNet
 """
-function vgg13(imsize=(224, 224); inchannels=3, nclasses=1000, fcsize=4096, dropout=0.5, pretrain=false)
-  model = vgg(imsize; config=vgg_config[:B],
-                      inchannels=inchannels,
-                      nclasses=nclasses,
-                      fcsize=fcsize,
-                      dropout=dropout)
+function VGG16(; pretrain=false, batchnorm=false)
+  model = VGG{batchnorm}((224, 224); config=vgg_config[:D],
+                                     inchannels=3,
+                                     nclasses=1000,
+                                     fcsize=4096,
+                                     dropout=0.5)
 
-  pretrain && pretrain_error("vgg13")
+  pretrain && pretrain_error("VGG11{BN=$batchnorm}")
   return model
 end
 
 """
-    vgg13bn(imsize=(224, 224); inchannels=3, nclasses=1000, fcsize=4096, dropout=0.5, pretrain=false)
+    VGG19(; pretrain=false, batchnorm=false)
 
-Create a VGG-13 style model with batch normalization
+Create a VGG-11 style model
 ([reference](https://arxiv.org/abs/1409.1556v6)).
+See also [`VGG`](#).
 
 !!! warning
-    `vgg13bn` does not currently support pretrained weights.
+    `VGG19{BN=true}` does not currently support pretrained weights.
 
 # Arguments
-- `imsize`: input image size as `(width, height)`
-- `inchannels`: number of input channels
-- `nclasses`: number of output classes
-- `fcsize`: intermediate fully connected layer size
-            (see [`Metalhead.vgg_classifier_layers`](#))
-- `dropout`: dropout level between fully connected layers
 - `pretrain`: set to `true` to load pre-trained model weights for ImageNet
 """
-function vgg13bn(imsize=(224, 224); inchannels=3, nclasses=1000, fcsize=4096, dropout=0.5, pretrain=false)
-  model = vgg(imsize; config=vgg_config[:B],
-                      batchnorm=true,
-                      inchannels=inchannels,
-                      nclasses=nclasses,
-                      fcsize=fcsize,
-                      dropout=dropout)
+function VGG19(; pretrain=false, batchnorm=false)
+  model = VGG{batchnorm}((224, 224); config=vgg_config[:E],
+                                     inchannels=3,
+                                     nclasses=1000,
+                                     fcsize=4096,
+                                     dropout=0.5)
 
-  pretrain && pretrain_error("vgg13bn")
-  return model
-end
-
-"""
-    vgg16(imsize=(224, 224); inchannels=3, nclasses=1000, fcsize=4096, dropout=0.5, pretrain=false)
-
-Create a VGG-16 style model
-([reference](https://arxiv.org/abs/1409.1556v6)).
-
-!!! warning
-    `vgg16` does not currently support pretrained weights.
-
-# Arguments
-- `imsize`: input image size as `(width, height)`
-- `inchannels`: number of input channels
-- `nclasses`: number of output classes
-- `fcsize`: intermediate fully connected layer size
-            (see [`Metalhead.vgg_classifier_layers`](#))
-- `dropout`: dropout level between fully connected layers
-- `pretrain`: set to `true` to load pre-trained model weights for ImageNet
-"""
-function vgg16(imsize=(224, 224); inchannels=3, nclasses=1000, fcsize=4096, dropout=0.5, pretrain=false)
-  model = vgg(imsize; config=vgg_config[:D],
-                      inchannels=inchannels,
-                      nclasses=nclasses,
-                      fcsize=fcsize,
-                      dropout=dropout)
-
-  pretrain && pretrain_error("vgg16")
-  return model
-end
-
-"""
-    vgg16bn(imsize=(224, 224); inchannels=3, nclasses=1000, fcsize=4096, dropout=0.5, pretrain=false)
-
-Create a VGG-16 style model with batch normalization
-([reference](https://arxiv.org/abs/1409.1556v6)).
-
-!!! warning
-    `vgg16bn` does not currently support pretrained weights.
-
-# Arguments
-- `imsize`: input image size as `(width, height)`
-- `inchannels`: number of input channels
-- `nclasses`: number of output classes
-- `fcsize`: intermediate fully connected layer size
-            (see [`Metalhead.vgg_classifier_layers`](#))
-- `dropout`: dropout level between fully connected layers
-- `pretrain`: set to `true` to load pre-trained model weights for ImageNet
-"""
-function vgg16bn(imsize=(224, 224); inchannels=3, nclasses=1000, fcsize=4096, dropout=0.5, pretrain=false)
-  model = vgg(imsize; config=vgg_config[:D],
-                      batchnorm=true,
-                      inchannels=inchannels,
-                      nclasses=nclasses,
-                      fcsize=fcsize,
-                      dropout=dropout)
-
-  pretrain && pretrain_error("vgg16bn")
-  return model
-end
-
-"""
-    vgg19(imsize=(224, 224); inchannels=3, nclasses=1000, fcsize=4096, dropout=0.5, pretrain=false)
-
-Create a VGG-19 style model
-([reference](https://arxiv.org/abs/1409.1556v6)).
-
-# Arguments
-- `imsize`: input image size as `(width, height)`
-- `inchannels`: number of input channels
-- `nclasses`: number of output classes
-- `fcsize`: intermediate fully connected layer size
-            (see [`Metalhead.vgg_classifier_layers`](#))
-- `dropout`: dropout level between fully connected layers
-- `pretrain`: set to `true` to load pre-trained model weights for ImageNet
-"""
-function vgg19(imsize=(224, 224); inchannels=3, nclasses=1000, fcsize=4096, dropout=0.5, pretrain=false)
-  model = vgg(imsize; config=vgg_config[:E],
-                      inchannels=inchannels,
-                      nclasses=nclasses,
-                      fcsize=fcsize,
-                      dropout=dropout)
-
-  pretrain && Flux.loadparams!(model, weights("vgg19"))
-  return model
-end
-
-"""
-    vgg19bn(imsize=(224, 224); inchannels=3, nclasses=1000, fcsize=4096, dropout=0.5, pretrain=false)
-
-Create a VGG-19 style model with batch normalization
-([reference](https://arxiv.org/abs/1409.1556v6)).
-
-!!! warning
-    `vgg19bn` does not currently support pretrained weights.
-
-# Arguments
-- `imsize`: input image size as `(width, height)`
-- `inchannels`: number of input channels
-- `nclasses`: number of output classes
-- `fcsize`: intermediate fully connected layer size
-            (see [`Metalhead.vgg_classifier_layers`](#))
-- `dropout`: dropout level between fully connected layers
-- `pretrain`: set to `true` to load pre-trained model weights for ImageNet
-"""
-function vgg19bn(imsize=(224, 224); inchannels=3, nclasses=1000, fcsize=4096, dropout=0.5, pretrain=false)
-  model = vgg(imsize; config=vgg_config[:E],
-                      batchnorm=true,
-                      inchannels=inchannels,
-                      nclasses=nclasses,
-                      fcsize=fcsize,
-                      dropout=dropout)
-
-  pretrain && pretrain_error("vgg19bn")
+  if pretrain && !batchnorm
+    Flux.loadparams!(model.layers, weights("vgg19"))
+  elseif pretrain
+    pretrain_error("VGG19{BN=true}")
+  end
   return model
 end

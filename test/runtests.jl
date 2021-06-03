@@ -1,55 +1,59 @@
 using Metalhead, Test
 
-PRETRAINED_MODELS = [vgg19, resnet50, googlenet, densenet121, squeezenet]
+PRETRAINED_MODELS = [(VGG19, false), ResNet50, GoogLeNet, DenseNet121, SqueezeNet]
 
 @testset "AlexNet" begin
-  model = alexnet()
+  model = AlexNet()
   @test size(model(rand(Float32, 256, 256, 3, 50))) == (1000, 50)
-  @test_throws ArgumentError alexnet(pretrain=true)
+  @test_throws ArgumentError AlexNet(pretrain=true)
 end
 
-@testset "VGG ($model)" for model in [vgg11, vgg11bn, vgg13, vgg13bn, vgg16, vgg16bn, vgg19, vgg19bn]
-  imsize = (224, 224)
-  m = model(imsize)  
+@testset "VGG" begin
+  @testset "$model{BN=$bn}" for model in [VGG11, VGG13, VGG16, VGG19], bn in [true, false]
+    imsize = (224, 224)
+    m = model(batchnorm=bn)
 
-  @test size(m(rand(Float32, imsize..., 3, 50))) == (1000, 50)
-  if model in PRETRAINED_MODELS
-    @test (model(imsize; pretrain=true); true)
-  else
-    @test_throws ArgumentError model(imsize; pretrain=true)
+    @test size(m(rand(Float32, imsize..., 3, 50))) == (1000, 50)
+    if (model, bn) in PRETRAINED_MODELS
+      @test (model(batchnorm=bn, pretrain=true); true)
+    else
+      @test_throws ArgumentError model(batchnorm=bn, pretrain=true)
+    end
   end
 end
 
-@testset "ResNet ($model)" for model in [resnet18, resnet34, resnet50, resnet101, resnet152]
-  m = model()
-  @test size(m(rand(Float32, 256, 256, 3, 50))) == (1000, 50)
+@testset "ResNet" begin
+  @testset for model in [ResNet18, ResNet34, ResNet50, ResNet101, ResNet152]
+    m = model()
+    @test size(m(rand(Float32, 256, 256, 3, 50))) == (1000, 50)
 
-  if model in PRETRAINED_MODELS
-    @test (model(pretrain=true); true)
-  else
-    @test_throws ArgumentError model(pretrain=true)
+    if model in PRETRAINED_MODELS
+      @test (model(pretrain=true); true)
+    else
+      @test_throws ArgumentError model(pretrain=true)
+    end
   end
 end
 
 @testset "GoogLeNet" begin
-  m = googlenet()
+  m = GoogLeNet()
   @test size(m(rand(Float32, 224, 224, 3, 50))) == (1000, 50)
-  @test (googlenet(pretrain=true); true)
+  @test (GoogLeNet(pretrain=true); true)
 end
 
 @testset "Inception3" begin
-  m = inception3()
+  m = Inception3()
   @test size(m(rand(Float32, 299, 299, 3, 50))) == (1000, 50)
-  @test_throws ArgumentError inception3(pretrain=true)
+  @test_throws ArgumentError Inception3(pretrain=true)
 end
 
 @testset "SqueezeNet" begin
-  m = squeezenet()
+  m = SqueezeNet()
   @test size(m(rand(Float32, 227, 227, 3, 50))) == (1000, 50)
-  @test (squeezenet(pretrain=true); true)
+  @test (SqueezeNet(pretrain=true); true)
 end
 
-@testset "DenseNet" for model in [densenet121, densenet161, densenet169, densenet201]
+@testset "DenseNet" for model in [DenseNet121, DenseNet161, DenseNet169, DenseNet201]
   m = model()
   @test size(m(rand(Float32, 224, 224, 3, 50))) == (1000, 50)
   

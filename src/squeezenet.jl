@@ -22,7 +22,7 @@ function fire(inplanes, squeeze_planes, expand1x1_planes, expand3x3_planes)
 end
 
 """
-    squeezenet(; pretrain=false)
+    squeezenet()
 
 Create a SqueezeNet
 ([reference](https://arxiv.org/abs/1602.07360v4)).
@@ -46,6 +46,27 @@ function squeezenet(; pretrain=false)
                  AdaptiveMeanPool((1, 1)),
                  flatten)
 
-  pretrain && Flux.loadparams!(layers, weights("squeezenet"))
   return layers
 end
+
+"""
+    SqueezeNet(; pretrain=false)
+
+Create a SqueezeNet
+([reference](https://arxiv.org/abs/1602.07360v4)).
+Set `pretrain=true` to load the model with pre-trained weights for ImageNet.
+
+See also [`squeezenet`](#).
+"""
+struct SqueezeNet{T}
+  layers::T
+
+  function SqueezeNet(; pretrain=false)
+    layers = squeezenet()
+
+    pretrain && Flux.loadparams!(layers, weights("squeezenet"))
+    new{typeof(layers)}(layers)
+  end
+end
+
+(m::SqueezeNet)(x) = m.layers(x)

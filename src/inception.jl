@@ -139,14 +139,14 @@ function inception_e(inplanes)
 end
 
 """
-    inception3(; pretrain=false)
+    inception3()
 
 Create an Inception-v3 model ([reference](https://arxiv.org/abs/1512.00567v3)).
 
 !!! warning
     `inception3` does not currently support pretrained weights.
 """
-function inception3(; pretrain=false)
+function inception3()
   layer = Chain(conv_bn((3, 3), 3, 32; stride=2)...,
                 conv_bn((3, 3), 32, 32)...,
                 conv_bn((3, 3), 32, 64; pad=1)...,
@@ -170,6 +170,28 @@ function inception3(; pretrain=false)
                 flatten,
                 Dense(2048, 1000))
 
-  pretrain && pretrain_error("inception3")
   return layer
 end
+
+"""
+    Inception3(; pretrain=false)
+
+Create an Inception-v3 model ([reference](https://arxiv.org/abs/1512.00567v3)).
+
+!!! warning
+    `Inception3` does not currently support pretrained weights.
+
+See also [`inception3`](#).
+"""
+struct Inception3{T}
+  layers::T
+
+  function Inception3(; pretrain=false)
+    layers = inception3()
+
+    pretrain && pretrain_error("Inception3")
+    new{typeof(layers)}(layers)
+  end
+end
+
+(m::Inception3)(x) = m.layers(x)
