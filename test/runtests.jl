@@ -53,13 +53,15 @@ end
   @test (SqueezeNet(pretrain=true); true)
 end
 
-@testset "DenseNet" for model in [DenseNet121, DenseNet161, DenseNet169, DenseNet201]
-  m = model()
-  @test size(m(rand(Float32, 224, 224, 3, 50))) == (1000, 50)
-  
-  if model in PRETRAINED_MODELS
-    @test (model(pretrain=true); true)
-  else
-    @test_throws ArgumentError model(pretrain=true)
+@testset "DenseNet" begin
+  @testset for model in [DenseNet121, DenseNet161, DenseNet169, DenseNet201]
+    m = model()
+    @test size(m(rand(Float32, 224, 224, 3, 50))) == (1000, 50)
+    
+    if model in PRETRAINED_MODELS
+      @test (model(pretrain=true); true)
+    else
+      @test_throws ArgumentError model(pretrain=true)
+    end
   end
 end
