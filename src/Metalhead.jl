@@ -3,7 +3,7 @@ module Metalhead
 using Flux
 using Flux: outputsize, Zygote
 using BSON
-using Pkg.Artifacts
+using Artifacts, LazyArtifacts
 
 # Models
 include("utilities.jl")
