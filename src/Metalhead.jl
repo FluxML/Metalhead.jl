@@ -1,7 +1,10 @@
 module Metalhead
 
+using Base: Integer
 using Flux
 using Flux: outputsize, Zygote
+using Functors
+using Functors: @functor
 using BSON
 using Artifacts, LazyArtifacts
 

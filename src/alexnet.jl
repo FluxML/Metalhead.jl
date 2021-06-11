@@ -35,13 +35,15 @@ See also [`alexnet`](#).
 """
 struct AlexNet{T}
   layers::T
-
-  function AlexNet(; pretrain=false)
-    layers = alexnet()
-
-    pretrain && pretrain_error("AlexNet")
-    new{typeof(layers)}(layers)
-  end
 end
+
+function AlexNet(; pretrain=false)
+  layers = alexnet()
+  pretrain && pretrain_error("AlexNet")
+
+  AlexNet(layers)
+end
+
+@functor AlexNet
 
 (m::AlexNet)(x) = m.layers(x)

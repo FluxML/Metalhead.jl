@@ -60,13 +60,15 @@ See also [`squeezenet`](#).
 """
 struct SqueezeNet{T}
   layers::T
-
-  function SqueezeNet(; pretrain=false)
-    layers = squeezenet()
-
-    pretrain && Flux.loadparams!(layers, weights("squeezenet"))
-    new{typeof(layers)}(layers)
-  end
 end
+
+function SqueezeNet(; pretrain=false)
+  layers = squeezenet()
+  pretrain && Flux.loadparams!(layers, weights("squeezenet"))
+
+  SqueezeNet(layers)
+end
+
+@functor SqueezeNet
 
 (m::SqueezeNet)(x) = m.layers(x)

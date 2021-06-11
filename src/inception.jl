@@ -185,13 +185,15 @@ See also [`inception3`](#).
 """
 struct Inception3{T}
   layers::T
-
-  function Inception3(; pretrain=false)
-    layers = inception3()
-
-    pretrain && pretrain_error("Inception3")
-    new{typeof(layers)}(layers)
-  end
 end
+
+function Inception3(; pretrain=false)
+  layers = inception3()
+  pretrain && pretrain_error("Inception3")
+
+  Inception3(layers)
+end
+
+@functor Inception3
 
 (m::Inception3)(x) = m.layers(x)

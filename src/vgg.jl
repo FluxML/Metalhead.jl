@@ -126,20 +126,24 @@ convolution layers. Defaults to `false`.
 """
 struct VGG{BN, T}
   layers::T
-
-  function VGG{BN}(imsize=(224, 224); config, inchannels, nclasses, fcsize, dropout) where BN
-    layers = vgg(imsize; config=config,
-                          inchannels=inchannels,
-                          nclasses=nclasses,
-                          fcsize=fcsize,
-                          dropout=dropout,
-                          batchnorm=BN)
-    
-    new{BN, typeof(layers)}(layers)
-  end
 end
 
-VGG(imsize=(224, 224); kwargs...) = VGG{false}(imsize; kwargs...)
+function VGG{BN}(imsize=(224, 224); config, inchannels, nclasses, fcsize, dropout) where BN
+  layers = vgg(imsize; config=config,
+                        inchannels=inchannels,
+                        nclasses=nclasses,
+                        fcsize=fcsize,
+                        dropout=dropout,
+                        batchnorm=BN)
+  
+  VGG{BN, typeof(layers)}(layers)
+end
+
+Functors.functor(m::VGG{BN}) where BN =
+  (layers = m.layers,), ls -> VGG{BN, typeof(ls)}(ls)
+
+VGG(imsize=(224, 224); config, inchannels, nclasses, fcsize, dropout) =
+  VGG{false}(imsize; config, inchannels, nclasses, fcsize, dropout)
 
 (m::VGG)(x) = m.layers(x)
 

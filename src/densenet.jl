@@ -88,15 +88,18 @@ end
 
 struct DenseNet{T}
   layers::T
-
-  function DenseNet(nblocks; growth_rate=32, reduction=0.5, num_classes=1000)
-    layers = densenet(nblocks; growth_rate=growth_rate,
-                               reduction=reduction,
-                               num_classes=num_classes)
-
-    new{typeof(layers)}(layers)
-  end
 end
+
+function DenseNet(nblocks::NTuple{N, <:Integer};
+                  growth_rate=32, reduction=0.5, num_classes=1000) where N
+  layers = densenet(nblocks; growth_rate=growth_rate,
+                             reduction=reduction,
+                             num_classes=num_classes)
+
+  DenseNet(layers)
+end
+
+@functor DenseNet
 
 (m::DenseNet)(x) = m.layers(x)
 

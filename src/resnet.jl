@@ -142,21 +142,24 @@ See also [`resnet`](#).
 - `channel_config`: the growth rate of the output feature maps within a residual block
 - `block_config`: a list of the number of residual blocks at each stage
 """
-struct ResNet{SC, BC, T}
+struct ResNet{BC, SC, T}
   layers::T
-
-  function ResNet{BC, SC}(channel_config, block_config) where {BC, SC}
-    BC in (:basic, :bottleneck) ||
-      throw(ArgumentError("Unrecognized residual block $BC (use either `:basic` or `:bottleneck`)"))
-    SC in (:A, :B, :C) ||
-      throw(ArgumentError("Unrecognized shortcut style $SC (use either `:A`, `:B`, or `:C`)"))
-
-    block = (BC == :basic) ? basicblock : bottleneck
-    layers = resnet(block, SC, channel_config, block_config)
-
-    new{BC, SC, typeof(layers)}(layers)
-  end
 end
+
+function ResNet{BC, SC}(channel_config, block_config) where {BC, SC}
+  BC in (:basic, :bottleneck) ||
+    throw(ArgumentError("Unrecognized residual block $BC (use either `:basic` or `:bottleneck`)"))
+  SC in (:A, :B, :C) ||
+    throw(ArgumentError("Unrecognized shortcut style $SC (use either `:A`, `:B`, or `:C`)"))
+
+  block = (BC == :basic) ? basicblock : bottleneck
+  layers = resnet(block, SC, channel_config, block_config)
+
+  ResNet{BC, SC, typeof(layers)}(layers)
+end
+
+Functors.functor(m::ResNet{BC, SC}) where {BC, SC} =
+  (layers = m.layers,), ls -> ResNet{BC, SC, typeof(ls)}(ls)
 
 (m::ResNet)(x) = m.layers(x)
 

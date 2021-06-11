@@ -71,13 +71,15 @@ See also [`googlenet`](#).
 """
 struct GoogLeNet{T}
   layers::T
-
-  function GoogLeNet(; pretrain=false)
-    layers = googlenet()
-
-    pretrain && Flux.loadparams!(layers, weights("googlenet"))
-    new{typeof(layers)}(layers)
-  end
 end
+
+function GoogLeNet(; pretrain=false)
+  layers = googlenet()
+  pretrain && Flux.loadparams!(layers, weights("googlenet"))
+
+  GoogLeNet(layers)
+end
+
+@functor GoogLeNet
 
 (m::GoogLeNet)(x) = m.layers(x)
