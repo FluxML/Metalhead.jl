@@ -158,8 +158,8 @@ function ResNet{BC, SC}(channel_config, block_config) where {BC, SC}
   ResNet{BC, SC, typeof(layers)}(layers)
 end
 
-Functors.functor(m::ResNet{BC, SC}) where {BC, SC} =
-  (layers = m.layers,), ls -> ResNet{BC, SC, typeof(ls)}(ls)
+Functors.functor(::Type{ResNet{BC, SC, T}}, m) where {BC, SC, T} =
+  (layers = m.layers,), nt -> ResNet{BC, SC, typeof(nt.layers)}(nt.layers)
 
 (m::ResNet)(x) = m.layers(x)
 

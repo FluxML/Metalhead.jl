@@ -139,8 +139,8 @@ function VGG{BN}(imsize=(224, 224); config, inchannels, nclasses, fcsize, dropou
   VGG{BN, typeof(layers)}(layers)
 end
 
-Functors.functor(m::VGG{BN}) where BN =
-  (layers = m.layers,), ls -> VGG{BN, typeof(ls)}(ls)
+Functors.functor(::Type{VGG{BN, T}}, m) where {BN, T} =
+  (layers = m.layers,), nt -> VGG{BN, typeof(nt.layers)}(nt.layers)
 
 VGG(imsize=(224, 224); config, inchannels, nclasses, fcsize, dropout) =
   VGG{false}(imsize; config, inchannels, nclasses, fcsize, dropout)
