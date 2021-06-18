@@ -60,9 +60,9 @@ Create a DenseNet model
 - `nblocks`: number of dense blocks between transitions
 - `growth_rate`: the output feature map growth rate of dense blocks (i.e. `k` in the paper)
 - `reduction`: the factor by which the number of feature maps is scaled across each transition
-- `num_classes`: the number of output classes
+- `nclasses`: the number of output classes
 """
-function densenet(nblocks; growth_rate=32, reduction=0.5, num_classes=1000)
+function densenet(nblocks; growth_rate=32, reduction=0.5, nclasses=1000)
   num_planes = 2 * growth_rate
   layers = []
   append!(layers, conv_bn((7, 7), 3, num_planes; stride=2, pad=(3, 3), usebias=false))
@@ -83,18 +83,32 @@ function densenet(nblocks; growth_rate=32, reduction=0.5, num_classes=1000)
   return Chain(layers...,
                AdaptiveMeanPool((1, 1)),
                flatten,
-               Dense(num_planes, num_classes))
+               Dense(num_planes, nclasses))
 end
 
+"""
+    DenseNet(nblocks::NTuple{N, <:Integer};
+             growth_rate=32, reduction=0.5, nclasses=1000)
+
+Create a DenseNet model
+([reference](https://arxiv.org/abs/1608.06993)).
+See also [`densenet`](#).
+
+# Arguments
+- `nblocks`: number of dense blocks between transitions
+- `growth_rate`: the output feature map growth rate of dense blocks (i.e. `k` in the paper)
+- `reduction`: the factor by which the number of feature maps is scaled across each transition
+- `nclasses`: the number of output classes
+"""
 struct DenseNet{T}
   layers::T
 end
 
 function DenseNet(nblocks::NTuple{N, <:Integer};
-                  growth_rate=32, reduction=0.5, num_classes=1000) where N
+                  growth_rate=32, reduction=0.5, nclasses=1000) where N
   layers = densenet(nblocks; growth_rate=growth_rate,
                              reduction=reduction,
-                             num_classes=num_classes)
+                             nclasses=nclasses)
 
   DenseNet(layers)
 end

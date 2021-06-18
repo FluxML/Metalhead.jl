@@ -34,8 +34,11 @@ end
 
 Create an Inception-v1 model (commonly referred to as GoogLeNet)
 ([reference](https://arxiv.org/abs/1409.4842v1)).
+
+# Arguments
+- `nclasses`: the number of output classes
 """
-function googlenet()
+function googlenet(; nclasses=1000)
   layers = Chain(Conv((7, 7), 3 => 64; stride=2, pad=3),
                  MaxPool((3, 3), stride=2, pad=1),
                  Conv((1, 1), 64 => 64),
@@ -55,7 +58,7 @@ function googlenet()
                  AdaptiveMeanPool((1, 1)),
                  flatten,
                  Dropout(0.4),
-                 Dense(1024, 1000))
+                 Dense(1024, nclasses))
 
   return layers
 end
@@ -73,8 +76,8 @@ struct GoogLeNet{T}
   layers::T
 end
 
-function GoogLeNet(; pretrain=false)
-  layers = googlenet()
+function GoogLeNet(; pretrain=false, nclasses=1000)
+  layers = googlenet(nclasses=nclasses)
   pretrain && Flux.loadparams!(layers, weights("googlenet"))
 
   GoogLeNet(layers)

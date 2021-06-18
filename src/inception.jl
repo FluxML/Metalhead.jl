@@ -139,14 +139,17 @@ function inception_e(inplanes)
 end
 
 """
-    inception3()
+    inception3(; nclasses=1000)
 
 Create an Inception-v3 model ([reference](https://arxiv.org/abs/1512.00567v3)).
+
+# Arguments
+- `nclasses`: the number of output classes
 
 !!! warning
     `inception3` does not currently support pretrained weights.
 """
-function inception3()
+function inception3(; nclasses=1000)
   layer = Chain(conv_bn((3, 3), 3, 32; stride=2)...,
                 conv_bn((3, 3), 32, 32)...,
                 conv_bn((3, 3), 32, 64; pad=1)...,
@@ -168,20 +171,22 @@ function inception3()
                 AdaptiveMeanPool((1, 1)),
                 Dropout(0.2),
                 flatten,
-                Dense(2048, 1000))
+                Dense(2048, nclasses))
 
   return layer
 end
 
 """
-    Inception3(; pretrain=false)
+    Inception3(; pretrain=false, nclasses=1000)
 
 Create an Inception-v3 model ([reference](https://arxiv.org/abs/1512.00567v3)).
+See also [`inception3`](#).
+
+# Arguments
+- `nclasses`: the number of output classes
 
 !!! warning
     `Inception3` does not currently support pretrained weights.
-
-See also [`inception3`](#).
 """
 struct Inception3{T}
   layers::T
