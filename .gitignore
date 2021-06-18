@@ -2,3 +2,7 @@
 *.jl.*.cov
 *.jl.mem
 *.bson
+
+# manifests
+docs/Manifest.toml
+Manifest.toml
