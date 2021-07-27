@@ -1,12 +1,11 @@
 """
-    conv_bn(kernelsize::Tuple{Int64,Int64}, inplanes::Int64, outplanes::Int64;
-            stride::Int64=1, pad::Union{Int64,Tuple{Int64,Int64}}=0,
-            usebias::Bool=true, rev::Bool=false)
+    conv_bn(kernelsize, inplanes, outplanes;
+            stride = 1, pad = 0, usebias = true, rev = false)
 
 Create a convolution + batch normalization pair with ReLU activation.
 
 # Arguments
-- `kernelsize`: size of the convolution kernel
+- `kernelsize`: size of the convolution kernel (tuple)
 - `inplanes`: number of input feature maps
 - `outplanes`: number of output feature maps
 - `stride`: stride of the convolution kernel
@@ -14,16 +13,18 @@ Create a convolution + batch normalization pair with ReLU activation.
 - `usebias`: set to `true` to use a bias in the convolution layer
 - `rev`: set to `true` to place the batch norm before the convolution
 """
-function conv_bn(kernelsize::Tuple{Int64,Int64}, inplanes::Int64, outplanes::Int64;
-                 stride::Int64=1, pad::Union{Int64,Tuple{Int64,Int64}}=0,
-                 usebias::Bool=true, rev::Bool=false)
+function conv_bn(kernelsize, inplanes, outplanes;
+                 stride = 1, pad = 0, usebias = true, rev = false)
   conv_layer = []
   if usebias
     push!(conv_layer, Conv(kernelsize, inplanes => outplanes,
-                           stride=stride, pad=pad, init=Flux.kaiming_normal))
+                           stride = stride, pad = pad, init = Flux.kaiming_normal))
   else
     push!(conv_layer, Conv(kernelsize, inplanes => outplanes,
-                           stride=stride, pad=pad, init=Flux.kaiming_normal, bias=Flux.Zeros()))
+                           stride = stride,
+                           pad = pad,
+                           init = Flux.kaiming_normal,
+                           bias = Flux.Zeros()))
   end
 
   if rev
@@ -42,7 +43,7 @@ Concatenate `x` and `y` along the channel dimension (third dimension).
 Equivalent to `cat(x, y; dims=3)`.
 Convenient binary reduction operator for use with `Parallel`.
 """
-cat_channels(x, y) = cat(x, y; dims=3)
+cat_channels(x, y) = cat(x, y; dims = 3)
 
 """
     weights(model)

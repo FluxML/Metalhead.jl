@@ -17,12 +17,12 @@ function _inceptionblock(inplanes, out_1x1, red_3x3, out_3x3, red_5x5, out_5x5, 
     branch1 = Chain(Conv((1, 1), inplanes => out_1x1))
   
     branch2 = Chain(Conv((1, 1), inplanes => red_3x3),
-                    Conv((3, 3), red_3x3 => out_3x3; pad=1))        
+                    Conv((3, 3), red_3x3 => out_3x3; pad = 1))
   
     branch3 = Chain(Conv((1, 1), inplanes => red_5x5),
-                    Conv((5, 5), red_5x5 => out_5x5; pad=2)) 
+                    Conv((5, 5), red_5x5 => out_5x5; pad = 2)) 
   
-    branch4 = Chain(MaxPool((3, 3), stride=1, pad=1),
+    branch4 = Chain(MaxPool((3, 3), stride=1, pad = 1),
                     Conv((1, 1), inplanes => pool_proj))
   
     return Parallel(cat_channels,
@@ -30,7 +30,7 @@ function _inceptionblock(inplanes, out_1x1, red_3x3, out_3x3, red_5x5, out_5x5, 
 end
 
 """
-    googlenet()
+    googlenet(; nclasses = 1000)
 
 Create an Inception-v1 model (commonly referred to as GoogLeNet)
 ([reference](https://arxiv.org/abs/1409.4842v1)).
@@ -38,21 +38,21 @@ Create an Inception-v1 model (commonly referred to as GoogLeNet)
 # Arguments
 - `nclasses`: the number of output classes
 """
-function googlenet(; nclasses=1000)
-  layers = Chain(Conv((7, 7), 3 => 64; stride=2, pad=3),
-                 MaxPool((3, 3), stride=2, pad=1),
+function googlenet(; nclasses = 1000)
+  layers = Chain(Conv((7, 7), 3 => 64; stride = 2, pad = 3),
+                 MaxPool((3, 3), stride = 2, pad = 1),
                  Conv((1, 1), 64 => 64),
-                 Conv((3, 3), 64 => 192; pad=1),
-                 MaxPool((3, 3), stride=2, pad=1),
+                 Conv((3, 3), 64 => 192; pad = 1),
+                 MaxPool((3, 3), stride = 2, pad = 1),
                  _inceptionblock(192, 64, 96, 128, 16, 32, 32),
                  _inceptionblock(256, 128, 128, 192, 32, 96, 64),
-                 MaxPool((3, 3), stride=2, pad=1),
+                 MaxPool((3, 3), stride = 2, pad = 1),
                  _inceptionblock(480, 192, 96, 208, 16, 48, 64),
                  _inceptionblock(512, 160, 112, 224, 24, 64, 64),
                  _inceptionblock(512, 128, 128, 256, 24, 64, 64),
                  _inceptionblock(512, 112, 144, 288, 32, 64, 64),
                  _inceptionblock(528, 256, 160, 320, 32, 128, 128),
-                 MaxPool((3, 3), stride=2, pad=1),
+                 MaxPool((3, 3), stride = 2, pad = 1),
                  _inceptionblock(832, 256, 160, 320, 32, 128, 128),
                  _inceptionblock(832, 384, 192, 384, 48, 128, 128),
                  AdaptiveMeanPool((1, 1)),
@@ -64,11 +64,14 @@ function googlenet(; nclasses=1000)
 end
 
 """
-    GoogLeNet(; pretrain=false)
+    GoogLeNet(; pretrain = false,  nclasses = 1000)
 
 Create an Inception-v1 model (commonly referred to as `GoogLeNet`)
 ([reference](https://arxiv.org/abs/1409.4842v1)).
-Set `pretrain=true` to load the model with pre-trained weights for ImageNet.
+
+# Arguments
+- `pretrain`: set to `true` to load the model with pre-trained weights for ImageNet
+- `nclasses`: the number of output classes
 
 See also [`googlenet`](#).
 """
@@ -76,8 +79,8 @@ struct GoogLeNet{T}
   layers::T
 end
 
-function GoogLeNet(; pretrain=false, nclasses=1000)
-  layers = googlenet(nclasses=nclasses)
+function GoogLeNet(; pretrain = false, nclasses = 1000)
+  layers = googlenet(nclasses = nclasses)
   pretrain && Flux.loadparams!(layers, weights("googlenet"))
 
   GoogLeNet(layers)

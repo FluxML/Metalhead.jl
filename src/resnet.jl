@@ -11,10 +11,10 @@ Create a basic residual block
 - `downsample`: set to `true` to downsample the input
 """
 basicblock(inplanes, outplanes, downsample = false) = downsample ?
-  Chain(conv_bn((3, 3), inplanes, outplanes[1]; stride=2, pad=1, usebias=false)...,
-        conv_bn((3, 3), outplanes[1], outplanes[2]; stride=1, pad=1, usebias=false)...) :
-  Chain(conv_bn((3, 3), inplanes, outplanes[1]; stride=1, pad=1, usebias=false)...,
-        conv_bn((3, 3), outplanes[1], outplanes[2]; stride=1, pad=1, usebias=false)...)
+  Chain(conv_bn((3, 3), inplanes, outplanes[1]; stride = 2, pad = 1, usebias = false)...,
+        conv_bn((3, 3), outplanes[1], outplanes[2]; stride = 1, pad = 1, usebias = false)...) :
+  Chain(conv_bn((3, 3), inplanes, outplanes[1]; stride = 1, pad = 1, usebias = false)...,
+        conv_bn((3, 3), outplanes[1], outplanes[2]; stride = 1, pad = 1, usebias = false)...)
 
 """
     bottleneck(inplanes, outplanes, downsample = false)
@@ -29,12 +29,12 @@ Create a bottleneck residual block
 - `downsample`: set to `true` to downsample the input
 """
 bottleneck(inplanes, outplanes, downsample = false) = downsample ?
-  Chain(conv_bn((1, 1), inplanes, outplanes[1]; stride=2, usebias=false)...,
-        conv_bn((3, 3), outplanes[1], outplanes[2]; stride=1, pad=1, usebias=false)...,
-        conv_bn((1, 1), outplanes[2], outplanes[3]; stride=1, usebias=false)...) :
-  Chain(conv_bn((1, 1), inplanes, outplanes[1]; stride=1, usebias=false)...,
-        conv_bn((3, 3), outplanes[1], outplanes[2]; stride=1, pad=1, usebias=false)...,
-        conv_bn((1, 1), outplanes[2], outplanes[3]; stride=1, usebias=false)...)
+  Chain(conv_bn((1, 1), inplanes, outplanes[1]; stride = 2, usebias = false)...,
+        conv_bn((3, 3), outplanes[1], outplanes[2]; stride = 1, pad = 1, usebias = false)...,
+        conv_bn((1, 1), outplanes[2], outplanes[3]; stride = 1, usebias = false)...) :
+  Chain(conv_bn((1, 1), inplanes, outplanes[1]; stride = 1, usebias = false)...,
+        conv_bn((3, 3), outplanes[1], outplanes[2]; stride = 1, pad = 1, usebias = false)...,
+        conv_bn((1, 1), outplanes[2], outplanes[3]; stride = 1, usebias = false)...)
 
 """
     skip_projection(inplanes, outplanes, downsample = false)
@@ -48,8 +48,8 @@ Create a skip projection
 - `downsample`: set to `true` to downsample the input
 """
 skip_projection(inplanes, outplanes, downsample = false) = downsample ? 
-  Chain(conv_bn((1, 1), inplanes, outplanes; stride=2, usebias=false)...) :
-  Chain(conv_bn((1, 1), inplanes, outplanes; stride=1, usebias=false)...)
+  Chain(conv_bn((1, 1), inplanes, outplanes; stride = 2, usebias = false)...) :
+  Chain(conv_bn((1, 1), inplanes, outplanes; stride = 1, usebias = false)...)
 
 # array -> PaddedView(0, array, outplanes) for zero padding arrays
 """
@@ -75,7 +75,7 @@ function skip_identity(inplanes, outplanes)
 end
 
 """
-    resnet(; block, shortcut_config, channel_config, block_config)
+    resnet(; block, shortcut_config, channel_config, block_config, nclasses = 1000)
 
 Create a ResNet model
 ([reference](https://arxiv.org/abs/1512.03385v1)).
@@ -88,12 +88,12 @@ Create a ResNet model
 - `block_config`: a list of the number of residual blocks at each stage
 - `nclasses`: the number of output classes
 """
-function resnet(; block, shortcut_config, channel_config, block_config, nclasses=1000)
+function resnet(; block, shortcut_config, channel_config, block_config, nclasses = 1000)
   inplanes = 64
   baseplanes = 64
   layers = []
-  append!(layers, conv_bn((7, 7), 3, inplanes; stride=2, pad=(3, 3)))
-  push!(layers, MaxPool((3, 3), stride=(2, 2), pad=(1, 1)))
+  append!(layers, conv_bn((7, 7), 3, inplanes; stride = 2, pad = (3, 3)))
+  push!(layers, MaxPool((3, 3), stride = (2, 2), pad = (1, 1)))
   for (i, nrepeats) in enumerate(block_config)
     outplanes = baseplanes .* channel_config
     if shortcut_config == :A
@@ -131,7 +131,7 @@ const resnet_config =
        :resnet152 => ([1, 1, 4], [3, 8, 36, 3], :B))
 
 """
-    ResNet(channel_config, block_config, shortcut_config; block, nclasses=1000)
+    ResNet(channel_config, block_config, shortcut_config; block, nclasses = 1000)
 
 Create a `ResNet` model
 ([reference](https://arxiv.org/abs/1512.03385v1)).
@@ -149,12 +149,12 @@ struct ResNet{T}
   layers::T
 end
 
-function ResNet(channel_config, block_config, shortcut_config; block, nclasses=1000)
-  layers = resnet(block=block,
-                  shortcut_config=shortcut_config,
-                  channel_config=channel_config,
-                  block_config=block_config,
-                  nclasses=nclasses)
+function ResNet(channel_config, block_config, shortcut_config; block, nclasses = 1000)
+  layers = resnet(block = block,
+                  shortcut_config = shortcut_config,
+                  channel_config = channel_config,
+                  block_config = block_config,
+                  nclasses = nclasses)
 
   ResNet(layers)
 end
@@ -164,7 +164,7 @@ end
 (m::ResNet)(x) = m.layers(x)
 
 """
-    ResNet18(; pretrain=false, nclasses=1000)
+    ResNet18(; pretrain = false, nclasses = 1000)
    
 Create a ResNet-18 model
 ([reference](https://arxiv.org/abs/1512.03385v1)).
@@ -176,15 +176,15 @@ See also [`Metalhead.ResNet`](#).
 !!! warning
     `ResNet18` does not currently support pretrained weights.
 """
-function ResNet18(; pretrain=false, nclasses=1000)
-  model = ResNet(resnet_config[:resnet18]...; block=basicblock, nclasses=nclasses)
+function ResNet18(; pretrain = false, nclasses = 1000)
+  model = ResNet(resnet_config[:resnet18]...; block = basicblock, nclasses = nclasses)
 
   pretrain && pretrain_error("ResNet18")
   return model
 end
 
 """
-    ResNet34(; pretrain=false, nclasses=1000)
+    ResNet34(; pretrain = false, nclasses = 1000)
    
 Create a ResNet-34 model
 ([reference](https://arxiv.org/abs/1512.03385v1)).
@@ -197,15 +197,15 @@ See also [`Metalhead.ResNet`](#).
 !!! warning
     `ResNet34` does not currently support pretrained weights.
 """
-function ResNet34(; pretrain=false, nclasses=1000)
-  model = ResNet(resnet_config[:resnet34]...; nclasses=nclasses)
+function ResNet34(; pretrain = false, nclasses = 1000)
+  model = ResNet(resnet_config[:resnet34]...; block = basicblock, nclasses = nclasses)
 
   pretrain && pretrain_error("ResNet34")
   return model
 end
 
 """
-    ResNet50(; pretrain=false, nclasses=1000)
+    ResNet50(; pretrain = false, nclasses = 1000)
    
 Create a ResNet-50 model
 ([reference](https://arxiv.org/abs/1512.03385v1)).
@@ -215,15 +215,15 @@ See also [`Metalhead.ResNet`](#).
 - `pretrain`: set to `true` to load pre-trained weights for ImageNet
 - `nclasses`: the number of output classes
 """
-function ResNet50(; pretrain=false, nclasses=1000)
-  model = ResNet(resnet_config[:resnet50]...; nclasses=nclasses)
+function ResNet50(; pretrain = false, nclasses = 1000)
+  model = ResNet(resnet_config[:resnet50]...; block = bottleneck, nclasses = nclasses)
 
   pretrain && Flux.loadparams!(model.layers, weights("resnet50"))
   return model
 end
 
 """
-    ResNet101(; pretrain=false, nclasses=1000)
+    ResNet101(; pretrain = false, nclasses = 1000)
    
 Create a ResNet-101 model
 ([reference](https://arxiv.org/abs/1512.03385v1)).
@@ -236,15 +236,15 @@ See also [`Metalhead.ResNet`](#).
 !!! warning
     `ResNet101` does not currently support pretrained weights.
 """
-function ResNet101(; pretrain=false, nclasses=1000)
-  model = ResNet(resnet_config[:resnet101]...; nclasses=nclasses)
+function ResNet101(; pretrain = false, nclasses = 1000)
+  model = ResNet(resnet_config[:resnet101]...; block = bottleneck, nclasses = nclasses)
 
   pretrain && pretrain_error("ResNet101")
   return model
 end
 
 """
-    ResNet152(; pretrain=false, nclasses=1000)
+    ResNet152(; pretrain = false, nclasses = 1000)
    
 Create a ResNet-152 model
 ([reference](https://arxiv.org/abs/1512.03385v1)).
@@ -257,8 +257,8 @@ See also [`Metalhead.ResNet`](#).
 !!! warning
     `ResNet152` does not currently support pretrained weights.
 """
-function ResNet152(; pretrain=false, nclasses=1000)
-  model = ResNet(resnet_config[:resnet152]...; nclasses=nclasses)
+function ResNet152(; pretrain = false, nclasses = 1000)
+  model = ResNet(resnet_config[:resnet152]...; block = bottleneck, nclasses = nclasses)
 
   pretrain && pretrain_error("ResNet152")
   return model

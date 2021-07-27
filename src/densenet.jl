@@ -81,7 +81,7 @@ function densenet(inplanes, growth_rates; reduction = 0.5, nclasses = 1000)
 end
 
 """
-    densenet(nblocks; growth_rate=32, reduction=0.5, num_classes=1000)
+    densenet(nblocks; growth_rate = 32, reduction = 0.5, num_classes = 1000)
 
 Create a DenseNet model
 ([reference](https://arxiv.org/abs/1608.06993)).
@@ -92,13 +92,13 @@ Create a DenseNet model
 - `reduction`: the factor by which the number of feature maps is scaled across each transition
 - `nclasses`: the number of output classes
 """
-densenet(nblocks; growth_rate=32, reduction=0.5, nclasses=1000) =
+densenet(nblocks; growth_rate = 32, reduction = 0.5, nclasses = 1000) =
   densenet(2 * growth_rate, [fill(growth_rate, n) for n in nblocks];
            reduction = reduction, nclasses = nclasses)
 
 """
     DenseNet(nblocks::NTuple{N, <:Integer};
-             growth_rate=32, reduction=0.5, nclasses=1000)
+             growth_rate = 32, reduction = 0.5, nclasses = 1000)
 
 Create a DenseNet model
 ([reference](https://arxiv.org/abs/1608.06993)).
@@ -115,10 +115,10 @@ struct DenseNet{T}
 end
 
 function DenseNet(nblocks::NTuple{N, <:Integer};
-                  growth_rate=32, reduction=0.5, nclasses=1000) where N
-  layers = densenet(nblocks; growth_rate=growth_rate,
-                             reduction=reduction,
-                             nclasses=nclasses)
+                  growth_rate = 32, reduction = 0.5, nclasses = 1000) where N
+  layers = densenet(nblocks; growth_rate = growth_rate,
+                             reduction = reduction,
+                             nclasses = nclasses)
 
   DenseNet(layers)
 end
@@ -128,7 +128,7 @@ end
 (m::DenseNet)(x) = m.layers(x)
 
 """
-    DenseNet121(; pretrain=false)
+    DenseNet121(; pretrain = false)
 
 Create a DenseNet-121 model
 ([reference](https://arxiv.org/abs/1608.06993)).
@@ -136,7 +136,7 @@ Set `pretrain=true` to load the model with pre-trained weights for ImageNet.
 
 See also [`Metalhead.DenseNet`](#).
 """
-function DenseNet121(; pretrain=false)
+function DenseNet121(; pretrain = false)
   model = DenseNet((6, 12, 24, 16))
 
   pretrain && Flux.loadparams!(model.layers, weights("densenet121"))
@@ -144,7 +144,7 @@ function DenseNet121(; pretrain=false)
 end
 
 """
-    DenseNet161(; pretrain=false)
+    DenseNet161(; pretrain = false)
 
 Create a DenseNet-161 model
 ([reference](https://arxiv.org/abs/1608.06993)).
@@ -154,15 +154,15 @@ Create a DenseNet-161 model
 
 See also [`Metalhead.DenseNet`](#).
 """
-function DenseNet161(; pretrain=false)
-  model = DenseNet((6, 12, 36, 24); growth_rate=64)
+function DenseNet161(; pretrain = false)
+  model = DenseNet((6, 12, 36, 24); growth_rate = 64)
 
   pretrain && pretrain_error("DenseNet161")
   return model
 end
 
 """
-    DenseNet169(; pretrain=false)
+    DenseNet169(; pretrain = false)
 
 Create a DenseNet-169 model
 ([reference](https://arxiv.org/abs/1608.06993)).
@@ -172,7 +172,7 @@ Create a DenseNet-169 model
 
 See also [`Metalhead.DenseNet`](#).
 """
-function DenseNet169(; pretrain=false)
+function DenseNet169(; pretrain = false)
   model = DenseNet((6, 12, 32, 32))
 
   pretrain && pretrain_error("DenseNet169")
@@ -180,7 +180,7 @@ function DenseNet169(; pretrain=false)
 end
 
 """
-    DenseNet201(; pretrain=false)
+    DenseNet201(; pretrain = false)
 
 Create a DenseNet-201 model
 ([reference](https://arxiv.org/abs/1608.06993)).
@@ -190,7 +190,7 @@ Create a DenseNet-201 model
 
 See also [`Metalhead.DenseNet`](#).
 """
-function DenseNet201(; pretrain=false)
+function DenseNet201(; pretrain = false)
   model = DenseNet((6, 12, 48, 32))
 
   pretrain && pretrain_error("DenseNet201")
