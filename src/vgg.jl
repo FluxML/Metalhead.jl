@@ -105,30 +105,28 @@ const vgg_config = Dict(:A => [(64,1), (128,1), (256,2), (512,2), (512,2)],
                         :E => [(64,2), (128,2), (256,4), (512,4), (512,4)])
 
 """
-    VGG{BN}(imsize=(224, 224); config, inchannels, nclasses, fcsize, dropout)
+    VGG(imsize=(224, 224); config, inchannels, batchnorm=false, nclasses, fcsize, dropout)
 
 Create a `VGG` model
 ([reference](https://arxiv.org/abs/1409.1556v6)).
 See also [`vgg`](#).
-
-Set `BN` to `true` to enable batch normalization after
-convolution layers. Defaults to `false`.
 
 # Arguments
 - `imsize`: input image width and height as a tuple
 - `config`: the configuration for the convolution layers
             (see [`Metalhead.vgg_convolutional_layers`](#))
 - `inchannels`: number of input channels
+- `batchnorm`: set to `true` to use batch normalization after each convolution
 - `nclasses`: number of output classes
 - `fcsize`: intermediate fully connected layer size
             (see [`Metalhead.vgg_classifier_layers`](#))
 - `dropout`: dropout level between fully connected layers
 """
-struct VGG{BN, T}
+struct VGG{T}
   layers::T
 end
 
-function VGG{BN}(imsize=(224, 224); config, inchannels, nclasses, fcsize, dropout) where BN
+function VGG(imsize=(224, 224); config, inchannels, batchnorm=false, nclasses, fcsize, dropout)
   layers = vgg(imsize; config=config,
                         inchannels=inchannels,
                         nclasses=nclasses,
@@ -136,14 +134,10 @@ function VGG{BN}(imsize=(224, 224); config, inchannels, nclasses, fcsize, dropou
                         dropout=dropout,
                         batchnorm=BN)
   
-  VGG{BN, typeof(layers)}(layers)
+  VGG{typeof(layers)}(layers)
 end
 
-Functors.functor(::Type{VGG{BN, T}}, m) where {BN, T} =
-  (layers = m.layers,), nt -> VGG{BN, typeof(nt.layers)}(nt.layers)
-
-VGG(imsize=(224, 224); config, inchannels, nclasses, fcsize, dropout) =
-  VGG{false}(imsize; config, inchannels, nclasses, fcsize, dropout)
+@functor VGG
 
 (m::VGG)(x) = m.layers(x)
 
@@ -161,8 +155,9 @@ See also [`VGG`](#).
 - `pretrain`: set to `true` to load pre-trained model weights for ImageNet
 """
 function VGG11(; pretrain=false, batchnorm=false)
-  model = VGG{batchnorm}((224, 224); config=vgg_config[:A],
+  model = VGG((224, 224); config=vgg_config[:A],
                                      inchannels=3,
+                                     batchnorm=batchnorm,
                                      nclasses=1000,
                                      fcsize=4096,
                                      dropout=0.5)
@@ -185,8 +180,9 @@ See also [`VGG`](#).
 - `pretrain`: set to `true` to load pre-trained model weights for ImageNet
 """
 function VGG13(; pretrain=false, batchnorm=false)
-  model = VGG{batchnorm}((224, 224); config=vgg_config[:B],
+  model = VGG((224, 224); config=vgg_config[:B],
                                      inchannels=3,
+                                     batchnorm=batchnorm,
                                      nclasses=1000,
                                      fcsize=4096,
                                      dropout=0.5)
@@ -209,8 +205,9 @@ See also [`VGG`](#).
 - `pretrain`: set to `true` to load pre-trained model weights for ImageNet
 """
 function VGG16(; pretrain=false, batchnorm=false)
-  model = VGG{batchnorm}((224, 224); config=vgg_config[:D],
+  model = VGG((224, 224); config=vgg_config[:D],
                                      inchannels=3,
+                                     batchnorm=batchnorm,
                                      nclasses=1000,
                                      fcsize=4096,
                                      dropout=0.5)
@@ -233,8 +230,9 @@ See also [`VGG`](#).
 - `pretrain`: set to `true` to load pre-trained model weights for ImageNet
 """
 function VGG19(; pretrain=false, batchnorm=false)
-  model = VGG{batchnorm}((224, 224); config=vgg_config[:E],
+  model = VGG((224, 224); config=vgg_config[:E],
                                      inchannels=3,
+                                     batchnorm=batchnorm,
                                      nclasses=1000,
                                      fcsize=4096,
                                      dropout=0.5)

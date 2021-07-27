@@ -81,7 +81,7 @@ Create a ResNet model
 ([reference](https://arxiv.org/abs/1512.03385v1)).
 
 # Arguments
-- `block`: a function with input `(inplanes, outplanes downsample=false)` that returns
+- `block`: a function with input `(inplanes, outplanes, downsample=false)` that returns
            a new residual block (see [`Metalhead.basicblock`](#) and [`Metalhead.bottleneck`](#))
 - `shortcut_config`: the type of shortcut style (either `:A`, `:B`, or `:C`)
 - `channel_config`: the growth rate of the output feature maps within a residual block
@@ -124,48 +124,42 @@ function resnet(; block, shortcut_config, channel_config, block_config, nclasses
 end
 
 const resnet_config =
-  Dict("resnet18" => ([1, 1], [2, 2, 2, 2]),
-       "resnet34" => ([1, 1], [3, 4, 6, 3]),
-       "resnet50" => ([1, 1, 4], [3, 4, 6, 3]),
-       "resnet101" => ([1, 1, 4], [3, 4, 23, 3]),
-       "resnet152" => ([1, 1, 4], [3, 8, 36, 3]))
+  Dict(:resnet18 => ([1, 1], [2, 2, 2, 2], :A),
+       :resnet34 => ([1, 1], [3, 4, 6, 3], :A),
+       :resnet50 => ([1, 1, 4], [3, 4, 6, 3], :B),
+       :resnet101 => ([1, 1, 4], [3, 4, 23, 3], :B),
+       :resnet152 => ([1, 1, 4], [3, 8, 36, 3], :B))
 
 """
-    ResNet{BC, SC}(channel_config, block_config; nclasses=1000)
+    ResNet(channel_config, block_config, shortcut_config; block, nclasses=1000)
 
 Create a `ResNet` model
 ([reference](https://arxiv.org/abs/1512.03385v1)).
 See also [`resnet`](#).
 
 # Arguments
-- `BC`: residual block style (either `:basic` or `:bottleneck`)
-- `SC`: shortcut style (either `:A` or `:B`)
 - `channel_config`: the growth rate of the output feature maps within a residual block
 - `block_config`: a list of the number of residual blocks at each stage
+- `shortcut_config`: the type of shortcut style (either `:A`, `:B`, or `:C`)
+- `block`: a function with input `(inplanes, outplanes, downsample=false)` that returns
+           a new residual block (see [`Metalhead.basicblock`](#) and [`Metalhead.bottleneck`](#))
 - `nclasses`: the number of output classes
 """
-struct ResNet{BC, SC, T}
+struct ResNet{T}
   layers::T
 end
 
-function ResNet{BC, SC}(channel_config, block_config; nclasses=1000) where {BC, SC}
-  BC in (:basic, :bottleneck) ||
-    throw(ArgumentError("Unrecognized residual block $BC (use either `:basic` or `:bottleneck`)"))
-  SC in (:A, :B, :C) ||
-    throw(ArgumentError("Unrecognized shortcut style $SC (use either `:A`, `:B`, or `:C`)"))
-
-  block = (BC == :basic) ? basicblock : bottleneck
+function ResNet(channel_config, block_config, shortcut_config; block, nclasses=1000)
   layers = resnet(block=block,
-                  shortcut_config=SC,
+                  shortcut_config=shortcut_config,
                   channel_config=channel_config,
                   block_config=block_config,
                   nclasses=nclasses)
 
-  ResNet{BC, SC, typeof(layers)}(layers)
+  ResNet(layers)
 end
 
-Functors.functor(::Type{ResNet{BC, SC, T}}, m) where {BC, SC, T} =
-  (layers = m.layers,), nt -> ResNet{BC, SC, typeof(nt.layers)}(nt.layers)
+@funtor ResNet
 
 (m::ResNet)(x) = m.layers(x)
 
@@ -183,7 +177,7 @@ See also [`Metalhead.ResNet`](#).
     `ResNet18` does not currently support pretrained weights.
 """
 function ResNet18(; pretrain=false, nclasses=1000)
-  model = ResNet{:basic, :A}(resnet_config["resnet18"]...; nclasses=nclasses)
+  model = ResNet(resnet_config[:resnet18]...; block=basicblock, nclasses=nclasses)
 
   pretrain && pretrain_error("ResNet18")
   return model
@@ -204,7 +198,7 @@ See also [`Metalhead.ResNet`](#).
     `ResNet34` does not currently support pretrained weights.
 """
 function ResNet34(; pretrain=false, nclasses=1000)
-  model = ResNet{:basic, :A}(resnet_config["resnet34"]...; nclasses=nclasses)
+  model = ResNet(resnet_config[:resnet34]...; nclasses=nclasses)
 
   pretrain && pretrain_error("ResNet34")
   return model
@@ -222,7 +216,7 @@ See also [`Metalhead.ResNet`](#).
 - `nclasses`: the number of output classes
 """
 function ResNet50(; pretrain=false, nclasses=1000)
-  model = ResNet{:bottleneck, :B}(resnet_config["resnet50"]...; nclasses=nclasses)
+  model = ResNet(resnet_config[:resnet50]...; nclasses=nclasses)
 
   pretrain && Flux.loadparams!(model.layers, weights("resnet50"))
   return model
@@ -243,7 +237,7 @@ See also [`Metalhead.ResNet`](#).
     `ResNet101` does not currently support pretrained weights.
 """
 function ResNet101(; pretrain=false, nclasses=1000)
-  model = ResNet{:bottleneck, :B}(resnet_config["resnet101"]...; nclasses=nclasses)
+  model = ResNet(resnet_config[:resnet101]...; nclasses=nclasses)
 
   pretrain && pretrain_error("ResNet101")
   return model
@@ -264,7 +258,7 @@ See also [`Metalhead.ResNet`](#).
     `ResNet152` does not currently support pretrained weights.
 """
 function ResNet152(; pretrain=false, nclasses=1000)
-  model = ResNet{:bottleneck, :B}(resnet_config["resnet152"]...; nclasses=nclasses)
+  model = ResNet(resnet_config[:resnet152]...; nclasses=nclasses)
 
   pretrain && pretrain_error("ResNet152")
   return model
