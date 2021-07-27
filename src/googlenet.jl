@@ -1,5 +1,5 @@
 """
-    inceptionblock(inplanes, out_1x1, red_3x3, out_3x3, red_5x5, out_3x3, pool_proj)
+    _inceptionblock(inplanes, out_1x1, red_3x3, out_3x3, red_5x5, out_3x3, pool_proj)
 
 Create an inception module for use in GoogLeNet
 ([reference](https://arxiv.org/abs/1409.4842v1)).
@@ -13,7 +13,7 @@ Create an inception module for use in GoogLeNet
 - `out_5x5`: the number of output feature maps for the 5x5 convolution (branch 3)
 - `pool_proj`: the number of output feature maps for the pooling projection (branch 4)
 """
-function inceptionblock(inplanes, out_1x1, red_3x3, out_3x3, red_5x5, out_5x5, pool_proj)
+function _inceptionblock(inplanes, out_1x1, red_3x3, out_3x3, red_5x5, out_5x5, pool_proj)
     branch1 = Chain(Conv((1, 1), inplanes => out_1x1))
   
     branch2 = Chain(Conv((1, 1), inplanes => red_3x3),
@@ -44,17 +44,17 @@ function googlenet(; nclasses=1000)
                  Conv((1, 1), 64 => 64),
                  Conv((3, 3), 64 => 192; pad=1),
                  MaxPool((3, 3), stride=2, pad=1),
-                 inceptionblock(192, 64, 96, 128, 16, 32, 32),
-                 inceptionblock(256, 128, 128, 192, 32, 96, 64),
+                 _inceptionblock(192, 64, 96, 128, 16, 32, 32),
+                 _inceptionblock(256, 128, 128, 192, 32, 96, 64),
                  MaxPool((3, 3), stride=2, pad=1),
-                 inceptionblock(480, 192, 96, 208, 16, 48, 64),
-                 inceptionblock(512, 160, 112, 224, 24, 64, 64),
-                 inceptionblock(512, 128, 128, 256, 24, 64, 64),
-                 inceptionblock(512, 112, 144, 288, 32, 64, 64),
-                 inceptionblock(528, 256, 160, 320, 32, 128, 128),
+                 _inceptionblock(480, 192, 96, 208, 16, 48, 64),
+                 _inceptionblock(512, 160, 112, 224, 24, 64, 64),
+                 _inceptionblock(512, 128, 128, 256, 24, 64, 64),
+                 _inceptionblock(512, 112, 144, 288, 32, 64, 64),
+                 _inceptionblock(528, 256, 160, 320, 32, 128, 128),
                  MaxPool((3, 3), stride=2, pad=1),
-                 inceptionblock(832, 256, 160, 320, 32, 128, 128),
-                 inceptionblock(832, 384, 192, 384, 48, 128, 128),
+                 _inceptionblock(832, 256, 160, 320, 32, 128, 128),
+                 _inceptionblock(832, 384, 192, 384, 48, 128, 128),
                  AdaptiveMeanPool((1, 1)),
                  flatten,
                  Dropout(0.4),
