@@ -159,7 +159,7 @@ function ResNet(channel_config, block_config, shortcut_config; block, nclasses =
   ResNet(layers)
 end
 
-@funtor ResNet
+@functor ResNet
 
 (m::ResNet)(x) = m.layers(x)
 

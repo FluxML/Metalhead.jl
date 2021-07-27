@@ -25,4 +25,9 @@ export  AlexNet,
         GoogLeNet, Inception3, SqueezeNet,
         DenseNet, DenseNet121, DenseNet161, DenseNet169, DenseNet201
 
+# use Flux._big_show to pretty print large models
+for T in (:AlexNet, :VGG, :ResNet, :GoogLeNet, :Inception3, :SqueezeNet, :DenseNet)
+  @eval Base.show(io::IO, ::MIME"text/plain", model::$T) = _maybe_big_show(io, model)
+end
+
 end # module

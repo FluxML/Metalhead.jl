@@ -17,10 +17,10 @@ function conv_bn(kernelsize, inplanes, outplanes;
                  stride = 1, pad = 0, usebias = true, rev = false)
   conv_layer = []
   if usebias
-    push!(conv_layer, Conv(kernelsize, inplanes => outplanes,
+    push!(conv_layer, Conv(kernelsize, Int(inplanes) => Int(outplanes),
                            stride = stride, pad = pad, init = Flux.kaiming_normal))
   else
-    push!(conv_layer, Conv(kernelsize, inplanes => outplanes,
+    push!(conv_layer, Conv(kernelsize, Int(inplanes) => Int(outplanes),
                            stride = stride,
                            pad = pad,
                            init = Flux.kaiming_normal,
@@ -28,12 +28,12 @@ function conv_bn(kernelsize, inplanes, outplanes;
   end
 
   if rev
-    push!(conv_layer, BatchNorm(inplanes, relu))
-    return reverse(Tuple(conv_layer))
+    push!(conv_layer, BatchNorm(Int(inplanes), relu))
+    return reverse(conv_layer)
   end
 
-  push!(conv_layer, BatchNorm(outplanes, relu))
-  return Tuple(conv_layer)
+  push!(conv_layer, BatchNorm(Int(outplanes), relu))
+  return conv_layer
 end
 
 """
@@ -52,3 +52,15 @@ Load the pre-trained weights for `model` using the stored artifacts.
 """
 weights(model) = BSON.load(joinpath(@artifact_str(model), "$model.bson"), @__MODULE__)[:weights]
 pretrain_error(model) = throw(ArgumentError("No pre-trained weights available for $model."))
+
+function _maybe_big_show(io, model)
+  if isdefined(Flux, :_big_show)
+    if isnothing(get(io, :typeinfo, nothing)) # e.g. top level in REPL
+      Flux._big_show(io, model)
+    else
+      show(io, model)
+    end
+  else
+    show(io, model)
+  end
+end

@@ -124,7 +124,8 @@ struct VGG{T}
   layers::T
 end
 
-function VGG(imsize = (224, 224); config, inchannels, batchnorm = false, nclasses, fcsize, dropout)
+function VGG(imsize::NTuple{2, <:Integer} = (224, 224);
+             config, inchannels, batchnorm = false, nclasses, fcsize, dropout)
   layers = vgg(imsize; config = config,
                         inchannels = inchannels,
                         batchnorm = batchnorm,
