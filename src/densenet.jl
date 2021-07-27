@@ -6,13 +6,13 @@ Create a Densenet bottleneck layer
 
 # Arguments
 - `inplanes`: number of input feature maps
-- `growth_rate`: number of output feature maps
-                 (and scaling factor for inner feature maps; see ref)
+- `outplanes`: number of output feature maps
+               (and scaling factor for inner feature maps; see ref)
 """
-function dense_bottleneck(inplanes, growth_rate)
-  inner_channels = 4 * growth_rate
-  m = Chain(conv_bn((1, 1), inplanes, inner_channels; usebias=false, rev=true)...,
-            conv_bn((3, 3), inner_channels, growth_rate; pad=1, usebias=false, rev=true)...)
+function dense_bottleneck(inplanes, outplanes)
+  inner_channels = 4 * outplanes
+  m = Chain(conv_bn((1, 1), inplanes, inner_channels; usebias = false, rev = true)...,
+            conv_bn((3, 3), inner_channels, outplanes; pad = 1, usebias = false, rev = true)...)
 
   SkipConnection(m, (mx, x) -> cat(x, mx; dims=3))
 end
@@ -27,27 +27,57 @@ Create a DenseNet transition sequence
 - `inplanes`: number of input feature maps
 - `outplanes`: number of output feature maps
 """
-transition(inplanes, outplanes) = (conv_bn((1, 1), inplanes, outplanes; usebias=false, rev=true)...,
-                                   MeanPool((2, 2)))
+transition(inplanes, outplanes) =
+  (conv_bn((1, 1), inplanes, outplanes; usebias = false, rev = true)...,
+   MeanPool((2, 2)))
 
 """
-    dense_block(inplanes, growth_rate, nblock)
+    dense_block(inplanes, growth_rates)
 
-Create a sequence of `nblock` DesNet bottlenecks with `growth_rate`
+Create a sequence of DenseNet bottlenecks increasing
+the number of output feature maps by `growth_rates` with each block
 ([reference](https://arxiv.org/abs/1608.06993)).
 
 # Arguments
 - `inplanes`: number of input feature maps to the full sequence
-- `growth_rate`: the rate at which output feature maps grow across blocks
-- `nblock`: the number of blocks
+- `growth_rates`: the growth (additive) rates of output feature maps
+                  after each block (a vector of `k`s from the ref)
 """
-function dense_block(inplanes, growth_rate, nblock)
-  layers = []
-  for i in 1:nblock
-    push!(layers, dense_bottleneck(inplanes, growth_rate))
-    inplanes += growth_rate
+dense_block(inplanes, growth_rates) = [dense_bottleneck(i, o)
+  for (i, o) in zip(inplanes + growth_rates[1:(end - 1)], growth_rates)]
+
+"""
+    densenet(inplanes, growth_rates; reduction = 0.5, nclasses = 1000)
+
+Create a DenseNet model
+([reference](https://arxiv.org/abs/1608.06993)).
+
+# Arguments
+- `inplanes`: the number of input feature maps to the first dense block
+- `growth_rates`: the growth rates of output feature maps within each
+                  [`dense_block`](#) (a vector of vectors)
+- `reduction`: the factor by which the number of feature maps is scaled across each transition
+- `nclasses`: the number of output classes
+"""
+function densenet(inplanes, growth_rates; reduction = 0.5, nclasses = 1000)
+  layers = conv_bn((7, 7), 3, inplanes; stride = 2, pad = (3, 3), usebias = false)
+  push!(layers, MaxPool((3, 3), stride = 2, pad = (1, 1)))
+
+  outplanes = 0
+  for rates in growth_rates[1:(end - 1)]
+    outplanes = inplanes + sum(rates)
+    append!(layers, dense_block(inplanes, rates))
+    append!(layers, transition(outplanes, floor(Int, outplanes * reduction)))
+    inplanes = outplanes * reduction
   end
-  return layers
+
+  append!(layers, dense_block(outplanes, growth_rates[end]))
+  push!(layers, BatchNorm(outplanes + sum(growth_rates[end]), relu))
+
+  return Chain(layers...,
+               AdaptiveMeanPool((1, 1)),
+               flatten,
+               Dense(num_planes, nclasses))
 end
 
 """
@@ -58,33 +88,13 @@ Create a DenseNet model
 
 # Arguments
 - `nblocks`: number of dense blocks between transitions
-- `growth_rate`: the output feature map growth rate of dense blocks (i.e. `k` in the paper)
+- `growth_rate`: the output feature map growth rate of dense blocks (i.e. `k` in the ref)
 - `reduction`: the factor by which the number of feature maps is scaled across each transition
 - `nclasses`: the number of output classes
 """
-function densenet(nblocks; growth_rate=32, reduction=0.5, nclasses=1000)
-  num_planes = 2 * growth_rate
-  layers = []
-  append!(layers, conv_bn((7, 7), 3, num_planes; stride=2, pad=(3, 3), usebias=false))
-  push!(layers, MaxPool((3, 3), stride=2, pad=(1, 1)))
-
-  for i in 1:3
-    append!(layers, dense_block(num_planes, growth_rate, nblocks[i]))
-    num_planes += nblocks[i] * growth_rate
-    out_planes = Int(floor(num_planes * reduction))
-    append!(layers, transition(num_planes, out_planes))
-    num_planes = out_planes
-  end
-
-  append!(layers, dense_block(num_planes, growth_rate, nblocks[4]))
-  num_planes += nblocks[4] * growth_rate
-  push!(layers, BatchNorm(num_planes, relu))
-
-  return Chain(layers...,
-               AdaptiveMeanPool((1, 1)),
-               flatten,
-               Dense(num_planes, nclasses))
-end
+densenet(nblocks; growth_rate=32, reduction=0.5, nclasses=1000) =
+  densenet(2 * growth_rate, [fill(growth_rate, n) for n in nblocks];
+           reduction = reduction, nclasses = nclasses)
 
 """
     DenseNet(nblocks::NTuple{N, <:Integer};
