@@ -39,26 +39,26 @@ Create an Inception-v1 model (commonly referred to as GoogLeNet)
 - `nclasses`: the number of output classes
 """
 function googlenet(; nclasses = 1000)
-  layers = Chain(Conv((7, 7), 3 => 64; stride = 2, pad = 3),
-                 MaxPool((3, 3), stride = 2, pad = 1),
-                 Conv((1, 1), 64 => 64),
-                 Conv((3, 3), 64 => 192; pad = 1),
-                 MaxPool((3, 3), stride = 2, pad = 1),
-                 _inceptionblock(192, 64, 96, 128, 16, 32, 32),
-                 _inceptionblock(256, 128, 128, 192, 32, 96, 64),
-                 MaxPool((3, 3), stride = 2, pad = 1),
-                 _inceptionblock(480, 192, 96, 208, 16, 48, 64),
-                 _inceptionblock(512, 160, 112, 224, 24, 64, 64),
-                 _inceptionblock(512, 128, 128, 256, 24, 64, 64),
-                 _inceptionblock(512, 112, 144, 288, 32, 64, 64),
-                 _inceptionblock(528, 256, 160, 320, 32, 128, 128),
-                 MaxPool((3, 3), stride = 2, pad = 1),
-                 _inceptionblock(832, 256, 160, 320, 32, 128, 128),
-                 _inceptionblock(832, 384, 192, 384, 48, 128, 128),
-                 AdaptiveMeanPool((1, 1)),
-                 flatten,
-                 Dropout(0.4),
-                 Dense(1024, nclasses))
+  layers = Chain(Chain(Conv((7, 7), 3 => 64; stride = 2, pad = 3),
+                       MaxPool((3, 3), stride = 2, pad = 1),
+                       Conv((1, 1), 64 => 64),
+                       Conv((3, 3), 64 => 192; pad = 1),
+                       MaxPool((3, 3), stride = 2, pad = 1),
+                       _inceptionblock(192, 64, 96, 128, 16, 32, 32),
+                       _inceptionblock(256, 128, 128, 192, 32, 96, 64),
+                       MaxPool((3, 3), stride = 2, pad = 1),
+                       _inceptionblock(480, 192, 96, 208, 16, 48, 64),
+                       _inceptionblock(512, 160, 112, 224, 24, 64, 64),
+                       _inceptionblock(512, 128, 128, 256, 24, 64, 64),
+                       _inceptionblock(512, 112, 144, 288, 32, 64, 64),
+                       _inceptionblock(528, 256, 160, 320, 32, 128, 128),
+                       MaxPool((3, 3), stride = 2, pad = 1),
+                       _inceptionblock(832, 256, 160, 320, 32, 128, 128),
+                       _inceptionblock(832, 384, 192, 384, 48, 128, 128),
+                       AdaptiveMeanPool((1, 1))),
+                 Chain(flatten,
+                       Dropout(0.4),
+                       Dense(1024, nclasses)))
 
   return layers
 end

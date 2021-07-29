@@ -73,10 +73,10 @@ function densenet(inplanes, growth_rates; reduction = 0.5, nclasses = 1000)
   end
   push!(layers, BatchNorm(outplanes, relu))
 
-  return Chain(layers...,
-               AdaptiveMeanPool((1, 1)),
-               flatten,
-               Dense(outplanes, nclasses))
+  return Chain(Chain(layers...),
+               Chain(AdaptiveMeanPool((1, 1)),
+                     flatten,
+                     Dense(outplanes, nclasses)))
 end
 
 """

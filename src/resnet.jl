@@ -104,7 +104,7 @@ function resnet(; block, shortcut_config, channel_config, block_config, nclasses
                                 skip_projection(inplanes, outplanes[end], i != 1)))
     end
     inplanes = outplanes[end]
-    for j in 2:nrepeats
+    for _ in 2:nrepeats
       if shortcut_config == :A || shortcut_config == :B
         push!(layers, Parallel(+, block(inplanes, outplanes, false),
                                   skip_identity(inplanes, outplanes[end])))
@@ -116,11 +116,9 @@ function resnet(; block, shortcut_config, channel_config, block_config, nclasses
     end
     baseplanes *= 2
   end
-  push!(layers, AdaptiveMeanPool((1, 1)))
-  push!(layers, flatten)
-  push!(layers, Dense(inplanes, nclasses))
 
-  return Chain(layers...)
+  return Chain(Chain(layers..., AdaptiveMeanPool((1, 1))),
+               Chain(flatten, Dense(inplanes, nclasses)))
 end
 
 const resnet_config =
