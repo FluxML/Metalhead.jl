@@ -1,97 +1,263 @@
-struct ResidualBlock
-  conv_layers
-  norm_layers
-  shortcut
-end
+"""
+    basicblock(inplanes, outplanes, downsample = false)
 
-@functor ResidualBlock
+Create a basic residual block
+([reference](https://arxiv.org/abs/1512.03385v1)).
 
-function ResidualBlock(filters, kernels::Array{Tuple{Int,Int}}, pads::Array{Tuple{Int,Int}}, strides::Array{Tuple{Int,Int}}, shortcut = identity)
-  local conv_layers = []
-  local norm_layers = []
-  for i in 2:length(filters)
-    push!(conv_layers, Conv(kernels[i-1], filters[i-1]=>filters[i], pad = pads[i-1], stride = strides[i-1]))
-    push!(norm_layers, BatchNorm(filters[i]))
-  end
-  ResidualBlock(Tuple(conv_layers),Tuple(norm_layers),shortcut)
-end
+# Arguments:
+- `inplanes`: the number of input feature maps
+- `outplanes`: a list of the number of output feature maps for each convolution
+               within the residual block
+- `downsample`: set to `true` to downsample the input
+"""
+basicblock(inplanes, outplanes, downsample = false) = downsample ?
+  Chain(conv_bn((3, 3), inplanes, outplanes[1]; stride = 2, pad = 1, usebias = false)...,
+        conv_bn((3, 3), outplanes[1], outplanes[2]; stride = 1, pad = 1, usebias = false)...) :
+  Chain(conv_bn((3, 3), inplanes, outplanes[1]; stride = 1, pad = 1, usebias = false)...,
+        conv_bn((3, 3), outplanes[1], outplanes[2]; stride = 1, pad = 1, usebias = false)...)
 
-function ResidualBlock(filters, kernels::Array{Int}, pads::Array{Int}, strides::Array{Int}, shortcut = identity)
-  ResidualBlock(filters, [(i,i) for i in kernels], [(i,i) for i in pads], [(i,i) for i in strides], shortcut)
-end
+"""
+    bottleneck(inplanes, outplanes, downsample = false)
 
-function (block::ResidualBlock)(input)
-  local value = copy.(input)
-  for i in 1:length(block.conv_layers)-1
-    value = relu.((block.norm_layers[i])((block.conv_layers[i])(value)))
-  end
-  relu.(((block.norm_layers[end])((block.conv_layers[end])(value))) + block.shortcut(input))
-end
+Create a bottleneck residual block
+([reference](https://arxiv.org/abs/1512.03385v1)).
 
-function Bottleneck(filters::Int, downsample::Bool = false, res_top::Bool = false)
-  if(!downsample && !res_top)
-    return ResidualBlock([4 * filters, filters, filters, 4 * filters], [1,3,1], [0,1,0], [1,1,1])
-  elseif(downsample && res_top)
-    return ResidualBlock([filters, filters, filters, 4 * filters], [1,3,1], [0,1,0], [1,1,1], Chain(Conv((1,1), filters=>4 * filters, pad = (0,0), stride = (1,1)), BatchNorm(4 * filters)))
+# Arguments:
+- `inplanes`: the number of input feature maps
+- `outplanes`: a list of the number of output feature maps for each convolution
+               within the residual block
+- `downsample`: set to `true` to downsample the input
+"""
+bottleneck(inplanes, outplanes, downsample = false) = downsample ?
+  Chain(conv_bn((1, 1), inplanes, outplanes[1]; stride = 2, usebias = false)...,
+        conv_bn((3, 3), outplanes[1], outplanes[2]; stride = 1, pad = 1, usebias = false)...,
+        conv_bn((1, 1), outplanes[2], outplanes[3]; stride = 1, usebias = false)...) :
+  Chain(conv_bn((1, 1), inplanes, outplanes[1]; stride = 1, usebias = false)...,
+        conv_bn((3, 3), outplanes[1], outplanes[2]; stride = 1, pad = 1, usebias = false)...,
+        conv_bn((1, 1), outplanes[2], outplanes[3]; stride = 1, usebias = false)...)
+
+"""
+    skip_projection(inplanes, outplanes, downsample = false)
+
+Create a skip projection
+([reference](https://arxiv.org/abs/1512.03385v1)).
+
+# Arguments:
+- `inplanes`: the number of input feature maps
+- `outplanes`: a list of the number of output feature maps
+- `downsample`: set to `true` to downsample the input
+"""
+skip_projection(inplanes, outplanes, downsample = false) = downsample ? 
+  Chain(conv_bn((1, 1), inplanes, outplanes; stride = 2, usebias = false)...) :
+  Chain(conv_bn((1, 1), inplanes, outplanes; stride = 1, usebias = false)...)
+
+# array -> PaddedView(0, array, outplanes) for zero padding arrays
+"""
+    skip_identity(inplanes, outplanes)
+
+Create a identity projection
+([reference](https://arxiv.org/abs/1512.03385v1)).
+
+# Arguments:
+- `inplanes`: the number of input feature maps
+- `outplanes`: a list of the number of output feature maps
+"""
+function skip_identity(inplanes, outplanes)
+  if outplanes[end] > inplanes
+    return Chain(MaxPool((1, 1), stride = 2),
+                 y -> cat(y, zeros(eltype(y),
+                                   size(y, 1),
+                                   size(y, 2),
+                                   outplanes[end] - inplanes, size(y, 4)); dims = 3))
   else
-    shortcut = Chain(Conv((1,1), 2 * filters=>4 * filters, pad = (0,0), stride = (2,2)), BatchNorm(4 * filters))
-    return ResidualBlock([2 * filters, filters, filters, 4 * filters], [1,3,1], [0,1,0], [1,1,2], shortcut)
+    return identity
   end
 end
 
-function resnet50()
-  local layers = [3, 4, 6, 3]
-  local layer_arr = []
+"""
+    resnet(; block, shortcut_config, channel_config, block_config, nclasses = 1000)
 
-  push!(layer_arr, Conv((7,7), 3=>64, pad = (3,3), stride = (2,2)))
-  push!(layer_arr, MaxPool((3,3), pad = (1,1), stride = (2,2)))
+Create a ResNet model
+([reference](https://arxiv.org/abs/1512.03385v1)).
 
-  initial_filters = 64
-  for i in 1:length(layers)
-    push!(layer_arr, Bottleneck(initial_filters, true, i==1))
-    for j in 2:layers[i]
-      push!(layer_arr, Bottleneck(initial_filters))
+# Arguments
+- `block`: a function with input `(inplanes, outplanes, downsample=false)` that returns
+           a new residual block (see [`Metalhead.basicblock`](#) and [`Metalhead.bottleneck`](#))
+- `shortcut_config`: the type of shortcut style (either `:A`, `:B`, or `:C`)
+- `channel_config`: the growth rate of the output feature maps within a residual block
+- `block_config`: a list of the number of residual blocks at each stage
+- `nclasses`: the number of output classes
+"""
+function resnet(; block, shortcut_config, channel_config, block_config, nclasses = 1000)
+  inplanes = 64
+  baseplanes = 64
+  layers = []
+  append!(layers, conv_bn((7, 7), 3, inplanes; stride = 2, pad = (3, 3)))
+  push!(layers, MaxPool((3, 3), stride = (2, 2), pad = (1, 1)))
+  for (i, nrepeats) in enumerate(block_config)
+    outplanes = baseplanes .* channel_config
+    if shortcut_config == :A
+      push!(layers, Parallel(+, block(inplanes, outplanes, i != 1),
+                                skip_identity(inplanes, outplanes)))
+    elseif shortcut_config == :B || shortcut_config == :C
+      push!(layers, Parallel(+, block(inplanes, outplanes, i != 1),
+                                skip_projection(inplanes, outplanes[end], i != 1)))
     end
-    initial_filters *= 2
-  end
-
-  push!(layer_arr, MeanPool((7,7)))
-  push!(layer_arr, x -> reshape(x, :, size(x,4)))
-  push!(layer_arr, (Dense(2048, 1000)))
-  push!(layer_arr, softmax)
-
-  Chain(layer_arr...)
-end
-
-function resnet_layers()
-  weight = Metalhead.weights("resnet.bson")
-  weights = Dict{Any ,Any}()
-  for ele in keys(weight)
-    weights[string(ele)] = convert(Array{Float64, N} where N, weight[ele])
-  end
-  ls = resnet50()
-  ls[1].weight .= weights["gpu_0/conv1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:]
-  count = 2
-  for j in [3:5, 6:9, 10:15, 16:18]
-    for p in j
-      ls[p].conv_layers[1].weight .= weights["gpu_0/res$(count)_$(p-j[1])_branch2a_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:]
-      ls[p].conv_layers[2].weight .= weights["gpu_0/res$(count)_$(p-j[1])_branch2b_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:]
-      ls[p].conv_layers[3].weight .= weights["gpu_0/res$(count)_$(p-j[1])_branch2c_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:]
+    inplanes = outplanes[end]
+    for _ in 2:nrepeats
+      if shortcut_config == :A || shortcut_config == :B
+        push!(layers, Parallel(+, block(inplanes, outplanes, false),
+                                  skip_identity(inplanes, outplanes[end])))
+      elseif shortcut_config == :C
+        push!(layers, Parallel(+, block(inplanes, outplanes, false),
+                                  skip_projection(inplanes, outplanes, false)))
+      end
+      inplanes = outplanes[end]
     end
-    count += 1
+    baseplanes *= 2
   end
-  ls[21].W .= transpose(weights["gpu_0/pred_w_0"]); ls[21].b .= weights["gpu_0/pred_b_0"]
-  return ls
+
+  return Chain(Chain(layers..., AdaptiveMeanPool((1, 1))),
+               Chain(flatten, Dense(inplanes, nclasses)))
 end
 
-struct ResNet <: ClassificationModel{ImageNet.ImageNet1k}
-  layers::Chain
+const resnet_config =
+  Dict(:resnet18 => ([1, 1], [2, 2, 2, 2], :A),
+       :resnet34 => ([1, 1], [3, 4, 6, 3], :A),
+       :resnet50 => ([1, 1, 4], [3, 4, 6, 3], :B),
+       :resnet101 => ([1, 1, 4], [3, 4, 23, 3], :B),
+       :resnet152 => ([1, 1, 4], [3, 8, 36, 3], :B))
+
+"""
+    ResNet(channel_config, block_config, shortcut_config; block, nclasses = 1000)
+
+Create a `ResNet` model
+([reference](https://arxiv.org/abs/1512.03385v1)).
+See also [`resnet`](#).
+
+# Arguments
+- `channel_config`: the growth rate of the output feature maps within a residual block
+- `block_config`: a list of the number of residual blocks at each stage
+- `shortcut_config`: the type of shortcut style (either `:A`, `:B`, or `:C`)
+- `block`: a function with input `(inplanes, outplanes, downsample=false)` that returns
+           a new residual block (see [`Metalhead.basicblock`](#) and [`Metalhead.bottleneck`](#))
+- `nclasses`: the number of output classes
+"""
+struct ResNet{T}
+  layers::T
 end
 
-ResNet() = ResNet(resnet_layers())
+function ResNet(channel_config, block_config, shortcut_config; block, nclasses = 1000)
+  layers = resnet(block = block,
+                  shortcut_config = shortcut_config,
+                  channel_config = channel_config,
+                  block_config = block_config,
+                  nclasses = nclasses)
 
-Base.show(io::IO, ::ResNet) = print(io, "ResNet()")
+  ResNet(layers)
+end
 
 @functor ResNet
 
 (m::ResNet)(x) = m.layers(x)
+
+"""
+    ResNet18(; pretrain = false, nclasses = 1000)
+   
+Create a ResNet-18 model
+([reference](https://arxiv.org/abs/1512.03385v1)).
+See also [`Metalhead.ResNet`](#).
+
+# Arguments
+- `nclasses`: the number of output classes
+
+!!! warning
+    `ResNet18` does not currently support pretrained weights.
+"""
+function ResNet18(; pretrain = false, nclasses = 1000)
+  model = ResNet(resnet_config[:resnet18]...; block = basicblock, nclasses = nclasses)
+
+  pretrain && pretrain_error("ResNet18")
+  return model
+end
+
+"""
+    ResNet34(; pretrain = false, nclasses = 1000)
+   
+Create a ResNet-34 model
+([reference](https://arxiv.org/abs/1512.03385v1)).
+See also [`Metalhead.ResNet`](#).
+
+# Arguments
+- `pretrain`: set to `true` to load pre-trained weights for ImageNet
+- `nclasses`: the number of output classes
+
+!!! warning
+    `ResNet34` does not currently support pretrained weights.
+"""
+function ResNet34(; pretrain = false, nclasses = 1000)
+  model = ResNet(resnet_config[:resnet34]...; block = basicblock, nclasses = nclasses)
+
+  pretrain && pretrain_error("ResNet34")
+  return model
+end
+
+"""
+    ResNet50(; pretrain = false, nclasses = 1000)
+   
+Create a ResNet-50 model
+([reference](https://arxiv.org/abs/1512.03385v1)).
+See also [`Metalhead.ResNet`](#).
+
+# Arguments
+- `pretrain`: set to `true` to load pre-trained weights for ImageNet
+- `nclasses`: the number of output classes
+"""
+function ResNet50(; pretrain = false, nclasses = 1000)
+  model = ResNet(resnet_config[:resnet50]...; block = bottleneck, nclasses = nclasses)
+
+  pretrain && Flux.loadparams!(model.layers, weights("resnet50"))
+  return model
+end
+
+"""
+    ResNet101(; pretrain = false, nclasses = 1000)
+   
+Create a ResNet-101 model
+([reference](https://arxiv.org/abs/1512.03385v1)).
+See also [`Metalhead.ResNet`](#).
+
+# Arguments
+- `pretrain`: set to `true` to load pre-trained weights for ImageNet
+- `nclasses`: the number of output classes
+
+!!! warning
+    `ResNet101` does not currently support pretrained weights.
+"""
+function ResNet101(; pretrain = false, nclasses = 1000)
+  model = ResNet(resnet_config[:resnet101]...; block = bottleneck, nclasses = nclasses)
+
+  pretrain && pretrain_error("ResNet101")
+  return model
+end
+
+"""
+    ResNet152(; pretrain = false, nclasses = 1000)
+   
+Create a ResNet-152 model
+([reference](https://arxiv.org/abs/1512.03385v1)).
+See also [`Metalhead.ResNet`](#).
+
+# Arguments
+- `pretrain`: set to `true` to load pre-trained weights for ImageNet
+- `nclasses`: the number of output classes
+
+!!! warning
+    `ResNet152` does not currently support pretrained weights.
+"""
+function ResNet152(; pretrain = false, nclasses = 1000)
+  model = ResNet(resnet_config[:resnet152]...; block = bottleneck, nclasses = nclasses)
+
+  pretrain && pretrain_error("ResNet152")
+  return model
+end

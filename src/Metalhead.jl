@@ -1,38 +1,32 @@
-__precompile__()
 module Metalhead
 
-using Flux, Images, ImageFiltering, BSON, REPL, Requires, Statistics
-using Flux: @functor
+using Flux
+using Flux: outputsize, Zygote
+using Functors
+using BSON
+using Artifacts, LazyArtifacts
+
+import Functors
 
 # Models
-export VGG19, SqueezeNet, DenseNet, ResNet, GoogleNet
-
-# Useful re-export from Images
-export load
-
-# High-level classification APIs
-export predict, classify
-
-# Data Sets
-export ImageNet, CIFAR10
-
-# Data set utilities
-export trainimgs, testimgs, valimgs, dataset, datasets
-
-function __init__()
-    @require TerminalExtensions="d3a6a179-465e-5219-bd3e-0137f7fd17c7" include("display/terminal_extensions.jl")
-end
-
-include("datasets/utils.jl")
-include("model.jl")
-include("utils.jl")
-include("display/terminal.jl")
-include("datasets/imagenet.jl")
-include("datasets/cifar10.jl")
-include("datasets/autodetect.jl")
-include("vgg19.jl")
-include("squeezenet.jl")
-include("densenet.jl")
+include("utilities.jl")
+include("alexnet.jl")
+include("vgg.jl")
 include("resnet.jl")
 include("googlenet.jl")
+include("inception.jl")
+include("squeezenet.jl")
+include("densenet.jl")
+
+export  AlexNet,
+        VGG, VGG11, VGG13, VGG16, VGG19,
+        ResNet, ResNet18, ResNet34, ResNet50, ResNet101, ResNet152,
+        GoogLeNet, Inception3, SqueezeNet,
+        DenseNet, DenseNet121, DenseNet161, DenseNet169, DenseNet201
+
+# use Flux._big_show to pretty print large models
+for T in (:AlexNet, :VGG, :ResNet, :GoogLeNet, :Inception3, :SqueezeNet, :DenseNet)
+  @eval Base.show(io::IO, ::MIME"text/plain", model::$T) = _maybe_big_show(io, model)
+end
+
 end # module

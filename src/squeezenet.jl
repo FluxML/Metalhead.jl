@@ -1,73 +1,72 @@
-function squeezenet_layers()
-  weight = Metalhead.weights("squeezenet.bson")
-  weights = Dict{Any ,Any}()
-  for ele in keys(weight)
-    weights[string(ele)] = weight[ele]
-  end
-    c_1 = Conv(weights["conv10_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["conv10_b_0"], stride=(1, 1), pad=(0, 0), dilation = (1, 1))
-    c_2 = Dropout(0.5f0)
-    c_3 = Conv(weights["fire9/expand1x1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire9/expand1x1_b_0"], stride=(1, 1), pad=(0, 0), dilation = (1, 1))
-    c_4 = Conv(weights["fire9/squeeze1x1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire9/squeeze1x1_b_0"], stride=(1, 1), pad=(0, 0), dilation = (1, 1))
-    c_5 = Conv(weights["fire8/expand1x1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire8/expand1x1_b_0"], stride=(1, 1), pad=(0, 0), dilation = (1, 1))
-    c_6 = Conv(weights["fire8/squeeze1x1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire8/squeeze1x1_b_0"], stride=(1, 1), pad=(0, 0), dilation = (1, 1))
-    c_7 = Conv(weights["fire7/expand1x1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire7/expand1x1_b_0"], stride=(1, 1), pad=(0, 0), dilation = (1, 1))
-    c_8 = Conv(weights["fire7/squeeze1x1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire7/squeeze1x1_b_0"], stride=(1, 1), pad=(0, 0), dilation = (1, 1))
-    c_9 = Conv(weights["fire6/expand1x1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire6/expand1x1_b_0"], stride=(1, 1), pad=(0, 0), dilation = (1, 1))
-    c_10 = Conv(weights["fire6/squeeze1x1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire6/squeeze1x1_b_0"], stride=(1, 1), pad=(0, 0), dilation = (1, 1))
-    c_11 = Conv(weights["fire5/expand1x1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire5/expand1x1_b_0"], stride=(1, 1), pad=(0, 0), dilation = (1, 1))
-    c_12 = Conv(weights["fire5/squeeze1x1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire5/squeeze1x1_b_0"], stride=(1, 1), pad=(0, 0), dilation = (1, 1))
-    c_13 = Conv(weights["fire4/expand1x1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire4/expand1x1_b_0"], stride=(1, 1), pad=(0, 0), dilation = (1, 1))
-    c_14 = Conv(weights["fire4/squeeze1x1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire4/squeeze1x1_b_0"], stride=(1, 1), pad=(0, 0), dilation = (1, 1))
-    c_15 = Conv(weights["fire3/expand1x1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire3/expand1x1_b_0"], stride=(1, 1), pad=(0, 0), dilation = (1, 1))
-    c_16 = Conv(weights["fire3/squeeze1x1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire3/squeeze1x1_b_0"], stride=(1, 1), pad=(0, 0), dilation = (1, 1))
-    c_17 = Conv(weights["fire2/expand1x1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire2/expand1x1_b_0"], stride=(1, 1), pad=(0, 0), dilation = (1, 1))
-    c_18 = Conv(weights["fire2/squeeze1x1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire2/squeeze1x1_b_0"], stride=(1, 1), pad=(0, 0), dilation = (1, 1))
-    c_19 = Conv(weights["conv1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["conv1_b_0"], stride=(2, 2), pad=(0, 0), dilation = (1, 1))
-    c_20 = Conv(weights["fire2/expand3x3_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire2/expand3x3_b_0"], stride=(1, 1), pad=(1, 1), dilation = (1, 1))
-    c_21 = Conv(weights["fire3/expand3x3_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire3/expand3x3_b_0"], stride=(1, 1), pad=(1, 1), dilation = (1, 1))
-    c_22 = Conv(weights["fire4/expand3x3_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire4/expand3x3_b_0"], stride=(1, 1), pad=(1, 1), dilation = (1, 1))
-    c_23 = Conv(weights["fire5/expand3x3_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire5/expand3x3_b_0"], stride=(1, 1), pad=(1, 1), dilation = (1, 1))
-    c_24 = Conv(weights["fire6/expand3x3_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire6/expand3x3_b_0"], stride=(1, 1), pad=(1, 1), dilation = (1, 1))
-    c_25 = Conv(weights["fire7/expand3x3_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire7/expand3x3_b_0"], stride=(1, 1), pad=(1, 1), dilation = (1, 1))
-    c_26 = Conv(weights["fire8/expand3x3_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire8/expand3x3_b_0"], stride=(1, 1), pad=(1, 1), dilation = (1, 1))
-    c_27 = Conv(weights["fire9/expand3x3_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire9/expand3x3_b_0"], stride=(1, 1), pad=(1, 1), dilation = (1, 1))
+"""
+    fire(inplanes, squeeze_planes, expand1x1_planes, expand3x3_planes)
 
-    ls = Chain(Conv(weights["conv1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["conv1_b_0"], stride=(2, 2), pad=(0, 0), dilation = (1, 1)),
-            x -> relu.(x), MaxPool((3,3), pad=(0,0), stride=(2,2)),
-            Conv(weights["fire2/squeeze1x1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire2/squeeze1x1_b_0"], stride=(1, 1), pad=(0, 0), dilation = (1, 1)),
-            x -> relu.(x), x->cat(relu.(c_17(x)), relu.(c_20(x)), dims=3),
-            Conv(weights["fire3/squeeze1x1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire3/squeeze1x1_b_0"], stride=(1, 1), pad=(0, 0), dilation = (1, 1)),
-            x -> relu.(x), x->cat(relu.(c_15(x)), relu.(c_21(x)), dims=3),
-            MaxPool((3, 3), pad=(0, 0), stride=(2, 2)),
-            Conv(weights["fire4/squeeze1x1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire4/squeeze1x1_b_0"], stride=(1, 1), pad=(0, 0), dilation = (1, 1)),
-            x -> relu.(x), x->cat(relu.(c_13(x)), relu.(c_22(x)), dims=3),
-            Conv(weights["fire5/squeeze1x1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire5/squeeze1x1_b_0"], stride=(1, 1), pad=(0, 0), dilation = (1, 1)),
-            x -> relu.(x), x->cat(relu.(c_11(x)), relu.(c_23(x)), dims=3),
-            MaxPool((3, 3), pad=(0, 0), stride=(2, 2)),
-            Conv(weights["fire6/squeeze1x1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire6/squeeze1x1_b_0"], stride=(1, 1), pad=(0, 0), dilation = (1, 1)),
-            x -> relu.(x), x->cat(relu.(c_9(x)), relu.(c_24(x)), dims=3),
-            Conv(weights["fire7/squeeze1x1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire7/squeeze1x1_b_0"], stride=(1, 1), pad=(0, 0), dilation = (1, 1)),
-            x -> relu.(x), x->cat(relu.(c_7(x)), relu.(c_25(x)), dims=3),
-            Conv(weights["fire8/squeeze1x1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire8/squeeze1x1_b_0"], stride=(1, 1), pad=(0, 0), dilation = (1, 1)),
-            x -> relu.(x), x->cat(relu.(c_5(x)), relu.(c_26(x)), dims=3),
-            Conv(weights["fire9/squeeze1x1_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["fire9/squeeze1x1_b_0"], stride=(1, 1), pad=(0, 0), dilation = (1, 1)),
-            x -> relu.(x), x->cat(relu.(c_3(x)), relu.(c_27(x)), dims=3),
-            Dropout(0.5f0),
-            Conv(weights["conv10_w_0"][end:-1:1,:,:,:][:,end:-1:1,:,:], weights["conv10_b_0"], stride=(1, 1), pad=(0, 0), dilation = (1, 1)),
-            x -> relu.(x), x->mean(x, dims=[1,2]),
-            vec, softmax
-            )
-#end
-  return ls
+Create a fire module
+([reference](https://arxiv.org/abs/1602.07360v4)).
+
+# Arguments
+- `inplanes`: number of input feature maps
+- `squeeze_planes`: number of intermediate feature maps
+- `expand1x1_planes`: number of output feature maps for the 1x1 expansion convolution
+- `expand3x3_planes`: number of output feature maps for the 3x3 expansion convolution
+"""
+function fire(inplanes, squeeze_planes, expand1x1_planes, expand3x3_planes)
+  branch_1 = Conv((1, 1), inplanes => squeeze_planes, relu)
+  branch_2 = Conv((1, 1), squeeze_planes => expand1x1_planes, relu)
+  branch_3 = Conv((3, 3), squeeze_planes => expand3x3_planes, pad = 1, relu)
+
+  return Chain(branch_1,
+               Parallel(cat_channels,
+                        branch_2,
+                        branch_3))
 end
 
-struct SqueezeNet <: ClassificationModel{ImageNet.ImageNet1k}
-  layers::Chain
+"""
+    squeezenet()
+
+Create a SqueezeNet
+([reference](https://arxiv.org/abs/1602.07360v4)).
+"""
+function squeezenet()
+  layers = Chain(Chain(Conv((3, 3), 3 => 64, relu, stride = 2),
+                       MaxPool((3, 3), stride = 2),
+                       fire(64, 16, 64, 64),
+                       fire(128, 16, 64, 64),
+                       MaxPool((3, 3), stride = 2),
+                       fire(128, 32, 128, 128),
+                       fire(256, 32, 128, 128),
+                       MaxPool((3, 3), stride = 2),
+                       fire(256, 48, 192, 192),
+                       fire(384, 48, 192, 192),
+                       fire(384, 64, 256, 256),
+                       fire(512, 64, 256, 256),
+                       Dropout(0.5),
+                       Conv((1, 1), 512 => 1000, relu),
+                       AdaptiveMeanPool((1, 1))),
+                 flatten)
+
+  return layers
 end
 
-SqueezeNet() = SqueezeNet(squeezenet_layers())
+"""
+    SqueezeNet(; pretrain = false)
 
-Base.show(io::IO, ::SqueezeNet) = print(io, "SqueezeNet()")
+Create a SqueezeNet
+([reference](https://arxiv.org/abs/1602.07360v4)).
+Set `pretrain=true` to load the model with pre-trained weights for ImageNet.
+
+See also [`squeezenet`](#).
+"""
+struct SqueezeNet{T}
+  layers::T
+end
+
+function SqueezeNet(; pretrain = false)
+  layers = squeezenet()
+  pretrain && Flux.loadparams!(layers, weights("squeezenet"))
+
+  SqueezeNet(layers)
+end
 
 @functor SqueezeNet
 

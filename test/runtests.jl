@@ -1,55 +1,84 @@
 using Metalhead, Test
+using Flux
+using Flux: Zygote
 
-# Standardized testing for the models of tomorrow
-@info "Starting Basic Models Tests..."
-@testset "Basic Model Tests" begin
-    for (T, MODEL) in [
-            (Float32, VGG19),
-            (Float32, SqueezeNet),
-            (Float64, DenseNet),
-            (Float64, GoogleNet),
-        ]
-	@info "Testing $(MODEL)..."
-        model = MODEL()
+PRETRAINED_MODELS = [(VGG19, false), ResNet50, GoogLeNet, DenseNet121, SqueezeNet]
 
-        x_test = rand(T, 224, 224, 3, 1)
-        y_test = model(x_test)
+function gradtest(model, input)
+  y, pb = Zygote.pullback(() -> model(input), Flux.params(model))
+  gs = pb(ones(Float32, size(y)))
 
-        # Test that types and shapes work out as we expect
-        @test y_test isa AbstractArray
-        @test length(y_test) == 1000
+  # if we make it to here with no error, success!
+  return true
+end
 
-        # Test that the models can be indexed
-        @test length(model.layers[1:4].layers) == 4
+@testset "AlexNet" begin
+  model = AlexNet()
+  @test size(model(rand(Float32, 256, 256, 3, 2))) == (1000, 2)
+  @test_throws ArgumentError AlexNet(pretrain = true)
+  @test_skip gradtest(model, rand(Float32, 256, 256, 3, 2))
+end
+
+@testset "VGG" begin
+  @testset "$model(BN=$bn)" for model in [VGG11, VGG13, VGG16, VGG19], bn in [true, false]
+    imsize = (224, 224)
+    m = model(batchnorm = bn)
+
+    @test size(m(rand(Float32, imsize..., 3, 2))) == (1000, 2)
+    if (model, bn) in PRETRAINED_MODELS
+      @test (model(batchnorm = bn, pretrain = true); true)
+    else
+      @test_throws ArgumentError model(batchnorm = bn, pretrain = true)
     end
+    @test_skip gradtest(m, rand(Float32, imsize..., 3, 2))
+  end
 end
 
-# Test proper download and functioning of CIFAR10
-@info "Starting CIFAR10 tests..."
-@testset "CIFAR dataset tests" begin
-    x1 = trainimgs(CIFAR10)[1]
-    x2 = valimgs(CIFAR10)[1]
-
-    # Test that the input is roughly what we expect
-    @test size(x1.img) == (32, 32)
-    @test size(x2.img) == (32, 32)
-end
-
-# Test printing of prediction
-@info "Testing Prediction on CIFAR10..."
-@testset "Prediction table display" begin
-    x = valimgs(CIFAR10)[1]
-    m = VGG19()
-    predict(m, x)
-end
-
-# Just run the prediction code end-to-end
-# TODO: Set up travis to actually run these
-if length(datasets()) == 2
-    for dataset in (ImageNet, CIFAR10)
-        val1 = valimgs(dataset)[1]
-        predict(vgg19, val1)
-        classify(vgg19, val1)
+@testset "ResNet" begin
+  @testset for model in [ResNet18, ResNet34, ResNet50, ResNet101, ResNet152]
+    m = model()
+    
+    @test size(m(rand(Float32, 256, 256, 3, 2))) == (1000, 2)
+    if model in PRETRAINED_MODELS
+      @test (model(pretrain = true); true)
+    else
+      @test_throws ArgumentError model(pretrain = true)
     end
-    predict(vgg19, testimgs(dataset(ImageNet))[1])
+    @test_skip gradtest(m, rand(Float32, 256, 256, 3, 2))
+  end
+end
+
+@testset "GoogLeNet" begin
+  m = GoogLeNet()
+  @test size(m(rand(Float32, 224, 224, 3, 2))) == (1000, 2)
+  @test (GoogLeNet(pretrain = true); true)
+  @test_skip gradtest(m, rand(Float32, 224, 224, 3, 2))
+end
+
+@testset "Inception3" begin
+  m = Inception3()
+  @test size(m(rand(Float32, 299, 299, 3, 2))) == (1000, 2)
+  @test_throws ArgumentError Inception3(pretrain = true)
+  @test_skip gradtest(m, rand(Float32, 299, 299, 3, 2))
+end
+
+@testset "SqueezeNet" begin
+  m = SqueezeNet()
+  @test size(m(rand(Float32, 227, 227, 3, 2))) == (1000, 2)
+  @test (SqueezeNet(pretrain = true); true)
+  @test_skip gradtest(m, rand(Float32, 227, 227, 3, 2))
+end
+
+@testset "DenseNet" begin
+  @testset for model in [DenseNet121, DenseNet161, DenseNet169, DenseNet201]
+    m = model()
+
+    @test size(m(rand(Float32, 224, 224, 3, 2))) == (1000, 2)
+    if model in PRETRAINED_MODELS
+      @test (model(pretrain = true); true)
+    else
+      @test_throws ArgumentError model(pretrain = true)
+    end
+    @test_skip gradtest(m, rand(Float32, 224, 224, 3, 2))
+  end
 end
