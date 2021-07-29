@@ -7,7 +7,6 @@ using BSON
 using Artifacts, LazyArtifacts
 
 import Functors
-import Functors: functor
 
 # Models
 include("utilities.jl")
