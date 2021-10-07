@@ -26,7 +26,7 @@ end
 
     @test size(m(rand(Float32, imsize..., 3, 2))) == (1000, 2)
     if (model, bn) in PRETRAINED_MODELS
-      @test (model(batchnorm = bn, pretrain = true); true)
+      @test_skip (model(batchnorm = bn, pretrain = true); true)
     else
       @test_throws ArgumentError model(batchnorm = bn, pretrain = true)
     end
@@ -37,21 +37,30 @@ end
 @testset "ResNet" begin
   @testset for model in [ResNet18, ResNet34, ResNet50, ResNet101, ResNet152]
     m = model()
-    
+
     @test size(m(rand(Float32, 256, 256, 3, 2))) == (1000, 2)
     if model in PRETRAINED_MODELS
-      @test (model(pretrain = true); true)
+      @test_skip (model(pretrain = true); true)
     else
       @test_throws ArgumentError model(pretrain = true)
     end
     @test_skip gradtest(m, rand(Float32, 256, 256, 3, 2))
+  end
+
+  @testset "Shortcut C" begin
+    m = Metalhead.resnet(block = Metalhead.basicblock,
+                         channel_config = [1, 1],
+                         block_config = [2, 2, 2, 2],
+                         shortcut_config = :C)
+
+    @test size(m(rand(Float32, 256, 256, 3, 2))) == (1000, 2)
   end
 end
 
 @testset "GoogLeNet" begin
   m = GoogLeNet()
   @test size(m(rand(Float32, 224, 224, 3, 2))) == (1000, 2)
-  @test (GoogLeNet(pretrain = true); true)
+  @test_skip (GoogLeNet(pretrain = true); true)
   @test_skip gradtest(m, rand(Float32, 224, 224, 3, 2))
 end
 
@@ -65,7 +74,7 @@ end
 @testset "SqueezeNet" begin
   m = SqueezeNet()
   @test size(m(rand(Float32, 227, 227, 3, 2))) == (1000, 2)
-  @test (SqueezeNet(pretrain = true); true)
+  @test_skip (SqueezeNet(pretrain = true); true)
   @test_skip gradtest(m, rand(Float32, 227, 227, 3, 2))
 end
 
@@ -75,7 +84,7 @@ end
 
     @test size(m(rand(Float32, 224, 224, 3, 2))) == (1000, 2)
     if model in PRETRAINED_MODELS
-      @test (model(pretrain = true); true)
+      @test_skip (model(pretrain = true); true)
     else
       @test_throws ArgumentError model(pretrain = true)
     end

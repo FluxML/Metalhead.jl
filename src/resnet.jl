@@ -44,7 +44,7 @@ Create a skip projection
 
 # Arguments:
 - `inplanes`: the number of input feature maps
-- `outplanes`: a list of the number of output feature maps
+- `outplanes`: the number of output feature maps
 - `downsample`: set to `true` to downsample the input
 """
 skip_projection(inplanes, outplanes, downsample = false) = downsample ? 
@@ -60,15 +60,15 @@ Create a identity projection
 
 # Arguments:
 - `inplanes`: the number of input feature maps
-- `outplanes`: a list of the number of output feature maps
+- `outplanes`: the number of output feature maps
 """
 function skip_identity(inplanes, outplanes)
-  if outplanes[end] > inplanes
+  if outplanes > inplanes
     return Chain(MaxPool((1, 1), stride = 2),
                  y -> cat(y, zeros(eltype(y),
                                    size(y, 1),
                                    size(y, 2),
-                                   outplanes[end] - inplanes, size(y, 4)); dims = 3))
+                                   outplanes - inplanes, size(y, 4)); dims = 3))
   else
     return identity
   end
@@ -98,7 +98,7 @@ function resnet(; block, shortcut_config, channel_config, block_config, nclasses
     outplanes = baseplanes .* channel_config
     if shortcut_config == :A
       push!(layers, Parallel(+, block(inplanes, outplanes, i != 1),
-                                skip_identity(inplanes, outplanes)))
+                                skip_identity(inplanes, outplanes[end])))
     elseif shortcut_config == :B || shortcut_config == :C
       push!(layers, Parallel(+, block(inplanes, outplanes, i != 1),
                                 skip_projection(inplanes, outplanes[end], i != 1)))
@@ -110,7 +110,7 @@ function resnet(; block, shortcut_config, channel_config, block_config, nclasses
                                   skip_identity(inplanes, outplanes[end])))
       elseif shortcut_config == :C
         push!(layers, Parallel(+, block(inplanes, outplanes, false),
-                                  skip_projection(inplanes, outplanes, false)))
+                                  skip_projection(inplanes, outplanes[end], false)))
       end
       inplanes = outplanes[end]
     end
