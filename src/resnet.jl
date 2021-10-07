@@ -11,10 +11,10 @@ Create a basic residual block
 - `downsample`: set to `true` to downsample the input
 """
 basicblock(inplanes, outplanes, downsample = false) = downsample ?
-  Chain(conv_bn((3, 3), inplanes, outplanes[1]; stride = 2, pad = 1, usebias = false)...,
-        conv_bn((3, 3), outplanes[1], outplanes[2]; stride = 1, pad = 1, usebias = false)...) :
-  Chain(conv_bn((3, 3), inplanes, outplanes[1]; stride = 1, pad = 1, usebias = false)...,
-        conv_bn((3, 3), outplanes[1], outplanes[2]; stride = 1, pad = 1, usebias = false)...)
+  Chain(conv_bn((3, 3), inplanes, outplanes[1]; stride = 2, pad = 1, bias = false)...,
+        conv_bn((3, 3), outplanes[1], outplanes[2], identity; stride = 1, pad = 1, bias = false)...) :
+  Chain(conv_bn((3, 3), inplanes, outplanes[1]; stride = 1, pad = 1, bias = false)...,
+        conv_bn((3, 3), outplanes[1], outplanes[2], identity; stride = 1, pad = 1, bias = false)...)
 
 """
     bottleneck(inplanes, outplanes, downsample = false)
@@ -29,12 +29,12 @@ Create a bottleneck residual block
 - `downsample`: set to `true` to downsample the input
 """
 bottleneck(inplanes, outplanes, downsample = false) = downsample ?
-  Chain(conv_bn((1, 1), inplanes, outplanes[1]; stride = 2, usebias = false)...,
-        conv_bn((3, 3), outplanes[1], outplanes[2]; stride = 1, pad = 1, usebias = false)...,
-        conv_bn((1, 1), outplanes[2], outplanes[3]; stride = 1, usebias = false)...) :
-  Chain(conv_bn((1, 1), inplanes, outplanes[1]; stride = 1, usebias = false)...,
-        conv_bn((3, 3), outplanes[1], outplanes[2]; stride = 1, pad = 1, usebias = false)...,
-        conv_bn((1, 1), outplanes[2], outplanes[3]; stride = 1, usebias = false)...)
+  Chain(conv_bn((1, 1), inplanes, outplanes[1]; stride = 2, bias = false)...,
+        conv_bn((3, 3), outplanes[1], outplanes[2]; stride = 1, pad = 1, bias = false)...,
+        conv_bn((1, 1), outplanes[2], outplanes[3], identity; stride = 1, bias = false)...) :
+  Chain(conv_bn((1, 1), inplanes, outplanes[1]; stride = 1, bias = false)...,
+        conv_bn((3, 3), outplanes[1], outplanes[2]; stride = 1, pad = 1, bias = false)...,
+        conv_bn((1, 1), outplanes[2], outplanes[3], identity; stride = 1, bias = false)...)
 
 """
     skip_projection(inplanes, outplanes, downsample = false)
@@ -48,8 +48,8 @@ Create a skip projection
 - `downsample`: set to `true` to downsample the input
 """
 skip_projection(inplanes, outplanes, downsample = false) = downsample ? 
-  Chain(conv_bn((1, 1), inplanes, outplanes; stride = 2, usebias = false)...) :
-  Chain(conv_bn((1, 1), inplanes, outplanes; stride = 1, usebias = false)...)
+  Chain(conv_bn((1, 1), inplanes, outplanes, identity; stride = 2, bias = false)...) :
+  Chain(conv_bn((1, 1), inplanes, outplanes, identity; stride = 1, bias = false)...)
 
 # array -> PaddedView(0, array, outplanes) for zero padding arrays
 """
@@ -77,7 +77,7 @@ end
 skip_identity(inplanes, outplanes, downsample) = skip_identity(inplanes, outplanes)
 
 """
-    resnet(block, residuals::NTuple{2, Any}, connection = +;
+    resnet(block, residuals::NTuple{2, Any}, connection = (x, y) -> @. relu(x) + relu(y);
            channel_config, block_config, nclasses = 1000)
 
 Create a ResNet model
@@ -94,7 +94,7 @@ Create a ResNet model
 - `block_config`: a list of the number of residual blocks at each stage
 - `nclasses`: the number of output classes
 """
-function resnet(block, residuals::NTuple{2, Any}, connection = +;
+function resnet(block, residuals::NTuple{2, Any}, connection = (x, y) -> @. relu(x) + relu(y);
                 channel_config, block_config, nclasses = 1000)
   inplanes = 64
   baseplanes = 64

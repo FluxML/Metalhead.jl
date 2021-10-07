@@ -11,8 +11,8 @@ Create a Densenet bottleneck layer
 """
 function dense_bottleneck(inplanes, outplanes)
   inner_channels = 4 * outplanes
-  m = Chain(conv_bn((1, 1), inplanes, inner_channels; usebias = false, rev = true)...,
-            conv_bn((3, 3), inner_channels, outplanes; pad = 1, usebias = false, rev = true)...)
+  m = Chain(conv_bn((1, 1), inplanes, inner_channels; bias = false, rev = true)...,
+            conv_bn((3, 3), inner_channels, outplanes; pad = 1, bias = false, rev = true)...)
 
   SkipConnection(m, (mx, x) -> cat(x, mx; dims = 3))
 end
@@ -28,7 +28,7 @@ Create a DenseNet transition sequence
 - `outplanes`: number of output feature maps
 """
 transition(inplanes, outplanes) =
-  [conv_bn((1, 1), inplanes, outplanes; usebias = false, rev = true)...,
+  [conv_bn((1, 1), inplanes, outplanes; bias = false, rev = true)...,
    MeanPool((2, 2))]
 
 """
@@ -60,7 +60,7 @@ Create a DenseNet model
 - `nclasses`: the number of output classes
 """
 function densenet(inplanes, growth_rates; reduction = 0.5, nclasses = 1000)
-  layers = conv_bn((7, 7), 3, inplanes; stride = 2, pad = (3, 3), usebias = false)
+  layers = conv_bn((7, 7), 3, inplanes; stride = 2, pad = (3, 3), bias = false)
   push!(layers, MaxPool((3, 3), stride = 2, pad = (1, 1)))
 
   outplanes = 0
