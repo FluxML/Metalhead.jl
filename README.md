@@ -14,23 +14,23 @@
 
 | Model Name     | Function           | Pre-trained? |
 |:---------------|:-------------------|:------------:|
-| VGG-11         | [`VGG11`](#)       | N            |
-| VGG-11 (w/ BN) | [`VGG11`](#)       | N            |
-| VGG-13         | [`VGG13`](#)       | N            |
-| VGG-13 (w/ BN) | [`VGG13`](#)       | N            |
-| VGG-16         | [`VGG16`](#)       | N            |
-| VGG-16 (w/ BN) | [`VGG16`](#)       | N            |
-| VGG-19         | [`VGG19`](#)       | Y            |
-| VGG-19 (w/ BN) | [`VGG19`](#)       | N            |
-| ResNet-18      | [`ResNet18`](#)    | N            |
-| ResNet-34      | [`ResNet34`](#)    | N            |
-| ResNet-50      | [`ResNet50`](#)    | Y            |
-| ResNet-101     | [`ResNet101`](#)   | N            |
-| ResNet-152     | [`ResNet152`](#)   | N            |
-| GoogLeNet      | [`GoogLeNet`](#)   | Y            |
-| Inception-v3   | [`Inception3`](#)  | N            |
-| SqueezeNet     | [`SqueezeNet`](#)  | Y            |
-| DenseNet-121   | [`DenseNet121`](#) | Y            |
-| DenseNet-161   | [`DenseNet161`](#) | N            |
-| DenseNet-169   | [`DenseNet169`](#) | N            |
-| DenseNet-201   | [`DenseNet201`](#) | N            |
+| [VGG](https://arxiv.org/abs/1409.1556)-11          | [`VGG11`](src/vgg.jl)             | N            |
+| VGG-11 (w/ BN) | [`VGG11`](src/vgg.jl)             | N            |
+| VGG-13         | [`VGG13`](src/vgg.jl)             | N            |
+| VGG-13 (w/ BN) | [`VGG13`](src/vgg.jl)             | N            |
+| VGG-16         | [`VGG16`](src/vgg.jl)             | N            |
+| VGG-16 (w/ BN) | [`VGG16`](src/vgg.jl)             | N            |
+| VGG-19         | [`VGG19`](src/vgg.jl)             | Y            |
+| VGG-19 (w/ BN) | [`VGG19`](src/vgg.jl)             | N            |
+| [ResNet](https://arxiv.org/abs/1512.03385)-18      | [`ResNet18`](src/resnet.jl)       | N            |
+| ResNet-34      | [`ResNet34`](src/resnet.jl)       | N            |
+| ResNet-50      | [`ResNet50`](src/resnet.jl)       | Y            |
+| ResNet-101     | [`ResNet101`](src/resnet.jl)      | N            |
+| ResNet-152     | [`ResNet152`](src/resnet.jl)      | N            |
+| [GoogLeNet](https://arxiv.org/abs/1409.4842)      | [`GoogLeNet`](src/googlenet.jl)   | Y            |
+| [Inception-v3](https://arxiv.org/abs/1512.00567)   | [`Inception3`](src/inception.jl)  | N            |
+| [SqueezeNet](https://arxiv.org/abs/1602.07360)     | [`SqueezeNet`](src/squeezenet.jl) | Y            |
+| [DenseNet](https://arxiv.org/abs/1608.06993)-121   | [`DenseNet121`](src/densenet.jl)  | Y            |
+| DenseNet-161   | [`DenseNet161`](src/densenet.jl)  | N            |
+| DenseNet-169   | [`DenseNet169`](src/densenet.jl)  | N            |
+| DenseNet-201   | [`DenseNet201`](src/densenet.jl)  | N            |
