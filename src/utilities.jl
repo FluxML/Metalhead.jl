@@ -56,11 +56,10 @@ cat_channels(x, y) = cat(x, y; dims = 3)
 Load the pre-trained weights for `model` using the stored artifacts.
 """
 function weights(model)
-  path = joinpath(@artifact_str(model), "$model.bson")
-
-  if ispath(path)
+  try
+    path = joinpath(@artifact_str(model), "$model.bson")
     return BSON.load(path, @__MODULE__)[:weights]
-  else
+  catch e
     throw(ArgumentError("No pre-trained weights available for $model."))
   end
 end
