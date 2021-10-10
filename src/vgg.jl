@@ -133,7 +133,7 @@ function VGG(imsize::NTuple{2, <:Integer} = (224, 224);
                         fcsize = fcsize,
                         dropout = dropout)
   
-  VGG{typeof(layers)}(layers)
+  VGG(layers)
 end
 
 @functor VGG

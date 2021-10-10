@@ -50,8 +50,6 @@ Convenient binary reduction operator for use with `Parallel`.
 """
 cat_channels(x, y) = cat(x, y; dims = 3)
 
-pretrain_error(model) = throw(ArgumentError("No pre-trained weights available for $model."))
-
 """
     weights(model)
 
@@ -63,7 +61,7 @@ function weights(model)
   if ispath(path)
     return BSON.load(path, @__MODULE__)[:weights]
   else
-    pretrain_error(model)
+    throw(ArgumentError("No pre-trained weights available for $model."))
   end
 end
 
