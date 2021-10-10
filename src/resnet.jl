@@ -61,7 +61,7 @@ Create a identity projection
 # Arguments:
 - `inplanes`: the number of input feature maps
 - `outplanes`: the number of output feature maps
-- `downsample`: ignored
+- `downsample`: this argument is ignored but it is needed for compatibility with [`resnet`](#).
 """
 function skip_identity(inplanes, outplanes)
   if outplanes > inplanes
@@ -86,9 +86,9 @@ Create a ResNet model
 # Arguments
 - `block`: a function with input `(inplanes, outplanes, downsample=false)` that returns
            a new residual block (see [`Metalhead.basicblock`](#) and [`Metalhead.bottleneck`](#))
-- `residuals`: a 2-tuple of functions with input `(inplanes, outplanes, downsample=false)` that
-               returns a new "skip" path to match a residual block
-               (see [`Metalhead.skip_identity`](#) and [`Metalhead.skip_projection`](#))
+- `residuals`: a 2-tuple of functions with input `(inplanes, outplanes, downsample=false)`,
+               each of which will return a function that will be used as a new "skip" path to match a residual block.
+              [`Metalhead.skip_identity`](#) and [`Metalhead.skip_projection`](#) can be used here. 
 - `connection`: the binary function applied to the output of residual and skip paths in a block
 - `channel_config`: the growth rate of the output feature maps within a residual block
 - `block_config`: a list of the number of residual blocks at each stage
