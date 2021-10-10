@@ -171,8 +171,8 @@ See also [`resnet`](#).
            a new residual block (see [`Metalhead.basicblock`](#) and [`Metalhead.bottleneck`](#))
 - `nclasses`: the number of output classes
 """
-struct ResNet{T}
-  layers::T
+struct ResNet
+  layers
 end
 
 function ResNet(channel_config, block_config, shortcut_config; block, nclasses = 1000)

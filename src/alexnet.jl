@@ -40,8 +40,8 @@ See also [`alexnet`](#).
 - `pretrain`: set to `true` to load pre-trained weights for ImageNet
 - `nclasses`: the number of output classes
 """
-struct AlexNet{T}
-  layers::T
+struct AlexNet
+  layers
 end
 
 function AlexNet(; pretrain = false, nclasses = 1000)

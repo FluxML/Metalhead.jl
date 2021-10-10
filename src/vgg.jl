@@ -120,8 +120,8 @@ See also [`vgg`](#).
             (see [`Metalhead.vgg_classifier_layers`](#))
 - `dropout`: dropout level between fully connected layers
 """
-struct VGG{T}
-  layers::T
+struct VGG
+  layers
 end
 
 function VGG(imsize::NTuple{2, <:Integer} = (224, 224);

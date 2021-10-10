@@ -57,8 +57,8 @@ Set `pretrain=true` to load the model with pre-trained weights for ImageNet.
 
 See also [`squeezenet`](#).
 """
-struct SqueezeNet{T}
-  layers::T
+struct SqueezeNet
+  layers
 end
 
 function SqueezeNet(; pretrain = false)

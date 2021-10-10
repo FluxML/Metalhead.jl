@@ -109,8 +109,8 @@ See also [`densenet`](#).
 - `reduction`: the factor by which the number of feature maps is scaled across each transition
 - `nclasses`: the number of output classes
 """
-struct DenseNet{T}
-  layers::T
+struct DenseNet
+  layers
 end
 
 function DenseNet(nblocks::NTuple{N, <:Integer};

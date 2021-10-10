@@ -189,8 +189,8 @@ See also [`inception3`](#).
 !!! warning
     `Inception3` does not currently support pretrained weights.
 """
-struct Inception3{T}
-  layers::T
+struct Inception3
+  layers
 end
 
 function Inception3(; pretrain = false, nclasses = 1000)

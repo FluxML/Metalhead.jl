@@ -75,8 +75,8 @@ Create an Inception-v1 model (commonly referred to as `GoogLeNet`)
 
 See also [`googlenet`](#).
 """
-struct GoogLeNet{T}
-  layers::T
+struct GoogLeNet
+  layers
 end
 
 function GoogLeNet(; pretrain = false, nclasses = 1000)
