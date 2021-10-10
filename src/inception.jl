@@ -167,9 +167,9 @@ function inception3(; nclasses = 1000)
                       inception_c(768, 192),
                       inception_d(768),
                       inception_e(1280),
-                      inception_e(2048),
-                      AdaptiveMeanPool((1, 1))),
-                Chain(Dropout(0.2),
+                      inception_e(2048)),
+                Chain(AdaptiveMeanPool((1, 1)),
+                      Dropout(0.2),
                       flatten,
                       Dense(2048, nclasses)))
 
