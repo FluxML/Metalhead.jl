@@ -244,7 +244,8 @@ See also [`Metalhead.ResNet`](#).
 function ResNet50(; pretrain = false, nclasses = 1000)
   model = ResNet(resnet_config[:resnet50]...; block = bottleneck, nclasses = nclasses)
 
-  pretrain && Flux.loadparams!(model.layers, weights("resnet50"))
+  # pretrain && Flux.loadparams!(model.layers, weights("resnet50"))
+  pretrain && pretrain_error("ResNet50")
   return model
 end
 

@@ -63,7 +63,8 @@ end
 
 function SqueezeNet(; pretrain = false)
   layers = squeezenet()
-  pretrain && Flux.loadparams!(layers, weights("squeezenet"))
+  # pretrain && Flux.loadparams!(layers, weights("squeezenet"))
+  pretrain && pretrain_error("SqueezeNet")
 
   SqueezeNet(layers)
 end

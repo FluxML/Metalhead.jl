@@ -211,7 +211,7 @@ function VGG16(; pretrain = false, batchnorm = false)
                           fcsize = 4096,
                           dropout = 0.5)
 
-  pretrain && pretrain_error("VGG11{BN=$batchnorm}")
+  pretrain && pretrain_error("VGG11(batchnorm=$batchnorm}")
   return model
 end
 
@@ -237,9 +237,10 @@ function VGG19(; pretrain = false, batchnorm = false)
                           dropout = 0.5)
 
   if pretrain && !batchnorm
-    Flux.loadparams!(model.layers, weights("vgg19"))
+    # Flux.loadparams!(model.layers, weights("vgg19"))
+    pretrain_error("VGG19(batchnorm=false)")
   elseif pretrain
-    pretrain_error("VGG19{BN=true}")
+    pretrain_error("VGG19(batchnorm=true)")
   end
   return model
 end

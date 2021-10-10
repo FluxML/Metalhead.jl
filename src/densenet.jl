@@ -138,7 +138,8 @@ See also [`Metalhead.DenseNet`](#).
 function DenseNet121(; pretrain = false)
   model = DenseNet((6, 12, 24, 16))
 
-  pretrain && Flux.loadparams!(model.layers, weights("densenet121"))
+  # pretrain && Flux.loadparams!(model.layers, weights("densenet121"))
+  pretrain && pretrain_error("DenseNet121")
   return model
 end
 
