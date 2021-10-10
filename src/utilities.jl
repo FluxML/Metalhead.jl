@@ -50,13 +50,24 @@ Convenient binary reduction operator for use with `Parallel`.
 """
 cat_channels(x, y) = cat(x, y; dims = 3)
 
+pretrain_error(model) = throw(ArgumentError("No pre-trained weights available for $model."))
+
 """
     weights(model)
 
 Load the pre-trained weights for `model` using the stored artifacts.
 """
-weights(model) = BSON.load(joinpath(@artifact_str(model), "$model.bson"), @__MODULE__)[:weights]
-pretrain_error(model) = throw(ArgumentError("No pre-trained weights available for $model."))
+function weights(model)
+  path = joinpath(@artifact_str(model), "$model.bson")
+
+  if ispath(path)
+    return BSON.load(path, @__MODULE__)[:weights]
+  else
+    pretrain_error(model)
+  end
+end
+
+loadpretrain!(model, name) = Flux.loadparams!(model, weights(name))
 
 function _maybe_big_show(io, model)
   if isdefined(Flux, :_big_show)

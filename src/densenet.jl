@@ -136,13 +136,15 @@ Create a DenseNet-121 model
 ([reference](https://arxiv.org/abs/1608.06993)).
 Set `pretrain=true` to load the model with pre-trained weights for ImageNet.
 
+!!! warning
+    `DenseNet121` does not currently support pretrained weights.
+
 See also [`Metalhead.DenseNet`](#).
 """
 function DenseNet121(; pretrain = false)
   model = DenseNet((6, 12, 24, 16))
 
-  # pretrain && Flux.loadparams!(model.layers, weights("densenet121"))
-  pretrain && pretrain_error("DenseNet121")
+  pretrain && loadpretrain!(model, "DenseNet121")
   return model
 end
 
@@ -160,7 +162,7 @@ See also [`Metalhead.DenseNet`](#).
 function DenseNet161(; pretrain = false)
   model = DenseNet((6, 12, 36, 24); growth_rate = 64)
 
-  pretrain && pretrain_error("DenseNet161")
+  pretrain && loadpretrain!(model, "DenseNet161")
   return model
 end
 
@@ -178,7 +180,7 @@ See also [`Metalhead.DenseNet`](#).
 function DenseNet169(; pretrain = false)
   model = DenseNet((6, 12, 32, 32))
 
-  pretrain && pretrain_error("DenseNet169")
+  pretrain && loadpretrain!(model, "DenseNet169")
   return model
 end
 
@@ -196,6 +198,6 @@ See also [`Metalhead.DenseNet`](#).
 function DenseNet201(; pretrain = false)
   model = DenseNet((6, 12, 48, 32))
 
-  pretrain && pretrain_error("DenseNet201")
+  pretrain && loadpretrain!(model, "DenseNet201")
   return model
 end

@@ -46,7 +46,7 @@ end
 
 function AlexNet(; pretrain = false, nclasses = 1000)
   layers = alexnet(nclasses = nclasses)
-  pretrain && pretrain_error("AlexNet")
+  pretrain && loadpretrain!(layers, "AlexNet")
 
   AlexNet(layers)
 end

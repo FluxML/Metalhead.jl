@@ -195,7 +195,7 @@ end
 
 function Inception3(; pretrain = false, nclasses = 1000)
   layers = inception3(nclasses = nclasses)
-  pretrain && pretrain_error("Inception3")
+  pretrain && loadpretrain!(layers, "Inception3")
 
   Inception3(layers)
 end

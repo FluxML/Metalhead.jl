@@ -73,6 +73,9 @@ Create an Inception-v1 model (commonly referred to as `GoogLeNet`)
 - `pretrain`: set to `true` to load the model with pre-trained weights for ImageNet
 - `nclasses`: the number of output classes
 
+!!! warning
+    `GoogLeNet` does not currently support pretrained weights.
+
 See also [`googlenet`](#).
 """
 struct GoogLeNet
@@ -81,8 +84,7 @@ end
 
 function GoogLeNet(; pretrain = false, nclasses = 1000)
   layers = googlenet(nclasses = nclasses)
-  # pretrain && Flux.loadparams!(layers, weights("googlenet"))
-  pretrain && pretrain_error("GoogLeNet")
+  pretrain && loadpretrain!(layers, "GoogLeNet")
 
   GoogLeNet(layers)
 end

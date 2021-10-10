@@ -164,7 +164,11 @@ function VGG11(; pretrain = false, batchnorm = false)
                           fcsize = 4096,
                           dropout = 0.5)
 
-  pretrain && pretrain_error("VGG11{BN=$batchnorm}")
+  if pretrain && !batchnorm
+    loadpretrain!(model, "VGG11")
+  elseif pretrain
+    loadpretrain!(model, "VGG11-BN)")
+  end
   return model
 end
 
@@ -189,7 +193,11 @@ function VGG13(; pretrain = false, batchnorm = false)
                           fcsize = 4096,
                           dropout = 0.5)
 
-  pretrain && pretrain_error("VGG13{BN=$batchnorm}")
+  if pretrain && !batchnorm
+    loadpretrain!(model, "VGG13")
+  elseif pretrain
+    loadpretrain!(model, "VGG13-BN)")
+  end
   return model
 end
 
@@ -214,7 +222,11 @@ function VGG16(; pretrain = false, batchnorm = false)
                           fcsize = 4096,
                           dropout = 0.5)
 
-  pretrain && pretrain_error("VGG11(batchnorm=$batchnorm}")
+  if pretrain && !batchnorm
+    loadpretrain!(model, "VGG16")
+  elseif pretrain
+    loadpretrain!(model, "VGG16-BN)")
+  end
   return model
 end
 
@@ -226,7 +238,7 @@ Create a VGG-11 style model
 See also [`VGG`](#).
 
 !!! warning
-    `VGG19(..., batchnorm = true)` does not currently support pretrained weights.
+    `VGG19` does not currently support pretrained weights.
 
 # Arguments
 - `pretrain`: set to `true` to load pre-trained model weights for ImageNet
@@ -240,10 +252,9 @@ function VGG19(; pretrain = false, batchnorm = false)
                           dropout = 0.5)
 
   if pretrain && !batchnorm
-    # Flux.loadparams!(model.layers, weights("vgg19"))
-    pretrain_error("VGG19(batchnorm=false)")
+    loadpretrain!(model, "VGG19")
   elseif pretrain
-    pretrain_error("VGG19(batchnorm=true)")
+    loadpretrain!(model, "VGG19-BN)")
   end
   return model
 end

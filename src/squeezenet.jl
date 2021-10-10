@@ -55,6 +55,9 @@ Create a SqueezeNet
 ([reference](https://arxiv.org/abs/1602.07360v4)).
 Set `pretrain=true` to load the model with pre-trained weights for ImageNet.
 
+!!! warning
+    `SqueezeNet` does not currently support pretrained weights.
+
 See also [`squeezenet`](#).
 """
 struct SqueezeNet
@@ -63,8 +66,7 @@ end
 
 function SqueezeNet(; pretrain = false)
   layers = squeezenet()
-  # pretrain && Flux.loadparams!(layers, weights("squeezenet"))
-  pretrain && pretrain_error("SqueezeNet")
+  pretrain && loadpretrain!(layers, "SqueezeNet")
 
   SqueezeNet(layers)
 end
