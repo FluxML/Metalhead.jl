@@ -12,6 +12,7 @@ LazyArtifacts = "4af54fe1-eca0-43a8-85a7-787d91b784e3"
 [compat]
 BSON = "0.3.2"
 Flux = "0.12"
+Functors = "0.2"
 julia = "1.4"
 
 [extras]
