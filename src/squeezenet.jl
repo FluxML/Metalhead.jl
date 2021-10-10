@@ -72,3 +72,6 @@ end
 @functor SqueezeNet
 
 (m::SqueezeNet)(x) = m.layers(x)
+
+backbone(m::SqueezeNet) = m.layers[1]
+classifier(m::SqueezeNet) = m.layers[2:end]

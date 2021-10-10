@@ -203,3 +203,6 @@ end
 @functor Inception3
 
 (m::Inception3)(x) = m.layers(x)
+
+backbone(m::Inception3) = m.layers[1]
+classifier(m::Inception3) = m.layers[2]

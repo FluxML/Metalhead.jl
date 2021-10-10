@@ -140,6 +140,9 @@ end
 
 (m::VGG)(x) = m.layers(x)
 
+backbone(m::VGG) = m.layers[1]
+classifier(m::VGG) = m.layers[2]
+
 """
     VGG11(; pretrain = false, batchnorm = false)
 

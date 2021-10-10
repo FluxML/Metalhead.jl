@@ -54,3 +54,6 @@ end
 @functor AlexNet
 
 (m::AlexNet)(x) = m.layers(x)
+
+backbone(m::AlexNet) = m.layers[1]
+classifier(m::AlexNet) = m.layers[2]

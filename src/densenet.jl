@@ -126,6 +126,9 @@ end
 
 (m::DenseNet)(x) = m.layers(x)
 
+backbone(m::DenseNet) = m.layers[1]
+classifier(m::DenseNet) = m.layers[2]
+
 """
     DenseNet121(; pretrain = false)
 

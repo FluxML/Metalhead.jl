@@ -90,3 +90,6 @@ end
 @functor GoogLeNet
 
 (m::GoogLeNet)(x) = m.layers(x)
+
+backbone(m::GoogLeNet) = m.layers[1]
+classifier(m::GoogLeNet) = m.layers[2]

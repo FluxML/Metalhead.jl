@@ -189,6 +189,9 @@ end
 
 (m::ResNet)(x) = m.layers(x)
 
+backbone(m::ResNet) = m.layers[1]
+classifier(m::ResNet) = m.layers[2]
+
 """
     ResNet18(; pretrain = false, nclasses = 1000)
    
