@@ -119,8 +119,8 @@ function resnet(block, residuals::NTuple{2, Any}, connection = (x, y) -> @. relu
     baseplanes *= 2
   end
 
-  return Chain(Chain(layers..., AdaptiveMeanPool((1, 1))),
-               Chain(flatten, Dense(inplanes, nclasses)))
+  return Chain(Chain(layers...),
+               Chain(AdaptiveMeanPool((1, 1)), flatten, Dense(inplanes, nclasses)))
 end
 
 """
