@@ -67,6 +67,11 @@ function weights(model)
   end
 end
 
+"""
+    loadpretrain!(model, name)
+
+Load the pre-trained weight artifacts matching `<name>.bson` into `model`.
+"""
 loadpretrain!(model, name) = Flux.loadparams!(model, weights(name))
 
 function _maybe_big_show(io, model)
