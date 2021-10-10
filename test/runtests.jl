@@ -2,7 +2,8 @@ using Metalhead, Test
 using Flux
 using Flux: Zygote
 
-PRETRAINED_MODELS = [(VGG19, false), ResNet50, GoogLeNet, DenseNet121, SqueezeNet]
+# PRETRAINED_MODELS = [(VGG19, false), ResNet50, GoogLeNet, DenseNet121, SqueezeNet]
+PRETRAINED_MODELS = []
 
 function gradtest(model, input)
   y, pb = Zygote.pullback(() -> model(input), Flux.params(model))
