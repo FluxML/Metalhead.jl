@@ -37,7 +37,7 @@ end
 @testset "ResNet" begin
   @testset for model in [ResNet18, ResNet34, ResNet50, ResNet101, ResNet152]
     m = model()
-    
+
     @test size(m(rand(Float32, 256, 256, 3, 2))) == (1000, 2)
     if model in PRETRAINED_MODELS
       @test (model(pretrain = true); true)
@@ -45,6 +45,14 @@ end
       @test_throws ArgumentError model(pretrain = true)
     end
     @test_skip gradtest(m, rand(Float32, 256, 256, 3, 2))
+  end
+
+  @testset "Shortcut C" begin
+    m = Metalhead.resnet(Metalhead.basicblock, :C;
+                         channel_config = [1, 1],
+                         block_config = [2, 2, 2, 2])
+
+    @test size(m(rand(Float32, 256, 256, 3, 2))) == (1000, 2)
   end
 end
 
