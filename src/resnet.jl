@@ -124,7 +124,7 @@ function resnet(block, residuals::NTuple{2, Any}, connection = (x, y) -> @. relu
 end
 
 """
-    resnet(block, shortcut_config::Symbol, connection = +;
+    resnet(block, shortcut_config::Symbol, connection = (x, y) -> @. relu(x) + relu(y);
            channel_config, block_config, nclasses = 1000)
 
 Create a ResNet model

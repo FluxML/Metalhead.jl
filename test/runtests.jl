@@ -26,7 +26,7 @@ end
 
     @test size(m(rand(Float32, imsize..., 3, 2))) == (1000, 2)
     if (model, bn) in PRETRAINED_MODELS
-      @test_skip (model(batchnorm = bn, pretrain = true); true)
+      @test (model(batchnorm = bn, pretrain = true); true)
     else
       @test_throws ArgumentError model(batchnorm = bn, pretrain = true)
     end
@@ -40,7 +40,7 @@ end
 
     @test size(m(rand(Float32, 256, 256, 3, 2))) == (1000, 2)
     if model in PRETRAINED_MODELS
-      @test_skip (model(pretrain = true); true)
+      @test (model(pretrain = true); true)
     else
       @test_throws ArgumentError model(pretrain = true)
     end
@@ -59,7 +59,7 @@ end
 @testset "GoogLeNet" begin
   m = GoogLeNet()
   @test size(m(rand(Float32, 224, 224, 3, 2))) == (1000, 2)
-  @test_skip (GoogLeNet(pretrain = true); true)
+  @test (GoogLeNet(pretrain = true); true)
   @test_skip gradtest(m, rand(Float32, 224, 224, 3, 2))
 end
 
@@ -73,7 +73,7 @@ end
 @testset "SqueezeNet" begin
   m = SqueezeNet()
   @test size(m(rand(Float32, 227, 227, 3, 2))) == (1000, 2)
-  @test_skip (SqueezeNet(pretrain = true); true)
+  @test (SqueezeNet(pretrain = true); true)
   @test_skip gradtest(m, rand(Float32, 227, 227, 3, 2))
 end
 
@@ -83,7 +83,7 @@ end
 
     @test size(m(rand(Float32, 224, 224, 3, 2))) == (1000, 2)
     if model in PRETRAINED_MODELS
-      @test_skip (model(pretrain = true); true)
+      @test (model(pretrain = true); true)
     else
       @test_throws ArgumentError model(pretrain = true)
     end
