@@ -42,7 +42,7 @@ function squeezenet()
                        fire(512, 64, 256, 256),
                        Dropout(0.5),
                        Conv((1, 1), 512 => 1000, relu)),
-                 AdaptiveMeanPool((1, 1))
+                 AdaptiveMeanPool((1, 1)),
                  flatten)
 
   return layers
