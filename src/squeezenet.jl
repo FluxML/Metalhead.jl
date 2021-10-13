@@ -41,8 +41,8 @@ function squeezenet()
                        fire(384, 64, 256, 256),
                        fire(512, 64, 256, 256),
                        Dropout(0.5),
-                       Conv((1, 1), 512 => 1000, relu),
-                       AdaptiveMeanPool((1, 1))),
+                       Conv((1, 1), 512 => 1000, relu)),
+                 AdaptiveMeanPool((1, 1)),
                  flatten)
 
   return layers
@@ -55,15 +55,18 @@ Create a SqueezeNet
 ([reference](https://arxiv.org/abs/1602.07360v4)).
 Set `pretrain=true` to load the model with pre-trained weights for ImageNet.
 
+!!! warning
+    `SqueezeNet` does not currently support pretrained weights.
+
 See also [`squeezenet`](#).
 """
-struct SqueezeNet{T}
-  layers::T
+struct SqueezeNet
+  layers
 end
 
 function SqueezeNet(; pretrain = false)
   layers = squeezenet()
-  pretrain && Flux.loadparams!(layers, weights("squeezenet"))
+  pretrain && loadpretrain!(layers, "SqueezeNet")
 
   SqueezeNet(layers)
 end
@@ -71,3 +74,6 @@ end
 @functor SqueezeNet
 
 (m::SqueezeNet)(x) = m.layers(x)
+
+backbone(m::SqueezeNet) = m.layers[1]
+classifier(m::SqueezeNet) = m.layers[2:end]

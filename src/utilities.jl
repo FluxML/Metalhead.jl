@@ -55,8 +55,21 @@ cat_channels(x, y) = cat(x, y; dims = 3)
 
 Load the pre-trained weights for `model` using the stored artifacts.
 """
-weights(model) = BSON.load(joinpath(@artifact_str(model), "$model.bson"), @__MODULE__)[:weights]
-pretrain_error(model) = throw(ArgumentError("No pre-trained weights available for $model."))
+function weights(model)
+  try
+    path = joinpath(@artifact_str(model), "$model.bson")
+    return BSON.load(path, @__MODULE__)[:weights]
+  catch e
+    throw(ArgumentError("No pre-trained weights available for $model."))
+  end
+end
+
+"""
+    loadpretrain!(model, name)
+
+Load the pre-trained weight artifacts matching `<name>.bson` into `model`.
+"""
+loadpretrain!(model, name) = Flux.loadparams!(model, weights(name))
 
 function _maybe_big_show(io, model)
   if isdefined(Flux, :_big_show)

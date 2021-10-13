@@ -171,8 +171,8 @@ See also [`resnet`](#).
            a new residual block (see [`Metalhead.basicblock`](#) and [`Metalhead.bottleneck`](#))
 - `nclasses`: the number of output classes
 """
-struct ResNet{T}
-  layers::T
+struct ResNet
+  layers
 end
 
 function ResNet(channel_config, block_config, shortcut_config; block, nclasses = 1000)
@@ -188,6 +188,9 @@ end
 @functor ResNet
 
 (m::ResNet)(x) = m.layers(x)
+
+backbone(m::ResNet) = m.layers[1]
+classifier(m::ResNet) = m.layers[2]
 
 """
     ResNet18(; pretrain = false, nclasses = 1000)
@@ -205,7 +208,7 @@ See also [`Metalhead.ResNet`](#).
 function ResNet18(; pretrain = false, nclasses = 1000)
   model = ResNet(resnet_config[:resnet18]...; block = basicblock, nclasses = nclasses)
 
-  pretrain && pretrain_error("ResNet18")
+  pretrain && loadpretrain!(model, "ResNet18")
   return model
 end
 
@@ -226,7 +229,7 @@ See also [`Metalhead.ResNet`](#).
 function ResNet34(; pretrain = false, nclasses = 1000)
   model = ResNet(resnet_config[:resnet34]...; block = basicblock, nclasses = nclasses)
 
-  pretrain && pretrain_error("ResNet34")
+  pretrain && loadpretrain!(model, "ResNet34")
   return model
 end
 
@@ -240,11 +243,14 @@ See also [`Metalhead.ResNet`](#).
 # Arguments
 - `pretrain`: set to `true` to load pre-trained weights for ImageNet
 - `nclasses`: the number of output classes
+
+!!! warning
+    `ResNet50` does not currently support pretrained weights.
 """
 function ResNet50(; pretrain = false, nclasses = 1000)
   model = ResNet(resnet_config[:resnet50]...; block = bottleneck, nclasses = nclasses)
 
-  pretrain && Flux.loadparams!(model.layers, weights("resnet50"))
+  pretrain && loadpretrain!(model, "ResNet50")
   return model
 end
 
@@ -265,7 +271,7 @@ See also [`Metalhead.ResNet`](#).
 function ResNet101(; pretrain = false, nclasses = 1000)
   model = ResNet(resnet_config[:resnet101]...; block = bottleneck, nclasses = nclasses)
 
-  pretrain && pretrain_error("ResNet101")
+  pretrain && loadpretrain!(model, "ResNet101")
   return model
 end
 
@@ -286,6 +292,6 @@ See also [`Metalhead.ResNet`](#).
 function ResNet152(; pretrain = false, nclasses = 1000)
   model = ResNet(resnet_config[:resnet152]...; block = bottleneck, nclasses = nclasses)
 
-  pretrain && pretrain_error("ResNet152")
+  pretrain && loadpretrain!(model, "ResNet152")
   return model
 end
