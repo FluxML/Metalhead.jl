@@ -36,3 +36,7 @@
 | DenseNet-161   | [`DenseNet161`](#) | N            |
 | DenseNet-169   | [`DenseNet169`](#) | N            |
 | DenseNet-201   | [`DenseNet201`](#) | N            |
+
+## Getting Started
+
+You can find the Metalhead.jl getting started guide here: https://fluxml.ai/Metalhead.jl/dev/docs/tutorials/quickstart.html
