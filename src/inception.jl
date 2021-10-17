@@ -167,9 +167,9 @@ function inception3(; nclasses = 1000)
                       inception_c(768, 192),
                       inception_d(768),
                       inception_e(1280),
-                      inception_e(2048),
-                      AdaptiveMeanPool((1, 1))),
-                Chain(Dropout(0.2),
+                      inception_e(2048)),
+                Chain(AdaptiveMeanPool((1, 1)),
+                      Dropout(0.2),
                       flatten,
                       Dense(2048, nclasses)))
 
@@ -189,13 +189,13 @@ See also [`inception3`](#).
 !!! warning
     `Inception3` does not currently support pretrained weights.
 """
-struct Inception3{T}
-  layers::T
+struct Inception3
+  layers
 end
 
 function Inception3(; pretrain = false, nclasses = 1000)
   layers = inception3(nclasses = nclasses)
-  pretrain && pretrain_error("Inception3")
+  pretrain && loadpretrain!(layers, "Inception3")
 
   Inception3(layers)
 end
@@ -203,3 +203,6 @@ end
 @functor Inception3
 
 (m::Inception3)(x) = m.layers(x)
+
+backbone(m::Inception3) = m.layers[1]
+classifier(m::Inception3) = m.layers[2]

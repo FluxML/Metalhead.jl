@@ -1,6 +1,8 @@
 """
-    conv_bn(kernelsize, inplanes, outplanes;
-            stride = 1, pad = 0, usebias = true, rev = false)
+    conv_bn(kernelsize, inplanes, outplanes, activation = relu;
+            rev = false,
+            stride = 1, pad = 0, dilation = 1, groups = 1, [bias, weight, init],
+            initβ = Flux.zeros32, initγ = Flux.ones32, ϵ = 1f-5, momentum = 1f-1)
 
 Create a convolution + batch normalization pair with ReLU activation.
 
@@ -8,32 +10,35 @@ Create a convolution + batch normalization pair with ReLU activation.
 - `kernelsize`: size of the convolution kernel (tuple)
 - `inplanes`: number of input feature maps
 - `outplanes`: number of output feature maps
+- `activation`: the activation function for the final layer
+- `rev`: set to `true` to place the batch norm before the convolution
 - `stride`: stride of the convolution kernel
 - `pad`: padding of the convolution kernel
-- `usebias`: set to `true` to use a bias in the convolution layer
-- `rev`: set to `true` to place the batch norm before the convolution
+- `dilation`: dilation of the convolution kernel
+- `groups`: groups for the convolution kernel
+- `bias`, `weight`, `init`: initialization for the convolution kernel (see [`Flux.Conv`](#))
+- `initβ`, `initγ`: initialization for the batch norm (see [`Flux.BatchNorm`](#))
+- `ϵ`, `momentum`: batch norm parameters (see [`Flux.BatchNorm`](#))
 """
-function conv_bn(kernelsize, inplanes, outplanes;
-                 stride = 1, pad = 0, usebias = true, rev = false)
-  conv_layer = []
-  if usebias
-    push!(conv_layer, Conv(kernelsize, Int(inplanes) => Int(outplanes),
-                           stride = stride, pad = pad, init = Flux.kaiming_normal))
-  else
-    push!(conv_layer, Conv(kernelsize, Int(inplanes) => Int(outplanes),
-                           stride = stride,
-                           pad = pad,
-                           init = Flux.kaiming_normal,
-                           bias = Flux.Zeros()))
-  end
+function conv_bn(kernelsize, inplanes, outplanes, activation = relu;
+                 rev = false,
+                 initβ = Flux.zeros32, initγ = Flux.ones32, ϵ = 1f-5, momentum = 1f-1,
+                 kwargs...)
+  layers = []
 
   if rev
-    push!(conv_layer, BatchNorm(Int(inplanes), relu))
-    return reverse(conv_layer)
+    activations = (conv = activation, bn = identity)
+    bnplanes = inplanes
+  else
+    activations = (conv = identity, bn = activation)
+    bnplanes = outplanes
   end
 
-  push!(conv_layer, BatchNorm(Int(outplanes), relu))
-  return conv_layer
+  push!(layers, Conv(kernelsize, Int(inplanes) => Int(outplanes), activations.conv; kwargs...))
+  push!(layers, BatchNorm(Int(bnplanes), activations.bn;
+                          initβ = initβ, initγ = initγ, ϵ = ϵ, momentum = momentum))
+
+  return rev ? reverse(layers) : layers
 end
 
 """
@@ -50,8 +55,21 @@ cat_channels(x, y) = cat(x, y; dims = 3)
 
 Load the pre-trained weights for `model` using the stored artifacts.
 """
-weights(model) = BSON.load(joinpath(@artifact_str(model), "$model.bson"), @__MODULE__)[:weights]
-pretrain_error(model) = throw(ArgumentError("No pre-trained weights available for $model."))
+function weights(model)
+  try
+    path = joinpath(@artifact_str(model), "$model.bson")
+    return BSON.load(path, @__MODULE__)[:weights]
+  catch e
+    throw(ArgumentError("No pre-trained weights available for $model."))
+  end
+end
+
+"""
+    loadpretrain!(model, name)
+
+Load the pre-trained weight artifacts matching `<name>.bson` into `model`.
+"""
+loadpretrain!(model, name) = Flux.loadparams!(model, weights(name))
 
 function _maybe_big_show(io, model)
   if isdefined(Flux, :_big_show)

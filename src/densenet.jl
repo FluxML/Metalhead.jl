@@ -11,8 +11,8 @@ Create a Densenet bottleneck layer
 """
 function dense_bottleneck(inplanes, outplanes)
   inner_channels = 4 * outplanes
-  m = Chain(conv_bn((1, 1), inplanes, inner_channels; usebias = false, rev = true)...,
-            conv_bn((3, 3), inner_channels, outplanes; pad = 1, usebias = false, rev = true)...)
+  m = Chain(conv_bn((1, 1), inplanes, inner_channels; bias = false, rev = true)...,
+            conv_bn((3, 3), inner_channels, outplanes; pad = 1, bias = false, rev = true)...)
 
   SkipConnection(m, (mx, x) -> cat(x, mx; dims = 3))
 end
@@ -28,7 +28,7 @@ Create a DenseNet transition sequence
 - `outplanes`: number of output feature maps
 """
 transition(inplanes, outplanes) =
-  [conv_bn((1, 1), inplanes, outplanes; usebias = false, rev = true)...,
+  [conv_bn((1, 1), inplanes, outplanes; bias = false, rev = true)...,
    MeanPool((2, 2))]
 
 """
@@ -60,7 +60,7 @@ Create a DenseNet model
 - `nclasses`: the number of output classes
 """
 function densenet(inplanes, growth_rates; reduction = 0.5, nclasses = 1000)
-  layers = conv_bn((7, 7), 3, inplanes; stride = 2, pad = (3, 3), usebias = false)
+  layers = conv_bn((7, 7), 3, inplanes; stride = 2, pad = (3, 3), bias = false)
   push!(layers, MaxPool((3, 3), stride = 2, pad = (1, 1)))
 
   outplanes = 0
@@ -109,8 +109,8 @@ See also [`densenet`](#).
 - `reduction`: the factor by which the number of feature maps is scaled across each transition
 - `nclasses`: the number of output classes
 """
-struct DenseNet{T}
-  layers::T
+struct DenseNet
+  layers
 end
 
 function DenseNet(nblocks::NTuple{N, <:Integer};
@@ -126,6 +126,9 @@ end
 
 (m::DenseNet)(x) = m.layers(x)
 
+backbone(m::DenseNet) = m.layers[1]
+classifier(m::DenseNet) = m.layers[2]
+
 """
     DenseNet121(; pretrain = false)
 
@@ -133,12 +136,15 @@ Create a DenseNet-121 model
 ([reference](https://arxiv.org/abs/1608.06993)).
 Set `pretrain=true` to load the model with pre-trained weights for ImageNet.
 
+!!! warning
+    `DenseNet121` does not currently support pretrained weights.
+
 See also [`Metalhead.DenseNet`](#).
 """
 function DenseNet121(; pretrain = false)
   model = DenseNet((6, 12, 24, 16))
 
-  pretrain && Flux.loadparams!(model.layers, weights("densenet121"))
+  pretrain && loadpretrain!(model, "DenseNet121")
   return model
 end
 
@@ -156,7 +162,7 @@ See also [`Metalhead.DenseNet`](#).
 function DenseNet161(; pretrain = false)
   model = DenseNet((6, 12, 36, 24); growth_rate = 64)
 
-  pretrain && pretrain_error("DenseNet161")
+  pretrain && loadpretrain!(model, "DenseNet161")
   return model
 end
 
@@ -174,7 +180,7 @@ See also [`Metalhead.DenseNet`](#).
 function DenseNet169(; pretrain = false)
   model = DenseNet((6, 12, 32, 32))
 
-  pretrain && pretrain_error("DenseNet169")
+  pretrain && loadpretrain!(model, "DenseNet169")
   return model
 end
 
@@ -192,6 +198,6 @@ See also [`Metalhead.DenseNet`](#).
 function DenseNet201(; pretrain = false)
   model = DenseNet((6, 12, 48, 32))
 
-  pretrain && pretrain_error("DenseNet201")
+  pretrain && loadpretrain!(model, "DenseNet201")
   return model
 end

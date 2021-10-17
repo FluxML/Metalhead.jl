@@ -3,7 +3,7 @@ name: Publish
 
 on:
   push:
-    branches: ['main', 'master']
+    branches: 'master'
 
 jobs:
   publish:
@@ -11,12 +11,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
         with:
           ref: gh-pages
           path: gh-pages
       - uses: julia-actions/setup-julia@latest
         with:
-          version: '1.5'
+          version: '1'
       - name: Install dependencies
         run: |
           julia --color=yes --project=. -e 'using Pkg; Pkg.instantiate()'

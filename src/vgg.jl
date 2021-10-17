@@ -16,7 +16,7 @@ function vgg_block(ifilters, ofilters, depth, batchnorm)
   layers = []
   for _ in 1:depth
     if batchnorm
-      append!(layers, conv_bn(k, ifilters, ofilters; pad = p, usebias = false))
+      append!(layers, conv_bn(k, ifilters, ofilters; pad = p, bias = false))
     else
       push!(layers, Conv(k, ifilters => ofilters, relu, pad = p))
     end
@@ -120,8 +120,8 @@ See also [`vgg`](#).
             (see [`Metalhead.vgg_classifier_layers`](#))
 - `dropout`: dropout level between fully connected layers
 """
-struct VGG{T}
-  layers::T
+struct VGG
+  layers
 end
 
 function VGG(imsize::NTuple{2, <:Integer} = (224, 224);
@@ -133,12 +133,15 @@ function VGG(imsize::NTuple{2, <:Integer} = (224, 224);
                         fcsize = fcsize,
                         dropout = dropout)
   
-  VGG{typeof(layers)}(layers)
+  VGG(layers)
 end
 
 @functor VGG
 
 (m::VGG)(x) = m.layers(x)
+
+backbone(m::VGG) = m.layers[1]
+classifier(m::VGG) = m.layers[2]
 
 """
     VGG11(; pretrain = false, batchnorm = false)
@@ -161,7 +164,11 @@ function VGG11(; pretrain = false, batchnorm = false)
                           fcsize = 4096,
                           dropout = 0.5)
 
-  pretrain && pretrain_error("VGG11{BN=$batchnorm}")
+  if pretrain && !batchnorm
+    loadpretrain!(model, "VGG11")
+  elseif pretrain
+    loadpretrain!(model, "VGG11-BN)")
+  end
   return model
 end
 
@@ -186,7 +193,11 @@ function VGG13(; pretrain = false, batchnorm = false)
                           fcsize = 4096,
                           dropout = 0.5)
 
-  pretrain && pretrain_error("VGG13{BN=$batchnorm}")
+  if pretrain && !batchnorm
+    loadpretrain!(model, "VGG13")
+  elseif pretrain
+    loadpretrain!(model, "VGG13-BN)")
+  end
   return model
 end
 
@@ -211,7 +222,11 @@ function VGG16(; pretrain = false, batchnorm = false)
                           fcsize = 4096,
                           dropout = 0.5)
 
-  pretrain && pretrain_error("VGG11{BN=$batchnorm}")
+  if pretrain && !batchnorm
+    loadpretrain!(model, "VGG16")
+  elseif pretrain
+    loadpretrain!(model, "VGG16-BN)")
+  end
   return model
 end
 
@@ -223,7 +238,7 @@ Create a VGG-11 style model
 See also [`VGG`](#).
 
 !!! warning
-    `VGG19(..., batchnorm = true)` does not currently support pretrained weights.
+    `VGG19` does not currently support pretrained weights.
 
 # Arguments
 - `pretrain`: set to `true` to load pre-trained model weights for ImageNet
@@ -237,9 +252,9 @@ function VGG19(; pretrain = false, batchnorm = false)
                           dropout = 0.5)
 
   if pretrain && !batchnorm
-    Flux.loadparams!(model.layers, weights("vgg19"))
+    loadpretrain!(model, "VGG19")
   elseif pretrain
-    pretrain_error("VGG19{BN=true}")
+    loadpretrain!(model, "VGG19-BN)")
   end
   return model
 end

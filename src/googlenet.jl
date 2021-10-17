@@ -54,9 +54,9 @@ function googlenet(; nclasses = 1000)
                        _inceptionblock(528, 256, 160, 320, 32, 128, 128),
                        MaxPool((3, 3), stride = 2, pad = 1),
                        _inceptionblock(832, 256, 160, 320, 32, 128, 128),
-                       _inceptionblock(832, 384, 192, 384, 48, 128, 128),
-                       AdaptiveMeanPool((1, 1))),
-                 Chain(flatten,
+                       _inceptionblock(832, 384, 192, 384, 48, 128, 128)),
+                 Chain(AdaptiveMeanPool((1, 1)),
+                       flatten,
                        Dropout(0.4),
                        Dense(1024, nclasses)))
 
@@ -73,15 +73,18 @@ Create an Inception-v1 model (commonly referred to as `GoogLeNet`)
 - `pretrain`: set to `true` to load the model with pre-trained weights for ImageNet
 - `nclasses`: the number of output classes
 
+!!! warning
+    `GoogLeNet` does not currently support pretrained weights.
+
 See also [`googlenet`](#).
 """
-struct GoogLeNet{T}
-  layers::T
+struct GoogLeNet
+  layers
 end
 
 function GoogLeNet(; pretrain = false, nclasses = 1000)
   layers = googlenet(nclasses = nclasses)
-  pretrain && Flux.loadparams!(layers, weights("googlenet"))
+  pretrain && loadpretrain!(layers, "GoogLeNet")
 
   GoogLeNet(layers)
 end
@@ -89,3 +92,6 @@ end
 @functor GoogLeNet
 
 (m::GoogLeNet)(x) = m.layers(x)
+
+backbone(m::GoogLeNet) = m.layers[1]
+classifier(m::GoogLeNet) = m.layers[2]

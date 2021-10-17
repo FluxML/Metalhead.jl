@@ -2,7 +2,8 @@ using Metalhead, Test
 using Flux
 using Flux: Zygote
 
-PRETRAINED_MODELS = [(VGG19, false), ResNet50, GoogLeNet, DenseNet121, SqueezeNet]
+# PRETRAINED_MODELS = [(VGG19, false), ResNet50, GoogLeNet, DenseNet121, SqueezeNet]
+PRETRAINED_MODELS = []
 
 function gradtest(model, input)
   y, pb = Zygote.pullback(() -> model(input), Flux.params(model))
@@ -37,7 +38,7 @@ end
 @testset "ResNet" begin
   @testset for model in [ResNet18, ResNet34, ResNet50, ResNet101, ResNet152]
     m = model()
-    
+
     @test size(m(rand(Float32, 256, 256, 3, 2))) == (1000, 2)
     if model in PRETRAINED_MODELS
       @test (model(pretrain = true); true)
@@ -46,12 +47,20 @@ end
     end
     @test_skip gradtest(m, rand(Float32, 256, 256, 3, 2))
   end
+
+  @testset "Shortcut C" begin
+    m = Metalhead.resnet(Metalhead.basicblock, :C;
+                         channel_config = [1, 1],
+                         block_config = [2, 2, 2, 2])
+
+    @test size(m(rand(Float32, 256, 256, 3, 2))) == (1000, 2)
+  end
 end
 
 @testset "GoogLeNet" begin
   m = GoogLeNet()
   @test size(m(rand(Float32, 224, 224, 3, 2))) == (1000, 2)
-  @test (GoogLeNet(pretrain = true); true)
+  @test_throws ArgumentError (GoogLeNet(pretrain = true); true)
   @test_skip gradtest(m, rand(Float32, 224, 224, 3, 2))
 end
 
@@ -65,7 +74,7 @@ end
 @testset "SqueezeNet" begin
   m = SqueezeNet()
   @test size(m(rand(Float32, 227, 227, 3, 2))) == (1000, 2)
-  @test (SqueezeNet(pretrain = true); true)
+  @test_throws ArgumentError (SqueezeNet(pretrain = true); true)
   @test_skip gradtest(m, rand(Float32, 227, 227, 3, 2))
 end
 
