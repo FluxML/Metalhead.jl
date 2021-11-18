@@ -112,7 +112,7 @@ function resnet(block, residuals::NTuple{2, Any}, connection = (x, y) -> @. relu
     inplanes = outplanes[end]
     for _ in 2:nrepeats
       push!(layers, Parallel(connection, block(inplanes, outplanes, false),
-                                         residuals[1](inplanes, outplanes[end], false)))
+                                         residuals[2](inplanes, outplanes[end], false)))
       inplanes = outplanes[end]
     end
     # next set of output plane base is doubled
