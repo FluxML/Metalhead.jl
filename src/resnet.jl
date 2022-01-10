@@ -197,10 +197,10 @@ classifier(m::ResNet) = m.layers[2]
    
 Create a ResNet model with a specified depth
 ([reference](https://arxiv.org/abs/1512.03385v1)).
-See also [`Metalhead.ResNet`](#).
+See also [`Metalhead.resnet`](#).
 
 # Arguments
-- `depth`: depth of the ResNet model. Typically one of (18, 34, 50, 101, 152).
+- `depth`: depth of the ResNet model. Options include (18, 34, 50, 101, 152).
 - `nclasses`: the number of output classes
 
 !!! warning
@@ -208,13 +208,13 @@ See also [`Metalhead.ResNet`](#).
 """
 function ResNet(depth = 50; pretrain = false, nclasses = 1000)
     model = ResNet(resnet_config[depth]...; block = bottleneck, nclasses = nclasses)
-    pretrain && loadpretrain!(model, string("ResNet", config))
+    pretrain && loadpretrain!(model, string("ResNet", depth))
     model
 end
 
 # Compat with Methalhead 0.6; remove in 0.7
-@deprecate ResNet18() ResNet(18)
-@deprecate ResNet34() ResNet(34)
-@deprecate ResNet50() ResNet(50)
-@deprecate ResNet101() ResNet(101)
-@deprecate ResNet152() ResNet(152)
+@deprecate ResNet18(; kw...) ResNet(18; kw...)
+@deprecate ResNet34(; kw...) ResNet(34; kw...)
+@deprecate ResNet50(; kw...) ResNet(50; kw...)
+@deprecate ResNet101(; kw...) ResNet(101; kw...)
+@deprecate ResNet152(; kw...) ResNet(152; kw...)
