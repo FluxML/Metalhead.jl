@@ -143,18 +143,25 @@ Create a ResNet model
 - `block_config`: a list of the number of residual blocks at each stage
 - `nclasses`: the number of output classes
 """
-resnet(block, shortcut_config::Symbol, args...; kwargs...) =
-  (shortcut_config == :A) ? resnet(block, (skip_identity, skip_identity), args...; kwargs...) :
-  (shortcut_config == :B) ? resnet(block, (skip_projection, skip_identity), args...; kwargs...) :
-  (shortcut_config == :C) ? resnet(block, (skip_projection, skip_projection), args...; kwargs...) :
-  error("Unrecognized shortcut config == $shortcut_config passed to resnet (use :A, :B, or :C).")
+function resnet(block, shortcut_config::Symbol, args...; kwargs...)
+  shortcut = if shortcut_config == :A
+      (skip_identity, skip_identity)
+    elseif shortcut_config == :B
+      (skip_projection, skip_identity)
+    elseif shortcut_config == :C
+      (skip_projection, skip_projection)
+    else
+      error("Unrecognized shortcut_config ($shortcut_config) passed to `resnet` (use :A, :B, or :C).")
+  end
+  resnet(block, shortcut, args...; kwargs...)
+end
 
 const resnet_config =
-  Dict(18 => ([1, 1], [2, 2, 2, 2], :A),
-       34 => ([1, 1], [3, 4, 6, 3], :A),
-       50 => ([1, 1, 4], [3, 4, 6, 3], :B),
-       101 => ([1, 1, 4], [3, 4, 23, 3], :B),
-       152 => ([1, 1, 4], [3, 8, 36, 3], :B))
+  Dict(18 => (([1, 1], [2, 2, 2, 2], :A), basicblock),
+       34 => (([1, 1], [3, 4, 6, 3], :A), basicblock),
+       50 => (([1, 1, 4], [3, 4, 6, 3], :B), bottleneck),
+       101 => (([1, 1, 4], [3, 4, 23, 3], :B), bottleneck),
+       152 => (([1, 1, 4], [3, 8, 36, 3], :B), bottleneck))
 
 """
     ResNet(channel_config, block_config, shortcut_config; block, nclasses = 1000)
@@ -206,8 +213,9 @@ See also [`Metalhead.resnet`](#).
 !!! warning
     Only `ResNet(50)` currently supports pretrained weights.
 """
-function ResNet(depth = 50; pretrain = false, nclasses = 1000)
-    model = ResNet(resnet_config[depth]...; block = bottleneck, nclasses = nclasses)
+function ResNet(depth::Int = 50; pretrain = false, nclasses = 1000)
+    config, block = resnet_config[depth]
+    model = ResNet(config...; block = block, nclasses = nclasses)
     pretrain && loadpretrain!(model, string("ResNet", depth))
     model
 end
