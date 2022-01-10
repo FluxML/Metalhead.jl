@@ -211,3 +211,10 @@ function ResNet(depth = 50; pretrain = false, nclasses = 1000)
     pretrain && loadpretrain!(model, string("ResNet", config))
     model
 end
+
+# Compat with Methalhead 0.6; remove in 0.7
+@deprecate ResNet18() ResNet(18)
+@deprecate ResNet34() ResNet(34)
+@deprecate ResNet50() ResNet(50)
+@deprecate ResNet101() ResNet(101)
+@deprecate ResNet152() ResNet(152)
