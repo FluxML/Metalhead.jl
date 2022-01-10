@@ -150,11 +150,11 @@ resnet(block, shortcut_config::Symbol, args...; kwargs...) =
   error("Unrecognized shortcut config == $shortcut_config passed to resnet (use :A, :B, or :C).")
 
 const resnet_config =
-  Dict(:resnet18 => ([1, 1], [2, 2, 2, 2], :A),
-       :resnet34 => ([1, 1], [3, 4, 6, 3], :A),
-       :resnet50 => ([1, 1, 4], [3, 4, 6, 3], :B),
-       :resnet101 => ([1, 1, 4], [3, 4, 23, 3], :B),
-       :resnet152 => ([1, 1, 4], [3, 8, 36, 3], :B))
+  Dict(18 => ([1, 1], [2, 2, 2, 2], :A),
+       34 => ([1, 1], [3, 4, 6, 3], :A),
+       50 => ([1, 1, 4], [3, 4, 6, 3], :B),
+       101 => ([1, 1, 4], [3, 4, 23, 3], :B),
+       152 => ([1, 1, 4], [3, 8, 36, 3], :B))
 
 """
     ResNet(channel_config, block_config, shortcut_config; block, nclasses = 1000)
@@ -193,105 +193,21 @@ backbone(m::ResNet) = m.layers[1]
 classifier(m::ResNet) = m.layers[2]
 
 """
-    ResNet18(; pretrain = false, nclasses = 1000)
+    ResNet(depth = 50; pretrain = false, nclasses = 1000)
    
-Create a ResNet-18 model
+Create a ResNet model with a specified depth
 ([reference](https://arxiv.org/abs/1512.03385v1)).
 See also [`Metalhead.ResNet`](#).
 
 # Arguments
+- `depth`: depth of the ResNet model. Typically one of (18, 34, 50, 101, 152).
 - `nclasses`: the number of output classes
 
 !!! warning
-    `ResNet18` does not currently support pretrained weights.
+    Only `ResNet(50)` currently supports pretrained weights.
 """
-function ResNet18(; pretrain = false, nclasses = 1000)
-  model = ResNet(resnet_config[:resnet18]...; block = basicblock, nclasses = nclasses)
-
-  pretrain && loadpretrain!(model, "ResNet18")
-  return model
-end
-
-"""
-    ResNet34(; pretrain = false, nclasses = 1000)
-   
-Create a ResNet-34 model
-([reference](https://arxiv.org/abs/1512.03385v1)).
-See also [`Metalhead.ResNet`](#).
-
-# Arguments
-- `pretrain`: set to `true` to load pre-trained weights for ImageNet
-- `nclasses`: the number of output classes
-
-!!! warning
-    `ResNet34` does not currently support pretrained weights.
-"""
-function ResNet34(; pretrain = false, nclasses = 1000)
-  model = ResNet(resnet_config[:resnet34]...; block = basicblock, nclasses = nclasses)
-
-  pretrain && loadpretrain!(model, "ResNet34")
-  return model
-end
-
-"""
-    ResNet50(; pretrain = false, nclasses = 1000)
-   
-Create a ResNet-50 model
-([reference](https://arxiv.org/abs/1512.03385v1)).
-See also [`Metalhead.ResNet`](#).
-
-# Arguments
-- `pretrain`: set to `true` to load pre-trained weights for ImageNet
-- `nclasses`: the number of output classes
-
-!!! warning
-    `ResNet50` does not currently support pretrained weights.
-"""
-function ResNet50(; pretrain = false, nclasses = 1000)
-  model = ResNet(resnet_config[:resnet50]...; block = bottleneck, nclasses = nclasses)
-
-  pretrain && loadpretrain!(model, "ResNet50")
-  return model
-end
-
-"""
-    ResNet101(; pretrain = false, nclasses = 1000)
-   
-Create a ResNet-101 model
-([reference](https://arxiv.org/abs/1512.03385v1)).
-See also [`Metalhead.ResNet`](#).
-
-# Arguments
-- `pretrain`: set to `true` to load pre-trained weights for ImageNet
-- `nclasses`: the number of output classes
-
-!!! warning
-    `ResNet101` does not currently support pretrained weights.
-"""
-function ResNet101(; pretrain = false, nclasses = 1000)
-  model = ResNet(resnet_config[:resnet101]...; block = bottleneck, nclasses = nclasses)
-
-  pretrain && loadpretrain!(model, "ResNet101")
-  return model
-end
-
-"""
-    ResNet152(; pretrain = false, nclasses = 1000)
-   
-Create a ResNet-152 model
-([reference](https://arxiv.org/abs/1512.03385v1)).
-See also [`Metalhead.ResNet`](#).
-
-# Arguments
-- `pretrain`: set to `true` to load pre-trained weights for ImageNet
-- `nclasses`: the number of output classes
-
-!!! warning
-    `ResNet152` does not currently support pretrained weights.
-"""
-function ResNet152(; pretrain = false, nclasses = 1000)
-  model = ResNet(resnet_config[:resnet152]...; block = bottleneck, nclasses = nclasses)
-
-  pretrain && loadpretrain!(model, "ResNet152")
-  return model
+function ResNet(depth = 50; pretrain = false, nclasses = 1000)
+    model = ResNet(resnet_config[depth]...; block = bottleneck, nclasses = nclasses)
+    pretrain && loadpretrain!(model, string("ResNet", config))
+    model
 end
