@@ -129,75 +129,34 @@ end
 backbone(m::DenseNet) = m.layers[1]
 classifier(m::DenseNet) = m.layers[2]
 
-"""
-    DenseNet121(; pretrain = false)
+const densenet_config = Dict(121 => (6, 12, 24, 16),
+                             161 => (6, 12, 36, 24),
+                             169 => (6, 12, 32, 32),
+                             201 => (6, 12, 48, 32))
 
-Create a DenseNet-121 model
+"""
+    DenseNet(config::Int = 121; pretrain = false)
+    DenseNet(transition_config::NTuple{N,Int})
+
+Create a DenseNet model with specified configuration. Currently supported values are (121, 161, 169, 201)
 ([reference](https://arxiv.org/abs/1608.06993)).
-Set `pretrain=true` to load the model with pre-trained weights for ImageNet.
+Set `pretrain = true` to load the model with pre-trained weights for ImageNet.
 
 !!! warning
-    `DenseNet121` does not currently support pretrained weights.
+    `DenseNet` does not currently support pretrained weights.
 
-See also [`Metalhead.DenseNet`](#).
+See also [`Metalhead.densenet`](#).
 """
-function DenseNet121(; pretrain = false)
-  model = DenseNet((6, 12, 24, 16))
+function DenseNet(config::Int; pretrain = false)
+  @assert config in (121, 161, 169, 201) "`config` must be one out of (121, 161, 169, 201)."
+  model = DenseNet(densenet_config[depth])
 
-  pretrain && loadpretrain!(model, "DenseNet121")
+  pretrain && loadpretrain!(model, string("DenseNet", config))
   return model
 end
 
-"""
-    DenseNet161(; pretrain = false)
-
-Create a DenseNet-161 model
-([reference](https://arxiv.org/abs/1608.06993)).
-
-!!! warning
-    `DenseNet161` does not currently support pretrained weights.
-
-See also [`Metalhead.DenseNet`](#).
-"""
-function DenseNet161(; pretrain = false)
-  model = DenseNet((6, 12, 36, 24); growth_rate = 64)
-
-  pretrain && loadpretrain!(model, "DenseNet161")
-  return model
-end
-
-"""
-    DenseNet169(; pretrain = false)
-
-Create a DenseNet-169 model
-([reference](https://arxiv.org/abs/1608.06993)).
-
-!!! warning
-    `DenseNet169` does not currently support pretrained weights.
-
-See also [`Metalhead.DenseNet`](#).
-"""
-function DenseNet169(; pretrain = false)
-  model = DenseNet((6, 12, 32, 32))
-
-  pretrain && loadpretrain!(model, "DenseNet169")
-  return model
-end
-
-"""
-    DenseNet201(; pretrain = false)
-
-Create a DenseNet-201 model
-([reference](https://arxiv.org/abs/1608.06993)).
-
-!!! warning
-    `DenseNet201` does not currently support pretrained weights.
-
-See also [`Metalhead.DenseNet`](#).
-"""
-function DenseNet201(; pretrain = false)
-  model = DenseNet((6, 12, 48, 32))
-
-  pretrain && loadpretrain!(model, "DenseNet201")
-  return model
-end
+# deprecations
+@deprecate DenseNet121(; kw...) DenseNet(121; kw...)
+@deprecate DenseNet161(; kw...) DenseNet(161; kw...)
+@deprecate DenseNet169(; kw...) DenseNet(169; kw...)
+@deprecate DenseNet201(; kw...) DenseNet(201; kw...)
