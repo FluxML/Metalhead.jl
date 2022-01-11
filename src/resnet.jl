@@ -214,7 +214,7 @@ See also [`Metalhead.resnet`](#).
     Only `ResNet(50)` currently supports pretrained weights.
 """
 function ResNet(depth::Int = 50; pretrain = false, nclasses = 1000)
-    @assert depth in (18, 34, 50, 101, 152) "`depth` must be one of (18, 34, 50, 101, 152)"
+    @assert depth in keys(resnet_config) "`depth` must be one of $(sort(collect(keys(resnet_config))))"
 
     config, block = resnet_config[depth]
     model = ResNet(config...; block = block, nclasses = nclasses)
