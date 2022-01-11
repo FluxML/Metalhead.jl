@@ -112,9 +112,9 @@ struct VGG
 end
 
 """
-    VGG(imsize::NTuple{2,Int} = (224, 224); config, inchannels, batchnorm, nclasses, fcsize, dropout)
+    VGG(imsize::NTuple{2,Int}; config, inchannels, batchnorm, nclasses, fcsize, dropout)
 
-Construct a VGG model with the specified input image size.
+Construct a VGG model with the specified input image size. Typically, the image size is `(224, 224)`.
 
 ## Keyword Arguments:
 - `config` : VGG convolutional block configuration. It is defined as a vector of tuples `(output_channels, num_convolutions)` for each block 
@@ -125,7 +125,7 @@ Construct a VGG model with the specified input image size.
             (see [`Metalhead.vgg_classifier_layers`](#))
 - `dropout`: dropout level between fully connected layers
 """
-function VGG(imsize::NTuple{2, <:Integer} = (224, 224);
+function VGG(imsize::NTuple{2, <:Integer};
              config, inchannels, batchnorm = false, nclasses, fcsize, dropout)
   layers = vgg(imsize; config = config,
                        inchannels = inchannels,
