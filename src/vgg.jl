@@ -117,7 +117,7 @@ end
 Construct a VGG model with the specified input image size.
 
 ## Keyword Arguments:
-- `config`::Symbol : VGG convolutional block configuration. Can be one of (:A, :B, :D, :E)
+- `config` : VGG convolutional block configuration. It is defined as a vector of tuples `(output_channels, num_convolutions)` for each block 
 - `inchannels`::Int : number of input channels
 - `batchnorm`::Bool : set to `true` to use batch normalization after each convolution
 - `nclasses`::Int : number of output classes
@@ -128,11 +128,11 @@ Construct a VGG model with the specified input image size.
 function VGG(imsize::NTuple{2, <:Integer} = (224, 224);
              config, inchannels, batchnorm = false, nclasses, fcsize, dropout)
   layers = vgg(imsize; config = config,
-                        inchannels = inchannels,
-                        batchnorm = batchnorm,
-                        nclasses = nclasses,
-                        fcsize = fcsize,
-                        dropout = dropout)
+                       inchannels = inchannels,
+                       batchnorm = batchnorm,
+                       nclasses = nclasses,
+                       fcsize = fcsize,
+                       dropout = dropout)
   
   VGG(layers)
 end
