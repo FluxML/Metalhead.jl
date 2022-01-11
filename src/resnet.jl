@@ -10,11 +10,11 @@ Create a basic residual block
                within the residual block
 - `downsample`: set to `true` to downsample the input
 """
-basicblock(inplanes, outplanes, downsample = false) = downsample ?
-  Chain(conv_bn((3, 3), inplanes, outplanes[1]; stride = 2, pad = 1, bias = false)...,
-        conv_bn((3, 3), outplanes[1], outplanes[2], identity; stride = 1, pad = 1, bias = false)...) :
-  Chain(conv_bn((3, 3), inplanes, outplanes[1]; stride = 1, pad = 1, bias = false)...,
+function basicblock(inplanes, outplanes, downsample = false)
+  stride = downsample ? 2 : 1
+  Chain(conv_bn((3, 3), inplanes, outplanes[1]; stride = stride, pad = 1, bias = false)...,
         conv_bn((3, 3), outplanes[1], outplanes[2], identity; stride = 1, pad = 1, bias = false)...)
+end
 
 """
     bottleneck(inplanes, outplanes, downsample = false)
@@ -28,13 +28,12 @@ Create a bottleneck residual block
                within the residual block
 - `downsample`: set to `true` to downsample the input
 """
-bottleneck(inplanes, outplanes, downsample = false) = downsample ?
-  Chain(conv_bn((1, 1), inplanes, outplanes[1]; stride = 2, bias = false)...,
-        conv_bn((3, 3), outplanes[1], outplanes[2]; stride = 1, pad = 1, bias = false)...,
-        conv_bn((1, 1), outplanes[2], outplanes[3], identity; stride = 1, bias = false)...) :
-  Chain(conv_bn((1, 1), inplanes, outplanes[1]; stride = 1, bias = false)...,
+function bottleneck(inplanes, outplanes, downsample = false)
+  stride = downsample : 2 : 1
+  Chain(conv_bn((1, 1), inplanes, outplanes[1]; stride = stride, bias = false)...,
         conv_bn((3, 3), outplanes[1], outplanes[2]; stride = 1, pad = 1, bias = false)...,
         conv_bn((1, 1), outplanes[2], outplanes[3], identity; stride = 1, bias = false)...)
+end
 
 """
     skip_projection(inplanes, outplanes, downsample = false)
@@ -47,9 +46,10 @@ Create a skip projection
 - `outplanes`: the number of output feature maps
 - `downsample`: set to `true` to downsample the input
 """
-skip_projection(inplanes, outplanes, downsample = false) = downsample ? 
-  Chain(conv_bn((1, 1), inplanes, outplanes, identity; stride = 2, bias = false)...) :
-  Chain(conv_bn((1, 1), inplanes, outplanes, identity; stride = 1, bias = false)...)
+function skip_projection(inplanes, outplanes, downsample = false)
+  stride = downsample ? 2 : 1 
+  Chain(conv_bn((1, 1), inplanes, outplanes, identity; stride = stride, bias = false)...)
+end
 
 # array -> PaddedView(0, array, outplanes) for zero padding arrays
 """
