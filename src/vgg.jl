@@ -97,33 +97,34 @@ function vgg(imsize; config, inchannels, batchnorm = false, nclasses, fcsize, dr
   return Chain(Chain(conv...), Chain(class...))
 end
 
-const vgg_config = Dict(:A => [(64,1), (128,1), (256,2), (512,2), (512,2)],
-                        :B => [(64,2), (128,2), (256,2), (512,2), (512,2)],
-                        :D => [(64,2), (128,2), (256,3), (512,3), (512,3)],
-                        :E => [(64,2), (128,2), (256,4), (512,4), (512,4)])
+const vgg_conv_config = Dict(:A => [(64,1), (128,1), (256,2), (512,2), (512,2)],
+                             :B => [(64,2), (128,2), (256,2), (512,2), (512,2)],
+                             :D => [(64,2), (128,2), (256,3), (512,3), (512,3)],
+                             :E => [(64,2), (128,2), (256,4), (512,4), (512,4)])
 
-"""
-    VGG(imsize = (224, 224); config, inchannels, batchnorm = false, nclasses, fcsize, dropout)
+const vgg_config = Dict(11 => :A,
+                        13 => :B,
+                        16 => :D,
+                        19 => :E)
 
-Create a `VGG` model
-([reference](https://arxiv.org/abs/1409.1556v6)).
-See also [`vgg`](#).
-
-# Arguments
-- `imsize`: input image width and height as a tuple
-- `config`: the configuration for the convolution layers
-            (see [`Metalhead.vgg_convolutional_layers`](#))
-- `inchannels`: number of input channels
-- `batchnorm`: set to `true` to use batch normalization after each convolution
-- `nclasses`: number of output classes
-- `fcsize`: intermediate fully connected layer size
-            (see [`Metalhead.vgg_classifier_layers`](#))
-- `dropout`: dropout level between fully connected layers
-"""
 struct VGG
   layers
 end
 
+"""
+    VGG(imsize::NTuple{2,Int} = (224, 224); config, inchannels, batchnorm, nclasses, fcsize, dropout)
+
+Construct a VGG model with the specified input image size.
+
+## Keyword Arguments:
+- `config`::Symbol : VGG convolutional block configuration. Can be one of (:A, :B, :D, :E)
+- `inchannels`::Int : number of input channels
+- `batchnorm`::Bool : set to `true` to use batch normalization after each convolution
+- `nclasses`::Int : number of output classes
+- `fcsize`: intermediate fully connected layer size
+            (see [`Metalhead.vgg_classifier_layers`](#))
+- `dropout`: dropout level between fully connected layers
+"""
 function VGG(imsize::NTuple{2, <:Integer} = (224, 224);
              config, inchannels, batchnorm = false, nclasses, fcsize, dropout)
   layers = vgg(imsize; config = config,
@@ -144,20 +145,22 @@ backbone(m::VGG) = m.layers[1]
 classifier(m::VGG) = m.layers[2]
 
 """
-    VGG11(; pretrain = false, batchnorm = false)
+    VGG(depth::Int = 16; pretrain = false, batchnorm = false)
 
-Create a VGG-11 style model
+Create a VGG style model with specified `depth`. Available values include (11, 13, 16, 19).
 ([reference](https://arxiv.org/abs/1409.1556v6)).
 See also [`VGG`](#).
 
 !!! warning
-    `VGG11` does not currently support pretrained weights.
+    `VGG` does not currently support pretrained weights.
 
 # Arguments
 - `pretrain`: set to `true` to load pre-trained model weights for ImageNet
 """
-function VGG11(; pretrain = false, batchnorm = false)
-  model = VGG((224, 224); config = vgg_config[:A],
+function VGG11(depth::Int; pretrain = false, batchnorm = false)
+  @assert depth in (11, 13, 16, 19) "depth must be from one in (11, 13, 16, 19)"
+
+  model = VGG((224, 224); config = vgg_conv_config[vgg_config[depth]],
                           inchannels = 3,
                           batchnorm = batchnorm,
                           nclasses = 1000,
@@ -165,96 +168,15 @@ function VGG11(; pretrain = false, batchnorm = false)
                           dropout = 0.5)
 
   if pretrain && !batchnorm
-    loadpretrain!(model, "VGG11")
+    loadpretrain!(model, string("VGG", depth))
   elseif pretrain
-    loadpretrain!(model, "VGG11-BN)")
+    loadpretrain!(model, "VGG$(depth)-BN)")
   end
-  return model
+  model
 end
 
-"""
-    VGG13(; pretrain = false, batchnorm = false)
-
-Create a VGG-11 style model
-([reference](https://arxiv.org/abs/1409.1556v6)).
-See also [`VGG`](#).
-
-!!! warning
-    `VGG13` does not currently support pretrained weights.
-
-# Arguments
-- `pretrain`: set to `true` to load pre-trained model weights for ImageNet
-"""
-function VGG13(; pretrain = false, batchnorm = false)
-  model = VGG((224, 224); config = vgg_config[:B],
-                          inchannels = 3,
-                          batchnorm = batchnorm,
-                          nclasses = 1000,
-                          fcsize = 4096,
-                          dropout = 0.5)
-
-  if pretrain && !batchnorm
-    loadpretrain!(model, "VGG13")
-  elseif pretrain
-    loadpretrain!(model, "VGG13-BN)")
-  end
-  return model
-end
-
-"""
-    VGG16(; pretrain = false, batchnorm = false)
-
-Create a VGG-11 style model
-([reference](https://arxiv.org/abs/1409.1556v6)).
-See also [`VGG`](#).
-
-!!! warning
-    `VGG16` does not currently support pretrained weights.
-
-# Arguments
-- `pretrain`: set to `true` to load pre-trained model weights for ImageNet
-"""
-function VGG16(; pretrain = false, batchnorm = false)
-  model = VGG((224, 224); config = vgg_config[:D],
-                          inchannels = 3,
-                          batchnorm = batchnorm,
-                          nclasses = 1000,
-                          fcsize = 4096,
-                          dropout = 0.5)
-
-  if pretrain && !batchnorm
-    loadpretrain!(model, "VGG16")
-  elseif pretrain
-    loadpretrain!(model, "VGG16-BN)")
-  end
-  return model
-end
-
-"""
-    VGG19(; pretrain = false, batchnorm = false)
-
-Create a VGG-11 style model
-([reference](https://arxiv.org/abs/1409.1556v6)).
-See also [`VGG`](#).
-
-!!! warning
-    `VGG19` does not currently support pretrained weights.
-
-# Arguments
-- `pretrain`: set to `true` to load pre-trained model weights for ImageNet
-"""
-function VGG19(; pretrain = false, batchnorm = false)
-  model = VGG((224, 224); config = vgg_config[:E],
-                          inchannels = 3,
-                          batchnorm = batchnorm,
-                          nclasses = 1000,
-                          fcsize = 4096,
-                          dropout = 0.5)
-
-  if pretrain && !batchnorm
-    loadpretrain!(model, "VGG19")
-  elseif pretrain
-    loadpretrain!(model, "VGG19-BN)")
-  end
-  return model
-end
+# deprecations
+@deprecate VGG11(; kw...) VGG(11; kw...)
+@deprecate VGG13(; kw...) VGG(13; kw...)
+@deprecate VGG16(; kw...) VGG(16; kw...)
+@deprecate VGG19(; kw...) VGG(19; kw...)
