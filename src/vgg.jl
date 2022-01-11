@@ -157,7 +157,7 @@ See also [`VGG`](#).
 # Arguments
 - `pretrain`: set to `true` to load pre-trained model weights for ImageNet
 """
-function VGG11(depth::Int; pretrain = false, batchnorm = false)
+function VGG(depth::Int = 16; pretrain = false, batchnorm = false)
   @assert depth in (11, 13, 16, 19) "depth must be from one in (11, 13, 16, 19)"
 
   model = VGG((224, 224); config = vgg_conv_config[vgg_config[depth]],
