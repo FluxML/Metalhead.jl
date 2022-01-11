@@ -112,7 +112,7 @@ struct VGG
 end
 
 """
-    VGG(imsize::NTuple{2,Int}; config, inchannels, batchnorm, nclasses, fcsize, dropout)
+    VGG(imsize::NTuple{2,Int}; config, inchannels, batchnorm = false, nclasses, fcsize, dropout)
 
 Construct a VGG model with the specified input image size. Typically, the image size is `(224, 224)`.
 
