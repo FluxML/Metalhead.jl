@@ -157,13 +157,13 @@ See also [`VGG`](#).
 # Arguments
 - `pretrain`: set to `true` to load pre-trained model weights for ImageNet
 """
-function VGG(depth::Int = 16; pretrain = false, batchnorm = false)
+function VGG(depth::Int = 16; pretrain = false, batchnorm = false, nclasses = 1000)
   @assert depth in keys(vgg_config) "depth must be from one in $(sort(collect(keys(vgg_config))))"
 
   model = VGG((224, 224); config = vgg_conv_config[vgg_config[depth]],
                           inchannels = 3,
                           batchnorm = batchnorm,
-                          nclasses = 1000,
+                          nclasses = nclasses,
                           fcsize = 4096,
                           dropout = 0.5)
 
