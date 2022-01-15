@@ -1,13 +1,16 @@
-using Flux
-using Functors
-using Flux: Zygote
-using Flux: _big_show
-using Metalhead
-using Test
-using Metalhead: conv_bn
-using Metalhead: skip_identity
-using Metalhead: skip_projection
+"""
+    resnextblock(inplanes, outplanes, cardinality, downsample = false)
 
+Create a basic residual block as defined in the paper for ResNeXt.
+([reference](https://arxiv.org/abs/1611.05431)).
+
+# Arguments:
+- `inplanes`: the number of input feature maps
+- `outplanes`: a list of the number of output feature maps for each convolution
+               within the residual block
+- `cardinality`: the number of groups to use for the convolution
+- `downsample`: set to `true` to downsample the input
+"""
 resnextblock(inplanes, outplanes, cardinality, downsample = false) = downsample ? 
     Chain(
         conv_bn((1, 1), inplanes, outplanes[1]; stride = 1, bias = false)...,
@@ -20,7 +23,20 @@ resnextblock(inplanes, outplanes, cardinality, downsample = false) = downsample 
                     groups = cardinality, bias = false)...,
         conv_bn((1, 1), outplanes[2], outplanes[3], identity; stride = 1, bias = false)...)
 
+"""
+    resnext(connection = (x, y) -> @. relu(x) + relu(y); channel_config, block_config, 
+            cardinality, nclasses = 1000)
+    
+Create a ResNeXt model
+([reference](https://arxiv.org/abs/1611.05431)).
 
+# Arguments
+- `connection`: the binary function applied to the output of residual and skip paths in a block
+- `channel_config`: the growth rate of the output feature maps within a residual block
+- `block_config`: a list of the number of residual blocks at each stage
+- `cardinality`: the number of groups to use for the convolution
+- `nclasses`: the number of output classes
+"""
 function resnext(connection = (x, y) -> @. relu(x) + relu(y); channel_config, block_config, cardinality, nclasses = 1000)
     inplanes = 128
     baseplanes = 128
@@ -49,6 +65,18 @@ function resnext(connection = (x, y) -> @. relu(x) + relu(y); channel_config, bl
                 Chain(AdaptiveMeanPool((1, 1)), flatten, Dense(inplanes, nclasses)))
 end
 
+"""
+    ResNeXt(channel_config, block_config, cardinality; nclasses = 1000)
+    
+Create a ResNeXt model
+([reference](https://arxiv.org/abs/1611.05431)).
+
+# Arguments
+- `channel_config`: the growth rate of the output feature maps within a residual block
+- `block_config`: a list of the number of residual blocks at each stage
+- `cardinality`: the number of groups to use for the convolution
+- `nclasses`: the number of output classes
+"""
 struct ResNeXt
     layers
 end
@@ -68,15 +96,42 @@ end
 backbone(m::ResNeXt) = m.layers[1]
 classifier(m::ResNeXt) = m.layers[2]
 
+"""
+    ResNeXt50(; pretrain = false, nclasses = 1000)
+   
+Create a ResNeXt-50 model
+([reference](https://arxiv.org/abs/1611.05431)).
+
+# Arguments
+- `pretrain`: set to `true` to load pre-trained weights for ImageNet
+- `nclasses`: the number of output classes
+
+!!! warning
+    `ResNeXt50` does not currently support pretrained weights.
+"""
 function ResNeXt50(; pretrain = false, nclasses = 1000)
-    channel_config = [1, 2, 1]
+    channel_config = [1, 1, 2]
     block_config = [3, 4, 6, 3]
     cardinality = 32
-    model = ResNeXt(channel_config, block_config, cardinality; nclasses)
-    return model
+    return ResNeXt(channel_config, block_config, cardinality; nclasses)
 end
 
-Base.show(io::IO, ::MIME"text/plain", model::ResNeXt) = Metalhead._maybe_big_show(io, model)
+"""
+    ResNeXt101(; pretrain = false, nclasses = 1000)
 
-m = ResNeXt50()
-Flux._big_show(IO, m)
+Create a ResNeXt-101 model
+([reference](https://arxiv.org/abs/1611.05431)).
+
+# Arguments
+- `pretrain`: set to `true` to load pre-trained weights for ImageNet
+- `nclasses`: the number of output classes
+
+!!! warning
+    `ResNeXt101` does not currently support pretrained weights.
+"""
+function ResNeXt101(; pretrain = false, nclasses = 1000)
+    channel_config = [1, 1, 2]
+    block_config = [3, 4, 23, 3]
+    cardinality = 32
+    return ResNeXt(channel_config, block_config, cardinality; nclasses)
+end
