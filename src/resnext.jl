@@ -6,22 +6,20 @@ Create a basic residual block as defined in the paper for ResNeXt
 
 # Arguments:
 - `inplanes`: the number of input feature maps
-- `outplanes`: a list of the number of output feature maps for each convolution
-               within the residual block
+- `outplanes`: the number of output feature maps 
 - `cardinality`: the number of groups to use for the convolution
+- `width`: the number of feature maps in each group in the bottleneck
 - `downsample`: set to `true` to downsample the input
 """
-resnextblock(inplanes, outplanes, cardinality, downsample = false) = downsample ? 
-    Chain(
-        conv_bn((1, 1), inplanes, outplanes[1]; stride = 1, bias = false)...,
-        conv_bn((3, 3), outplanes[1], outplanes[2]; stride = 2, pad = 1, 
-                    groups = cardinality, bias = false)...,
-        conv_bn((1, 1), outplanes[2], outplanes[3], identity; stride = 1, bias = false)...) :
-    Chain(
-        conv_bn((1, 1), inplanes, outplanes[1]; stride = 1, bias = false)...,
-        conv_bn((3, 3), outplanes[1], outplanes[2]; stride = 1, pad = 1,
-                    groups = cardinality, bias = false)...,
-        conv_bn((1, 1), outplanes[2], outplanes[3], identity; stride = 1, bias = false)...)
+function resnextblock(inplanes, outplanes, cardinality, width, downsample = false)
+    stride = downsample ? 2 : 1
+    inner_channels = cardinality * width
+
+    return Chain(conv_bn((1, 1), inplanes, inner_channels; stride = 1, bias = false)...,
+        conv_bn((3, 3), inner_channels, inner_channels;
+            stride = stride, pad = 1, bias = false, groups = cardinality)...,
+        conv_bn((1, 1), inner_channels, outplanes; stride = 1, bias = false)...)
+end
 
 """
     resnext(connection = (x, y) -> @. relu(x) + relu(y); channel_config, block_config, 
@@ -31,14 +29,14 @@ Create a ResNeXt model
 ([reference](https://arxiv.org/abs/1611.05431)).
 
 # Arguments
-- `connection`: the binary function applied to the output of residual and skip paths in a block
-- `channel_config`: the growth rate of the output feature maps within a residual block
-- `block_config`: a list of the number of residual blocks at each stage
 - `cardinality`: the number of groups to use for the convolution
+- `width`: the number of feature maps in each group in the bottleneck
+- `connection`: the binary function applied to the output of residual and skip paths in a block
+- `block_config`: a list of the number of residual blocks at each stage
 - `nclasses`: the number of output classes
 """
 function resnext(cardinality, width, channel_multiplier = 2, connection = (x, y) -> @. relu(x) + relu(y);
-                 block_config, nclasses = 1000)
+    block_config, nclasses = 1000)
     inplanes = 64
     baseplanes = 128
     layers = []
@@ -50,41 +48,37 @@ function resnext(cardinality, width, channel_multiplier = 2, connection = (x, y)
         # push first skip connection on using first residual
         # downsample the residual path if this is the first repetition of a block
         push!(layers, Parallel(connection, resnextblock(inplanes, outplanes, cardinality, width, i != 1),
-                                           skip_projection(inplanes, outplanes, i != 1)))
+            skip_projection(inplanes, outplanes, i != 1)))
         # push remaining skip connections on using second residual
         inplanes = outplanes
         for _ in 2:nrepeats
             push!(layers, Parallel(connection, resnextblock(inplanes, outplanes, cardinality, width, false),
-                                               skip_identity(inplanes, outplanes, false)))
+                skip_identity(inplanes, outplanes, false)))
         end
         baseplanes = outplanes
     end
 
     return Chain(Chain(layers...),
-                 Chain(AdaptiveMeanPool((1, 1)), flatten, Dense(inplanes, nclasses)))
+        Chain(AdaptiveMeanPool((1, 1)), flatten, Dense(inplanes, nclasses)))
 end
 
 """
-    ResNeXt(channel_config, block_config, cardinality; nclasses = 1000)
+    ResneXt(cardinality, width; block_config, nclasses = 1000)
     
 Create a ResNeXt model
 ([reference](https://arxiv.org/abs/1611.05431)).
 
 # Arguments
-- `channel_config`: the growth rate of the output feature maps within a residual block
-- `block_config`: a list of the number of residual blocks at each stage
 - `cardinality`: the number of groups to use for the convolution
+- `width`: the number of feature maps in each group in the bottleneck
 - `nclasses`: the number of output classes
 """
 struct ResNeXt
     layers
 end
 
-function ResNeXt(channel_config, block_config, cardinality; nclasses = 1000)
-    layers = resnext(;channel_config = channel_config,
-                  block_config = block_config,
-                  cardinality = cardinality,
-                  nclasses = nclasses)
+function ResNeXt(cardinality, width; block_config, nclasses = 1000)
+    layers = resnext(cardinality, width; block_config, nclasses)
     ResNeXt(layers)
 end
 
@@ -95,42 +89,27 @@ end
 backbone(m::ResNeXt) = m.layers[1]
 classifier(m::ResNeXt) = m.layers[2]
 
-"""
-    ResNeXt50(; pretrain = false, nclasses = 1000)
-   
-Create a ResNeXt-50 model
-([reference](https://arxiv.org/abs/1611.05431)).
+const resnext_config = Dict(
+    50 => (3, 4, 6, 3),
+    101 => (3, 4, 23, 3)
+)
 
-# Arguments
-- `pretrain`: set to `true` to load pre-trained weights for ImageNet
-- `nclasses`: the number of output classes
+"""
+    ResNeXt(; config::Int = 50, cardinality = 32, width = 4, pretrain = false, nclasses = 1000)
+
+Create a ResNeXt model with specified configuration. Currently supported values are (50, 101).
+([reference](https://arxiv.org/abs/1611.05431)).
+Set `pretrain = true` to load the model with pre-trained weights for ImageNet.
 
 !!! warning
-    `ResNeXt50` does not currently support pretrained weights.
+    `ResNeXt` does not currently support pretrained weights.
+
+See also [`Metalhead.resnext`](#).
 """
-function ResNeXt50(; pretrain = false, nclasses = 1000)
-    channel_config = [1, 1, 2]
-    block_config = [3, 4, 6, 3]
-    cardinality = 32
-    return ResNeXt(channel_config, block_config, cardinality; nclasses)
-end
+function ResNeXt(; config::Int = 50, cardinality = 32, width = 4, pretrain = false, nclasses = 1000)
+    @assert config in keys(resnext_config) "`config` must be one of $(sort(collect(keys(resnext_config))))"
 
-"""
-    ResNeXt101(; pretrain = false, nclasses = 1000)
-
-Create a ResNeXt-101 model
-([reference](https://arxiv.org/abs/1611.05431)).
-
-# Arguments
-- `pretrain`: set to `true` to load pre-trained weights for ImageNet
-- `nclasses`: the number of output classes
-
-!!! warning
-    `ResNeXt101` does not currently support pretrained weights.
-"""
-function ResNeXt101(; pretrain = false, nclasses = 1000)
-    channel_config = [1, 1, 2]
-    block_config = [3, 4, 23, 3]
-    cardinality = 32
-    return ResNeXt(channel_config, block_config, cardinality; nclasses)
+    model = ResNeXt(cardinality, width; block_config = resnext_config[config], nclasses)
+    pretrain && loadpretrain!(model, string("ResNeXt", config))
+    model
 end

@@ -17,6 +17,7 @@ include("googlenet.jl")
 include("inception.jl")
 include("squeezenet.jl")
 include("densenet.jl")
+include("resnext.jl")
 
 export  AlexNet,
         VGG, VGG11, VGG13, VGG16, VGG19,
