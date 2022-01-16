@@ -63,7 +63,7 @@ function resnext(cardinality, width, channel_multiplier = 2, connection = (x, y)
 end
 
 """
-    ResneXt(cardinality, width; block_config, nclasses = 1000)
+    ResNeXt(cardinality, width; block_config, nclasses = 1000)
     
 Create a ResNeXt model
 ([reference](https://arxiv.org/abs/1611.05431)).
