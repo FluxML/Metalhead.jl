@@ -57,6 +57,20 @@ end
   end
 end
 
+@testset "ResNeXt" begin
+  @testset for depth in [50, 101, 152]
+    m = ResNeXt(depth)
+
+    @test size(m(rand(Float32, 224, 224, 3, 2))) == (1000, 2)
+    if ResNeXt in PRETRAINED_MODELS
+      @test (ResNeXt(depth, pretrain = true); true)
+    else
+      @test_throws ArgumentError ResNeXt(depth, pretrain = true)
+    end
+    @test_skip gradtest(m, rand(Float32, 224, 224, 3, 2))
+  end
+end
+
 @testset "GoogLeNet" begin
   m = GoogLeNet()
   @test size(m(rand(Float32, 224, 224, 3, 2))) == (1000, 2)
