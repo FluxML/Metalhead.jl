@@ -1,7 +1,7 @@
 """
     resnextblock(inplanes, outplanes, cardinality, downsample = false)
 
-Create a basic residual block as defined in the paper for ResNeXt.
+Create a basic residual block as defined in the paper for ResNeXt
 ([reference](https://arxiv.org/abs/1611.05431)).
 
 # Arguments:
