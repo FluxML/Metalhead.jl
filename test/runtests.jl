@@ -50,8 +50,8 @@ end
 
   @testset "Shortcut C" begin
     m = Metalhead.resnet(Metalhead.basicblock, :C;
-                        channel_config = [1, 1],
-                        block_config = [2, 2, 2, 2])
+                         channel_config = [1, 1],
+                         block_config = [2, 2, 2, 2])
 
     @test size(m(rand(Float32, 256, 256, 3, 2))) == (1000, 2)
   end
