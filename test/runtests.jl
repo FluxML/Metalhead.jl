@@ -50,23 +50,22 @@ end
 
   @testset "Shortcut C" begin
     m = Metalhead.resnet(Metalhead.basicblock, :C;
-      channel_config = [1, 1],
-      block_config = [2, 2, 2, 2])
+                        channel_config = [1, 1],
+                        block_config = [2, 2, 2, 2])
 
     @test size(m(rand(Float32, 256, 256, 3, 2))) == (1000, 2)
   end
 end
 
 @testset "ResNeXt" begin
-  @testset for depth in [50, 101]
-    model = ResNeXt
-    m = model(config = depth)
+  @testset for depth in [50, 101, 152]
+    m = ResNeXt(depth)
 
     @test size(m(rand(Float32, 224, 224, 3, 2))) == (1000, 2)
-    if model in PRETRAINED_MODELS
-      @test (model(config = depth, pretrain = true); true)
+    if ResNeXt in PRETRAINED_MODELS
+      @test (ResNeXt(depth, pretrain = true); true)
     else
-      @test_throws ArgumentError model(config = depth, pretrain = true)
+      @test_throws ArgumentError ResNeXt(depth, pretrain = true)
     end
     @test_skip gradtest(m, rand(Float32, 224, 224, 3, 2))
   end
