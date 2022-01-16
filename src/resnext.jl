@@ -37,32 +37,31 @@ Create a ResNeXt model
 - `cardinality`: the number of groups to use for the convolution
 - `nclasses`: the number of output classes
 """
-function resnext(connection = (x, y) -> @. relu(x) + relu(y); channel_config, block_config, cardinality, nclasses = 1000)
-    inplanes = 128
+function resnext(cardinality, width, channel_multiplier = 2, connection = (x, y) -> @. relu(x) + relu(y);
+                 block_config, nclasses = 1000)
+    inplanes = 64
     baseplanes = 128
     layers = []
     append!(layers, conv_bn((7, 7), 3, inplanes; stride = 2, pad = (3, 3)))
     push!(layers, MaxPool((3, 3), stride = (2, 2), pad = (1, 1)))
     for (i, nrepeats) in enumerate(block_config)
         # output planes within a block
-        outplanes = baseplanes .* channel_config
+        outplanes = baseplanes * channel_multiplier
         # push first skip connection on using first residual
         # downsample the residual path if this is the first repetition of a block
-        push!(layers, Parallel(connection, resnextblock(inplanes, outplanes, cardinality, i != 1),
-                                            skip_projection(inplanes, outplanes[end], i != 1)))
+        push!(layers, Parallel(connection, resnextblock(inplanes, outplanes, cardinality, width, i != 1),
+                                           skip_projection(inplanes, outplanes, i != 1)))
         # push remaining skip connections on using second residual
-        inplanes = outplanes[end]
+        inplanes = outplanes
         for _ in 2:nrepeats
-            push!(layers, Parallel(connection, resnextblock(inplanes, outplanes, cardinality, false),
-                                                skip_identity(inplanes, outplanes[end], false)))
-            inplanes = outplanes[end]
+            push!(layers, Parallel(connection, resnextblock(inplanes, outplanes, cardinality, width, false),
+                                               skip_identity(inplanes, outplanes, false)))
         end
-        # next set of output plane base is doubled
-        baseplanes *= 2
+        baseplanes = outplanes
     end
 
     return Chain(Chain(layers...),
-                Chain(AdaptiveMeanPool((1, 1)), flatten, Dense(inplanes, nclasses)))
+                 Chain(AdaptiveMeanPool((1, 1)), flatten, Dense(inplanes, nclasses)))
 end
 
 """
