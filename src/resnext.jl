@@ -1,5 +1,5 @@
 """
-  resnextblock(inplanes, outplanes, cardinality, width, downsample = false)
+    resnextblock(inplanes, outplanes, cardinality, width, downsample = false)
 
 Create a basic residual block as defined in the paper for ResNeXt
 ([reference](https://arxiv.org/abs/1611.05431)).
@@ -23,7 +23,7 @@ function resnextblock(inplanes, outplanes, cardinality, width, downsample = fals
 end
 
 """
-  resnext(cardinality, width, widen_factor, connection = (x, y) -> @. relu(x) + relu(y);
+    resnext(cardinality, width, widen_factor = 2, connection = (x, y) -> @. relu(x) + relu(y);
           block_config, nclasses = 1000)
     
 Create a ResNeXt model
@@ -67,7 +67,7 @@ function resnext(cardinality, width, widen_factor = 2, connection = (x, y) -> @.
 end
 
 """
-  ResNeXt(cardinality, width; block_config, nclasses = 1000)
+    ResNeXt(cardinality, width; block_config, nclasses = 1000)
     
 Create a ResNeXt model
 ([reference](https://arxiv.org/abs/1611.05431)).
@@ -101,7 +101,7 @@ const resnext_config = Dict(
 )
 
 """
-  ResNeXt(config::Int = 50; cardinality = 32, width = 4, pretrain = false, nclasses = 1000)
+    ResNeXt(config::Int = 50; cardinality = 32, width = 4, pretrain = false, nclasses = 1000)
 
 Create a ResNeXt model with specified configuration. Currently supported values for `config` are (50, 101).
 ([reference](https://arxiv.org/abs/1611.05431)).
