@@ -11,14 +11,16 @@ Create a basic residual block as defined in the paper for ResNeXt
 - `width`: the number of feature maps in each group in the bottleneck
 - `downsample`: set to `true` to downsample the input
 """
-function resnextblock(inplanes, outplanes, cardinality, width, downsample = false)
+function resnextblock(inplanes, outplanes, cardinality, width, widen_factor, downsample = false)
     stride = downsample ? 2 : 1
-    inner_channels = cardinality * width
 
-    return Chain(conv_bn((1, 1), inplanes, inner_channels; stride = 1, bias = false)...,
-        conv_bn((3, 3), inner_channels, inner_channels;
+    width_ratio = outplanes / (widen_factor * 128.0)
+    hidden_channels = cardinality * floor(width * width_ratio)
+
+    return Chain(conv_bn((1, 1), inplanes, hidden_channels; stride = 1, bias = false)...,
+        conv_bn((3, 3), hidden_channels, hidden_channels;
             stride = stride, pad = 1, bias = false, groups = cardinality)...,
-        conv_bn((1, 1), inner_channels, outplanes; stride = 1, bias = false)...)
+        conv_bn((1, 1), hidden_channels, outplanes; stride = 1, bias = false)...)
 end
 
 """
@@ -35,7 +37,7 @@ Create a ResNeXt model
 - `block_config`: a list of the number of residual blocks at each stage
 - `nclasses`: the number of output classes
 """
-function resnext(cardinality, width, channel_multiplier = 2, connection = (x, y) -> @. relu(x) + relu(y);
+function resnext(cardinality, width, widen_factor = 2, connection = (x, y) -> @. relu(x) + relu(y);
     block_config, nclasses = 1000)
     inplanes = 64
     baseplanes = 128
@@ -44,15 +46,15 @@ function resnext(cardinality, width, channel_multiplier = 2, connection = (x, y)
     push!(layers, MaxPool((3, 3), stride = (2, 2), pad = (1, 1)))
     for (i, nrepeats) in enumerate(block_config)
         # output planes within a block
-        outplanes = baseplanes * channel_multiplier
+        outplanes = baseplanes * widen_factor
         # push first skip connection on using first residual
         # downsample the residual path if this is the first repetition of a block
-        push!(layers, Parallel(connection, resnextblock(inplanes, outplanes, cardinality, width, i != 1),
+        push!(layers, Parallel(connection, resnextblock(inplanes, outplanes, cardinality, width, widen_factor, i != 1),
             skip_projection(inplanes, outplanes, i != 1)))
         # push remaining skip connections on using second residual
         inplanes = outplanes
         for _ in 2:nrepeats
-            push!(layers, Parallel(connection, resnextblock(inplanes, outplanes, cardinality, width, false),
+            push!(layers, Parallel(connection, resnextblock(inplanes, outplanes, cardinality, width, widen_factor, false),
                 skip_identity(inplanes, outplanes, false)))
         end
         baseplanes = outplanes
