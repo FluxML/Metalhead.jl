@@ -105,3 +105,17 @@ end
     @test_skip gradtest(m, rand(Float32, 224, 224, 3, 2))
   end
 end
+
+@testset "MobileNet" begin
+  @testset for model in [MobileNetv2, MobileNetV3]
+    m = model()
+
+    @test size(m(rand(Float32, 224, 224, 3, 2))) == (1000, 2)
+    if model in PRETRAINED_MODELS
+      @test (model(pretrain = true); true)
+    else
+      @test_throws ArgumentError model(pretrain = true)
+    end
+    @test_skip gradtest(m, rand(Float32, 224, 224, 3, 2))
+  end
+end
