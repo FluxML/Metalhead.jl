@@ -1,6 +1,4 @@
-"""
-  This is a utility function for making sure that all layers have a channel size divisible by 8. 
-"""
+# This is a utility function for making sure that all layers have a channel size divisible by 8.
 function _make_divisible(v, divisor, min_value = nothing)
   if isnothing(min_value)
     min_value = divisor
@@ -22,25 +20,21 @@ Create a basic inverted residual block for MobileNetv2
 - `inplanes`: number of input feature maps
 - `outplanes`: number of output feature maps
 - `stride`: stride of the convolutional layer, has to be either 1 or 2
-- `expand_ratio`: ratio of the input feature maps and the inner bottleneck feature maps
+- `expand_ratio`: ratio of the inner bottleneck feature maps over the input feature maps
 """
 function invertedresidualv2(inplanes, outplanes, stride, expand_ratio)
   @assert stride in [1, 2] "`stride` has to be 1 or 2"
   hidden_planes = floor(Int, inplanes * expand_ratio)
 
   if expand_ratio == 1
-    invres = Chain(
-      conv_bn((3, 3), hidden_planes, hidden_planes, relu6; bias = false, stride,
-               pad = 1, groups = hidden_planes)...,
-      conv_bn((1, 1), hidden_planes, outplanes, identity; bias = false)...
-    )
+    invres = Chain(conv_bn((3, 3), hidden_planes, hidden_planes, relu6;
+                           bias = false, stride, pad = 1, groups = hidden_planes)...,
+                   conv_bn((1, 1), hidden_planes, outplanes, identity; bias = false)...)
   else
-    invres = Chain(
-      conv_bn((1, 1), inplanes, hidden_planes, relu6; bias = false)...,
-      conv_bn((3, 3), hidden_planes, hidden_planes, relu6; bias = false, stride,
-               pad = 1, groups = hidden_planes)...,
-      conv_bn((1, 1), hidden_planes, outplanes, identity; bias = false)...
-    )
+    invres = Chain(conv_bn((1, 1), inplanes, hidden_planes, relu6; bias = false)...,
+                   conv_bn((3, 3), hidden_planes, hidden_planes, relu6;
+                           bias = false, stride, pad = 1, groups = hidden_planes)...,
+                   conv_bn((1, 1), hidden_planes, outplanes, identity; bias = false)...)
   end
 
   (stride == 1 && inplanes == outplanes) ? SkipConnection(invres, +) : invres
@@ -86,9 +80,9 @@ function mobilenetv2(width_mult; nclasses = 1000)
   # building last several layers
   outplanes = (width_mult > 1.0) ? _make_divisible(1280 * width_mult, width_mult == 0.1 ? 4 : 8) : 1280
 
-  return Chain(Chain(layers...),
-               conv_bn((1, 1), inplanes, outplanes, relu6, bias = false)...,
-               AdaptiveMeanPool((1, 1)), flatten, Dense(outplanes, nclasses))
+  return Chain(Chain(layers...,
+                     conv_bn((1, 1), inplanes, outplanes, relu6, bias = false)...),
+               Chain(AdaptiveMeanPool((1, 1)), flatten, Dense(outplanes, nclasses)))
 end
 
 # Model definition for MobileNetv2
@@ -135,15 +129,10 @@ Hard-Swish activation function
 Squeeze and Excitation layer used by MobileNetv3
 ([reference](https://arxiv.org/abs/1905.02244)).
 """
-function selayer(channels, reduction = 4)
-  SkipConnection(
-    Chain(
-        AdaptiveMeanPool((1, 1)),
-        conv_bn((1, 1), channels, channels // reduction, relu; bias = false)...,
-        conv_bn((1, 1), channels // reduction, channels, hardσ)...,
-    ), .*
-  )
-end
+selayer(channels, reduction = 4) =
+SkipConnection(Chain(AdaptiveMeanPool((1, 1)),
+                     conv_bn((1, 1), channels, channels // reduction, relu; bias = false)...,
+                     conv_bn((1, 1), channels // reduction, channels, hardσ)...,), .*)
 
 """
     invertedresidualv3(inplanes, hidden_planes, outplanes, kernel_size, stride, use_se, use_hs)
@@ -165,20 +154,16 @@ function invertedresidualv3(inplanes, hidden_planes, outplanes, kernel_size,
   @assert stride in [1, 2] "`stride` has to be 1 or 2"
 
   if inplanes == hidden_planes
-    invres = Chain(
-      conv_bn((kernel_size, kernel_size), hidden_planes, hidden_planes, use_hs ? h_swish : relu;
-               bias = false, stride, pad = (kernel_size - 1) ÷ 2, groups = hidden_planes)...,
-      use_se ? selayer(hidden_planes) : identity,
-      conv_bn((1, 1), hidden_planes, outplanes, identity; bias = false)...
-    )
+    invres = Chain(conv_bn((kernel_size, kernel_size), hidden_planes, hidden_planes, use_hs ? h_swish : relu;
+                            bias = false, stride, pad = (kernel_size - 1) ÷ 2, groups = hidden_planes)...,
+                            use_se ? selayer(hidden_planes) : identity,
+                   conv_bn((1, 1), hidden_planes, outplanes, identity; bias = false)...)
   else
-    invres = Chain(
-      conv_bn((1, 1), inplanes, hidden_planes, use_hs ? h_swish : relu; bias = false)...,
-      conv_bn((kernel_size, kernel_size), hidden_planes, hidden_planes, use_hs ? h_swish : relu;
-               bias = false, stride, pad = (kernel_size - 1) ÷ 2, groups = hidden_planes)...,
-      use_se ? selayer(hidden_planes) : identity,
-      conv_bn((1, 1), hidden_planes, outplanes, identity; bias = false)...
-    )
+    invres = Chain(conv_bn((1, 1), inplanes, hidden_planes, use_hs ? h_swish : relu; bias = false)...,
+                   conv_bn((kernel_size, kernel_size), hidden_planes, hidden_planes, use_hs ? h_swish : relu;
+                            bias = false, stride, pad = (kernel_size - 1) ÷ 2, groups = hidden_planes)...,
+                            use_se ? selayer(hidden_planes) : identity,
+                   conv_bn((1, 1), hidden_planes, outplanes, identity; bias = false)...)
   end
 
   (stride == 1 && inplanes == outplanes) ? SkipConnection(invres, +) : invres
@@ -204,68 +189,63 @@ function mobilenetv3(configs, mode, width_mult; nclasses = 1000)
   inplanes = _make_divisible(16 * width_mult, 8)
   layers = []
   append!(layers, conv_bn((3, 3), 3, inplanes, h_swish; stride = 2))
-
+  explanes = 0
   # building inverted residual blocks
   for (k, t, c, use_se, use_hs, s) in configs
-    # converting the stored parameters to their respective types
-    k = convert(Int, k)
-    c = convert(Int, c)
-    use_se = convert(Bool, use_se)
-    use_hs = convert(Bool, use_hs)
-    s = convert(Int, s)
     # inverted residual layers
     outplanes = _make_divisible(c * width_mult, 8)
-    global explanes = _make_divisible(inplanes * t, 8)
+    explanes = _make_divisible(inplanes * t, 8)
     push!(layers, invertedresidualv3(inplanes, explanes, outplanes, k, s, use_se, use_hs))
     inplanes = outplanes
   end
 
   # building last several layers
-  output_channel = Dict("large" => 1280, "small" => 1024)
-  output_channel = width_mult > 1.0 ? _make_divisible(output_channel[mode] * width_mult, 8) : output_channel[mode]
-  classifier = Chain(
+  output_channel = (mode == "large") ? 1280 : 1024
+  output_channel = width_mult > 1.0 ? _make_divisible(output_channel * width_mult, 8) : output_channel
+  classifier = (
     Dense(explanes, output_channel, h_swish),
     Dropout(0.2),
     Dense(output_channel, nclasses),
   )
 
-  return Chain(Chain(layers...),
-               conv_bn((1, 1), inplanes, explanes, h_swish, bias = false)...,
-               AdaptiveMeanPool((1, 1)), flatten, classifier)
+  return Chain(Chain(layers...,
+                     conv_bn((1, 1), inplanes, explanes, h_swish, bias = false)...),
+               Chain(AdaptiveMeanPool((1, 1)), flatten, classifier...))
 end
 
 # Configurations for small and large mode for MobileNetv3
 mobilenetv3_configs = Dict(
-  "small" => [
+  "small" =>[
     # k, t, c, SE, HS, s 
-    [3, 1, 16, 1, 0, 2],
-    [3, 4.5, 24, 0, 0, 2],
-    [3, 3.67, 24, 0, 0, 1],
-    [5, 4, 40, 1, 1, 2],
-    [5, 6, 40, 1, 1, 1],
-    [5, 6, 40, 1, 1, 1],
-    [5, 3, 48, 1, 1, 1],
-    [5, 3, 48, 1, 1, 1],
-    [5, 6, 96, 1, 1, 2],
-    [5, 6, 96, 1, 1, 1],
-    [5, 6, 96, 1, 1, 1],
-  ], "large" => [
+    (3, 1, 16, true, false, 2),
+    (3, 4.5, 24, false, false, 2),
+    (3, 3.67, 24, false, false, 1),
+    (5, 4, 40, true, true, 2),
+    (5, 6, 40, true, true, 1),
+    (5, 6, 40, true, true, 1),
+    (5, 3, 48, true, true, 1),
+    (5, 3, 48, true, true, 1),
+    (5, 6, 96, true, true, 2),
+    (5, 6, 96, true, true, 1),
+    (5, 6, 96, true, true, 1),
+  ], 
+  "large" => [
     # k, t, c, SE, HS, s 
-    [3, 1, 16, 0, 0, 1],
-    [3, 4, 24, 0, 0, 2],
-    [3, 3, 24, 0, 0, 1],
-    [5, 3, 40, 1, 0, 2],
-    [5, 3, 40, 1, 0, 1],
-    [5, 3, 40, 1, 0, 1],
-    [3, 6, 80, 0, 1, 2],
-    [3, 2.5, 80, 0, 1, 1],
-    [3, 2.3, 80, 0, 1, 1],
-    [3, 2.3, 80, 0, 1, 1],
-    [3, 6, 112, 1, 1, 1],
-    [3, 6, 112, 1, 1, 1],
-    [5, 6, 160, 1, 1, 2],
-    [5, 6, 160, 1, 1, 1],
-    [5, 6, 160, 1, 1, 1]
+    (3, 1, 16, false, false, 1),
+    (3, 4, 24, false, false, 2),
+    (3, 3, 24, false, false, 1),
+    (5, 3, 40, true, false, 2),
+    (5, 3, 40, true, false, 1),
+    (5, 3, 40, true, false, 1),
+    (3, 6, 80, false, true, 2),
+    (3, 2.5, 80, false, true, 1),
+    (3, 2.3, 80, false, true, 1),
+    (3, 2.3, 80, false, true, 1),
+    (3, 6, 112, true, true, 1),
+    (3, 6, 112, true, true, 1),
+    (5, 6, 160, true, true, 2),
+    (5, 6, 160, true, true, 1),
+    (5, 6, 160, true, true, 1)
   ]
 )
 
