@@ -106,16 +106,31 @@ end
   end
 end
 
-@testset "MobileNet" begin
-  @testset for model in [MobileNetv2, MobileNetV3]
-    m = model()
+@testset "MobileNet" verbose = true begin
+  @testset "MobileNetv2" begin
+
+    m = MobileNetv2()
 
     @test size(m(rand(Float32, 224, 224, 3, 2))) == (1000, 2)
-    if model in PRETRAINED_MODELS
-      @test (model(pretrain = true); true)
+    if MobileNetv2 in PRETRAINED_MODELS
+      @test (MobileNetv2(pretrain = true); true)
     else
-      @test_throws ArgumentError model(pretrain = true)
+      @test_throws ArgumentError MobileNetv2(pretrain = true)
     end
     @test_skip gradtest(m, rand(Float32, 224, 224, 3, 2))
+  end
+
+  @testset "MobileNetv3" verbose = true begin
+    @testset for mode in ["small", "large"]
+      m = MobileNetv3(; mode)
+
+      @test size(m(rand(Float32, 224, 224, 3, 2))) == (1000, 2)
+      if MobileNetv3 in PRETRAINED_MODELS
+        @test (MobileNetv3(; mode, pretrain = true); true)
+      else
+        @test_throws ArgumentError MobileNetv3(; mode, pretrain = true)
+      end
+      @test_skip gradtest(m, rand(Float32, 224, 224, 3, 2))
+    end
   end
 end

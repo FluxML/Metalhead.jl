@@ -10,6 +10,8 @@ function _make_divisible(v, divisor, min_value = nothing)
   (new_v < 0.9 * v) ? new_v + divisor : new_v
 end
 
+# MobileNetv2
+
 """
     invertedresidualv2(inplanes, outplanes, stride, expand_ratio)
 
@@ -41,7 +43,7 @@ function invertedresidualv2(inplanes, outplanes, stride, expand_ratio)
     )
   end
 
-  (stride == 1 && inplanes == outplanes) ? SkipConnection(+, invres) : invres
+  (stride == 1 && inplanes == outplanes) ? SkipConnection(invres, +) : invres
 end
 
 """
@@ -66,10 +68,12 @@ function mobilenetv2(width_mult; nclasses = 1000)
     [6, 160, 3, 2],
     [6, 320, 1, 1],
   ]
+  
   # building first layer
   inplanes = _make_divisible(32 * width_mult, width_mult == 0.1 ? 4 : 8)
   layers = []
-  push!(layers, conv_bn((3, 3), 3, inplanes, stride = 2))
+  append!(layers, conv_bn((3, 3), 3, inplanes, stride = 2))
+
   # building inverted residual blocks
   for (t, c, n, s) in configs
     outplanes = _make_divisible(c * width_mult, width_mult == 0.1 ? 4 : 8)
@@ -78,34 +82,68 @@ function mobilenetv2(width_mult; nclasses = 1000)
       inplanes = outplanes
     end
   end
+
   # building last several layers
   outplanes = (width_mult > 1.0) ? _make_divisible(1280 * width_mult, width_mult == 0.1 ? 4 : 8) : 1280
 
   return Chain(Chain(layers...),
-               conv_bn((1, 1), inplanes, outplanes, relu6, bias = false),
-               Chain(AdaptiveMeanPool((1, 1)), flatten, Dense(outplanes, nclasses)))
+               conv_bn((1, 1), inplanes, outplanes, relu6, bias = false)...,
+               AdaptiveMeanPool((1, 1)), flatten, Dense(outplanes, nclasses))
+end
+
+# Model definition for MobileNetv2
+struct MobileNetv2
+  layers
 end
 
 """
-Squeeze and Excitation layer used by MobileNetv3
-([reference](https://arxiv.org/abs/1905.02244)).
+    MobileNetv2(width_mult::Float64 = 1.0; pretrain = false, nclasses = 1000)
+
+Create a MobileNetv2 model with the specified configuration.
+([reference](https://arxiv.org/abs/1801.04381)).
+Set `pretrain` to `true` to load the pretrained weights for ImageNet. 
+
+# Arguments
+- `width_mult`: Controls the number of channels in each layer, with 1.0 being the original
+  model as detailed in the paper.
+- `pretrain`: whether to load the pre-trained weights for ImageNet
+- `nclasses`: the number of output classes
 """
-function selayer(channel, reduction = 4)
-  Chain(
-    Parallel(*, Chain(
-        Dense(channel, _make_divisible(channel ÷ reduction, 8), relu),
-        Dense(_make_divisible(channel ÷ reduction, 8), channel, hardσ),
-        AdaptiveMeanPool((1, 1)), flatten
-      ), identity
-    )
-  )
+function MobileNetv2(width_mult::Float64 = 1.0; pretrain = false, nclasses = 1000)
+  layers = mobilenetv2(width_mult; nclasses)
+  pretrain && loadpretrain!(layers, string("MobileNetv2"))
+
+  MobileNetv2(layers)
 end
+
+@functor MobileNetv2
+
+(m::MobileNetv2)(x) = m.layers(x)
+
+backbone(m::MobileNetv2) = m.layers[1]
+classifier(m::MobileNetv2) = m.layers[2:end]
+
+# MobileNetv3
 
 """
 Hard-Swish activation function
 ([reference](https://arxiv.org/abs/1905.02244)).
 """
 @inline h_swish(x) = x * hardσ(x)
+
+"""
+Squeeze and Excitation layer used by MobileNetv3
+([reference](https://arxiv.org/abs/1905.02244)).
+"""
+function selayer(channels, reduction = 4)
+  SkipConnection(
+    Chain(
+        AdaptiveMeanPool((1, 1)),
+        conv_bn((1, 1), channels, channels // reduction, relu; bias = false)...,
+        conv_bn((1, 1), channels // reduction, channels, hardσ)...,
+    ), .*
+  )
+end
 
 """
     invertedresidualv3(inplanes, hidden_planes, outplanes, kernel_size, stride, use_se, use_hs)
@@ -119,8 +157,8 @@ Create a basic inverted residual block for MobileNetv3
 - `outplanes`: number of output feature maps
 - `kernel_size`: kernel size of the convolutional layers
 - `stride`: stride of the convolutional kernel, has to be either 1 or 2
-- `use_se`: if True, Squeeze and Excitation layer will be used
-- `use_hs`: if True, Hard-Swish activation function will be used
+- `use_se`: if `true`, Squeeze and Excitation layer will be used
+- `use_hs`: if `true`, Hard-Swish activation function will be used
 """
 function invertedresidualv3(inplanes, hidden_planes, outplanes, kernel_size,
                             stride, use_se, use_hs)
@@ -143,7 +181,7 @@ function invertedresidualv3(inplanes, hidden_planes, outplanes, kernel_size,
     )
   end
 
-  (stride == 1 && inplanes == outplanes) ? SkipConnection(+, invres) : invres
+  (stride == 1 && inplanes == outplanes) ? SkipConnection(invres, +) : invres
 end
 
 """
@@ -161,10 +199,12 @@ Create a MobileNetv3 model.
 """
 function mobilenetv3(configs, mode, width_mult; nclasses = 1000)
   @assert mode in ["large", "small"] "`mode` has to be either \"large\" or \"small\""
+
   # building first layer
   inplanes = _make_divisible(16 * width_mult, 8)
   layers = []
-  push!(layers, conv_bn((3, 3), 3, inplanes, h_swish; stride = 2))
+  append!(layers, conv_bn((3, 3), 3, inplanes, h_swish; stride = 2))
+
   # building inverted residual blocks
   for (k, t, c, use_se, use_hs, s) in configs
     # converting the stored parameters to their respective types
@@ -179,6 +219,7 @@ function mobilenetv3(configs, mode, width_mult; nclasses = 1000)
     push!(layers, invertedresidualv3(inplanes, explanes, outplanes, k, s, use_se, use_hs))
     inplanes = outplanes
   end
+
   # building last several layers
   output_channel = Dict("large" => 1280, "small" => 1024)
   output_channel = width_mult > 1.0 ? _make_divisible(output_channel[mode] * width_mult, 8) : output_channel[mode]
@@ -189,42 +230,9 @@ function mobilenetv3(configs, mode, width_mult; nclasses = 1000)
   )
 
   return Chain(Chain(layers...),
-               conv_bn((1, 1), inplanes, explanes, h_swish, bias = false),
-               Chain(AdaptiveMeanPool((1, 1)), flatten, classifier))
+               conv_bn((1, 1), inplanes, explanes, h_swish, bias = false)...,
+               AdaptiveMeanPool((1, 1)), flatten, classifier)
 end
-
-# Model definition for MobileNetv2
-
-struct MobileNetv2
-  layers
-end
-
-"""
-    MobileNetv2(width_mult::Float64 = 1.0; pretrain = false, nclasses = 1000)
-
-Create a MobileNetv2 model with the specified configuration.
-([reference](https://arxiv.org/abs/1801.04381)).
-Set `pretrain` to `true` to load the pretrained weights for ImageNet. 
-
-# Arguments
-- `width_mult`: Controls the number of channels in each layer, with 1.0 being the original
-  model as detailed in the paper.
-- `pretrain`: whether to load the pre-trained weights for ImageNet
-- `nclasses`: the number of output classes
-"""
-function MobileNetv2(width_mult::Float64 = 1.0; pretrain = false, nclasses = 1000)
-  layers = mobilenetv2(width_mult; nclasses)
-  pretrain && loadpretrain!(model, string("MobileNetv2", config))
-
-  MobileNetv2(layers)
-end
-
-@functor MobileNetv2
-
-(m::MobileNetv2)(x) = m.layers(x)
-
-backbone(m::MobileNetv2) = m.layers[1]
-classifier(m::MobileNetv2) = m.layers[2:end]
 
 # Configurations for small and large mode for MobileNetv3
 mobilenetv3_configs = Dict(
@@ -262,7 +270,6 @@ mobilenetv3_configs = Dict(
 )
 
 # Model definition for MobileNetv3
-
 struct MobileNetv3
   layers
 end
@@ -285,7 +292,7 @@ function MobileNetv3(width_mult::Float64 = 1.0; mode = "small", pretrain = false
   @assert mode in ["large", "small"] "`mode` has to be either \"large\" or \"small\""
 
   layers = mobilenetv3(mobilenetv3_configs[mode], mode, width_mult; nclasses)
-  pretrain && loadpretrain!(model, string("MobileNetv3", config))
+  pretrain && loadpretrain!(layers, string("MobileNetv3", mode))
   MobileNetv3(layers)
 end
 
