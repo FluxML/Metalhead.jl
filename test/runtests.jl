@@ -121,14 +121,14 @@ end
   end
 
   @testset "MobileNetv3" verbose = true begin
-    @testset for mode in ["small", "large"]
-      m = MobileNetv3(; mode)
+    @testset for mode in [:small, :large]
+      m = MobileNetv3(mode)
 
       @test size(m(rand(Float32, 224, 224, 3, 2))) == (1000, 2)
       if MobileNetv3 in PRETRAINED_MODELS
-        @test (MobileNetv3(; mode, pretrain = true); true)
+        @test (MobileNetv3(mode; pretrain = true); true)
       else
-        @test_throws ArgumentError MobileNetv3(; mode, pretrain = true)
+        @test_throws ArgumentError MobileNetv3(mode; pretrain = true)
       end
       @test_skip gradtest(m, rand(Float32, 224, 224, 3, 2))
     end
