@@ -175,7 +175,7 @@ function invertedresidualv3(inplanes, hidden_planes, outplanes, kernel_size,
 end
 
 """
-    mobilenetv3(configs, width_mult; max_width = 1024, nclasses = 1000)
+    mobilenetv3(width_mult, configs; max_width = 1024, nclasses = 1000)
 
 Create a MobileNetv3 model.
 ([reference](https://arxiv.org/abs/1905.02244)).
