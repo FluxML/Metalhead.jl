@@ -98,7 +98,7 @@ struct MobileNetv2
 end
 
 """
-    MobileNetv2(width_mult = 1.0; pretrain = false, nclasses = 1000)
+    MobileNetv2(width_mult::Number = 1; pretrain = false, nclasses = 1000)
 
 Create a MobileNetv2 model with the specified configuration.
 ([reference](https://arxiv.org/abs/1801.04381)).
@@ -106,13 +106,13 @@ Set `pretrain` to `true` to load the pretrained weights for ImageNet.
 
 # Arguments
 - `width_mult`: Controls the number of feature maps in each layer, with 1.0 being the original
-  model as detailed in the paper.
+  model as detailed in the paper. This is usually a floating point value in between 0.1 and 1.4.
 - `pretrain`: Whether to load the pre-trained weights for ImageNet
 - `nclasses`: The number of output classes
 
 See also [`Metalhead.mobilenetv2`](#).
 """
-function MobileNetv2(width_mult::Float64 = 1.0; pretrain = false, nclasses = 1000)
+function MobileNetv2(width_mult::Number = 1; pretrain = false, nclasses = 1000)
   layers = mobilenetv2(width_mult, mobilenetv2_configs; nclasses = nclasses)
   pretrain && loadpretrain!(layers, string("MobileNetv2"))
 
@@ -193,7 +193,7 @@ Create a MobileNetv3 model.
 - `max_width`: The maximum number of feature maps in any layer of the network
 - `nclasses`: the number of output classes
 """
-function mobilenetv3(configs, width_mult; max_width = 1024, nclasses = 1000)
+function mobilenetv3(width_mult, configs; max_width = 1024, nclasses = 1000)
   # building first layer
   inplanes = _make_divisible(16 * width_mult, 8)
   layers = []
@@ -264,7 +264,7 @@ struct MobileNetv3
 end
 
 """
-    MobileNetv3(mode::Symbol = :small, width_mult = 1.0; pretrain = false, nclasses = 1000)
+    MobileNetv3(mode::Symbol = :small, width_mult::Number = 1; pretrain = false, nclasses = 1000)
 
 Create a MobileNetv3 model with the specified configuration.
 ([reference](https://arxiv.org/abs/1905.02244)).
@@ -272,18 +272,18 @@ Set `pretrain = true` to load the model with pre-trained weights for ImageNet.
 
 # Arguments
 - `mode`: :small or :large for the size of the model (see paper).
-- `width_mult`: Controls the number of output feature maps in each block
-                (with 1.0 being the default in the paper).
+- `width_mult`: Controls the number of output feature maps in each block (with 1.0 being the 
+  default in the paper). This is usually a floating point value in between 0.1 and 1.4.
 - `pretrain`: whether to load the pre-trained weights for ImageNet
 - `nclasses`: the number of output classes
 
 See also [`Metalhead.mobilenetv3`](#).
 """
-function MobileNetv3(mode::Symbol = :small, width_mult = 1.0; pretrain = false, nclasses = 1000)
+function MobileNetv3(mode::Symbol = :small, width_mult::Number = 1; pretrain = false, nclasses = 1000)
   @assert mode in [:large, :small] "`mode` has to be either :large or :small"
 
   max_width = (mode == :large) ? 1280 : 1024
-  layers = mobilenetv3(mobilenetv3_configs[mode], width_mult; max_width = max_width, nclasses = nclasses)
+  layers = mobilenetv3(width_mult, mobilenetv3_configs[mode]; max_width = max_width, nclasses = nclasses)
   pretrain && loadpretrain!(layers, string("MobileNetv3", mode))
   MobileNetv3(layers)
 end
