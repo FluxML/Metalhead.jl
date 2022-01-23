@@ -274,8 +274,9 @@ Set `pretrain = true` to load the model with pre-trained weights for ImageNet.
 
 # Arguments
 - `mode`: :small or :large for the size of the model (see paper).
-- `width_mult`: Controls the number of output feature maps in each block (with 1.0 being the 
-  default in the paper). This is usually a floating point value in between 0.1 and 1.4.
+- `width_mult`: Controls the number of output feature maps in each block
+                (with 1.0 being the default in the paper;
+                 this is usually a value between 0.1 and 1.4)
 - `pretrain`: whether to load the pre-trained weights for ImageNet
 - `nclasses`: the number of output classes
 
