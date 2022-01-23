@@ -98,7 +98,7 @@ struct MobileNetv2
 end
 
 """
-    MobileNetv2(width_mult::Number = 1; pretrain = false, nclasses = 1000)
+    MobileNetv2(width_mult = 1.0; pretrain = false, nclasses = 1000)
 
 Create a MobileNetv2 model with the specified configuration.
 ([reference](https://arxiv.org/abs/1801.04381)).
