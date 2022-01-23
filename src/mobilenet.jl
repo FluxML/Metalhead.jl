@@ -182,6 +182,9 @@ Create a MobileNetv3 model.
 ([reference](https://arxiv.org/abs/1905.02244)).
 
 # Arguments
+- `width_mult`: Controls the number of output feature maps in each block
+                (with 1.0 being the default in the paper;
+                 this is usually a value between 0.1 and 1.4)
 - `configs`: a "list of tuples" configuration for each layer that details:
   - `k::Int` - The size of the convolutional kernel
   - `c::Float` - The multiplier factor for deciding the number of feature maps in the hidden layer
@@ -189,8 +192,6 @@ Create a MobileNetv3 model.
   - `use_se::Bool` - Whether to use Squeeze and Excitation layer
   - `use_hs::Bool` - Whether to use Hard-Swish activation function
   - `s::Int` - The stride of the convolutional kernel
-- `width_mult`: Controls the number of feature maps in each layer, with 1.0 being the original
-  model as detailed in the paper.
 - `max_width`: The maximum number of feature maps in any layer of the network
 - `nclasses`: the number of output classes
 """
