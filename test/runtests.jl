@@ -12,11 +12,11 @@ end
 
 # CNN tests
 @testset verbose = true "ConvNets" begin
-  include("ConvNets.jl")
+  include("convnets.jl")
 end
 
 # ViT tests
 @testset verbose = true "ViT-based" begin
-  include("ViT.jl")
+  include("vit-like.jl")
 end
 
