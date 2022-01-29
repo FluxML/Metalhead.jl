@@ -23,6 +23,9 @@ include("convnets/densenet.jl")
 include("convnets/squeezenet.jl")
 include("convnets/mobilenet.jl")
 
+# CNN models
+include("convnets/ConvNets.jl")
+using .ConvNets
 export  AlexNet,
         VGG, VGG11, VGG13, VGG16, VGG19,
         ResNet, ResNet18, ResNet34, ResNet50, ResNet101, ResNet152,
