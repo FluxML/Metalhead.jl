@@ -36,47 +36,6 @@ function bottleneck(inplanes, outplanes, downsample = false)
 end
 
 """
-    skip_projection(inplanes, outplanes, downsample = false)
-
-Create a skip projection
-([reference](https://arxiv.org/abs/1512.03385v1)).
-
-# Arguments:
-- `inplanes`: the number of input feature maps
-- `outplanes`: the number of output feature maps
-- `downsample`: set to `true` to downsample the input
-"""
-function skip_projection(inplanes, outplanes, downsample = false)
-  stride = downsample ? 2 : 1 
-  Chain(conv_bn((1, 1), inplanes, outplanes, identity; stride = stride, bias = false)...)
-end
-
-# array -> PaddedView(0, array, outplanes) for zero padding arrays
-"""
-    skip_identity(inplanes, outplanes[, downsample])
-
-Create a identity projection
-([reference](https://arxiv.org/abs/1512.03385v1)).
-
-# Arguments:
-- `inplanes`: the number of input feature maps
-- `outplanes`: the number of output feature maps
-- `downsample`: this argument is ignored but it is needed for compatibility with [`resnet`](#).
-"""
-function skip_identity(inplanes, outplanes)
-  if outplanes > inplanes
-    return Chain(MaxPool((1, 1), stride = 2),
-                 y -> cat(y, zeros(eltype(y),
-                                   size(y, 1),
-                                   size(y, 2),
-                                   outplanes - inplanes, size(y, 4)); dims = 3))
-  else
-    return identity
-  end
-end
-skip_identity(inplanes, outplanes, downsample) = skip_identity(inplanes, outplanes)
-
-"""
     resnet(block, residuals::NTuple{2, Any}, connection = (x, y) -> @. relu(x) + relu(y);
            channel_config, block_config, nclasses = 1000)
 

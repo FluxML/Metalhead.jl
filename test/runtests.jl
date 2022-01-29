@@ -57,6 +57,20 @@ end
   end
 end
 
+@testset "ResNeXt" begin
+  @testset for depth in [50, 101, 152]
+    m = ResNeXt(depth)
+
+    @test size(m(rand(Float32, 224, 224, 3, 2))) == (1000, 2)
+    if ResNeXt in PRETRAINED_MODELS
+      @test (ResNeXt(depth, pretrain = true); true)
+    else
+      @test_throws ArgumentError ResNeXt(depth, pretrain = true)
+    end
+    @test_skip gradtest(m, rand(Float32, 224, 224, 3, 2))
+  end
+end
+
 @testset "GoogLeNet" begin
   m = GoogLeNet()
   @test size(m(rand(Float32, 224, 224, 3, 2))) == (1000, 2)
@@ -89,5 +103,34 @@ end
       @test_throws ArgumentError model(pretrain = true)
     end
     @test_skip gradtest(m, rand(Float32, 224, 224, 3, 2))
+  end
+end
+
+@testset "MobileNet" verbose = true begin
+  @testset "MobileNetv2" begin
+
+    m = MobileNetv2()
+
+    @test size(m(rand(Float32, 224, 224, 3, 2))) == (1000, 2)
+    if MobileNetv2 in PRETRAINED_MODELS
+      @test (MobileNetv2(pretrain = true); true)
+    else
+      @test_throws ArgumentError MobileNetv2(pretrain = true)
+    end
+    @test_skip gradtest(m, rand(Float32, 224, 224, 3, 2))
+  end
+
+  @testset "MobileNetv3" verbose = true begin
+    @testset for mode in [:small, :large]
+      m = MobileNetv3(mode)
+
+      @test size(m(rand(Float32, 224, 224, 3, 2))) == (1000, 2)
+      if MobileNetv3 in PRETRAINED_MODELS
+        @test (MobileNetv3(mode; pretrain = true); true)
+      else
+        @test_throws ArgumentError MobileNetv3(mode; pretrain = true)
+      end
+      @test_skip gradtest(m, rand(Float32, 224, 224, 3, 2))
+    end
   end
 end
