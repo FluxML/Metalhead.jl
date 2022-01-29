@@ -1,4 +1,4 @@
-using Metalhead.ConvNets, Test
+using Metalhead, Test
 using Flux
 
 # PRETRAINED_MODELS = [(VGG19, false), ResNet50, GoogLeNet, DenseNet121, SqueezeNet]
@@ -40,7 +40,7 @@ end
   end
 
   @testset "Shortcut C" begin
-    m = ConvNets.resnet(ConvNets.basicblock, :C;
+    m = Metalhead.resnet(Metalhead.basicblock, :C;
                          channel_config = [1, 1],
                          block_config = [2, 2, 2, 2])
 
