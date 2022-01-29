@@ -19,4 +19,3 @@ end
 @testset verbose = true "ViT-based" begin
   include("vit-like.jl")
 end
-
