@@ -36,6 +36,10 @@
 | DenseNet-161                                     | [`DenseNet161`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.DenseNet161.html) | N            |
 | DenseNet-169                                     | [`DenseNet169`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.DenseNet169.html) | N            |
 | DenseNet-201                                     | [`DenseNet201`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.DenseNet201.html) | N            |
+| [ResNeXt](https://arxiv.org/abs/1611.05431)  | [`ResNeXt`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.ResNeXt.html)    | N            |
+| [MobileNetv2](https://arxiv.org/abs/1801.04381) | [`MobileNetv2`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.MobileNetv2.html) | N            |
+| [MobileNetv3](https://arxiv.org/abs/1905.02244) | [`MobileNetv3`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.MobileNetv3.html) | N            |
+| [MLPMixer](https://arxiv.org/pdf/2105.01601)     | [`MLPMixer`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.MLPMixer.html)     | N            |
 
 ## Getting Started
 
