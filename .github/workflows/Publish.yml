@@ -25,7 +25,6 @@ jobs:
         run: |
           cd gh-pages
           julia --color=yes --project=../docs -e "using Pkg; Pkg.instantiate()"
-          julia --color=yes --project=../docs -e 'using Pkg; Pkg.develop(path="..")'
           julia --color=yes --project=../docs ../docs/make.jl
           git config user.name github-actions
           git config user.email github-actions@github.com

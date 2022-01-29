@@ -5,12 +5,12 @@
 using Flux, Metalhead
 ```
 
-Using a model from Metalhead is as simple as selecting a model from the table of [available models](#). For example, below we use the ResNet-50 model with pre-trained weights.
+Using a model from Metalhead is as simple as selecting a model from the table of [available models](#). For example, below we use the ResNet-18 model.
 {cell=quickstart}
 ```julia
 using Flux, Metalhead
 
-model = ResNet50(pretrain=true)
+model = ResNet(18)
 ```
 
 Now, we can use this model with Flux like any other model. Below, we train it on some randomly generated data.
@@ -18,8 +18,8 @@ Now, we can use this model with Flux like any other model. Below, we train it on
 ```julia
 using Flux: onehotbatch
 
-batchsize = 8
-data = [(rand(Float32, 224, 224, 3, batchsize), onehotbatch(rand(1:1000), 1:1000))
+batchsize = 4
+data = [(rand(Float32, 224, 224, 3, batchsize), onehotbatch(rand(1:1000, batchsize), 1:1000))
         for _ in 1:3]
 opt = ADAM()
 ps = Flux.params(model)
