@@ -32,7 +32,6 @@
 | [GoogLeNet](https://arxiv.org/abs/1409.4842)     | [`GoogLeNet`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.GoogLeNet.html)     | N            |
 | [Inception-v3](https://arxiv.org/abs/1512.00567) | [`Inception3`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.Inception3.html)   | N            |
 | [SqueezeNet](https://arxiv.org/abs/1602.07360)   | [`SqueezeNet`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.SqueezeNet.html)   | N            |
-<<<<<<< HEAD
 | [DenseNet](https://arxiv.org/abs/1608.06993)-121 | [`DenseNet`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.DenseNet.html)       | N            |
 | DenseNet-161                                     | [`DenseNet`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.DenseNet.html)       | N            |
 | DenseNet-169                                     | [`DenseNet`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.DenseNet.html)       | N            |
@@ -42,15 +41,6 @@
 | ResNeXt-152                                      | [`ResNeXt`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.ResNeXt.html)          | N            |
 | [MobileNetv2](https://arxiv.org/abs/1801.04381)  | [`MobileNetv2`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.MobileNetv2.html)  | N            |
 | [MobileNetv3](https://arxiv.org/abs/1905.02244)  | [`MobileNetv3`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.MobileNetv3.html)  | N            |
-=======
-| [DenseNet](https://arxiv.org/abs/1608.06993)-121 | [`DenseNet121`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.DenseNet121.html) | N            |
-| DenseNet-161                                     | [`DenseNet161`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.DenseNet161.html) | N            |
-| DenseNet-169                                     | [`DenseNet169`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.DenseNet169.html) | N            |
-| DenseNet-201                                     | [`DenseNet201`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.DenseNet201.html) | N            |
-| [ResNeXt](https://arxiv.org/abs/1611.05431)  | [`ResNeXt`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.ResNeXt.html)    | N            |
-| [MobileNetv2](https://arxiv.org/abs/1801.04381) | [`MobileNetv2`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.MobileNetv2.html) | N            |
-| [MobileNetv3](https://arxiv.org/abs/1905.02244) | [`MobileNetv3`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.MobileNetv3.html) | N            |
->>>>>>> 0ad2db9 (Updated directory structure)
 | [MLPMixer](https://arxiv.org/pdf/2105.01601)     | [`MLPMixer`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.MLPMixer.html)     | N            |
 
 ## Getting Started

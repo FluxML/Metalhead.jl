@@ -15,7 +15,7 @@ end
   include("convnets.jl")
 end
 
-# ViT tests
-@testset verbose = true "ViT-based" begin
-  include("vit-like.jl")
+# Other tests
+@testset verbose = true "Other" begin
+  include("other.jl")
 end

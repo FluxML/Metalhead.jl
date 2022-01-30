@@ -37,8 +37,8 @@ for T in (:AlexNet, :VGG, :ResNet, :GoogLeNet, :Inception3, :SqueezeNet, :DenseN
 @eval Base.show(io::IO, ::MIME"text/plain", model::$T) = _maybe_big_show(io, model)
 end
 
-# ViT-like models
-include("vit-like/mlpmixer.jl")
+# Other models
+include("other/mlpmixer.jl")
 
 export  MLPMixer
 
