@@ -29,8 +29,6 @@ struct MLPMixer
   planes
   patch_size
   num_patches
-  token_mix
-  channel_mix
   layers
   nclasses
 end
@@ -69,8 +67,6 @@ function MLPMixer(; image_size = 256, channels = 3, patch_size = 16, planes = 51
            planes,
            patch_size,
            num_patches,
-           token_mix,
-           channel_mix,
            layers,
            nclasses)
 end
