@@ -5,21 +5,49 @@ _residualprenorm(planes, fn) = SkipConnection(Chain(fn, LayerNorm(planes)), +)
 _conv1d(inplanes, outplanes, activation) = Conv((1, ), inplanes => outplanes, activation)
 
 """
-    feedforward(planes, expansion_factor = 4, dropout = 0., dense = Dense)
+    mlpmixer(imsize::NTuple{2} = (256, 256); inchannels = 3, patch_size = 16, planes = 512, 
+             depth = 12, expansion_factor = 4, dropout = 0., nclasses = 1000, token_mix = 
+             _conv1d, channel_mix = Dense))
 
-Feedforward block in the MLPMixer architecture.
+Creates a model with the MLPMixer architecture.
 ([reference](https://arxiv.org/pdf/2105.01601)).
 
 # Arguments
-  `planes`: Number of dimensions in the input and output.
-  `expansion_factor`: Determines the number of dimensions in the intermediate layer.
-  `activation`: Activation function to use.
-  `dropout`: Dropout rate.
-  `dense`: Type of dense layer to use in the feedforward block.
+- imsize: the size of the input image
+- inchannels: the number of input channels
+- patch_size: the size of the patches
+- planes: the number of channels fed into the main model
+- depth: the number of blocks in the main model
+- expansion_factor: the number of channels in each block
+- dropout: the dropout rate
+- nclasses: the number of classes in the output
+- token_mix: the function to use for the token mixing layer
+- channel_mix: the function to use for the channel mixing layer
 """
-function feedforward(planes, expansion_factor = 4, dropout = 0., dense = Dense)
-  Chain(dense(planes, planes * expansion_factor, gelu), Dropout(dropout),
-        dense(planes * expansion_factor, planes, gelu), Dropout(dropout))
+function mlpmixer(imsize::NTuple{2} = (256, 256); inchannels = 3, patch_size = 16, planes = 512, 
+                  depth = 12, expansion_factor = 4, dropout = 0., nclasses = 1000, token_mix = 
+                  _conv1d, channel_mix = Dense)
+                    
+  im_height, im_width = imsize
+
+  @assert (im_height % patch_size) == 0 && (im_width % patch_size == 0)
+  "image size must be divisible by patch size"
+  
+  num_patches = (im_height ÷ patch_size) * (im_width ÷ patch_size)
+
+  layers = []
+  push!(layers, Patching(patch_size))
+  push!(layers, Dense((patch_size ^ 2) * inchannels, planes))
+  append!(layers, [Chain(_residualprenorm(planes, mlpblock(num_patches, 
+                                          expansion_factor * num_patches, 
+                                          dropout, token_mix)),
+                         _residualprenorm(planes, mlpblock(planes, 
+                                          expansion_factor * planes, dropout, 
+                                          channel_mix)),) for _ in 1:depth])
+
+  classification_head = Chain(_seconddimmean, Dense(planes, nclasses))
+
+  return Chain(layers..., classification_head)
 end
 
 struct MLPMixer
@@ -27,41 +55,30 @@ struct MLPMixer
 end
 
 """
-    MLPMixer(; image_size = 256, channels = 3, patch_size = 16, planes = 512, 
-               depth = 12, expansion_factor = 4, dropout = 0., nclasses = 1000)
+    MLPMixer(imsize::NTuple{2} = (256, 256); inchannels = 3, patch_size = 16, planes = 512, 
+             depth = 12, expansion_factor = 4, dropout = 0., pretrain = false, nclasses = 1000)
 
 Creates a model with the MLPMixer architecture.
 ([reference](https://arxiv.org/pdf/2105.01601)).
 
 # Arguments
-- `image_size`: Size of the input image.
-- `channels`: Number of channels in the input image.
-- `patch_size`: Size of each patch fed into the network.
-- `planes`: Number of dimensions in every layer after the patch expansion layer.
-- `depth`: Number of layers in the network.
-- `expansion_factor`: Determines the number of dimensions in the intermediate layers.
-- `dropout`: Dropout rate in the feedforward blocks.
-- `nclasses`: Number of classes in the output.
+- imsize: the size of the input image
+- inchannels: the number of input channels
+- patch_size: the size of the patches
+- planes: the number of channels fed into the main model
+- depth: the number of blocks in the main model
+- expansion_factor: the number of channels in each block
+- dropout: the dropout rate
+- pretrain: whether to load the pre-trained weights for ImageNet
+- nclasses: the number of classes in the output
 """
-function MLPMixer(; image_size = 256, channels = 3, patch_size = 16, planes = 512, 
-                    depth = 12, expansion_factor = 4, dropout = 0., nclasses = 1000)
-  @assert (image_size % patch_size) == 0 "image size must be divisible by patch size"
-  
-  num_patches = (image_size ÷ patch_size) ^ 2
-  token_mix = _conv1d
-  channel_mix = Dense
-
-  layers = []
-  push!(layers, Patching(patch_size))
-  push!(layers, Dense((patch_size ^ 2) * channels, planes))
-  append!(layers, [Chain(_residualprenorm(planes, feedforward(num_patches, expansion_factor, 
-                                          dropout, token_mix)),
-                         _residualprenorm(planes, feedforward(planes, expansion_factor, dropout, 
-                                          channel_mix)),) for _ in 1:depth])
-
-  classification_head = Chain(_seconddimmean, Dense(planes, nclasses))
-
-  return MLPMixer(Chain(layers..., classification_head))
+function MLPMixer(imsize::NTuple{2} = (256, 256); inchannels = 3, patch_size = 16, planes = 512, 
+                  depth = 12, expansion_factor = 4, dropout = 0., pretrain = false, nclasses = 1000)
+                    
+  layers = mlpmixer(imsize; inchannels, patch_size, planes, depth, expansion_factor, dropout, 
+                    nclasses)
+  pretrain && loadpretrain!(layers, string("MLPMixer"))
+  MLPMixer(layers)
 end
 
 (m::MLPMixer)(x) = m.layers(x)
