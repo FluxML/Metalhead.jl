@@ -5,12 +5,12 @@ using Flux: outputsize, Zygote
 using Functors
 using BSON
 using Artifacts, LazyArtifacts
-using TensorCast
 using Statistics
 
 import Functors
 
 include("utilities.jl")
+include("layers.jl")
 
 # CNN models
 include("convnets/alexnet.jl")
