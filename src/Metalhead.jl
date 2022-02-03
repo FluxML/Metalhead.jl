@@ -23,28 +23,22 @@ include("convnets/densenet.jl")
 include("convnets/squeezenet.jl")
 include("convnets/mobilenet.jl")
 
+# Other models
+include("other/mlpmixer.jl")
+
 export  AlexNet,
         VGG, VGG11, VGG13, VGG16, VGG19,
         ResNet, ResNet18, ResNet34, ResNet50, ResNet101, ResNet152,
         GoogLeNet, Inception3, SqueezeNet,
         DenseNet, DenseNet121, DenseNet161, DenseNet169, DenseNet201,
         ResNeXt,
-        MobileNetv2, MobileNetv3
+        MobileNetv2, MobileNetv3,
+        MLPMixer
 
 # use Flux._big_show to pretty print large models
 for T in (:AlexNet, :VGG, :ResNet, :GoogLeNet, :Inception3, :SqueezeNet, :DenseNet, :ResNeXt, 
-    :MobileNetv2, :MobileNetv3)
+    :MobileNetv2, :MobileNetv3, :MLPMixer)
 @eval Base.show(io::IO, ::MIME"text/plain", model::$T) = _maybe_big_show(io, model)
-end
-
-# Other models
-include("other/mlpmixer.jl")
-
-export  MLPMixer
-
-# use Flux._big_show to pretty print large models
-for T in (:MLPMixer,)
-    @eval Base.show(io::IO, ::MIME"text/plain", model::$T) = _maybe_big_show(io, model)
 end
 
 end # module
