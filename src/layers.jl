@@ -123,7 +123,11 @@ function mlpblock(planes, hidden_planes, dropout = 0., dense = Dense; activation
         dense(hidden_planes, planes, activation), Dropout(dropout))
 end
 
-# Patching layer used by many vision transformer-like models
+"""
+    Patching{T <: Integer}
+Patching layer used by many vision transformer-like models to split the input image into patches.
+Can be instantiated with a tuple `(patch_height, patch_width)` or a single value `patch_size`.
+"""
 struct Patching{T <: Integer}
   patch_height::T
   patch_width::T
@@ -141,32 +145,33 @@ end
 
 @functor Patching
 
-# Positional embedding layer used by many vision transformer-like models
-struct PosEmbedding
-  embedding_vector
+"""
+    PosEmbedding{T}
+
+Positional embedding layer used by many vision transformer-like models. Instantiated with an 
+embedding vector which is a learnable parameter.
+"""
+struct PosEmbedding{T}
+  embedding_vector::T
 end
 
 (p::PosEmbedding)(x) = x .+ p.embedding_vector[:, 1:size(x)[2], :]
 
 @functor PosEmbedding
 
-# Class tokens used by many vision transformer-like models
-struct CLSTokens
-  cls_token
+"""
+    CLSTokens{T}
+
+Appends class tokens to the input that are used for classfication by many vision 
+transformer-like models. Instantiated with a class token vector which is a learnable parameter.
+"""
+struct CLSTokens{T}
+  cls_token::T
 end
 
 function(m::CLSTokens)(x)
   cls_tokens = repeat(m.cls_token, 1, 1, size(x)[3])
-  x = cat(cls_tokens, x; dims = 2)
+  return cat(cls_tokens, x; dims = 2)
 end
 
 @functor CLSTokens
-
-# Utility function to decide if mean pooling happens inside the model
-struct CLSPooling
-  mode
-end
-
-(m::CLSPooling)(x) = (m.mode == "cls") ? x[:, 1, :] : _seconddimmean(x)
-
-@functor CLSPooling

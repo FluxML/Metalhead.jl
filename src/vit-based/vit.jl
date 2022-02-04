@@ -46,10 +46,6 @@ end
 
 @functor MHAttention
 
-struct Transformer
-  layers
-end
-
 """
     Transformer(planes, depth, heads, headplanes, mlppanes, dropout = 0.)
 
@@ -69,12 +65,8 @@ function Transformer(planes, depth, heads, headplanes, mlpplanes, dropout = 0.)
                   SkipConnection(prenorm(planes, mlpblock(planes, mlpplanes, dropout)), +)) 
             for _ in 1:depth]
 
-  Transformer(Chain(layers...))
+  Chain(layers...)
 end
-
-(m::Transformer)(x) = m.layers(x)
-
-@functor Transformer
 
 """
     vit(imsize::NTuple{2} = (256, 256); inchannels = 3, patch_size = (16, 16), planes = 1024, 
@@ -120,7 +112,7 @@ function vit(imsize::NTuple{2} = (256, 256); inchannels = 3, patch_size = (16, 1
                PosEmbedding(rand(Float32, (planes, num_patches + 1, 1))),
                Dropout(emb_dropout),
                Transformer(planes, depth, heads, headplanes, mlppanes, dropout),
-               CLSPooling(pool),
+               (pool == "cls") ? x -> x[:, 1, :] : x -> _seconddimmean(x),
                Chain(LayerNorm(planes), Dense(planes, nclasses)))
 end
 
@@ -164,6 +156,6 @@ end
 (m::ViT)(x) = m.layers(x)
 
 backbone(m::ViT) = m.layers[1:end-1]
-classifier(m::MLPMixer) = m.layers[end]
+classifier(m::ViT) = m.layers[end]
 
 @functor ViT
