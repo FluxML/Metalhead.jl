@@ -84,4 +84,4 @@ end
 (m::MLPMixer)(x) = m.layers(x)
 
 backbone(m::MLPMixer) = m.layers[1]
-classifier(m::MLPMixer) = m.layers[2:end]
+classifier(m::MLPMixer) = m.layers[2]

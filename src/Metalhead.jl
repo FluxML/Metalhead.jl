@@ -38,7 +38,7 @@ export  AlexNet,
 # use Flux._big_show to pretty print large models
 for T in (:AlexNet, :VGG, :ResNet, :GoogLeNet, :Inception3, :SqueezeNet, :DenseNet, :ResNeXt, 
           :MobileNetv2, :MobileNetv3, :MLPMixer)
-@eval Base.show(io::IO, ::MIME"text/plain", model::$T) = _maybe_big_show(io, model)
+  @eval Base.show(io::IO, ::MIME"text/plain", model::$T) = _maybe_big_show(io, model)
 end
 
 end # module
