@@ -13,16 +13,16 @@ Creates a model with the MLPMixer architecture.
 ([reference](https://arxiv.org/pdf/2105.01601)).
 
 # Arguments
-- imsize: the size of the input image
-- inchannels: the number of input channels
-- patch_size: the size of the patches
-- planes: the number of channels fed into the main model
-- depth: the number of blocks in the main model
-- expansion_factor: the number of channels in each block
-- dropout: the dropout rate
-- nclasses: the number of classes in the output
-- token_mix: the function to use for the token mixing layer
-- channel_mix: the function to use for the channel mixing layer
+- `imsize`: the size of the input image
+- `inchannels`: the number of input channels
+- `patch_size`: the size of the patches
+- `planes`: the number of channels fed into the main model
+- `depth`: the number of blocks in the main model
+- `expansion_factor`: the number of channels in each block
+- `dropout`: the dropout rate
+- `nclasses`: the number of classes in the output
+- `token_mix`: the function to use for the token mixing layer
+- `channel_mix`: the function to use for the channel mixing layer
 """
 function mlpmixer(imsize::NTuple{2} = (256, 256); inchannels = 3, patch_size = 16, planes = 512, 
                   depth = 12, expansion_factor = 4, dropout = 0., nclasses = 1000, token_mix = 
@@ -62,14 +62,16 @@ Creates a model with the MLPMixer architecture.
 ([reference](https://arxiv.org/pdf/2105.01601)).
 
 # Arguments
-- imsize: the size of the input image
-- inchannels: the number of input channels
-- patch_size: the size of the patches
-- planes: the number of channels fed into the main model
-- depth: the number of blocks in the main model
-- expansion_factor: the number of channels in each block
-- dropout: the dropout rate
-- nclasses: the number of classes in the output
+- `imsize`: the size of the input image
+- `inchannels`: the number of input channels
+- `patch_size`: the size of the patches
+- `planes`: the number of channels fed into the main model
+- `depth`: the number of blocks in the main model
+- `expansion_factor`: the number of channels in each block
+- `dropout`: the dropout rate
+- `nclasses`: the number of classes in the output
+
+See also [`Metalhead.mlpmixer`](#).
 """
 function MLPMixer(imsize::NTuple{2} = (256, 256); inchannels = 3, patch_size = 16, planes = 512, 
                   depth = 12, expansion_factor = 4, dropout = 0., nclasses = 1000)
