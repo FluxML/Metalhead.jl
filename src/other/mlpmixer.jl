@@ -47,7 +47,7 @@ function mlpmixer(imsize::NTuple{2} = (256, 256); inchannels = 3, patch_size = 1
 
   classification_head = Chain(_seconddimmean, Dense(planes, nclasses))
 
-  return Chain(layers..., classification_head)
+  return Chain(Chain(layers...), classification_head)
 end
 
 struct MLPMixer
@@ -56,7 +56,7 @@ end
 
 """
     MLPMixer(imsize::NTuple{2} = (256, 256); inchannels = 3, patch_size = 16, planes = 512, 
-             depth = 12, expansion_factor = 4, dropout = 0., pretrain = false, nclasses = 1000)
+             depth = 12, expansion_factor = 4, dropout = 0., nclasses = 1000)
 
 Creates a model with the MLPMixer architecture.
 ([reference](https://arxiv.org/pdf/2105.01601)).
@@ -69,18 +69,19 @@ Creates a model with the MLPMixer architecture.
 - depth: the number of blocks in the main model
 - expansion_factor: the number of channels in each block
 - dropout: the dropout rate
-- pretrain: whether to load the pre-trained weights for ImageNet
 - nclasses: the number of classes in the output
 """
 function MLPMixer(imsize::NTuple{2} = (256, 256); inchannels = 3, patch_size = 16, planes = 512, 
-                  depth = 12, expansion_factor = 4, dropout = 0., pretrain = false, nclasses = 1000)
+                  depth = 12, expansion_factor = 4, dropout = 0., nclasses = 1000)
                     
   layers = mlpmixer(imsize; inchannels, patch_size, planes, depth, expansion_factor, dropout, 
                     nclasses)
-  pretrain && loadpretrain!(layers, string("MLPMixer"))
   MLPMixer(layers)
 end
 
+@functor MLPMixer
+
 (m::MLPMixer)(x) = m.layers(x)
 
-@functor MLPMixer
+backbone(m::MLPMixer) = m.layers[1]
+classifier(m::MLPMixer) = m.layers[2:end]
