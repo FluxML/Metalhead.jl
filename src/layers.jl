@@ -107,6 +107,21 @@ Useful as the `connection` argument for [`resnet`](#).
 See also [`addrelu`](#).
 """
 reluadd(x, y) = @. relu(x) + relu(y)
+    mlpblock(planes, expansion_factor = 4, dropout = 0., dense = Dense)
+
+Feedforward block used in many vision transformer-like models.
+
+# Arguments
+  `planes`: Number of dimensions in the input and output.
+  `hidden_planes`: Number of dimensions in the intermediate layer.
+  `dropout`: Dropout rate.
+  `dense`: Type of dense layer to use in the feedforward block.
+  `activation`: Activation function to use.
+"""
+function mlpblock(planes, hidden_planes, dropout = 0., dense = Dense; activation = gelu)
+  Chain(dense(planes, hidden_planes, activation), Dropout(dropout),
+        dense(hidden_planes, planes, activation), Dropout(dropout))
+end
 
 # Patching layer used by many vision transformer-like models
 struct Patching{T <: Integer}
@@ -126,19 +141,32 @@ end
 
 @functor Patching
 
-"""
-    mlpblock(planes, expansion_factor = 4, dropout = 0., dense = Dense)
-
-Feedforward block used in many vision transformer-like models.
-
-# Arguments
-  `planes`: Number of dimensions in the input and output.
-  `hidden_planes`: Number of dimensions in the intermediate layer.
-  `dropout`: Dropout rate.
-  `dense`: Type of dense layer to use in the feedforward block.
-  `activation`: Activation function to use.
-"""
-function mlpblock(planes, hidden_planes, dropout = 0., dense = Dense; activation = gelu)
-  Chain(dense(planes, hidden_planes, activation), Dropout(dropout),
-        dense(hidden_planes, planes, activation), Dropout(dropout))
+# Positional embedding layer used by many vision transformer-like models
+struct PosEmbedding
+  embedding_vector
 end
+
+(p::PosEmbedding)(x) = x .+ p.embedding_vector[:, 1:size(x)[2], :]
+
+@functor PosEmbedding
+
+# Class tokens used by many vision transformer-like models
+struct CLSTokens
+  cls_token
+end
+
+function(m::CLSTokens)(x)
+  cls_tokens = repeat(m.cls_token, 1, 1, size(x)[3])
+  x = cat(cls_tokens, x; dims = 2)
+end
+
+@functor CLSTokens
+
+# Utility function to decide if mean pooling happens inside the model
+struct CLSPooling
+  mode
+end
+
+(m::CLSPooling)(x) = (m.mode == "cls") ? x[:, 1, :] : _seconddimmean(x)
+
+@functor CLSPooling
