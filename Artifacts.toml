@@ -15,12 +15,12 @@ lazy = true
     url = "https://github.com/FluxML/MetalheadWeights/releases/download/v0.1.1/googlenet-0.1.1.tar.gz"
 
 [resnet50]
-git-tree-sha1 = "ea3effeaf1ea3969ed5c609f5db5cd0e456ce799"
+git-tree-sha1 = "661497926a2a5aa709e79fc44cc9cb3d930e1c91"
 lazy = true
 
     [[resnet50.download]]
-    sha256 = "17760ae50e3d59ed7d74c3dfcdb9f0eeaccec1e2ccd095663955c9fed4f318a8"
-    url = "https://github.com/FluxML/MetalheadWeights/releases/download/v0.1.1/resnet50-0.1.1.tar.gz"
+    sha256 = "58b6f1551a3e76da0aea137d40ab2c41d128fe9705b02f8e3167e647644b57a7"
+    url = "https://github.com/DhairyaLGandhi/dftsurr/releases/download/untagged-7fa5b55e76dcbcc95518/resnet50-0.6.1.tar.gz"
 
 [squeezenet]
 git-tree-sha1 = "e0e53eb402efe4693417db8cbcc31519e74c8c74"
