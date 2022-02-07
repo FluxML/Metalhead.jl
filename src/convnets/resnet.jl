@@ -36,7 +36,7 @@ function bottleneck(inplanes, outplanes, downsample = false)
 end
 
 """
-    resnet(block, residuals::NTuple{2, Any}, connection = (x, y) -> @. relu(x) + relu(y);
+    resnet(block, residuals::NTuple{2, Any}, connection = (x, y) -> @. relu(x + y);
            channel_config, block_config, nclasses = 1000)
 
 Create a ResNet model
@@ -53,12 +53,12 @@ Create a ResNet model
 - `block_config`: a list of the number of residual blocks at each stage
 - `nclasses`: the number of output classes
 """
-function resnet(block, residuals::NTuple{2, Any}, connection = (x, y) -> @. relu(x) + relu(y);
+function resnet(block, residuals::NTuple{2, Any}, connection = (x, y) -> @. relu(x + y);
                 channel_config, block_config, nclasses = 1000)
   inplanes = 64
   baseplanes = 64
   layers = []
-  append!(layers, conv_bn((7, 7), 3, inplanes; stride = 2, pad = (3, 3)))
+  append!(layers, conv_bn((7, 7), 3, inplanes; stride = 2, pad = 3, bias = false))
   push!(layers, MaxPool((3, 3), stride = (2, 2), pad = (1, 1)))
   for (i, nrepeats) in enumerate(block_config)
     # output planes within a block
@@ -83,7 +83,7 @@ function resnet(block, residuals::NTuple{2, Any}, connection = (x, y) -> @. relu
 end
 
 """
-    resnet(block, shortcut_config::Symbol, connection = (x, y) -> @. relu(x) + relu(y);
+    resnet(block, shortcut_config::Symbol, connection = (x, y) -> @. relu(x + y);
            channel_config, block_config, nclasses = 1000)
 
 Create a ResNet model
@@ -123,7 +123,8 @@ const resnet_config =
        152 => (([1, 1, 4], [3, 8, 36, 3], :B), bottleneck))
 
 """
-    ResNet(channel_config, block_config, shortcut_config; block, nclasses = 1000)
+    ResNet(channel_config, block_config, shortcut_config;
+           block, connection = (x, y) -> @. relu(x + y), nclasses = 1000)
 
 Create a `ResNet` model
 ([reference](https://arxiv.org/abs/1512.03385v1)).
@@ -135,17 +136,20 @@ See also [`resnet`](#).
 - `shortcut_config`: the type of shortcut style (either `:A`, `:B`, or `:C`)
 - `block`: a function with input `(inplanes, outplanes, downsample=false)` that returns
            a new residual block (see [`Metalhead.basicblock`](#) and [`Metalhead.bottleneck`](#))
+- `connection`: the binary function applied to the output of residual and skip paths in a block
 - `nclasses`: the number of output classes
 """
 struct ResNet
   layers
 end
 
-function ResNet(channel_config, block_config, shortcut_config; block, nclasses = 1000)
+function ResNet(channel_config, block_config, shortcut_config;
+                block, connection = (x, y) -> @. relu(x + y), nclasses = 1000)
   layers = resnet(block,
                   shortcut_config;
                   channel_config = channel_config,
                   block_config = block_config,
+                  connection = connection,
                   nclasses = nclasses)
 
   ResNet(layers)
