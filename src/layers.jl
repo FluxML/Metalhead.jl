@@ -90,6 +90,28 @@ function skip_identity(inplanes, outplanes)
 end
 skip_identity(inplanes, outplanes, downsample) = skip_identity(inplanes, outplanes)
 
+"""
+    add_activate(f, x, y)
+    add_activate(f)
+
+Convenience function for `(x, y) -> @. f(x + y)`.
+Useful as the `connection` argument for [`resnet`](#).
+See also [`activate_add`](#).
+"""
+add_activate(f, x, y) = @. f(x + y)
+add_activate(f) = Base.Fix1(add_activate, f)
+
+"""
+    activate_add(f, x, y)
+    activate_add(f)
+
+Convenience function for `(x, y) -> @. f(x) + f(y)`.
+Useful as the `connection` argument for [`resnet`](#).
+See also [`add_activate`](#).
+"""
+activate_add(f, x, y) = @. f(x) + f(y)
+activate_add(f) = Base.Fix1(activate_add, f)
+
 # Patching layer used by many vision transformer-like models
 struct Patching{T <: Integer}
   patch_height::T

@@ -36,7 +36,7 @@ function bottleneck(inplanes, outplanes, downsample = false)
 end
 
 """
-    resnet(block, residuals::NTuple{2, Any}, connection = (x, y) -> @. relu(x + y);
+    resnet(block, residuals::NTuple{2, Any}, connection = add_activate(relu);
            channel_config, block_config, nclasses = 1000)
 
 Create a ResNet model
@@ -53,7 +53,7 @@ Create a ResNet model
 - `block_config`: a list of the number of residual blocks at each stage
 - `nclasses`: the number of output classes
 """
-function resnet(block, residuals::NTuple{2, Any}, connection = (x, y) -> @. relu(x + y);
+function resnet(block, residuals::NTuple{2, Any}, connection = add_activate(relu);
                 channel_config, block_config, nclasses = 1000)
   inplanes = 64
   baseplanes = 64
@@ -124,7 +124,7 @@ const resnet_config =
 
 """
     ResNet(channel_config, block_config, shortcut_config;
-           block, connection = (x, y) -> @. relu(x + y), nclasses = 1000)
+           block, connection = add_activate(relu), nclasses = 1000)
 
 Create a `ResNet` model
 ([reference](https://arxiv.org/abs/1512.03385v1)).
@@ -144,12 +144,12 @@ struct ResNet
 end
 
 function ResNet(channel_config, block_config, shortcut_config;
-                block, connection = (x, y) -> @. relu(x + y), nclasses = 1000)
+                block, connection = add_activate(relu), nclasses = 1000)
   layers = resnet(block,
-                  shortcut_config;
+                  shortcut_config,
+                  connection;
                   channel_config = channel_config,
                   block_config = block_config,
-                  connection = connection,
                   nclasses = nclasses)
 
   ResNet(layers)
@@ -164,7 +164,7 @@ classifier(m::ResNet) = m.layers[2]
 
 """
     ResNet(depth = 50; pretrain = false, nclasses = 1000)
-   
+
 Create a ResNet model with a specified depth
 ([reference](https://arxiv.org/abs/1512.03385v1)).
 See also [`Metalhead.resnet`](#).
