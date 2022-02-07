@@ -36,7 +36,7 @@ function bottleneck(inplanes, outplanes, downsample = false)
 end
 
 """
-    resnet(block, residuals::NTuple{2, Any}, connection = add_activate(relu);
+    resnet(block, residuals::NTuple{2, Any}, connection = addrelu;
            channel_config, block_config, nclasses = 1000)
 
 Create a ResNet model
@@ -53,7 +53,7 @@ Create a ResNet model
 - `block_config`: a list of the number of residual blocks at each stage
 - `nclasses`: the number of output classes
 """
-function resnet(block, residuals::NTuple{2, Any}, connection = add_activate(relu);
+function resnet(block, residuals::NTuple{2, Any}, connection = addrelu;
                 channel_config, block_config, nclasses = 1000)
   inplanes = 64
   baseplanes = 64
@@ -83,7 +83,7 @@ function resnet(block, residuals::NTuple{2, Any}, connection = add_activate(relu
 end
 
 """
-    resnet(block, shortcut_config::Symbol, connection = (x, y) -> @. relu(x + y);
+    resnet(block, shortcut_config::Symbol, connection = addrelu;
            channel_config, block_config, nclasses = 1000)
 
 Create a ResNet model
@@ -124,7 +124,7 @@ const resnet_config =
 
 """
     ResNet(channel_config, block_config, shortcut_config;
-           block, connection = add_activate(relu), nclasses = 1000)
+           block, connection = addrelu, nclasses = 1000)
 
 Create a `ResNet` model
 ([reference](https://arxiv.org/abs/1512.03385v1)).
@@ -144,7 +144,7 @@ struct ResNet
 end
 
 function ResNet(channel_config, block_config, shortcut_config;
-                block, connection = add_activate(relu), nclasses = 1000)
+                block, connection = addrelu, nclasses = 1000)
   layers = resnet(block,
                   shortcut_config,
                   connection;
