@@ -91,7 +91,7 @@ end
 skip_identity(inplanes, outplanes, downsample) = skip_identity(inplanes, outplanes)
 
 """
-    mlpblock(planes, expansion_factor = 4; dense = Dense, dropout = 0., activation = gelu)
+    mlpblock(planes, hidden_planes, dropout = 0.; dense = Dense, activation = gelu)
 
 Feedforward block used in many vision transformer-like models.
 
@@ -192,6 +192,7 @@ embedding vector which is a learnable parameter.
 struct ViPosEmbedding{T}
   vectors::T
 end
+
 ViPosEmbedding(embedsize, npatches; init = (dims::NTuple{2, Int}) -> rand(Float32, dims)) = 
   ViPosEmbedding(init((embedsize, npatches)))
 
@@ -206,6 +207,7 @@ transformer-like models. Instantiated with a class token vector which is a learn
 struct ClassTokens{T}
   token::T
 end
+
 ClassTokens(dim::Integer; init = Flux.zeros) = ClassTokens(init(dim, 1, 1))
 
 function (m::ClassTokens)(x)

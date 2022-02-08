@@ -9,7 +9,7 @@ Transformer as used in the base ViT architecture.
 
 # Arguments
 - `planes`: number of input channels
-- `depth`: number of layers
+- `depth`: number of attention blocks
 - `heads`: number of attention heads
 - `headplanes`: number of hidden channels per head
 - `mlppanes`: number of hidden channels in the MLP block
@@ -78,7 +78,7 @@ end
 """
     ViT(imsize::NTuple{2} = (256, 256); inchannels = 3, patch_size = (16, 16), planes = 1024, 
         depth = 6, heads = 16, mlppanes = 2048, headplanes = 64, dropout = 0.1, emb_dropout = 0.1, 
-        pool = "cls", nclasses = 1000)
+        pool = :class, nclasses = 1000)
 
 Creates a Vision Transformer (ViT) model.
 ([reference](https://arxiv.org/abs/2010.11929)).
