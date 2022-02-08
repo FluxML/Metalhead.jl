@@ -47,7 +47,7 @@ Create a ResNet model
            a new residual block (see [`Metalhead.basicblock`](#) and [`Metalhead.bottleneck`](#))
 - `residuals`: a 2-tuple of functions with input `(inplanes, outplanes, downsample=false)`,
                each of which will return a function that will be used as a new "skip" path to match a residual block.
-              [`Metalhead.skip_identity`](#) and [`Metalhead.skip_projection`](#) can be used here. 
+              [`Metalhead.skip_identity`](#) and [`Metalhead.skip_projection`](#) can be used here.
 - `connection`: the binary function applied to the output of residual and skip paths in a block
 - `channel_config`: the growth rate of the output feature maps within a residual block
 - `block_config`: a list of the number of residual blocks at each stage
