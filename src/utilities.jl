@@ -3,7 +3,7 @@ chunk(A, k::Int; dim::Int = 1) =
     (selectdim(A, dim, i) for i in Iterators.partition(axes(A,dim), cld(size(A,dim), k)));
 
 # Utility function for classifier head of vision transformer-like models
-_seconddimmean(x) = mean(x, dims = 2)[:, 1, :]
+_seconddimmean(x) = dropdims(mean(x, dims = 2); dims = 2)
 
 """
     addrelu(x, y)

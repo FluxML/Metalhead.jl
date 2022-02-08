@@ -91,7 +91,7 @@ end
 skip_identity(inplanes, outplanes, downsample) = skip_identity(inplanes, outplanes)
 
 """
-    mlpblock(planes, expansion_factor = 4, dropout = 0., dense = Dense)
+    mlpblock(planes, expansion_factor = 4; dense = Dense, dropout = 0., activation = gelu)
 
 Feedforward block used in many vision transformer-like models.
 
@@ -102,14 +102,12 @@ Feedforward block used in many vision transformer-like models.
 - `dense`: Type of dense layer to use in the feedforward block.
 - `activation`: Activation function to use.
 """
-function mlpblock(planes, hidden_planes, dropout = 0., dense = Dense; activation = gelu)
+function mlpblock(planes, hidden_planes, dropout = 0.; dense = Dense, activation = gelu)
   Chain(dense(planes, hidden_planes, activation), Dropout(dropout),
         dense(hidden_planes, planes, activation), Dropout(dropout))
 end
 
 """
-    Attention{T}
-
 Self attention layer used by transformer models. Can be instantiated with a layer that produces
 the key, value and query vectors from the input.
 """
@@ -117,11 +115,11 @@ struct Attention{T}
   qkv::T
 end
 
-Attention(in, out) = Attention(Dense(in, out * 3; bias = false))
+Attention(dims::Pair{Int, Int}) = Attention(Dense(dims.first, dims.second * 3; bias = false))
 
 @functor Attention
 
-function (attn::Attention)(x::AbstractArray{T}) where T
+function (attn::Attention)(x::AbstractArray{T, 3}) where T
   q, k, v = chunk(attn.qkv(x), 3; dim = 1)
   scale = convert(T, sqrt(size(q, 1)))
   score = softmax(batched_mul(batched_transpose(q), k) / scale)
@@ -130,8 +128,7 @@ function (attn::Attention)(x::AbstractArray{T}) where T
   return attention
 end
 
-struct MHAttention{Q <: Integer, S, T}
-  nheads::Q
+struct MHAttention{S, T}
   heads::S
   projection::T
 end
@@ -147,37 +144,37 @@ Multi-head self-attention layer used in many vision transformer-like models.
 - `nheads`: Number of attention heads.
 - `dropout`: Dropout rate for the projection layer.
 """
-function MHAttention(in, hidden, nheads, dropout = 0.)
-  project_out = !(nheads == 1 && hidden == in)
+function MHAttention(in, hidden, nheads; dropout = 0.)
+  if (nheads == 1 && hidden == in)
+    return Attention(in => in)
+  end
   inheads, innerheads = chunk(1:in, nheads), chunk(1:hidden, nheads)
-  heads = Parallel(vcat, [Attention(length(i), length(o)) for (i, o) in zip(inheads, innerheads)]...)
-  projection = project_out ? Chain(Dense(hidden, in), Dropout(dropout)) : identity
+  heads = Parallel(vcat, [Attention(length(i) => length(o)) for (i, o) in zip(inheads, innerheads)]...)
+  projection = Chain(Dense(hidden, in), Dropout(dropout))
 
-  MHAttention(nheads, heads, projection)
+  MHAttention(heads, projection)
 end
 
 @functor MHAttention
 
 function (mha::MHAttention)(x)
-  xhead = chunk(x, mha.nheads; dim = 1)
-
+  nheads = length(mha.heads.layers)
+  xhead = chunk(x, nheads; dim = 1)
   return mha.projection(mha.heads(xhead...))
 end
 
 """
-    Patching{T <: Integer}
-
-Patching layer used by many vision transformer-like models to split the input image into patches.
-Can be instantiated with a tuple `(patch_height, patch_width)` or a single value `patch_size`.
+Patch embedding layer used by many vision transformer-like models to split the input image into patches.
+Can be instantiated with a tuple of integers `(patch_height, patch_width)` or a single value `patch_size`.
 """
-struct Patching{T <: Integer}
-  patch_height::T
-  patch_width::T
+struct PatchEmbedding
+  patch_height::Int
+  patch_width::Int
 end
 
-Patching(patch_size) = Patching(patch_size, patch_size)
+PatchEmbedding(patch_size) = PatchEmbedding(patch_size, patch_size)
 
-function (p::Patching)(x)
+function (p::PatchEmbedding)(x)
   h, w, c, n = size(x)
   hp, wp = h ÷ p.patch_height, w ÷ p.patch_width
   xpatch = reshape(x, hp, p.patch_height, wp, p.patch_width, c, n)
@@ -186,35 +183,34 @@ function (p::Patching)(x)
                  hp * wp, n)
 end
 
-@functor Patching
+@functor PatchEmbedding
 
 """
-    PosEmbedding{T}
-
 Positional embedding layer used by many vision transformer-like models. Instantiated with an 
 embedding vector which is a learnable parameter.
 """
-struct PosEmbedding{T}
-  embedding_vector::T
+struct ViPosEmbedding{T}
+  vectors::T
 end
+ViPosEmbedding(embedsize, npatches; init = (dims::NTuple{2, Int}) -> rand(Float32, dims)) = 
+  ViPosEmbedding(init((embedsize, npatches)))
 
-(p::PosEmbedding)(x) = x .+ p.embedding_vector[:, 1:size(x)[2], :]
+(p::ViPosEmbedding)(x) = x .+ p.vectors
 
-@functor PosEmbedding
+@functor ViPosEmbedding
 
 """
-    CLSTokens{T}
-
 Appends class tokens to the input that are used for classfication by many vision 
 transformer-like models. Instantiated with a class token vector which is a learnable parameter.
 """
-struct CLSTokens{T}
-  cls_token::T
+struct ClassTokens{T}
+  token::T
+end
+ClassTokens(dim::Integer; init = Flux.zeros) = ClassTokens(init(dim, 1, 1))
+
+function (m::ClassTokens)(x)
+  tokens = repeat(m.token, 1, 1, size(x, 3))
+  return hcat(tokens, x)
 end
 
-function(m::CLSTokens)(x)
-  cls_tokens = repeat(m.cls_token, 1, 1, size(x)[3])
-  return cat(cls_tokens, x; dims = 2)
-end
-
-@functor CLSTokens
+@functor ClassTokens

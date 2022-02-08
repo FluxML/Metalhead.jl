@@ -36,14 +36,14 @@ function mlpmixer(imsize::NTuple{2} = (256, 256); inchannels = 3, patch_size = 1
   num_patches = (im_height ÷ patch_size) * (im_width ÷ patch_size)
 
   layers = []
-  push!(layers, Patching(patch_size))
+  push!(layers, PatchEmbedding(patch_size))
   push!(layers, Dense((patch_size ^ 2) * inchannels, planes))
   append!(layers, [Chain(_residualprenorm(planes, mlpblock(num_patches, 
                                           expansion_factor * num_patches, 
-                                          dropout, token_mix)),
+                                          dropout; dense = token_mix)),
                          _residualprenorm(planes, mlpblock(planes, 
-                                          expansion_factor * planes, dropout, 
-                                          channel_mix)),) for _ in 1:depth])
+                                          expansion_factor * planes, dropout; 
+                                          dense = channel_mix)),) for _ in 1:depth])
 
   classification_head = Chain(_seconddimmean, Dense(planes, nclasses))
 
