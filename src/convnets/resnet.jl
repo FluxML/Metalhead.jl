@@ -30,8 +30,8 @@ Create a bottleneck residual block
 """
 function bottleneck(inplanes, outplanes, downsample = false)
   stride = downsample ? 2 : 1
-  Chain(conv_bn((1, 1), inplanes, outplanes[1]; stride = stride, bias = false)...,
-        conv_bn((3, 3), outplanes[1], outplanes[2]; stride = 1, pad = 1, bias = false)...,
+  Chain(conv_bn((1, 1), inplanes, outplanes[1]; stride = 1, bias = false)...,
+        conv_bn((3, 3), outplanes[1], outplanes[2]; stride = stride, pad = 1, bias = false)...,
         conv_bn((1, 1), outplanes[2], outplanes[3], identity; stride = 1, bias = false)...)
 end
 
