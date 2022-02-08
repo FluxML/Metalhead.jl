@@ -1,5 +1,27 @@
+# Utility function for getting chunks of an ND-array along a particular dimension
+chunk(A, k::Int; dim::Int = 1) = 
+    (selectdim(A, dim, i) for i in Iterators.partition(axes(A,dim), cld(size(A,dim), k)));
+
 # Utility function for classifier head of vision transformer-like models
 _seconddimmean(x) = mean(x, dims = 2)[:, 1, :]
+
+"""
+    addrelu(x, y)
+
+Convenience function for `(x, y) -> @. relu(x + y)`.
+Useful as the `connection` argument for [`resnet`](#).
+See also [`reluadd`](#).
+"""
+addrelu(x, y) = @. relu(x + y)
+
+"""
+    reluadd(x, y)
+
+Convenience function for `(x, y) -> @. relu(x) + relu(y)`.
+Useful as the `connection` argument for [`resnet`](#).
+See also [`addrelu`](#).
+"""
+reluadd(x, y) = @. relu(x) + relu(y)
 
 """
     weights(model)

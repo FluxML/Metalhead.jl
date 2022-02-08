@@ -91,32 +91,16 @@ end
 skip_identity(inplanes, outplanes, downsample) = skip_identity(inplanes, outplanes)
 
 """
-    addrelu(x, y)
-
-Convenience function for `(x, y) -> @. relu(x + y)`.
-Useful as the `connection` argument for [`resnet`](#).
-See also [`reluadd`](#).
-"""
-addrelu(x, y) = @. relu(x + y)
-
-"""
-    reluadd(x, y)
-
-Convenience function for `(x, y) -> @. relu(x) + relu(y)`.
-Useful as the `connection` argument for [`resnet`](#).
-See also [`addrelu`](#).
-"""
-reluadd(x, y) = @. relu(x) + relu(y)
     mlpblock(planes, expansion_factor = 4, dropout = 0., dense = Dense)
 
 Feedforward block used in many vision transformer-like models.
 
 # Arguments
-  `planes`: Number of dimensions in the input and output.
-  `hidden_planes`: Number of dimensions in the intermediate layer.
-  `dropout`: Dropout rate.
-  `dense`: Type of dense layer to use in the feedforward block.
-  `activation`: Activation function to use.
+- `planes`: Number of dimensions in the input and output.
+- `hidden_planes`: Number of dimensions in the intermediate layer.
+- `dropout`: Dropout rate.
+- `dense`: Type of dense layer to use in the feedforward block.
+- `activation`: Activation function to use.
 """
 function mlpblock(planes, hidden_planes, dropout = 0., dense = Dense; activation = gelu)
   Chain(dense(planes, hidden_planes, activation), Dropout(dropout),
@@ -124,7 +108,65 @@ function mlpblock(planes, hidden_planes, dropout = 0., dense = Dense; activation
 end
 
 """
+    Attention{T}
+
+Self attention layer used by transformer models. Can be instantiated with a layer that produces
+the key, value and query vectors from the input.
+"""
+struct Attention{T}
+  qkv::T
+end
+
+Attention(in, out) = Attention(Dense(in, out * 3; bias = false))
+
+@functor Attention
+
+function (attn::Attention)(x::AbstractArray{T}) where T
+  q, k, v = chunk(attn.qkv(x), 3; dim = 1)
+  scale = convert(T, sqrt(size(q, 1)))
+  score = softmax(batched_mul(batched_transpose(q), k) / scale)
+  attention = batched_mul(v, score)
+
+  return attention
+end
+
+struct MHAttention{Q <: Integer, S, T}
+  nheads::Q
+  heads::S
+  projection::T
+end
+
+"""
+    MHAttention(in, hidden, nheads, dropout = 0.)
+
+Multi-head self-attention layer used in many vision transformer-like models.
+
+# Arguments
+- `in`: Number of dimensions in the input.
+- `hidden`: Number of dimensions in the intermediate layer.
+- `nheads`: Number of attention heads.
+- `dropout`: Dropout rate for the projection layer.
+"""
+function MHAttention(in, hidden, nheads, dropout = 0.)
+  project_out = !(nheads == 1 && hidden == in)
+  inheads, innerheads = chunk(1:in, nheads), chunk(1:hidden, nheads)
+  heads = Parallel(vcat, [Attention(length(i), length(o)) for (i, o) in zip(inheads, innerheads)]...)
+  projection = project_out ? Chain(Dense(hidden, in), Dropout(dropout)) : identity
+
+  MHAttention(nheads, heads, projection)
+end
+
+@functor MHAttention
+
+function (mha::MHAttention)(x)
+  xhead = chunk(x, mha.nheads; dim = 1)
+
+  return mha.projection(mha.heads(xhead...))
+end
+
+"""
     Patching{T <: Integer}
+
 Patching layer used by many vision transformer-like models to split the input image into patches.
 Can be instantiated with a tuple `(patch_height, patch_width)` or a single value `patch_size`.
 """
@@ -132,6 +174,7 @@ struct Patching{T <: Integer}
   patch_height::T
   patch_width::T
 end
+
 Patching(patch_size) = Patching(patch_size, patch_size)
 
 function (p::Patching)(x)

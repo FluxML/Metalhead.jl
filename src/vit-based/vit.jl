@@ -1,50 +1,5 @@
-include("utilities.jl")
-
 # Utility function for applying LayerNorm before a block
 prenorm(planes, fn) = Chain(fn, LayerNorm(planes))
-
-struct MHAttention
-  heads
-  scale
-  qkvlayer
-  outlayer
-end
-
-"""
-    MHAttention(planes; heads = 8, headplanes = 64, dropout = 0.)
-
-Multi-head attention block as used in the base ViT architecture.
-([reference](https://arxiv.org/abs/2010.11929)).
-
-# Arguments
-- `planes`: number of input channels
-- `heads`: number of attention heads
-- `headplanes`: number of hidden channels per head
-- `dropout`: dropout rate
-"""
-function MHAttention(planes; heads = 8, headplanes = 64, dropout = 0.)
-  hidden_planes = headplanes * heads
-  outproject = !(heads == 1 && headplanes == planes)
-  
-  to_qkv = Dense(planes, hidden_planes * 3; bias = false)
-  to_out = outproject ? Chain(Dense(hidden_planes, planes), Dropout(dropout)) : identity
-
-  MHAttention(heads, headplanes ^ -0.5, to_qkv, to_out)
-end
-
-function (m::MHAttention)(x)
-  q, k, v = chunk(m.qkvlayer(x), 3; dim = 1)
-  @cast q[h, b, d, n] := q[(h, d), n, b] h in 1:m.heads
-  @cast k[h, b, d, n] := k[(h, d), n, b] h in 1:m.heads
-  @cast v[h, b, d, n] := v[(h, d), n, b] h in 1:m.heads
-  dots = batchmul(q, permutedims(k, (2, 1, 3, 4))) * m.scale
-  attn = softmax(dots; dims = 3)
-  out = batchmul(attn, v)
-  @cast out[(h, d), n, b] := out[h, b, d, n] in 1:m.heads
-  m.outlayer(out)
-end
-
-@functor MHAttention
 
 """
     Transformer(planes, depth, heads, headplanes, mlppanes, dropout = 0.)
@@ -61,7 +16,7 @@ Transformer as used in the base ViT architecture.
 - `dropout`: dropout rate
 """
 function Transformer(planes, depth, heads, headplanes, mlpplanes, dropout = 0.)
-  layers = [Chain(SkipConnection(prenorm(planes, MHAttention(planes; heads, headplanes, dropout)), +),
+  layers = [Chain(SkipConnection(prenorm(planes, MHAttention(planes, headplanes, heads, dropout)), +),
                   SkipConnection(prenorm(planes, mlpblock(planes, mlpplanes, dropout)), +)) 
             for _ in 1:depth]
 
