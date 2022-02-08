@@ -108,12 +108,17 @@ function resnet(block, shortcut_config::AbstractVector{<:Symbol}, args...; kwarg
     :B => (skip_projection, skip_identity),
     :C => (skip_projection, skip_projection))
 
-  try
-    shortcut = [shortcut_dict[sc] for sc in shortcut_config]
-  catch
+  if any(sc -> !haskey(shortcut_dict,sc),shortcut_config)
     error("Unrecognized shortcut_config ($shortcut_config) passed to `resnet` (use a vector with :A, :B, or :C).")
   end
+
+  shortcut = [shortcut_dict[sc] for sc in shortcut_config]
   resnet(block, shortcut, args...; kwargs...)
+end
+
+function resnet(block, shortcut_config::Symbol, args...; block_config, kwargs...)
+    resnet(block, fill(shortcut_config, length(block_config)), args...;
+           block_config = block_config, kwargs...)
 end
 
 const resnet_config =
