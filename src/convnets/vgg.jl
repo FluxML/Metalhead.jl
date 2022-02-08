@@ -42,7 +42,7 @@ function vgg_convolutional_layers(config, batchnorm, inchannels)
   ifilters = inchannels
   for c in config
     append!(layers, vgg_block(ifilters, c..., batchnorm))
-    push!(layers, MaxPool((2,2)))
+    push!(layers, MaxPool((2,2), stride=2))
     ifilters, _ = c
   end
   return layers
