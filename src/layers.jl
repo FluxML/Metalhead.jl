@@ -90,6 +90,24 @@ function skip_identity(inplanes, outplanes)
 end
 skip_identity(inplanes, outplanes, downsample) = skip_identity(inplanes, outplanes)
 
+"""
+    addrelu(x, y)
+
+Convenience function for `(x, y) -> @. relu(x + y)`.
+Useful as the `connection` argument for [`resnet`](#).
+See also [`reluadd`](#).
+"""
+addrelu(x, y) = @. relu(x + y)
+
+"""
+    reluadd(x, y)
+
+Convenience function for `(x, y) -> @. relu(x) + relu(y)`.
+Useful as the `connection` argument for [`resnet`](#).
+See also [`addrelu`](#).
+"""
+reluadd(x, y) = @. relu(x) + relu(y)
+
 # Patching layer used by many vision transformer-like models
 struct Patching{T <: Integer}
   patch_height::T
