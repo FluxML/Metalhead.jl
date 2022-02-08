@@ -53,7 +53,7 @@ Create a ResNet model
 - `block_config`: a list of the number of residual blocks at each stage
 - `nclasses`: the number of output classes
 """
-function resnet(block, residuals::NTuple{2, Any}, connection = addrelu;
+function resnet(block, residuals::AbstractVector{<:NTuple{2, Any}}, connection = addrelu;
                 channel_config, block_config, nclasses = 1000)
   inplanes = 64
   baseplanes = 64
@@ -61,24 +61,17 @@ function resnet(block, residuals::NTuple{2, Any}, connection = addrelu;
   append!(layers, conv_bn((7, 7), 3, inplanes; stride = 2, pad = 3, bias = false))
   push!(layers, MaxPool((3, 3), stride = (2, 2), pad = (1, 1)))
   for (i, nrepeats) in enumerate(block_config)
-    residuals_ =
-        if i == 1
-            residuals
-        else
-            (skip_projection, skip_identity)
-        end
-
     # output planes within a block
     outplanes = baseplanes .* channel_config
     # push first skip connection on using first residual
     # downsample the residual path if this is the first repetition of a block
     push!(layers, Parallel(connection, block(inplanes, outplanes, i != 1),
-                                       residuals_[1](inplanes, outplanes[end], i != 1)))
+                                       residuals[i][1](inplanes, outplanes[end], i != 1)))
     # push remaining skip connections on using second residual
     inplanes = outplanes[end]
     for _ in 2:nrepeats
       push!(layers, Parallel(connection, block(inplanes, outplanes, false),
-                                         residuals_[2](inplanes, outplanes[end], false)))
+                                         residuals[i][2](inplanes, outplanes[end], false)))
       inplanes = outplanes[end]
     end
     # next set of output plane base is doubled
@@ -109,25 +102,26 @@ Create a ResNet model
 - `block_config`: a list of the number of residual blocks at each stage
 - `nclasses`: the number of output classes
 """
-function resnet(block, shortcut_config::Symbol, args...; kwargs...)
-  shortcut = if shortcut_config == :A
-      (skip_identity, skip_identity)
-    elseif shortcut_config == :B
-      (skip_projection, skip_identity)
-    elseif shortcut_config == :C
-      (skip_projection, skip_projection)
-    else
-      error("Unrecognized shortcut_config ($shortcut_config) passed to `resnet` (use :A, :B, or :C).")
+function resnet(block, shortcut_config::AbstractVector{<:Symbol}, args...; kwargs...)
+  shortcut_dict = Dict(
+    :A => (skip_identity, skip_identity),
+    :B => (skip_projection, skip_identity),
+    :C => (skip_projection, skip_projection))
+
+  try
+    shortcut = [shortcut_dict[sc] for sc in shortcut_config]
+  catch
+    error("Unrecognized shortcut_config ($shortcut_config) passed to `resnet` (use a vector with :A, :B, or :C).")
   end
   resnet(block, shortcut, args...; kwargs...)
 end
 
 const resnet_config =
-  Dict(18 => (([1, 1], [2, 2, 2, 2], :A), basicblock),
-       34 => (([1, 1], [3, 4, 6, 3], :A), basicblock),
-       50 => (([1, 1, 4], [3, 4, 6, 3], :B), bottleneck),
-       101 => (([1, 1, 4], [3, 4, 23, 3], :B), bottleneck),
-       152 => (([1, 1, 4], [3, 8, 36, 3], :B), bottleneck))
+  Dict(18 => (([1, 1], [2, 2, 2, 2], [:A, :B, :B, :B]), basicblock),
+       34 => (([1, 1], [3, 4, 6, 3], [:A, :B, :B, :B]), basicblock),
+       50 => (([1, 1, 4], [3, 4, 6, 3], [:B, :B, :B, :B]), bottleneck),
+       101 => (([1, 1, 4], [3, 4, 23, 3], [:B, :B, :B, :B]), bottleneck),
+       152 => (([1, 1, 4], [3, 8, 36, 3], [:B, :B, :B, :B]), bottleneck))
 
 """
     ResNet(channel_config, block_config, shortcut_config;
