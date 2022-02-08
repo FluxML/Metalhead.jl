@@ -30,8 +30,8 @@ Create a bottleneck residual block
 """
 function bottleneck(inplanes, outplanes, downsample = false)
   stride = downsample ? 2 : 1
-  Chain(conv_bn((1, 1), inplanes, outplanes[1]; stride = stride, bias = false)...,
-        conv_bn((3, 3), outplanes[1], outplanes[2]; stride = 1, pad = 1, bias = false)...,
+  Chain(conv_bn((1, 1), inplanes, outplanes[1]; stride = 1, bias = false)...,
+        conv_bn((3, 3), outplanes[1], outplanes[2]; stride = stride, pad = 1, bias = false)...,
         conv_bn((1, 1), outplanes[2], outplanes[3], identity; stride = 1, bias = false)...)
 end
 
@@ -47,7 +47,7 @@ Create a ResNet model
            a new residual block (see [`Metalhead.basicblock`](#) and [`Metalhead.bottleneck`](#))
 - `residuals`: a 2-tuple of functions with input `(inplanes, outplanes, downsample=false)`,
                each of which will return a function that will be used as a new "skip" path to match a residual block.
-              [`Metalhead.skip_identity`](#) and [`Metalhead.skip_projection`](#) can be used here. 
+              [`Metalhead.skip_identity`](#) and [`Metalhead.skip_projection`](#) can be used here.
 - `connection`: the binary function applied to the output of residual and skip paths in a block
 - `channel_config`: the growth rate of the output feature maps within a residual block
 - `block_config`: a list of the number of residual blocks at each stage
