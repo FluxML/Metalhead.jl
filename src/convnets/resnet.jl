@@ -61,17 +61,24 @@ function resnet(block, residuals::NTuple{2, Any}, connection = addrelu;
   append!(layers, conv_bn((7, 7), 3, inplanes; stride = 2, pad = 3, bias = false))
   push!(layers, MaxPool((3, 3), stride = (2, 2), pad = (1, 1)))
   for (i, nrepeats) in enumerate(block_config)
+    residuals_ =
+        if i == 1
+            residuals
+        else
+            (skip_projection, skip_identity)
+        end
+
     # output planes within a block
     outplanes = baseplanes .* channel_config
     # push first skip connection on using first residual
     # downsample the residual path if this is the first repetition of a block
     push!(layers, Parallel(connection, block(inplanes, outplanes, i != 1),
-                                       residuals[1](inplanes, outplanes[end], i != 1)))
+                                       residuals_[1](inplanes, outplanes[end], i != 1)))
     # push remaining skip connections on using second residual
     inplanes = outplanes[end]
     for _ in 2:nrepeats
       push!(layers, Parallel(connection, block(inplanes, outplanes, false),
-                                         residuals[2](inplanes, outplanes[end], false)))
+                                         residuals_[2](inplanes, outplanes[end], false)))
       inplanes = outplanes[end]
     end
     # next set of output plane base is doubled
