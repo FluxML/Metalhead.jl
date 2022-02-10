@@ -1,5 +1,5 @@
 # Utility function for getting chunks of an ND-array along a particular dimension
-chunk(A, k::Int; dim::Int = 1) = 
+chunks(A, k::Int; dim::Int = 1) = 
     (selectdim(A, dim, i) for i in Iterators.partition(axes(A,dim), cld(size(A,dim), k)));
 
 # Utility function for classifier head of vision transformer-like models

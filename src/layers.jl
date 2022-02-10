@@ -120,7 +120,7 @@ Attention(dims::Pair{Int, Int}) = Attention(Dense(dims.first, dims.second * 3; b
 @functor Attention
 
 function (attn::Attention)(x::AbstractArray{T, 3}) where T
-  q, k, v = chunk(attn.qkv(x), 3; dim = 1)
+  q, k, v = chunks(attn.qkv(x), 3; dim = 1)
   scale = convert(T, sqrt(size(q, 1)))
   score = softmax(batched_mul(batched_transpose(q), k) / scale)
   attention = batched_mul(v, score)
@@ -159,7 +159,7 @@ end
 
 function (mha::MHAttention)(x)
   nheads = length(mha.heads.layers)
-  xhead = chunk(x, nheads; dim = 1)
+  xhead = chunks(x, nheads; dim = 1)
   return mha.projection(mha.heads(xhead...))
 end
 
