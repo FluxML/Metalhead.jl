@@ -137,7 +137,7 @@ struct MHAttention{S, T}
 end
 
 """
-    MHAttention(in, hidden, nheads, dropout = 0.)
+    MHAttention(in, hidden, nheads; dropout = 0.0)
 
 Multi-head self-attention layer used in many vision transformer-like models.
 
@@ -207,7 +207,7 @@ ViPosEmbedding(embedsize, npatches; init = (dims::NTuple{2, Int}) -> rand(Float3
 @functor ViPosEmbedding
 
 """
-    ClassTokens(dim; init = Flux.zeros)
+    ClassTokens(dim; init = Flux.zeros32)
 
 Appends class tokens to an input with embedding dimension `dim` for use in many vision transformer models.
 """
@@ -215,7 +215,7 @@ struct ClassTokens{T}
   token::T
 end
 
-ClassTokens(dim::Integer; init = Flux.zeros) = ClassTokens(init(dim, 1, 1))
+ClassTokens(dim::Integer; init = Flux.zeros32) = ClassTokens(init(dim, 1, 1))
 
 function (m::ClassTokens)(x)
   tokens = repeat(m.token, 1, 1, size(x, 3))
