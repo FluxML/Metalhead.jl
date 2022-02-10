@@ -151,7 +151,7 @@ function MHAttention(in, hidden, nheads; dropout = 0.)
   if (nheads == 1 && hidden == in)
     return Attention(in => in)
   end
-  inheads, innerheads = chunk(1:in, nheads), chunk(1:hidden, nheads)
+  inheads, innerheads = Flux.chunk(1:in, nheads), Flux.chunk(1:hidden, nheads)
   heads = Parallel(vcat, [Attention(length(i) => length(o)) for (i, o) in zip(inheads, innerheads)]...)
   projection = Chain(Dense(hidden, in), Dropout(dropout))
 
