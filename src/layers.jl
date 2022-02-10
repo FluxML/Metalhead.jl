@@ -108,8 +108,11 @@ function mlpblock(planes, hidden_planes, dropout = 0.; dense = Dense, activation
 end
 
 """
-Self attention layer used by transformer models. Can be instantiated with a layer that produces
-the key, value and query vectors from the input.
+    Attention(in => out)
+    Attention(qkvlayer)
+
+Self attention layer used by transformer models. Specify the `in` and `out` dimensions,
+or directly provide a `qkvlayer` that maps an input the queries, keys, and values.
 """
 struct Attention{T}
   qkv::T
