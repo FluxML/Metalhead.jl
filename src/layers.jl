@@ -164,8 +164,10 @@ function (mha::MHAttention)(x)
 end
 
 """
+    PatchEmbedding(patch_size)
+    PatchEmbedding(patch_height, patch_width)
+
 Patch embedding layer used by many vision transformer-like models to split the input image into patches.
-Can be instantiated with a tuple of integers `(patch_height, patch_width)` or a single value `patch_size`.
 """
 struct PatchEmbedding
   patch_height::Int
@@ -186,8 +188,9 @@ end
 @functor PatchEmbedding
 
 """
-Positional embedding layer used by many vision transformer-like models. Instantiated with an 
-embedding vector which is a learnable parameter.
+    ViPosEmbedding(embedsize, npatches; init = (dims) -> rand(Float32, dims))
+
+Positional embedding layer used by many vision transformer-like models.
 """
 struct ViPosEmbedding{T}
   vectors::T
@@ -201,8 +204,9 @@ ViPosEmbedding(embedsize, npatches; init = (dims::NTuple{2, Int}) -> rand(Float3
 @functor ViPosEmbedding
 
 """
-Appends class tokens to the input that are used for classfication by many vision 
-transformer-like models. Instantiated with a class token vector which is a learnable parameter.
+    ClassTokens(dim; init = Flux.zeros)
+
+Appends class tokens to an input with embedding dimension `dim` for use in many vision transformer models.
 """
 struct ClassTokens{T}
   token::T

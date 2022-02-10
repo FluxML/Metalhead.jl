@@ -28,8 +28,7 @@ end
         depth = 6, heads = 16, mlppanes = 2048, headplanes = 64, dropout = 0.1, emb_dropout = 0.1, 
         pool = :class, nclasses = 1000)
 
-Creates a Vision Transformer model as detailed in the paper An Image is Worth 16x16 
-Words: Transformers for Image Recognition at Scale .
+Creates a Vision Transformer (ViT) model.
 ([reference](https://arxiv.org/abs/2010.11929)).
 
 # Arguments
@@ -67,7 +66,7 @@ function vit(imsize::NTuple{2} = (256, 256); inchannels = 3, patch_size = (16, 1
                      ViPosEmbedding(planes, npatches + 1),
                      Dropout(emb_dropout),
                      transformer_encoder(planes, depth, heads, headplanes, mlppanes, dropout),
-                     (pool == :class) ? x -> x[:, 1, :] : x -> _seconddimmean(x)),
+                     (pool == :class) ? x -> x[:, 1, :] : _seconddimmean),
                Chain(LayerNorm(planes), Dense(planes, nclasses)))
 end
 
@@ -98,8 +97,8 @@ Creates a Vision Transformer (ViT) model.
 - `nclasses`: number of classes in the output
 """
 function ViT(imsize::NTuple{2} = (256, 256); inchannels = 3, patch_size = (16, 16), planes = 1024, 
-  depth = 6, heads = 16, mlppanes = 2048, headplanes = 64, dropout = 0.1, emb_dropout = 0.1, 
-  pool = :class, nclasses = 1000)
+            depth = 6, heads = 16, mlppanes = 2048, headplanes = 64,
+            dropout = 0.1, emb_dropout = 0.1, pool = :class, nclasses = 1000)
   
   layers = vit(imsize; inchannels, patch_size, planes, depth, heads, mlppanes, headplanes, 
                dropout, emb_dropout, pool, nclasses)
