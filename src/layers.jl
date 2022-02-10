@@ -91,7 +91,7 @@ end
 skip_identity(inplanes, outplanes, downsample) = skip_identity(inplanes, outplanes)
 
 """
-    mlpblock(planes, hidden_planes, dropout = 0.; dense = Dense, activation = gelu)
+    mlpblock(planes, hidden_planes; dropout = 0., dense = Dense, activation = gelu)
 
 Feedforward block used in many vision transformer-like models.
 
@@ -102,7 +102,7 @@ Feedforward block used in many vision transformer-like models.
 - `dense`: Type of dense layer to use in the feedforward block.
 - `activation`: Activation function to use.
 """
-function mlpblock(planes, hidden_planes, dropout = 0.; dense = Dense, activation = gelu)
+function mlpblock(planes, hidden_planes; dropout = 0., dense = Dense, activation = gelu)
   Chain(dense(planes, hidden_planes, activation), Dropout(dropout),
         dense(hidden_planes, planes, activation), Dropout(dropout))
 end

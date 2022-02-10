@@ -2,7 +2,7 @@
 prenorm(planes, fn) = Chain(fn, LayerNorm(planes))
 
 """
-    transformer_encoder(planes, depth, heads, headplanes, mlppanes, dropout = 0.)
+    transformer_encoder(planes, depth, heads, headplanes, mlppanes; dropout = 0.)
 
 Transformer as used in the base ViT architecture.
 ([reference](https://arxiv.org/abs/2010.11929)).
@@ -15,9 +15,9 @@ Transformer as used in the base ViT architecture.
 - `mlppanes`: number of hidden channels in the MLP block
 - `dropout`: dropout rate
 """
-function transformer_encoder(planes, depth, heads, headplanes, mlpplanes, dropout = 0.)
+function transformer_encoder(planes, depth, heads, headplanes, mlpplanes; dropout = 0.)
   layers = [Chain(SkipConnection(prenorm(planes, MHAttention(planes, headplanes, heads; dropout)), +),
-                  SkipConnection(prenorm(planes, mlpblock(planes, mlpplanes, dropout)), +)) 
+                  SkipConnection(prenorm(planes, mlpblock(planes, mlpplanes; dropout)), +)) 
             for _ in 1:depth]
 
   Chain(layers...)
@@ -65,7 +65,7 @@ function vit(imsize::NTuple{2} = (256, 256); inchannels = 3, patch_size = (16, 1
                      ClassTokens(planes),
                      ViPosEmbedding(planes, npatches + 1),
                      Dropout(emb_dropout),
-                     transformer_encoder(planes, depth, heads, headplanes, mlppanes, dropout),
+                     transformer_encoder(planes, depth, heads, headplanes, mlppanes; dropout),
                      (pool == :class) ? x -> x[:, 1, :] : _seconddimmean),
                Chain(LayerNorm(planes), Dense(planes, nclasses)))
 end
