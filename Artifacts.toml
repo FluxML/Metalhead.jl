@@ -14,6 +14,14 @@ lazy = true
     sha256 = "8ab8d60cc26e81451473badc9dc749b5ffc170a11bc00fb4b203da34fbfdc996"
     url = "https://github.com/FluxML/MetalheadWeights/releases/download/v0.1.1/googlenet-0.1.1.tar.gz"
 
+[resnet18]
+git-tree-sha1 = "e686115fea748bb63e6055076bbdfd6845ad07bb"
+lazy = true
+
+    [[resnet18.download]]
+    sha256 = "749decf67c650f314dc1460fab401f8d3f6999bacaea5eec7bd257dac0dd7980"
+    url = "https://github.com/DhairyaLGandhi/dftsurr/releases/download/untagged-7fa5b55e76dcbcc95518/resnet18-0.6.1.tar.gz"
+
 [resnet34]
 git-tree-sha1 = "6101dc5ccee820d41ddfcb4be09a1b074d96e477"
 lazy = true
