@@ -17,23 +17,30 @@ function basicblock(inplanes, outplanes, downsample = false)
 end
 
 """
-    bottleneck(inplanes, outplanes, downsample = false)
+    bottleneck(inplanes, outplanes, downsample = false; stride = [1, (downsample ? 2 : 1), 1])
 
 Create a bottleneck residual block
-([reference](https://arxiv.org/abs/1512.03385v1)).
+([reference](https://arxiv.org/abs/1512.03385v1)). The bottleneck is composed of
+3 convolutional layers with the given `stride`. While the original paper uses a
+stride of 2 for the first convolutional layer (if `downsample` is `true`). A
+[revised variant](https://catalog.ngc.nvidia.com/orgs/nvidia/resources/resnet_50_v1_5_for_pytorch)
+called version 1.5 uses a stride of 2 (if `downsample` is `true`) in the 2nd
+convolutional layer instead.
 
 # Arguments:
 - `inplanes`: the number of input feature maps
 - `outplanes`: a list of the number of output feature maps for each convolution
                within the residual block
 - `downsample`: set to `true` to downsample the input
+- `stride`: a list of the stride of the 3 convolutional layers
 """
-function bottleneck(inplanes, outplanes, downsample = false)
-  stride = downsample ? 2 : 1
-  Chain(conv_bn((1, 1), inplanes, outplanes[1]; stride = 1, bias = false)...,
-        conv_bn((3, 3), outplanes[1], outplanes[2]; stride = stride, pad = 1, bias = false)...,
-        conv_bn((1, 1), outplanes[2], outplanes[3], identity; stride = 1, bias = false)...)
+function bottleneck(inplanes, outplanes, downsample = false;
+                    stride = [1, (downsample ? 2 : 1), 1])
+  Chain(conv_bn((1, 1), inplanes, outplanes[1]; stride = stride[1], bias = false)...,
+        conv_bn((3, 3), outplanes[1], outplanes[2]; stride = stride[2], pad = 1, bias = false)...,
+        conv_bn((1, 1), outplanes[2], outplanes[3], identity; stride = stride[3], bias = false)...)
 end
+
 
 """
     resnet(block, residuals::NTuple{2, Any}, connection = addrelu;
@@ -178,7 +185,10 @@ classifier(m::ResNet) = m.layers[2]
     ResNet(depth = 50; pretrain = false, nclasses = 1000)
 
 Create a ResNet model with a specified depth
-([reference](https://arxiv.org/abs/1512.03385v1)).
+([reference](https://arxiv.org/abs/1512.03385v1))
+following [these modification](https://catalog.ngc.nvidia.com/orgs/nvidia/resources/resnet_50_v1_5_for_pytorch)
+referred as ResNet v1.5.
+
 See also [`Metalhead.resnet`](#).
 
 # Arguments
@@ -205,6 +215,17 @@ resnet34 = ResNet([1, 1], [3, 4, 6, 3], :A;
     block = Metalhead.basicblock)
 ```
 
+The bottleneck of the orginal ResNet model has a stride of 2 on the first
+convolutional layer when downsampling (instead of the 2nd convolutional layers
+as in ResNet v1.5). The architecture of the orignal ResNet model can be obtained
+as shown below:
+
+```julia
+bottleneck_v1(inplanes, outplanes, downsample = false) =
+    Metalhead.bottleneck(inplanes, outplanes, downsample; stride = [(downsample ? 2 : 1), 1, 1])
+
+resnet50_v1 = ResNet([1, 1, 4], [3, 4, 6, 3], :B; block = bottleneck_v1)
+```
 """
 function ResNet(depth::Int = 50; pretrain = false, nclasses = 1000)
     @assert depth in keys(resnet_config) "`depth` must be one of $(sort(collect(keys(resnet_config))))"
