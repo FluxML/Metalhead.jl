@@ -43,7 +43,7 @@ function squeezenet()
                        Dropout(0.5),
                        Conv((1, 1), 512 => 1000, relu)),
                  AdaptiveMeanPool((1, 1)),
-                 flatten)
+                 MLUtils.flatten)
 
   return layers
 end

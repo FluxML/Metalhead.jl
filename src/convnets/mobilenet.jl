@@ -77,7 +77,7 @@ function mobilenetv2(width_mult, configs; max_width = 1280, nclasses = 1000)
 
   return Chain(Chain(layers...,
                      conv_bn((1, 1), inplanes, outplanes, relu6, bias = false)...),
-               Chain(AdaptiveMeanPool((1, 1)), flatten, Dense(outplanes, nclasses)))
+               Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten, Dense(outplanes, nclasses)))
 end
 
 # Layer configurations for MobileNetv2
@@ -221,7 +221,7 @@ function mobilenetv3(width_mult, configs; max_width = 1024, nclasses = 1000)
 
   return Chain(Chain(layers...,
                      conv_bn((1, 1), inplanes, explanes, hardswish, bias = false)...),
-               Chain(AdaptiveMeanPool((1, 1)), flatten, classifier...))
+               Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten, classifier...))
 end
 
 # Configurations for small and large mode for MobileNetv3
