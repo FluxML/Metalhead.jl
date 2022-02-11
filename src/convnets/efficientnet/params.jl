@@ -27,8 +27,7 @@ get_efficientnet_coefficients(model_name::String) =
     "b5" => (1.6, 2.2, 456),
     "b6" => (1.8, 2.6, 528),
     "b7" => (2.0, 3.1, 600),
-    "b8" => (2.2, 3.6, 672),
-    "l2" => (4.3, 5.3, 800))[model_name]
+    "b8" => (2.2, 3.6, 672))[model_name]
 
 function get_efficientnet_params(model_name)
   block_params = [

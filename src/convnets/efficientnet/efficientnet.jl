@@ -11,12 +11,6 @@ struct EfficientNet{S, B, H, P, F}
 end
 Flux.@functor EfficientNet
 
-"""
-    EfficientNet(block_params, global_params; in_channels = 3)
-
-Construct an EfficientNet model
-([reference](https://arxiv.org/abs/1905.11946)).
-"""
 function EfficientNet(
   model_name, block_params, global_params; in_channels, n_classes, pretrain,
 )
@@ -49,14 +43,30 @@ function EfficientNet(
     Conv((1, 1), out_channels=>head_out_channels; bias, pad),
     BatchNorm(head_out_channels, swish))
 
-  top = n_classes ≡ nothing ?
-    identity : (Dense(head_out_channels, n_classes) ∘ Flux.flatten)
+  top = Dense(head_out_channels, n_classes)
   model = EfficientNet(stem, blocks, head, AdaptiveMeanPool((1, 1)), top)
   pretrain && loadpretrain!(model, "EfficientNet" * model_name)
   model
 end
 
-EfficientNet(model_name::String; in_channels = 3, n_classes = 1000, pretrain = false) =
-  EfficientNet(model_name, get_efficientnet_params(model_name)...; in_channels, n_classes, pretrain)
+"""
+    EfficientNet(block_params, global_params; in_channels = 3)
 
-(m::EfficientNet)(x) = m.top(m.pooling(m.head(m.blocks(m.stem(x)))))
+Construct an EfficientNet model
+([reference](https://arxiv.org/abs/1905.11946)).
+
+# Arguments
+- `model_name::String`: Name of the model. Accepts `b0`-`b8` names.
+- `in_channels::Int`: Number of input channels. Default is `3`.
+- `n_classes::Int`: Number of output classes. Default is `1000`.
+- `pretrain::Bool`: Whether to load ImageNet pretrained weights.
+  Default is `false`.
+"""
+EfficientNet(
+  model_name::String; in_channels::Int = 3,
+  n_classes::Int = 1000, pretrain::Bool = false,
+) = EfficientNet(
+  model_name, get_efficientnet_params(model_name)...;
+  in_channels, n_classes, pretrain)
+
+(m::EfficientNet)(x) = m.top(Flux.flatten(m.pooling(m.head(m.blocks(m.stem(x))))))
