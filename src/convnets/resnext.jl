@@ -63,7 +63,7 @@ function resnext(cardinality, width, widen_factor = 2, connection = (x, y) -> @.
   end
 
   return Chain(Chain(layers...),
-               Chain(AdaptiveMeanPool((1, 1)), flatten, Dense(inplanes, nclasses)))
+               Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten, Dense(inplanes, nclasses)))
 end
 
 """

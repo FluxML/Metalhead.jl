@@ -63,7 +63,7 @@ Create VGG classifier (fully connected) layers
 """
 function vgg_classifier_layers(imsize, nclasses, fcsize, dropout)
   layers = []
-  push!(layers, flatten)
+  push!(layers, MLUtils.flatten)
   push!(layers, Dense(Int(prod(imsize)), fcsize, relu))
   push!(layers, Dropout(dropout))
   push!(layers, Dense(fcsize, fcsize, relu))

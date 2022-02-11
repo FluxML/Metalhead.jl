@@ -56,7 +56,7 @@ function googlenet(; nclasses = 1000)
                        _inceptionblock(832, 256, 160, 320, 32, 128, 128),
                        _inceptionblock(832, 384, 192, 384, 48, 128, 128)),
                  Chain(AdaptiveMeanPool((1, 1)),
-                       flatten,
+                       MLUtils.flatten,
                        Dropout(0.4),
                        Dense(1024, nclasses)))
 

@@ -75,7 +75,7 @@ function densenet(inplanes, growth_rates; reduction = 0.5, nclasses = 1000)
 
   return Chain(Chain(layers...),
                Chain(AdaptiveMeanPool((1, 1)),
-                     flatten,
+                     MLUtils.flatten,
                      Dense(outplanes, nclasses)))
 end
 

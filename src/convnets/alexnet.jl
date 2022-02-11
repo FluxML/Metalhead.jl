@@ -17,7 +17,7 @@ function alexnet(; nclasses = 1000)
                        Conv((3, 3), 256 => 256, relu, pad = (1, 1)),
                        MaxPool((3, 3), stride = (2, 2)),
                        AdaptiveMeanPool((6,6))),
-                 Chain(flatten,
+                 Chain(MLUtils.flatten,
                        Dropout(0.5),
                        Dense(256 * 6 * 6, 4096, relu),
                        Dropout(0.5),
