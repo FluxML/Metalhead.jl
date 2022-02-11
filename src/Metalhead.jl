@@ -6,8 +6,6 @@ using Functors
 using BSON
 using Artifacts, LazyArtifacts
 using Statistics
-using Pickle
-using Downloads: download
 
 import Functors
 
