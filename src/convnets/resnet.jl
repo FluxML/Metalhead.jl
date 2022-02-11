@@ -109,7 +109,7 @@ function resnet(block, shortcut_config::AbstractVector{<:Symbol}, args...; kwarg
     :C => (skip_projection, skip_projection))
 
   if any(sc -> !haskey(shortcut_dict,sc),shortcut_config)
-    error("Unrecognized shortcut_config ($shortcut_config) passed to `resnet` (use a vector with :A, :B, or :C).")
+    error("Unrecognized shortcut_config ($shortcut_config) passed to `resnet` (use only :A, :B, or :C).")
   end
 
   shortcut = [shortcut_dict[sc] for sc in shortcut_config]
@@ -119,6 +119,10 @@ end
 function resnet(block, shortcut_config::Symbol, args...; block_config, kwargs...)
     resnet(block, fill(shortcut_config, length(block_config)), args...;
            block_config = block_config, kwargs...)
+end
+
+function resnet(block, shortcut_config::NTuple{N,Symbol}, args...; kwargs...) where N
+    resnet(block, collect(shortcut_config), args...; kwargs...)
 end
 
 const resnet_config =
@@ -139,7 +143,9 @@ See also [`resnet`](#).
 # Arguments
 - `channel_config`: the growth rate of the output feature maps within a residual block
 - `block_config`: a list of the number of residual blocks at each stage
-- `shortcut_config`: the type of shortcut style (either `:A`, `:B`, or `:C`)
+- `shortcut_config`: the type of shortcut style (either `:A`, `:B`, or `:C`).
+   `shortcut_config` can also be a vector or tuple of symbols if different shortcut styles are applied to
+   different residual blocks.
 - `block`: a function with input `(inplanes, outplanes, downsample=false)` that returns
            a new residual block (see [`Metalhead.basicblock`](#) and [`Metalhead.bottleneck`](#))
 - `connection`: the binary function applied to the output of residual and skip paths in a block
@@ -181,6 +187,24 @@ See also [`Metalhead.resnet`](#).
 
 !!! warning
     Only `ResNet(50)` currently supports pretrained weights.
+
+For `ResNet(18)` and `ResNet(34)`, the parameter-free shortcut style (type `:A`)
+is used in the first block and the three other blocks use type `:B` connection
+(following the implementation in PyTorch). The published version of
+`ResNet(18)` and `ResNet(34)` used type `:A` shortcuts for all four blocks. The
+example below shows how to create a 18 or 34-layer `ResNet` using only type `:A`
+shortcuts:
+
+```julia
+using Metalhead
+
+resnet18 = ResNet([1, 1], [2, 2, 2, 2], :A;
+    block = Metalhead.basicblock)
+
+resnet34 = ResNet([1, 1], [3, 4, 6, 3], :A;
+    block = Metalhead.basicblock)
+```
+
 """
 function ResNet(depth::Int = 50; pretrain = false, nclasses = 1000)
     @assert depth in keys(resnet_config) "`depth` must be one of $(sort(collect(keys(resnet_config))))"
