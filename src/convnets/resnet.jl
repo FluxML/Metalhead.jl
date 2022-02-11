@@ -30,13 +30,13 @@ Create a bottleneck residual block
 """
 function bottleneck(inplanes, outplanes, downsample = false)
   stride = downsample ? 2 : 1
-  Chain(conv_bn((1, 1), inplanes, outplanes[1]; stride = stride, bias = false)...,
-        conv_bn((3, 3), outplanes[1], outplanes[2]; stride = 1, pad = 1, bias = false)...,
+  Chain(conv_bn((1, 1), inplanes, outplanes[1]; stride = 1, bias = false)...,
+        conv_bn((3, 3), outplanes[1], outplanes[2]; stride = stride, pad = 1, bias = false)...,
         conv_bn((1, 1), outplanes[2], outplanes[3], identity; stride = 1, bias = false)...)
 end
 
 """
-    resnet(block, residuals::NTuple{2, Any}, connection = (x, y) -> @. relu(x) + relu(y);
+    resnet(block, residuals::NTuple{2, Any}, connection = addrelu;
            channel_config, block_config, nclasses = 1000)
 
 Create a ResNet model
@@ -47,18 +47,18 @@ Create a ResNet model
            a new residual block (see [`Metalhead.basicblock`](#) and [`Metalhead.bottleneck`](#))
 - `residuals`: a 2-tuple of functions with input `(inplanes, outplanes, downsample=false)`,
                each of which will return a function that will be used as a new "skip" path to match a residual block.
-              [`Metalhead.skip_identity`](#) and [`Metalhead.skip_projection`](#) can be used here. 
+              [`Metalhead.skip_identity`](#) and [`Metalhead.skip_projection`](#) can be used here.
 - `connection`: the binary function applied to the output of residual and skip paths in a block
 - `channel_config`: the growth rate of the output feature maps within a residual block
 - `block_config`: a list of the number of residual blocks at each stage
 - `nclasses`: the number of output classes
 """
-function resnet(block, residuals::NTuple{2, Any}, connection = (x, y) -> @. relu(x) + relu(y);
+function resnet(block, residuals::NTuple{2, Any}, connection = addrelu;
                 channel_config, block_config, nclasses = 1000)
   inplanes = 64
   baseplanes = 64
   layers = []
-  append!(layers, conv_bn((7, 7), 3, inplanes; stride = 2, pad = (3, 3)))
+  append!(layers, conv_bn((7, 7), 3, inplanes; stride = 2, pad = 3, bias = false))
   push!(layers, MaxPool((3, 3), stride = (2, 2), pad = (1, 1)))
   for (i, nrepeats) in enumerate(block_config)
     # output planes within a block
@@ -83,7 +83,7 @@ function resnet(block, residuals::NTuple{2, Any}, connection = (x, y) -> @. relu
 end
 
 """
-    resnet(block, shortcut_config::Symbol, connection = (x, y) -> @. relu(x) + relu(y);
+    resnet(block, shortcut_config::Symbol, connection = addrelu;
            channel_config, block_config, nclasses = 1000)
 
 Create a ResNet model
@@ -123,7 +123,8 @@ const resnet_config =
        152 => (([1, 1, 4], [3, 8, 36, 3], :B), bottleneck))
 
 """
-    ResNet(channel_config, block_config, shortcut_config; block, nclasses = 1000)
+    ResNet(channel_config, block_config, shortcut_config;
+           block, connection = addrelu, nclasses = 1000)
 
 Create a `ResNet` model
 ([reference](https://arxiv.org/abs/1512.03385v1)).
@@ -135,15 +136,18 @@ See also [`resnet`](#).
 - `shortcut_config`: the type of shortcut style (either `:A`, `:B`, or `:C`)
 - `block`: a function with input `(inplanes, outplanes, downsample=false)` that returns
            a new residual block (see [`Metalhead.basicblock`](#) and [`Metalhead.bottleneck`](#))
+- `connection`: the binary function applied to the output of residual and skip paths in a block
 - `nclasses`: the number of output classes
 """
 struct ResNet
   layers
 end
 
-function ResNet(channel_config, block_config, shortcut_config; block, nclasses = 1000)
+function ResNet(channel_config, block_config, shortcut_config;
+                block, connection = addrelu, nclasses = 1000)
   layers = resnet(block,
-                  shortcut_config;
+                  shortcut_config,
+                  connection;
                   channel_config = channel_config,
                   block_config = block_config,
                   nclasses = nclasses)
@@ -160,7 +164,7 @@ classifier(m::ResNet) = m.layers[2]
 
 """
     ResNet(depth = 50; pretrain = false, nclasses = 1000)
-   
+
 Create a ResNet model with a specified depth
 ([reference](https://arxiv.org/abs/1512.03385v1)).
 See also [`Metalhead.resnet`](#).
