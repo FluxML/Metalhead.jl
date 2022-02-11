@@ -6,11 +6,12 @@ using Functors
 using BSON
 using Artifacts, LazyArtifacts
 using Statistics
+using MLUtils
 
 import Functors
 
 include("utilities.jl")
-include("layers.jl")
+include("layers.jl")  
 
 # CNN models
 include("convnets/alexnet.jl")
