@@ -91,31 +91,95 @@ end
 skip_identity(inplanes, outplanes, downsample) = skip_identity(inplanes, outplanes)
 
 """
-    addrelu(x, y)
+    mlpblock(planes, hidden_planes; dropout = 0., dense = Dense, activation = gelu)
 
-Convenience function for `(x, y) -> @. relu(x + y)`.
-Useful as the `connection` argument for [`resnet`](#).
-See also [`reluadd`](#).
+Feedforward block used in many vision transformer-like models.
+
+# Arguments
+- `planes`: Number of dimensions in the input and output.
+- `hidden_planes`: Number of dimensions in the intermediate layer.
+- `dropout`: Dropout rate.
+- `dense`: Type of dense layer to use in the feedforward block.
+- `activation`: Activation function to use.
 """
-addrelu(x, y) = @. relu(x + y)
-
-"""
-    reluadd(x, y)
-
-Convenience function for `(x, y) -> @. relu(x) + relu(y)`.
-Useful as the `connection` argument for [`resnet`](#).
-See also [`addrelu`](#).
-"""
-reluadd(x, y) = @. relu(x) + relu(y)
-
-# Patching layer used by many vision transformer-like models
-struct Patching{T <: Integer}
-  patch_height::T
-  patch_width::T
+function mlpblock(planes, hidden_planes; dropout = 0., dense = Dense, activation = gelu)
+  Chain(dense(planes, hidden_planes, activation), Dropout(dropout),
+        dense(hidden_planes, planes, activation), Dropout(dropout))
 end
-Patching(patch_size) = Patching(patch_size, patch_size)
 
-function (p::Patching)(x)
+"""
+    Attention(in => out)
+    Attention(qkvlayer)
+
+Self attention layer used by transformer models. Specify the `in` and `out` dimensions,
+or directly provide a `qkvlayer` that maps an input the queries, keys, and values.
+"""
+struct Attention{T}
+  qkv::T
+end
+
+Attention(dims::Pair{Int, Int}) = Attention(Dense(dims.first, dims.second * 3; bias = false))
+
+@functor Attention
+
+function (attn::Attention)(x::AbstractArray{T, 3}) where T
+  q, k, v = chunk(attn.qkv(x), 3, dims = 1)
+  scale = convert(T, sqrt(size(q, 1)))
+  score = softmax(batched_mul(batched_transpose(q), k) / scale)
+  attention = batched_mul(v, score)
+
+  return attention
+end
+
+struct MHAttention{S, T}
+  heads::S
+  projection::T
+end
+
+"""
+    MHAttention(in, hidden, nheads; dropout = 0.0)
+
+Multi-head self-attention layer used in many vision transformer-like models.
+
+# Arguments
+- `in`: Number of dimensions in the input.
+- `hidden`: Number of dimensions in the intermediate layer.
+- `nheads`: Number of attention heads.
+- `dropout`: Dropout rate for the projection layer.
+"""
+function MHAttention(in, hidden, nheads; dropout = 0.)
+  if (nheads == 1 && hidden == in)
+    return Attention(in => in)
+  end
+  inheads, innerheads = chunk(1:in, nheads), chunk(1:hidden, nheads)
+  heads = Parallel(vcat, [Attention(length(i) => length(o)) for (i, o) in zip(inheads, innerheads)]...)
+  projection = Chain(Dense(hidden, in), Dropout(dropout))
+
+  MHAttention(heads, projection)
+end
+
+@functor MHAttention
+
+function (mha::MHAttention)(x)
+  nheads = length(mha.heads.layers)
+  xhead = chunk(x, nheads, dims = 1)
+  return mha.projection(mha.heads(xhead...))
+end
+
+"""
+    PatchEmbedding(patch_size)
+    PatchEmbedding(patch_height, patch_width)
+
+Patch embedding layer used by many vision transformer-like models to split the input image into patches.
+"""
+struct PatchEmbedding
+  patch_height::Int
+  patch_width::Int
+end
+
+PatchEmbedding(patch_size) = PatchEmbedding(patch_size, patch_size)
+
+function (p::PatchEmbedding)(x)
   h, w, c, n = size(x)
   hp, wp = h ÷ p.patch_height, w ÷ p.patch_width
   xpatch = reshape(x, hp, p.patch_height, wp, p.patch_width, c, n)
@@ -124,21 +188,38 @@ function (p::Patching)(x)
                  hp * wp, n)
 end
 
-@functor Patching
+@functor PatchEmbedding
 
 """
-    mlpblock(planes, expansion_factor = 4, dropout = 0., dense = Dense)
+    ViPosEmbedding(embedsize, npatches; init = (dims) -> rand(Float32, dims))
 
-Feedforward block used in many vision transformer-like models.
-
-# Arguments
-  `planes`: Number of dimensions in the input and output.
-  `hidden_planes`: Number of dimensions in the intermediate layer.
-  `dropout`: Dropout rate.
-  `dense`: Type of dense layer to use in the feedforward block.
-  `activation`: Activation function to use.
+Positional embedding layer used by many vision transformer-like models.
 """
-function mlpblock(planes, hidden_planes, dropout = 0., dense = Dense; activation = gelu)
-  Chain(dense(planes, hidden_planes, activation), Dropout(dropout),
-        dense(hidden_planes, planes, activation), Dropout(dropout))
+struct ViPosEmbedding{T}
+  vectors::T
 end
+
+ViPosEmbedding(embedsize, npatches; init = (dims::NTuple{2, Int}) -> rand(Float32, dims)) = 
+  ViPosEmbedding(init((embedsize, npatches)))
+
+(p::ViPosEmbedding)(x) = x .+ p.vectors
+
+@functor ViPosEmbedding
+
+"""
+    ClassTokens(dim; init = Flux.zeros32)
+
+Appends class tokens to an input with embedding dimension `dim` for use in many vision transformer models.
+"""
+struct ClassTokens{T}
+  token::T
+end
+
+ClassTokens(dim::Integer; init = Flux.zeros32) = ClassTokens(init(dim, 1, 1))
+
+function (m::ClassTokens)(x)
+  tokens = repeat(m.token, 1, 1, size(x, 3))
+  return hcat(tokens, x)
+end
+
+@functor ClassTokens

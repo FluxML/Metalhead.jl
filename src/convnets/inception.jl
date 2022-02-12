@@ -170,7 +170,7 @@ function inception3(; nclasses = 1000)
                       inception_e(2048)),
                 Chain(AdaptiveMeanPool((1, 1)),
                       Dropout(0.2),
-                      flatten,
+                      MLUtils.flatten,
                       Dense(2048, nclasses)))
 
   return layer

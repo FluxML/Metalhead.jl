@@ -79,7 +79,7 @@ function resnet(block, residuals::NTuple{2, Any}, connection = addrelu;
   end
 
   return Chain(Chain(layers...),
-               Chain(AdaptiveMeanPool((1, 1)), flatten, Dense(inplanes, nclasses)))
+               Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten, Dense(inplanes, nclasses)))
 end
 
 """

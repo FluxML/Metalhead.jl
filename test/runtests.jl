@@ -19,3 +19,8 @@ end
 @testset verbose = true "Other" begin
   include("other.jl")
 end
+
+# ViT tests
+@testset verbose = true "ViTs" begin
+  include("vit-based.jl")
+end
