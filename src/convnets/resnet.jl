@@ -43,6 +43,23 @@ end
 
 
 """
+    bottleneck_v1(inplanes, outplanes, downsample = false)
+
+Create a bottleneck residual block
+([reference](https://arxiv.org/abs/1512.03385v1)). The bottleneck is composed of
+3 convolutional layers with all a stride of 1 except the first convolutional
+layer which has a stride of 2.
+
+# Arguments:
+- `inplanes`: the number of input feature maps
+- `outplanes`: a list of the number of output feature maps for each convolution
+               within the residual block
+- `downsample`: set to `true` to downsample the input
+"""
+bottleneck_v1(inplanes, outplanes, downsample = false) =
+    bottleneck(inplanes, outplanes, downsample; stride = [(downsample ? 2 : 1), 1, 1])
+
+"""
     resnet(block, residuals::NTuple{2, Any}, connection = addrelu;
            channel_config, block_config, nclasses = 1000)
 
@@ -217,10 +234,7 @@ as in ResNet v1.5). The architecture of the orignal ResNet model can be obtained
 as shown below:
 
 ```julia
-bottleneck_v1(inplanes, outplanes, downsample = false) =
-    Metalhead.bottleneck(inplanes, outplanes, downsample; stride = [(downsample ? 2 : 1), 1, 1])
-
-resnet50_v1 = ResNet([1, 1, 4], [3, 4, 6, 3], :B; block = bottleneck_v1)
+resnet50_v1 = ResNet([1, 1, 4], [3, 4, 6, 3], :B; block = Metalhead.bottleneck_v1)
 ```
 """
 function ResNet(depth::Int = 50; pretrain = false, nclasses = 1000)
