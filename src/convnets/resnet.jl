@@ -128,9 +128,7 @@ function resnet(block, shortcut_config::Symbol, args...; block_config, kwargs...
            block_config = block_config, kwargs...)
 end
 
-function resnet(block, shortcut_config::NTuple{N,Symbol}, args...; kwargs...) where N
-    resnet(block, collect(shortcut_config), args...; kwargs...)
-end
+resnet(block, residuals::NTuple{2}, args...; kwargs...) = resnet(block, [residuals], args...; kwargs...)
 
 const resnet_config =
   Dict(18 => (([1, 1], [2, 2, 2, 2], [:A, :B, :B, :B]), basicblock),
