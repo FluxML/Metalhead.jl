@@ -212,7 +212,7 @@ resnet34 = ResNet([1, 1], [3, 4, 6, 3], :A; block = Metalhead.basicblock)
 ```
 
 The bottleneck of the orginal ResNet model has a stride of 2 on the first
-convolutional layer when downsampling (instead of the 2nd convolutional layers
+convolutional layer when downsampling (instead of the second convolutional layers
 as in ResNet v1.5). The architecture of the orignal ResNet model can be obtained
 as shown below:
 
