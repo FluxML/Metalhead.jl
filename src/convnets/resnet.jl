@@ -21,11 +21,11 @@ end
 
 Create a bottleneck residual block
 ([reference](https://arxiv.org/abs/1512.03385v1)). The bottleneck is composed of
-3 convolutional layers with the given `stride`. While the original paper uses a
-stride of 2 for the first convolutional layer (if `downsample` is `true`). A
-[revised variant](https://catalog.ngc.nvidia.com/orgs/nvidia/resources/resnet_50_v1_5_for_pytorch)
-called version 1.5 uses a stride of 2 (if `downsample` is `true`) in the 2nd
-convolutional layer instead.
+3 convolutional layers each with the given `stride`.
+By default, `stride` implements ["ResNet v1.5"](https://catalog.ngc.nvidia.com/orgs/nvidia/resources/resnet_50_v1_5_for_pytorch)
+which uses `stride == [1, 2, 1]` when `downsample == true`.
+This version is standard across various ML frameworks.
+The original paper uses `stride == [2, 1, 1]` when `downsample == true` instead.
 
 # Arguments:
 - `inplanes`: the number of input feature maps
