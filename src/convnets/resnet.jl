@@ -206,8 +206,7 @@ shortcuts:
 ```julia
 using Metalhead
 
-resnet18 = ResNet([1, 1], [2, 2, 2, 2], :A;
-    block = Metalhead.basicblock)
+resnet18 = ResNet([1, 1], [2, 2, 2, 2], :A; block = Metalhead.basicblock)
 
 resnet34 = ResNet([1, 1], [3, 4, 6, 3], :A;
     block = Metalhead.basicblock)
