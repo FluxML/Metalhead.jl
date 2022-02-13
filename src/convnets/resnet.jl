@@ -149,7 +149,7 @@ See also [`resnet`](#).
 - `channel_config`: the growth rate of the output feature maps within a residual block
 - `block_config`: a list of the number of residual blocks at each stage
 - `shortcut_config`: the type of shortcut style (either `:A`, `:B`, or `:C`).
-   `shortcut_config` can also be a vector or tuple of symbols if different shortcut styles are applied to
+   `shortcut_config` can also be a vector of symbols if different shortcut styles are applied to
    different residual blocks.
 - `block`: a function with input `(inplanes, outplanes, downsample=false)` that returns
            a new residual block (see [`Metalhead.basicblock`](#) and [`Metalhead.bottleneck`](#))
