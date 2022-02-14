@@ -26,6 +26,7 @@ include("convnets/mobilenet.jl")
 
 # Other models
 include("other/mlpmixer.jl")
+include("other/esrgan.jl")
 
 # ViT-based models
 include("vit-based/vit.jl")
