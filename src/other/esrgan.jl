@@ -1,33 +1,15 @@
-using Flux
-using Flux:@functor
-
-function ConvBlock(inc, out, k, s, p, use_act)
-    if use_act 
-        return Chain(
-            Conv((k, k), inc => out, stride = s, pad = p, bias = true),
-            x -> leakyrelu.(x, 0.2)
-        )
-    else
-        return Chain(
-            Conv((k, k), inc => out, stride = s, pad = p, bias = true)
-        )
-    end
-end
 
 function UpsampleBlock(inc, scale = 2)
     return Chain(
         Upsample(:nearest, scale = (scale, scale)),
-        Conv((3, 3), inc => inc, stride = 1, pad = 1, bias = true),
-        x -> leakyrelu.(x, 0.2)
+        Conv((3, 3), inc => inc, Base.Fix2(leakyrelu, 0.2), pad = 1)
     )
 end
 
-mutable struct DenseResidualBlock
+struct DenseResidualBlock
     residual_beta
     blocks
 end
-
-@functor DenseResidualBlock
 
 function DenseResidualBlock(inc; 
                             c = 32, residual_beta = 0.2)
@@ -35,12 +17,14 @@ function DenseResidualBlock(inc;
     for i in 0:4
         in_channels = inc + c * i
         out_channels = i<=3 ? c : inc
-        use_act = i<=3 ? true : false
-        push!(blocks, ConvBlock(in_channels, out_channels, 3, 1, 1, use_act))
+        act = i <= 3 ? Base.Fix2(leakyrelu, 0.2) : identity
+        push!(blocks, Conv((3, 3), in_channels => out_channels, act, pad = 1))
     end
 
     return DenseResidualBlock(residual_beta, blocks)
 end
+
+@functor DenseResidualBlock
 
 function (m::DenseResidualBlock)(x) 
     new_inputs = x
@@ -52,22 +36,22 @@ function (m::DenseResidualBlock)(x)
     return m.residual_beta * out + x
 end
 
-mutable struct RRDB
+mutable struct ResidualinResidualDenseBlock
     residual_beta
     rrdb
 end
 
-@functor RRDB
+@functor ResidualinResidualDenseBlock
 
-function RRDB(inc;
+function ResidualinResidualDenseBlock(inc;
               residual_beta = 0.2)
     rrdb = Chain([DenseResidualBlock(inc) for _ in 1:3]...)
-    RRDB(residual_beta, rrdb)
+    ResidualinResidualDenseBlock(residual_beta, rrdb)
 end
 
-(m::RRDB)(x) = m.rrdb(x) * m.residual_beta + x
+(m::ResidualinResidualDenseBlock)(x) = m.rrdb(x) * m.residual_beta + x
 
-mutable struct Generator
+struct esrgan_generator
     initial
     residuals
     conv
@@ -75,23 +59,22 @@ mutable struct Generator
     final
 end
 
-@functor Generator
-
-function Generator(inc = 3, nc = 64, nb = 23)
-    initial = Conv((3, 3), inc => nc, stride = 1, pad = 1, bias = true)
-    residuals = Chain([RRDB(nc) for _ in 1:nb]...)
-    conv = Conv((3, 3), nc => nc, stride = 1, pad = 1)
+function esrgan_generator(inc = 3, nc = 64, nb = 23)
+    initial = Conv((3, 3), inc => nc, pad = 1)
+    residuals = Chain([ResidualinResidualDenseBlock(nc) for _ in 1:nb]...)
+    conv = Conv((3, 3), nc => nc, pad = 1)
     upsamples = Chain(UpsampleBlock(nc), UpsampleBlock(nc))
     final = Chain(
-        Conv((3, 3), nc => nc, stride = 1, pad = 1, bias = true),
-        x -> leakyrelu.(x, 0.2),
-        Conv((3, 3), nc => inc, stride = 1, pad = 1, bias = true)
+        Conv((3, 3), nc => nc, Base.Fix2(leakyrelu, 0.2), pad = 1),
+        Conv((3, 3), nc => inc, pad = 1)
     )
 
-    Generator(initial, residuals, conv, upsamples, final)
+    esrgan_generator(initial, residuals, conv, upsamples, final)
 end
 
-function (m::Generator)(x)
+@functor esrgan_generator
+
+function (m::esrgan_generator)(x)
     initial = m.initial(x)
     x = m.conv(m.residuals(initial)) + initial
     x = m.upsamples(x)
@@ -99,34 +82,33 @@ function (m::Generator)(x)
     return x
 end
 
-mutable struct Discriminator
-    blocks
-    classifier
-end
 
-@functor Discriminator
-
-function Discriminator(; in_c = 3, features = [64, 64, 128, 128, 256, 256, 512, 512])
+function esrgan_discriminator(; in_c = 3, features = [64, 64, 128, 128, 256, 256, 512, 512])
     blocks = []
     for (idx, feature) in enumerate(features)
         s = 1 + (idx - 1) % 2
-        push!(blocks,ConvBlock(in_c, feature, 3, s, 1, true))
+        push!(blocks, Conv((3, 3), in_c => feature, Base.Fix2(leakyrelu, 0.2), stride = s, pad = 1))
         in_c = feature
     end
     blocks = Chain(blocks...)
     classifier = Chain(
         AdaptiveMeanPool((6, 6)),
         flatten,
-        Dense(512 * 6 * 6, 1024),
-        x -> leakyrelu.(x, 0.2),
+        Dense(512 * 6 * 6, 1024, Base.Fix2(leakyrelu, 0.2)),
         Dense(1024, 1)
     )
-
-    Discriminator(blocks, classifier)
+    return Chain(blocks, classifier)
 end
 
-function (m::Discriminator)(x)
-    x = m.blocks(x)
-    x = m.classifier(x)
-    return x
-end
+# Test
+
+D = esrgan_discriminator()
+G = esrgan_generator()
+
+x = rand(Float64,24,24,3,5)
+
+y = G(x)
+
+println(y|>size) #(96, 96, 3, 5)
+
+println(D(y)|>size) #(1, 5)
