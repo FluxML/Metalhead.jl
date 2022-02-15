@@ -93,7 +93,7 @@ function esrgan_discriminator(; in_c = 3, features = [64, 64, 128, 128, 256, 256
     blocks = Chain(blocks...)
     classifier = Chain(
         AdaptiveMeanPool((6, 6)),
-        flatten,
+        Flux.flatten,
         Dense(512 * 6 * 6, 1024, Base.Fix2(leakyrelu, 0.2)),
         Dense(1024, 1)
     )
@@ -103,3 +103,5 @@ end
 function ESRGAN()
     return esrgan_discriminator(), esrgan_generator()
 end
+
+@functor ESRGAN
