@@ -8,7 +8,7 @@ using Flux
 end
 
 @testset "ESRGAN" begin
-    D, G = Metalhead.ESRGAN()
+    D, G = ESRGAN()
     @test size(G(rand(Float32,24,24,3,5))) == (96, 96, 3, 5)
     @test size(D(G(rand(Float32,24,24,3,5)))) == (1,5)
 end
