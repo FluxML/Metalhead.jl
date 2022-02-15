@@ -100,15 +100,6 @@ function esrgan_discriminator(; in_c = 3, features = [64, 64, 128, 128, 256, 256
     return Chain(blocks, classifier)
 end
 
-# Test
-
-D = esrgan_discriminator()
-G = esrgan_generator()
-
-x = rand(Float64,24,24,3,5)
-
-y = G(x)
-
-println(y|>size) #(96, 96, 3, 5)
-
-println(D(y)|>size) #(1, 5)
+function ESRGAN()
+    return esrgan_discriminator(), esrgan_generator()
+end
