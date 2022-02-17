@@ -112,17 +112,19 @@ end
     invertedresidual(kernel_size, inplanes, hidden_planes, outplanes, activation = relu;
                      stride, reduction = nothing)
 
-Create a basic inverted residual block for MobileNetv3
+Create a basic inverted residual block for MobileNet variants
 ([reference](https://arxiv.org/abs/1905.02244)).
 
 # Arguments
+- `kernel_size`: The kernel size of the convolutional layers
 - `inplanes`: The number of input feature maps
 - `hidden_planes`: The number of feature maps in the hidden layer
 - `outplanes`: The number of output feature maps
-- `kernel_size`: The kernel size of the convolutional layers
+- `activation`: The activation function for the first two convolution layer
 - `stride`: The stride of the convolutional kernel, has to be either 1 or 2
-- `use_se`: If `true`, Squeeze and Excitation layer will be used
-- `use_hs`: If `true`, Hard-Swish activation function will be used
+- `reduction`: The reduction factor for the number of hidden feature maps
+               in a squeeze and excite layer (see [`squeeze_excite`](#)).
+               Must be >= 1 or `nothing` for no squeeze and excite layer.
 """
 function invertedresidual(kernel_size, inplanes, hidden_planes, outplanes, activation = relu;
                           stride, reduction = nothing)
