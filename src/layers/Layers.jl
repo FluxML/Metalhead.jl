@@ -9,7 +9,6 @@ using MLUtils
 include("../utilities.jl")
 
 include("attention.jl")
-include("drop.jl")
 include("embeddings.jl")
 include("mlp.jl")
 include("normalise.jl")
