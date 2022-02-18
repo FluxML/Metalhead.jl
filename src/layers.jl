@@ -130,7 +130,7 @@ function invertedresidual(kernel_size, inplanes, hidden_planes, outplanes, activ
                           stride, reduction = nothing)
   @assert stride in [1, 2] "`stride` has to be 1 or 2"
 
-  pad = (kernel_size - 1) ÷ 2
+  pad = @. (kernel_size - 1) ÷ 2
   conv1 = (inplanes == hidden_planes) ? () : conv_bn((1, 1), inplanes, hidden_planes, activation; bias = false)
   selayer = isnothing(reduction) ? identity : squeeze_excite(hidden_planes, reduction)
 
