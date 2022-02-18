@@ -91,6 +91,61 @@ end
 skip_identity(inplanes, outplanes, downsample) = skip_identity(inplanes, outplanes)
 
 """
+    squeeze_excite(channels, reduction = 4)
+
+Squeeze and excitation layer used by MobileNet variants
+([reference](https://arxiv.org/abs/1905.02244)).
+
+# Arguments
+- `channels`: the number of input/output feature maps
+- `reduction = 4`: the reduction factor for the number of hidden feature maps
+                   (must be >= 1)
+"""
+function squeeze_excite(channels, reduction = 4)
+  @assert (reduction >= 1) "`reduction` must be >= 1"
+  SkipConnection(Chain(AdaptiveMeanPool((1, 1)),
+                       conv_bn((1, 1), channels, channels ÷ reduction, relu; bias = false)...,
+                       conv_bn((1, 1), channels ÷ reduction, channels, hardσ)...), .*)
+end
+
+"""
+    invertedresidual(kernel_size, inplanes, hidden_planes, outplanes, activation = relu;
+                     stride, reduction = nothing)
+
+Create a basic inverted residual block for MobileNet variants
+([reference](https://arxiv.org/abs/1905.02244)).
+
+# Arguments
+- `kernel_size`: The kernel size of the convolutional layers
+- `inplanes`: The number of input feature maps
+- `hidden_planes`: The number of feature maps in the hidden layer
+- `outplanes`: The number of output feature maps
+- `activation`: The activation function for the first two convolution layer
+- `stride`: The stride of the convolutional kernel, has to be either 1 or 2
+- `reduction`: The reduction factor for the number of hidden feature maps
+               in a squeeze and excite layer (see [`squeeze_excite`](#)).
+               Must be >= 1 or `nothing` for no squeeze and excite layer.
+"""
+function invertedresidual(kernel_size, inplanes, hidden_planes, outplanes, activation = relu;
+                          stride, reduction = nothing)
+  @assert stride in [1, 2] "`stride` has to be 1 or 2"
+
+  pad = @. (kernel_size - 1) ÷ 2
+  conv1 = (inplanes == hidden_planes) ? () : conv_bn((1, 1), inplanes, hidden_planes, activation; bias = false)
+  selayer = isnothing(reduction) ? identity : squeeze_excite(hidden_planes, reduction)
+
+  invres = Chain(conv1...,
+                 conv_bn(kernel_size, hidden_planes, hidden_planes, activation;
+                         bias = false, stride, pad = pad, groups = hidden_planes)...,
+                 selayer,
+                 conv_bn((1, 1), hidden_planes, outplanes, identity; bias = false)...)
+
+  (stride == 1 && inplanes == outplanes) ? SkipConnection(invres, +) : invres
+end
+invertedresidual(kernel_size::Integer, args...; kwargs...) =
+  invertedresidual((kernel_size, kernel_size), args...; kwargs...)
+
+"""
     mlpblock(planes, hidden_planes; dropout = 0., dense = Dense, activation = gelu)
 
 Feedforward block used in many vision transformer-like models.

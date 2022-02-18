@@ -1,6 +1,14 @@
 # Utility function for classifier head of vision transformer-like models
 _seconddimmean(x) = dropdims(mean(x, dims = 2); dims = 2)
 
+# utility function for making sure that all layers have a channel size divisible by 8
+# used by MobileNet variants
+function _round_channels(channels, divisor, min_value = divisor)
+  new_channels = max(min_value, floor(Int, channels + divisor / 2) ÷ divisor * divisor)
+  # Make sure that round down does not go down by more than 10%
+  return (new_channels < 0.9 * channels) ? new_channels + divisor : new_channels
+end
+
 """
     addrelu(x, y)
 
