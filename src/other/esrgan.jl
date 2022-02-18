@@ -51,13 +51,36 @@ end
 
 (m::ResidualinResidualDenseBlock)(x) = m.rrdb(x) * m.residual_beta + x
 
-struct esrgan_generator
-    initial
-    residuals
-    conv
-    upsamples
-    final
-end
+# struct esrgan_generator
+#     initial
+#     residuals
+#     conv
+#     upsamples
+#     final
+# end
+
+# function esrgan_generator(inc = 3, nc = 64, nb = 23)
+#     initial = Conv((3, 3), inc => nc, pad = 1)
+#     residuals = Chain([ResidualinResidualDenseBlock(nc) for _ in 1:nb]...)
+#     conv = Conv((3, 3), nc => nc, pad = 1)
+#     upsamples = Chain(UpsampleBlock(nc), UpsampleBlock(nc))
+#     final = Chain(
+#         Conv((3, 3), nc => nc, Base.Fix2(leakyrelu, 0.2), pad = 1),
+#         Conv((3, 3), nc => inc, pad = 1)
+#     )
+
+#     esrgan_generator(initial, residuals, conv, upsamples, final)
+# end
+
+# @functor esrgan_generator
+
+# function (m::esrgan_generator)(x)
+#     initial = m.initial(x)
+#     x = m.conv(m.residuals(initial)) + initial
+#     x = m.upsamples(x)
+#     x = m.final(x)
+#     return x
+# end
 
 function esrgan_generator(inc = 3, nc = 64, nb = 23)
     initial = Conv((3, 3), inc => nc, pad = 1)
@@ -68,20 +91,8 @@ function esrgan_generator(inc = 3, nc = 64, nb = 23)
         Conv((3, 3), nc => nc, Base.Fix2(leakyrelu, 0.2), pad = 1),
         Conv((3, 3), nc => inc, pad = 1)
     )
-
-    esrgan_generator(initial, residuals, conv, upsamples, final)
+    return Chain(initial, SkipConnection(Chain(conv, residuals), +), upsamples, final)
 end
-
-@functor esrgan_generator
-
-function (m::esrgan_generator)(x)
-    initial = m.initial(x)
-    x = m.conv(m.residuals(initial)) + initial
-    x = m.upsamples(x)
-    x = m.final(x)
-    return x
-end
-
 
 function esrgan_discriminator(; in_c = 3, features = [64, 64, 128, 128, 256, 256, 512, 512])
     blocks = []
@@ -93,15 +104,14 @@ function esrgan_discriminator(; in_c = 3, features = [64, 64, 128, 128, 256, 256
     blocks = Chain(blocks...)
     classifier = Chain(
         AdaptiveMeanPool((6, 6)),
-        Flux.flatten,
+        MLUtils.flatten,
         Dense(512 * 6 * 6, 1024, Base.Fix2(leakyrelu, 0.2)),
         Dense(1024, 1)
     )
     return Chain(blocks, classifier)
 end
 
-function ESRGAN()
-    return esrgan_discriminator(), esrgan_generator()
+function esrgan()
+    return Chain(discriminator = esrgan_discriminator(), generator = esrgan_generator())
 end
 
-@functor ESRGAN
