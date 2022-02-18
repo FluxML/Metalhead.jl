@@ -1,44 +1,4 @@
-# This is a utility function for making sure that all layers have a channel size divisible by 8.
-function _make_divisible(v, divisor, min_value = nothing)
-  if isnothing(min_value)
-    min_value = divisor
-  end
-  new_v = max(min_value, floor(Int, v + divisor / 2) ÷ divisor * divisor)
-  # Make sure that round down does not go down by more than 10%
-  (new_v < 0.9 * v) ? new_v + divisor : new_v
-end
-
 # MobileNetv2
-
-"""
-    invertedresidualv2(inplanes, outplanes, stride, expand_ratio)
-
-Create a basic inverted residual block for MobileNetv2
-([reference](https://arxiv.org/abs/1801.04381)).
-
-# Arguments
-- `inplanes`: The number of input feature maps
-- `outplanes`: The number of output feature maps
-- `stride`: The stride of the convolutional layer, has to be either 1 or 2
-- `expand_ratio`: The ratio of the inner bottleneck feature maps over the input feature maps
-"""
-function invertedresidualv2(inplanes, outplanes, stride, expand_ratio)
-  @assert stride in [1, 2] "`stride` has to be 1 or 2"
-  hidden_planes = floor(Int, inplanes * expand_ratio)
-
-  if expand_ratio == 1
-    invres = Chain(conv_bn((3, 3), hidden_planes, hidden_planes, relu6;
-                           bias = false, stride, pad = 1, groups = hidden_planes)...,
-                   conv_bn((1, 1), hidden_planes, outplanes, identity; bias = false)...)
-  else
-    invres = Chain(conv_bn((1, 1), inplanes, hidden_planes, relu6; bias = false)...,
-                   conv_bn((3, 3), hidden_planes, hidden_planes, relu6;
-                           bias = false, stride, pad = 1, groups = hidden_planes)...,
-                   conv_bn((1, 1), hidden_planes, outplanes, identity; bias = false)...)
-  end
-
-  (stride == 1 && inplanes == outplanes) ? SkipConnection(invres, +) : invres
-end
 
 """
     mobilenetv2(width_mult, configs; max_width = 1280, nclasses = 1000)
@@ -59,21 +19,23 @@ Create a MobileNetv2 model.
 """
 function mobilenetv2(width_mult, configs; max_width = 1280, nclasses = 1000)
   # building first layer
-  inplanes = _make_divisible(32 * width_mult, width_mult == 0.1 ? 4 : 8)
+  inplanes = _round_channels(32 * width_mult, width_mult == 0.1 ? 4 : 8)
   layers = []
   append!(layers, conv_bn((3, 3), 3, inplanes, stride = 2))
 
   # building inverted residual blocks
   for (t, c, n, s) in configs
-    outplanes = _make_divisible(c * width_mult, width_mult == 0.1 ? 4 : 8)
+    outplanes = _round_channels(c * width_mult, width_mult == 0.1 ? 4 : 8)
     for i in 1:n
-      push!(layers, invertedresidualv2(inplanes, outplanes, i == 1 ? s : 1, t))
+      push!(layers, invertedresidual(3, inplanes, inplanes * t, outplanes, relu6;
+                                     stride = i == 1 ? s : 1))
       inplanes = outplanes
     end
   end
 
   # building last several layers
-  outplanes = (width_mult > 1.0) ? _make_divisible(max_width * width_mult, width_mult == 0.1 ? 4 : 8) : max_width
+  outplanes = (width_mult > 1) ? _round_channels(max_width * width_mult, width_mult == 0.1 ? 4 : 8) :
+                                 max_width
 
   return Chain(Chain(layers...,
                      conv_bn((1, 1), inplanes, outplanes, relu6, bias = false)...),
@@ -130,52 +92,6 @@ classifier(m::MobileNetv2) = m.layers[2:end]
 # MobileNetv3
 
 """
-    selayer(channels, reduction = 4)
-
-Squeeze and Excitation layer used by MobileNetv3
-([reference](https://arxiv.org/abs/1905.02244)).
-"""
-selayer(channels, reduction = 4) =
-  SkipConnection(Chain(AdaptiveMeanPool((1, 1)),
-                       conv_bn((1, 1), channels, channels // reduction, relu; bias = false)...,
-                       conv_bn((1, 1), channels // reduction, channels, hardσ)...,), .*)
-
-"""
-    invertedresidualv3(inplanes, hidden_planes, outplanes, kernel_size, stride, use_se, use_hs)
-
-Create a basic inverted residual block for MobileNetv3
-([reference](https://arxiv.org/abs/1905.02244)).
-
-# Arguments
-- `inplanes`: The number of input feature maps
-- `hidden_planes`: The number of feature maps in the hidden layer
-- `outplanes`: The number of output feature maps
-- `kernel_size`: The kernel size of the convolutional layers
-- `stride`: The stride of the convolutional kernel, has to be either 1 or 2
-- `use_se`: If `true`, Squeeze and Excitation layer will be used
-- `use_hs`: If `true`, Hard-Swish activation function will be used
-"""
-function invertedresidualv3(inplanes, hidden_planes, outplanes, kernel_size,
-                            stride, use_se, use_hs)
-  @assert stride in [1, 2] "`stride` has to be 1 or 2"
-
-  if inplanes == hidden_planes
-    invres = Chain(conv_bn((kernel_size, kernel_size), hidden_planes, hidden_planes, use_hs ? hardswish : relu;
-                            bias = false, stride, pad = (kernel_size - 1) ÷ 2, groups = hidden_planes)...,
-                            use_se ? selayer(hidden_planes) : identity,
-                   conv_bn((1, 1), hidden_planes, outplanes, identity; bias = false)...)
-  else
-    invres = Chain(conv_bn((1, 1), inplanes, hidden_planes, use_hs ? hardswish : relu; bias = false)...,
-                   conv_bn((kernel_size, kernel_size), hidden_planes, hidden_planes, use_hs ? hardswish : relu;
-                            bias = false, stride, pad = (kernel_size - 1) ÷ 2, groups = hidden_planes)...,
-                            use_se ? selayer(hidden_planes) : identity,
-                   conv_bn((1, 1), hidden_planes, outplanes, identity; bias = false)...)
-  end
-
-  (stride == 1 && inplanes == outplanes) ? SkipConnection(invres, +) : invres
-end
-
-"""
     mobilenetv3(width_mult, configs; max_width = 1024, nclasses = 1000)
 
 Create a MobileNetv3 model.
@@ -189,7 +105,7 @@ Create a MobileNetv3 model.
   - `k::Int` - The size of the convolutional kernel
   - `c::Float` - The multiplier factor for deciding the number of feature maps in the hidden layer
   - `t::Int` - The number of output feature maps for a given block
-  - `use_se::Bool` - Whether to use Squeeze and Excitation layer
+  - `r::Int` - The reduction factor (`>= 1` or `nothing` to skip) for squeeze and excite layers
   - `use_hs::Bool` - Whether to use Hard-Swish activation function
   - `s::Int` - The stride of the convolutional kernel
 - `max_width`: The maximum number of feature maps in any layer of the network
@@ -197,22 +113,24 @@ Create a MobileNetv3 model.
 """
 function mobilenetv3(width_mult, configs; max_width = 1024, nclasses = 1000)
   # building first layer
-  inplanes = _make_divisible(16 * width_mult, 8)
+  inplanes = _round_channels(16 * width_mult, 8)
   layers = []
   append!(layers, conv_bn((3, 3), 3, inplanes, hardswish; stride = 2))
   explanes = 0
   # building inverted residual blocks
-  for (k, t, c, use_se, use_hs, s) in configs
+  for (k, t, c, r, use_hs, s) in configs
     # inverted residual layers
-    outplanes = _make_divisible(c * width_mult, 8)
-    explanes = _make_divisible(inplanes * t, 8)
-    push!(layers, invertedresidualv3(inplanes, explanes, outplanes, k, s, use_se, use_hs))
+    outplanes = _round_channels(c * width_mult, 8)
+    explanes = _round_channels(inplanes * t, 8)
+    activation = use_hs ? hardswish : relu
+    push!(layers, invertedresidual(k, inplanes, explanes, outplanes, activation;
+                                   stride = s, reduction = r))
     inplanes = outplanes
   end
 
   # building last several layers
   output_channel = max_width
-  output_channel = width_mult > 1.0 ? _make_divisible(output_channel * width_mult, 8) : output_channel
+  output_channel = width_mult > 1.0 ? _round_channels(output_channel * width_mult, 8) : output_channel
   classifier = (
     Dense(explanes, output_channel, hardswish),
     Dropout(0.2),
@@ -228,35 +146,35 @@ end
 mobilenetv3_configs = Dict(
   :small => [
     # k, t, c, SE, HS, s 
-    (3, 1, 16, true, false, 2),
-    (3, 4.5, 24, false, false, 2),
-    (3, 3.67, 24, false, false, 1),
-    (5, 4, 40, true, true, 2),
-    (5, 6, 40, true, true, 1),
-    (5, 6, 40, true, true, 1),
-    (5, 3, 48, true, true, 1),
-    (5, 3, 48, true, true, 1),
-    (5, 6, 96, true, true, 2),
-    (5, 6, 96, true, true, 1),
-    (5, 6, 96, true, true, 1),
+    (3, 1, 16, 4, false, 2),
+    (3, 4.5, 24, nothing, false, 2),
+    (3, 3.67, 24, nothing, false, 1),
+    (5, 4, 40, 4, true, 2),
+    (5, 6, 40, 4, true, 1),
+    (5, 6, 40, 4, true, 1),
+    (5, 3, 48, 4, true, 1),
+    (5, 3, 48, 4, true, 1),
+    (5, 6, 96, 4, true, 2),
+    (5, 6, 96, 4, true, 1),
+    (5, 6, 96, 4, true, 1),
   ], 
   :large => [
     # k, t, c, SE, HS, s 
-    (3, 1, 16, false, false, 1),
-    (3, 4, 24, false, false, 2),
-    (3, 3, 24, false, false, 1),
-    (5, 3, 40, true, false, 2),
-    (5, 3, 40, true, false, 1),
-    (5, 3, 40, true, false, 1),
-    (3, 6, 80, false, true, 2),
-    (3, 2.5, 80, false, true, 1),
-    (3, 2.3, 80, false, true, 1),
-    (3, 2.3, 80, false, true, 1),
-    (3, 6, 112, true, true, 1),
-    (3, 6, 112, true, true, 1),
-    (5, 6, 160, true, true, 2),
-    (5, 6, 160, true, true, 1),
-    (5, 6, 160, true, true, 1)
+    (3, 1, 16, nothing, false, 1),
+    (3, 4, 24, nothing, false, 2),
+    (3, 3, 24, nothing, false, 1),
+    (5, 3, 40, 4, false, 2),
+    (5, 3, 40, 4, false, 1),
+    (5, 3, 40, 4, false, 1),
+    (3, 6, 80, nothing, true, 2),
+    (3, 2.5, 80, nothing, true, 1),
+    (3, 2.3, 80, nothing, true, 1),
+    (3, 2.3, 80, nothing, true, 1),
+    (3, 6, 112, 4, true, 1),
+    (3, 6, 112, 4, true, 1),
+    (5, 6, 160, 4, true, 2),
+    (5, 6, 160, 4, true, 1),
+    (5, 6, 160, 4, true, 1)
   ]
 )
 
