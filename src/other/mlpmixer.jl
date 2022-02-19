@@ -2,7 +2,7 @@
 _residualprenorm(planes, fn) = SkipConnection(Chain(fn, LayerNorm(planes)), +)
 
 # Utility function for 1D convolution
-_conv1d(inplanes, outplanes, activation) = Conv((1, ), inplanes => outplanes, activation)
+_conv1d(inplanes, outplanes, activation = identity) = Conv((1, ), inplanes => outplanes, activation)
 
 """
     mlpmixer(imsize::NTuple{2} = (256, 256); inchannels = 3, patch_size = 16, planes = 512, 
