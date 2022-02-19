@@ -51,37 +51,6 @@ end
 
 (m::ResidualinResidualDenseBlock)(x) = m.rrdb(x) * m.residual_beta + x
 
-# struct esrgan_generator
-#     initial
-#     residuals
-#     conv
-#     upsamples
-#     final
-# end
-
-# function esrgan_generator(inc = 3, nc = 64, nb = 23)
-#     initial = Conv((3, 3), inc => nc, pad = 1)
-#     residuals = Chain([ResidualinResidualDenseBlock(nc) for _ in 1:nb]...)
-#     conv = Conv((3, 3), nc => nc, pad = 1)
-#     upsamples = Chain(UpsampleBlock(nc), UpsampleBlock(nc))
-#     final = Chain(
-#         Conv((3, 3), nc => nc, Base.Fix2(leakyrelu, 0.2), pad = 1),
-#         Conv((3, 3), nc => inc, pad = 1)
-#     )
-
-#     esrgan_generator(initial, residuals, conv, upsamples, final)
-# end
-
-# @functor esrgan_generator
-
-# function (m::esrgan_generator)(x)
-#     initial = m.initial(x)
-#     x = m.conv(m.residuals(initial)) + initial
-#     x = m.upsamples(x)
-#     x = m.final(x)
-#     return x
-# end
-
 function esrgan_generator(inc = 3, nc = 64, nb = 23)
     initial = Conv((3, 3), inc => nc, pad = 1)
     residuals = Chain([ResidualinResidualDenseBlock(nc) for _ in 1:nb]...)
