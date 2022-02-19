@@ -10,13 +10,14 @@ Creates a single block of ConvNeXt.
 - `λ`: Init value for [LayerScale](https://arxiv.org/abs/2103.17239)
 """
 function convnextblock(planes, drop_path_rate = 0., λ = 1f-6)
-  γ = λ > 0 ? Flux.ones32(planes) * λ : nothing
-  LayerScale(x) = isnothing(γ) ? x : x .* γ
+  γ = Flux.ones32(planes) * λ
+  LayerScale(x) = x .* γ
+  scale = λ > 0 ? identity : LayerScale
   layers = SkipConnection(Chain(DepthwiseConv((7, 7), planes => planes; pad = 3), 
                                 x -> permutedims(x, (3, 1, 2, 4)),
                                 LayerNorm(planes; ϵ = 1f-6),
                                 mlpblock(planes, 4 * planes),
-                                LayerScale,
+                                scale, # LayerScale
                                 x -> permutedims(x, (2, 3, 1, 4)),
                                 Dropout(drop_path_rate, dims = 4)), +)
   return layers
