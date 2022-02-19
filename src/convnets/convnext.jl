@@ -68,11 +68,11 @@ function convnext(depths, planes; inchannels = 3, drop_path_rate = 0., λ = 1f-6
 end
 
 # Configurations for ConvNeXt models
-convnext_configs = Dict(:tiny => Dict("depths" => [3, 3, 9, 3], "planes" => [96, 192, 384, 768]),
-                        :small => Dict("depths" => [3, 3, 27, 3], "planes" => [96, 192, 384, 768]),
-                        :base => Dict("depths" => [3, 3, 27, 3], "planes" => [128, 256, 512, 1024]),
-                        :large => Dict("depths" => [3, 3, 27, 3], "planes" => [192, 384, 768, 1536]),
-                        :xlarge => Dict("depths" => [3, 3, 27, 3], "planes" => [256, 512, 1024, 2048]))
+convnext_configs = Dict(:tiny => Dict(:depths => [3, 3, 9, 3], :planes => [96, 192, 384, 768]),
+                        :small => Dict(:depths => [3, 3, 27, 3], :planes => [96, 192, 384, 768]),
+                        :base => Dict(:depths => [3, 3, 27, 3], :planes => [128, 256, 512, 1024]),
+                        :large => Dict(:depths => [3, 3, 27, 3], :planes => [192, 384, 768, 1536]),
+                        :xlarge => Dict(:depths => [3, 3, 27, 3], :planes => [256, 512, 1024, 2048]))
 
 struct ConvNeXt
   layers
@@ -91,8 +91,8 @@ Creates a ConvNeXt model.
 - `nclasses`: number of output classes
 """
 function ConvNeXt(mode::Symbol = :base; inchannels = 3, drop_path_rate = 0., λ = 1f-6, nclasses = 1000)
-  depths = convnext_configs[mode]["depths"]
-  planes = convnext_configs[mode]["planes"]
+  depths = convnext_configs[mode][:depths]
+  planes = convnext_configs[mode][:planes]
   layers = convnext(depths, planes; inchannels, drop_path_rate, λ, nclasses)
   return ConvNeXt(layers)
 end
