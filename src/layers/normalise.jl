@@ -1,30 +1,25 @@
 """
-    ChannelLayerNorm(sz, λ = identity; affine = true, ϵ = 1f-5)
+    ChannelLayerNorm(sz::Int, λ = identity; ϵ = 1f-5)
 
 A variant of LayerNorm where the input is normalised along the
-channel dimension. The input is expected to have channel 
-dimension with size `sz`.
+channel dimension. The input is expected to have channel dimension with size 
+`sz`. It also applies a learnable shift and rescaling.
 
-If `affine = true` also applies a learnable shift and rescaling
-as in the [`ChannelDiag`](@ref) layer.
+Note that this is specifically for inputs with 4 dimensions in the format
+(H, W, C, N) where H, W are the height and width of the input, C is the number
+of channels, and N is the batch size.
 """
-struct ChannelLayerNorm{F,D,T,N}
+struct ChannelLayerNorm{F,D,T}
   λ::F
   diag::D
   ϵ::T
-  size::NTuple{N,Int}
-  affine::Bool
 end
 
-function(m::ChannelLayerNorm)(x)
-  x = MLUtils.normalise(x, dims = ndims(x) - 1, ϵ = m.ϵ)
-  m.diag === nothing ? m.λ.(x) : m.λ.(m.diag(x))
-end
+(m::ChannelLayerNorm)(x) = m.λ.(m.diag(MLUtils.normalise(x, dims = ndims(x) - 1, ϵ = m.ϵ)))
 
-function ChannelLayerNorm(sz, λ = identity; affine = true, ϵ = 1f-5)
-  sz = sz isa Integer ? (sz,) : sz
-  diag = Flux.Diagonal(1, 1, sz...)
-  return ChannelLayerNorm(λ, diag, ϵ, sz, affine)
+function ChannelLayerNorm(sz::Int, λ = identity; ϵ = 1f-5)
+  diag = Flux.Diagonal(1, 1, sz)
+  return ChannelLayerNorm(λ, diag, ϵ)
 end
 
 @functor ChannelLayerNorm
