@@ -1,6 +1,3 @@
-# Utility function for applying LayerNorm before a block
-prenorm(planes, fn) = Chain(fn, LayerNorm(planes))
-
 """
     transformer_encoder(planes, depth, heads, headplanes, mlppanes; dropout = 0.)
 

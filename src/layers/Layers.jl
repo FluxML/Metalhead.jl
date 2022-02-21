@@ -18,7 +18,7 @@ export Attention, MHAttention,
        PatchEmbedding, ViPosEmbedding, ClassTokens,
        mlpblock,
        DropPath,
-       ChannelLayerNorm,
+       ChannelLayerNorm, prenorm,
        skip_identity, skip_projection,
        conv_bn,
        invertedresidual, squeeze_excite
