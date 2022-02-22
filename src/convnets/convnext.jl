@@ -58,7 +58,7 @@ function convnext(depths, planes; inchannels = 3, drop_path_rate = 0., λ = 1f-6
     cur += depths[i]
   end
 
-  backbone = collect(Iterators.flatten(Iterators.flatten((zip(downsample_layers, stages)))))
+  backbone = collect(Iterators.flatten(Iterators.flatten(zip(downsample_layers, stages))))
   head = Chain(GlobalMeanPool(),
                MLUtils.flatten,
                LayerNorm(planes[end]),
