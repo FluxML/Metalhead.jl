@@ -60,7 +60,8 @@ Create a DenseNet model
 - `nclasses`: the number of output classes
 """
 function densenet(inplanes, growth_rates; reduction = 0.5, nclasses = 1000)
-  layers = conv_bn((7, 7), 3, inplanes; stride = 2, pad = (3, 3), bias = false)
+  layers = []
+  push!(layers, conv_bn((7, 7), 3, inplanes; stride = 2, pad = (3, 3), bias = false))
   push!(layers, MaxPool((3, 3), stride = 2, pad = (1, 1)))
 
   outplanes = 0

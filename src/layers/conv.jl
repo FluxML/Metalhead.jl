@@ -38,7 +38,7 @@ function conv_bn(kernelsize, inplanes, outplanes, activation = relu;
   push!(layers, BatchNorm(Int(bnplanes), activations.bn;
                           initβ = initβ, initγ = initγ, ϵ = ϵ, momentum = momentum))
 
-  return rev ? reverse(layers) : layers
+  return rev ? Chain(reverse(layers)...) : Chain(layers...)
 end
 
 

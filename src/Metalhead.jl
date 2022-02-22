@@ -22,6 +22,7 @@ include("convnets/vgg.jl")
 include("convnets/inception.jl")
 include("convnets/googlenet.jl")
 include("convnets/resnet.jl")
+include("convnets/res2net.jl")
 include("convnets/resnext.jl")
 include("convnets/densenet.jl")
 include("convnets/squeezenet.jl")
@@ -42,6 +43,7 @@ export  AlexNet,
         GoogLeNet, Inception3, SqueezeNet,
         DenseNet, DenseNet121, DenseNet161, DenseNet169, DenseNet201,
         ResNeXt,
+        Res2Net, Res2NeXt,
         MobileNetv2, MobileNetv3,
         MLPMixer,
         ViT,
@@ -49,7 +51,7 @@ export  AlexNet,
 
 # use Flux._big_show to pretty print large models
 for T in (:AlexNet, :VGG, :ResNet, :GoogLeNet, :Inception3, :SqueezeNet, :DenseNet, :ResNeXt, 
-          :MobileNetv2, :MobileNetv3, :MLPMixer, :ViT, :ConvNeXt)
+          :Res2Net, :MobileNetv2, :MobileNetv3, :MLPMixer, :ViT, :ConvNeXt)
   @eval Base.show(io::IO, ::MIME"text/plain", model::$T) = _maybe_big_show(io, model)
 end
 

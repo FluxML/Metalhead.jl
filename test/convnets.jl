@@ -136,3 +136,18 @@ end
     end
   end
 end
+
+@testset "Res2Net" verbose = true begin
+  @testset for depth in [50, 101, 152]
+    @testset "Res2Net" begin
+      m = Res2Net(depth)
+      @test size(m(rand(Float32, 224, 224, 3, 2))) == (1000, 2)
+      @test_skip gradtest(m, rand(Float32, 224, 224, 3, 2))
+    end
+    @testset "Res2NeXt" begin
+      m = Res2NeXt(depth)
+      @test size(m(rand(Float32, 224, 224, 3, 2))) == (1000, 2)
+      @test_skip gradtest(m, rand(Float32, 224, 224, 3, 2))
+    end
+  end
+end
