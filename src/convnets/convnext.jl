@@ -16,7 +16,7 @@ function convnextblock(planes, drop_path_rate = 0., λ = 1f-6)
   layers = SkipConnection(Chain(DepthwiseConv((7, 7), planes => planes; pad = 3), 
                                 x -> permutedims(x, (3, 1, 2, 4)),
                                 LayerNorm(planes; ϵ = 1f-6),
-                                mlpblock(planes, 4 * planes),
+                                mlp_block(planes, 4 * planes),
                                 scale, # LayerScale
                                 x -> permutedims(x, (2, 3, 1, 4)),
                                 Dropout(drop_path_rate, dims = 4)), +)
@@ -58,13 +58,13 @@ function convnext(depths, planes; inchannels = 3, drop_path_rate = 0., λ = 1f-6
     cur += depths[i]
   end
 
-  layers = collect(Iterators.flatten(Iterators.flatten((zip(downsample_layers, stages)))))
-
+  backbone = collect(Iterators.flatten(Iterators.flatten(zip(downsample_layers, stages))))
   head = Chain(GlobalMeanPool(),
                MLUtils.flatten,
                LayerNorm(planes[end]),
                Dense(planes[end], nclasses))
-  return Chain(layers..., head)
+
+  return Chain(Chain(backbone...), head)
 end
 
 # Configurations for ConvNeXt models
@@ -90,7 +90,8 @@ Creates a ConvNeXt model.
 - `λ`: Init value for [LayerScale](https://arxiv.org/abs/2103.17239)
 - `nclasses`: number of output classes
 """
-function ConvNeXt(mode::Symbol = :base; inchannels = 3, drop_path_rate = 0., λ = 1f-6, nclasses = 1000)
+function ConvNeXt(mode::Symbol = :base; inchannels = 3, drop_path_rate = 0., λ = 1f-6, 
+                  nclasses = 1000)
   depths = convnext_configs[mode][:depths]
   planes = convnext_configs[mode][:planes]
   layers = convnext(depths, planes; inchannels, drop_path_rate, λ, nclasses)

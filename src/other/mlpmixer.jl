@@ -38,10 +38,10 @@ function mlpmixer(imsize::NTuple{2} = (256, 256); inchannels = 3, patch_size = 1
   layers = []
   push!(layers, PatchEmbedding(patch_size))
   push!(layers, Dense((patch_size ^ 2) * inchannels, planes))
-  append!(layers, [Chain(_residualprenorm(planes, mlpblock(num_patches, 
+  append!(layers, [Chain(_residualprenorm(planes, mlp_block(num_patches, 
                                           expansion_factor * num_patches; 
                                           dropout, dense = token_mix)),
-                         _residualprenorm(planes, mlpblock(planes, 
+                         _residualprenorm(planes, mlp_block(planes, 
                                           expansion_factor * planes; dropout, 
                                           dense = channel_mix)),) for _ in 1:depth])
 
