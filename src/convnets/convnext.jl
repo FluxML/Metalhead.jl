@@ -16,7 +16,7 @@ function convnextblock(planes, drop_path_rate = 0., λ = 1f-6)
   layers = SkipConnection(Chain(DepthwiseConv((7, 7), planes => planes; pad = 3), 
                                 x -> permutedims(x, (3, 1, 2, 4)),
                                 LayerNorm(planes; ϵ = 1f-6),
-                                mlpblock(planes, 4 * planes),
+                                mlp_block(planes, 4 * planes),
                                 scale, # LayerScale
                                 x -> permutedims(x, (2, 3, 1, 4)),
                                 Dropout(drop_path_rate, dims = 4)), +)
