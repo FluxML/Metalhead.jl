@@ -1,5 +1,5 @@
 """
-    Bottle2Neck(inplanes, planes; expansion = 4, stride = 1, downsample = nothing,
+    Bottle2Neck(inplanes, planes; expansion = 4, stride = 1, downsample = identity,
                 cardinality = 1, base_width = 26, scale = 4, stype = :normal)
 
 Creates a bottle2neck block as defined in the paper for Res2Net.
@@ -10,7 +10,7 @@ Creates a bottle2neck block as defined in the paper for Res2Net.
 - `planes`: number of output channels
 - `expansion`: expansion factor of the block
 - `stride`: stride of the 3x3 convolution layer in the block
-- `downsample`: if not nothing, downsample the input using the layer provided
+- `downsample`: if not identity, downsample the input using the layer provided
 - `cardinality`: number of convolution groups in the block (used for Res2NeXt)
 - `base_width`: base width of the 3x3 convolution layer in the block
 - `scale`: scale factor to control the scale dimension of the block
@@ -27,7 +27,7 @@ struct Bottle2Neck
   downsample
 end
 
-function Bottle2Neck(inplanes, planes; expansion = 4, stride = 1, downsample = nothing,
+function Bottle2Neck(inplanes, planes; expansion = 4, stride = 1, downsample = identity,
                      cardinality = 1, base_width = 26, scale = 4, stype = :normal)
   @assert stype in [:normal, :stage]
   width = floor(Int, planes * base_width / 64) * cardinality
@@ -36,7 +36,7 @@ function Bottle2Neck(inplanes, planes; expansion = 4, stride = 1, downsample = n
                  [conv_bn((3, 3), width, width; groups = cardinality, stride, pad = 1, 
                     bias = false) for _ in 1:nums]...,
                  conv_bn((1, 1), width * scale, planes * expansion; bias = false))
-  pool = (stype == :stage) ? MeanPool((3, 3); stride, pad = 1) : nothing
+  pool = (stype == :stage) ? MeanPool((3, 3); stride, pad = 1) : identity
   Bottle2Neck(scale, stype, width, nums, layers, pool, downsample)
 end
 
@@ -44,6 +44,7 @@ end
 
 function (m::Bottle2Neck)(x)
   residual = x
+  residual = m.downsample(residual)
   out = m.layers[1](x)
   spx = [out[:, :, i:min(i + m.width - 1, end), :] for i in 1:m.width]
   local sp
@@ -52,15 +53,8 @@ function (m::Bottle2Neck)(x)
     sp = m.layers[i + 1](sp)
     out = (i == 1) ? sp : cat(out, sp; dims = 3)
   end
-  if m.scale != 1 && m.stype == :normal
-    out = cat(out, spx[m.nums]; dims = 3)
-  elseif m.scale != 1 && m.stype == :stage
-    out = cat(out, m.pool(spx[m.nums]); dims = 3)
-  end
+  out = cat(out, m.pool(spx[m.nums]); dims = 3)
   out = m.layers[end](out)
-  if !isnothing(m.downsample)
-    residual = m.downsample(residual)
-  end
   return relu.(out + residual)
 end
 
@@ -93,7 +87,7 @@ function res2net(block_config; cardinality = 1, expansion = 4, base_width = 26, 
     planes = base_inplanes * (2 ^ (i - 1))
     downsample = (stride != 1 || inplanes != planes * expansion) ?
                  conv_bn((1, 1), inplanes, planes * expansion, identity; stride, bias = false) : 
-                 nothing
+                 identity
     push!(layers, Bottle2Neck(inplanes, planes; stype = :stage, cardinality, expansion, stride, 
                               downsample, base_width, scale))
     inplanes = planes * expansion
