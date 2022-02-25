@@ -8,6 +8,7 @@ using Flux
 			@test size(m(rand(Float32, 224, 224, 3, 1))) == (1000, 1)
 			@test_skip gradtest(m, rand(Float32, 224, 224, 3, 1))
 		end
+		GC.gc()
 	end
 end
 
@@ -18,5 +19,6 @@ end
 			@test size(m(rand(Float32, 224, 224, 3, 1))) == (1000, 1)
 			@test_skip gradtest(m, rand(Float32, 224, 224, 3, 1))
 		end
+		GC.gc()
 	end
 end
