@@ -1,26 +1,34 @@
 """
-    PatchEmbedding(patch_size)
-    PatchEmbedding(patch_height, patch_width)
+    PatchEmbedding(imsize::NTuple{2} = (224, 224); inchannels = 3, patch_size = (16, 16), 
+                   embedplanes = 768, norm_layer = identity, flatten = true)
 
-Patch embedding layer used by many vision transformer-like models to split the input image into patches.
+Patch embedding layer used by many vision transformer-like models to split the input image into 
+patches.
+
+# Arguments:
+- `imsize`: the size of the input image
+- `inchannels`: the number of channels in the input image
+- `patch_size`: the size of the patches
+- `embedplanes`: the number of channels in the embedding
+- `norm_layer`: the normalization layer
+- `flatten`: whether to flatten the input after the embedding
 """
-struct PatchEmbedding
-  patch_height::Int
-  patch_width::Int
+function PatchEmbedding(imsize::NTuple{2} = (224, 224); inchannels = 3, patch_size = (16, 16), 
+                        embedplanes = 768, norm_layer = identity, flatten = true)
+
+  im_height, im_width = imsize
+  patch_height, patch_width = patch_size
+
+  norm_layer = typeof(norm_layer) != typeof(identity) ? norm_layer(embedplanes) : identity
+
+  @assert (im_height % patch_height == 0) && (im_width % patch_width == 0)
+  "Image dimensions must be divisible by the patch size."
+  
+  return Chain(Conv(patch_size, inchannels => embedplanes; stride = patch_size),
+               flatten ? x -> permutedims(reshape(x, (:, size(x, 3), size(x, 4))), (2, 1, 3)) 
+                       : identity,
+               norm_layer)
 end
-
-PatchEmbedding(patch_size) = PatchEmbedding(patch_size, patch_size)
-
-function (p::PatchEmbedding)(x)
-  h, w, c, n = size(x)
-  hp, wp = h ÷ p.patch_height, w ÷ p.patch_width
-  xpatch = reshape(x, hp, p.patch_height, wp, p.patch_width, c, n)
-
-  return reshape(permutedims(xpatch, (1, 3, 5, 2, 4, 6)), p.patch_height * p.patch_width * c, 
-                 hp * wp, n)
-end
-
-@functor PatchEmbedding
 
 """
     ViPosEmbedding(embedsize, npatches; init = (dims) -> rand(Float32, dims))

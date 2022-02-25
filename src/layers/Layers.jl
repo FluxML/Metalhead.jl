@@ -16,7 +16,7 @@ include("conv.jl")
 
 export Attention, MHAttention,
        PatchEmbedding, ViPosEmbedding, ClassTokens,
-       mlp_block,
+       mlp_block, LayerScale, DropPath,
        ChannelLayerNorm, prenorm,
        skip_identity, skip_projection,
        conv_bn,
