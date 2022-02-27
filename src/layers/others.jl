@@ -18,13 +18,13 @@ Implements LayerScale.
 ([reference](https://arxiv.org/abs/2103.17239))
 
 # Arguments
-- `λ`: initialisation value for the learnable diagonal matrix.
 - `planes`: Size of channel dimension in the input.
+- `λ`: initialisation value for the learnable diagonal matrix.
 """
-LayerScale(λ, planes::Int) = λ > 0 ? LayerScale(Flux.ones32(planes) * λ) : identity
+LayerScale(planes::Int, λ) = λ > 0 ? LayerScale(Flux.ones32(planes) * λ) : identity
 
 @functor LayerScale
-(m::LayerScale)(x) = x .* m.scale
+(m::LayerScale)(x::AbstractArray{T}) where T = convert.(T, m.scale) .* x
 
 """
     DropPath(p)

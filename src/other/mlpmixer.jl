@@ -135,11 +135,11 @@ return Chain(SkipConnection(Chain(Flux.Diagonal(planes),
                                   x -> permutedims(x, (2, 1, 3)),
                                   Dense(npatches, npatches),
                                   x -> permutedims(x, (2, 1, 3)),
-                                  LayerScale(λ, planes),
+                                  LayerScale(planes, λ),
                                   DropPath(drop_path_rate)), +),
              SkipConnection(Chain(Flux.Diagonal(planes),
                                   mlp_layer(planes, Int(mlp_ratio * planes); dropout, activation),
-                                  LayerScale(λ, planes),
+                                  LayerScale(planes, λ),
                                   DropPath(drop_path_rate)), +))
 end
 

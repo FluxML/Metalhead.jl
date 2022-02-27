@@ -1,5 +1,5 @@
 """
-    convnextblock(planes, drop_path_rate = 0., λ = 1f-6)
+    convnextblock(planes, drop_path_rate = 0., λ = 1e-6)
 
 Creates a single block of ConvNeXt.
 ([reference](https://arxiv.org/abs/2201.03545))
@@ -9,19 +9,19 @@ Creates a single block of ConvNeXt.
 - `drop_path_rate`: Stochastic depth rate.
 - `λ`: Init value for LayerScale
 """
-function convnextblock(planes, drop_path_rate = 0., λ = 1f-6)
+function convnextblock(planes, drop_path_rate = 0., λ = 1e-6)
   layers = SkipConnection(Chain(DepthwiseConv((7, 7), planes => planes; pad = 3), 
                                 x -> permutedims(x, (3, 1, 2, 4)),
                                 LayerNorm(planes; ϵ = 1f-6),
                                 mlp_block(planes, 4 * planes),
-                                LayerScale(λ, planes),
+                                LayerScale(planes, λ),
                                 x -> permutedims(x, (2, 3, 1, 4)),
                                 DropPath(drop_path_rate)), +)
   return layers
 end
 
 """
-    convnext(depths, planes; inchannels = 3, drop_path_rate = 0., λ = 1f-6, nclasses = 1000)
+    convnext(depths, planes; inchannels = 3, drop_path_rate = 0., λ = 1e-6, nclasses = 1000)
 
 Creates the layers for a ConvNeXt model.
 ([reference](https://arxiv.org/abs/2201.03545))
@@ -34,7 +34,7 @@ Creates the layers for a ConvNeXt model.
 - `λ`: Init value for [LayerScale](https://arxiv.org/abs/2103.17239)
 - `nclasses`: number of output classes
 """
-function convnext(depths, planes; inchannels = 3, drop_path_rate = 0., λ = 1f-6, nclasses = 1000)
+function convnext(depths, planes; inchannels = 3, drop_path_rate = 0., λ = 1e-6, nclasses = 1000)
   @assert length(depths) == length(planes) "`planes` should have exactly one value for each block"
   
   downsample_layers = []
@@ -76,7 +76,7 @@ struct ConvNeXt
 end
 
 """
-    ConvNeXt(mode::Symbol = :base; inchannels = 3, drop_path_rate = 0., λ = 1f-6, nclasses = 1000)
+    ConvNeXt(mode::Symbol = :base; inchannels = 3, drop_path_rate = 0., λ = 1e-6, nclasses = 1000)
 
 Creates a ConvNeXt model.
 ([reference](https://arxiv.org/abs/2201.03545))
@@ -89,7 +89,7 @@ Creates a ConvNeXt model.
 
 See also [`Metalhead.convnext`](#).
 """
-function ConvNeXt(mode::Symbol = :base; inchannels = 3, drop_path_rate = 0., λ = 1f-6, 
+function ConvNeXt(mode::Symbol = :base; inchannels = 3, drop_path_rate = 0., λ = 1e-6, 
                   nclasses = 1000)
   @assert mode in keys(convnext_configs) "`size` must be one of $(keys(convnext_configs))"
   depths = convnext_configs[mode][:depths]
