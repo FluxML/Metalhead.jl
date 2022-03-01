@@ -7,8 +7,8 @@ Implements LayerScale.
 # Arguments
 - `scale`: Scaling factor, a learnable diagonal matrix which is multiplied to the input.
 """
-struct LayerScale
-  scale
+struct LayerScale{T<:AbstractVector{<:Real}}
+    scale::T
 end
 
 """
@@ -24,7 +24,7 @@ Implements LayerScale.
 LayerScale(planes::Int, λ) = λ > 0 ? LayerScale(Flux.ones32(planes) * λ) : identity
 
 @functor LayerScale
-(m::LayerScale)(x::AbstractArray{T}) where T = convert.(T, m.scale) .* x
+(m::LayerScale)(x::AbstractArray) = m.scale .* x
 
 """
     DropPath(p)
