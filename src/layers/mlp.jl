@@ -1,5 +1,5 @@
 """
-		mlp_block(inplanes, hidden_planes; outplanes = inplanes, dropout = 0., activation = gelu)
+		mlp_block(inplanes, hidden_planes, outplanes = inplanes; dropout = 0., activation = gelu)
 
 Feedforward block used in many MLPMixer-like and vision-transformer models.
 
@@ -10,13 +10,13 @@ Feedforward block used in many MLPMixer-like and vision-transformer models.
 - `dropout`: Dropout rate.
 - `activation`: Activation function to use.
 """
-function mlp_block(inplanes, hidden_planes; outplanes = inplanes, dropout = 0., activation = gelu)
+function mlp_block(inplanes, hidden_planes, outplanes = inplanes; dropout = 0., activation = gelu)
   Chain(Dense(inplanes, hidden_planes, activation), Dropout(dropout),
         Dense(hidden_planes, outplanes), Dropout(dropout))
 end
 
 """
-    gated_mlp(inplanes, hidden_planes; outplanes = inplanes, dropout = 0., activation = gelu, 
+    gated_mlp(inplanes, hidden_planes, outplanes = inplanes; dropout = 0., activation = gelu, 
 							gate_layer = identity)
 
 Feedforward block based on the implementation in the paper "Pay Attention to MLPs".
@@ -30,7 +30,7 @@ Feedforward block based on the implementation in the paper "Pay Attention to MLP
 - `activation`: Activation function to use.
 - `gate_layer`: Layer to use for the gating.
 """
-function gated_mlp(inplanes, hidden_planes; outplanes = inplanes, dropout = 0., activation = gelu, 
+function gated_mlp(inplanes, hidden_planes, outplanes = inplanes; dropout = 0., activation = gelu, 
 									 gate_layer = identity)
 	layers = []
 	push!(layers, Dense(inplanes, hidden_planes, activation))
