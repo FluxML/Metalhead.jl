@@ -19,7 +19,8 @@ using .Layers
 # CNN models
 include("convnets/alexnet.jl")
 include("convnets/vgg.jl")
-include("convnets/inception.jl")
+include("convnets/inceptionv3.jl")
+include("convnets/inceptionv4.jl")
 include("convnets/googlenet.jl")
 include("convnets/resnet.jl")
 include("convnets/resnext.jl")

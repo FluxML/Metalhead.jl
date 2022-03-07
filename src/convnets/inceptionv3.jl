@@ -1,5 +1,5 @@
 """
-    inception_a(inplanes, pool_proj)
+    inception3_a(inplanes, pool_proj)
 
 Create an Inception-v3 style-A module
 (ref: Fig. 5 in [paper](https://arxiv.org/abs/1512.00567v3)).
@@ -23,7 +23,7 @@ function inception_a(inplanes, pool_proj)
 end
 
 """
-    inception_b(inplanes)
+    inception3_b(inplanes)
 
 Create an Inception-v3 style-B module
 (ref: Fig. 10 in [paper](https://arxiv.org/abs/1512.00567v3)).
@@ -43,7 +43,7 @@ function inception_b(inplanes)
 end
 
 """
-    inception_c(inplanes, inner_planes, n = 7)
+    inception3_c(inplanes, inner_planes, n = 7)
 
 Create an Inception-v3 style-C module
 (ref: Fig. 6 in [paper](https://arxiv.org/abs/1512.00567v3)).
@@ -71,7 +71,7 @@ function inception_c(inplanes, inner_planes, n = 7)
 end
 
 """
-    inception_d(inplanes)
+    inception3_d(inplanes)
 
 Create an Inception-v3 style-D module
 (ref: [pytorch](https://github.com/pytorch/vision/blob/6db1569c89094cf23f3bc41f79275c45e9fcb3f3/torchvision/models/inception.py#L322)).
@@ -93,7 +93,7 @@ function inception_d(inplanes)
 end
 
 """
-    inception_e(inplanes)
+    inception3_e(inplanes)
 
 Create an Inception-v3 style-E module
 (ref: Fig. 7 in [paper](https://arxiv.org/abs/1512.00567v3)).
