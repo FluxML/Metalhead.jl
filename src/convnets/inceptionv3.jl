@@ -1,5 +1,5 @@
 """
-    inception_a(inplanes, pool_proj)
+    inception3_a(inplanes, pool_proj)
 
 Create an Inception-v3 style-A module
 (ref: Fig. 5 in [paper](https://arxiv.org/abs/1512.00567v3)).
@@ -8,7 +8,7 @@ Create an Inception-v3 style-A module
 - `inplanes`: number of input feature maps
 - `pool_proj`: the number of output feature maps for the pooling projection
 """
-function inception_a(inplanes, pool_proj)
+function inception3_a(inplanes, pool_proj)
   branch1x1 = Chain(conv_bn((1, 1), inplanes, 64)...)
   
   branch5x5 = Chain(conv_bn((1, 1), inplanes, 48)...,
@@ -26,7 +26,7 @@ function inception_a(inplanes, pool_proj)
 end
 
 """
-    inception_b(inplanes)
+    inception3_b(inplanes)
 
 Create an Inception-v3 style-B module
 (ref: Fig. 10 in [paper](https://arxiv.org/abs/1512.00567v3)).
@@ -34,7 +34,7 @@ Create an Inception-v3 style-B module
 # Arguments
 - `inplanes`: number of input feature maps
 """
-function inception_b(inplanes)
+function inception3_b(inplanes)
   branch3x3_1 = Chain(conv_bn((3, 3), inplanes, 384; stride = 2)...)
 
   branch3x3_2 = Chain(conv_bn((1, 1), inplanes, 64)...,
@@ -48,7 +48,7 @@ function inception_b(inplanes)
 end
 
 """
-    inception_c(inplanes, inner_planes, n = 7)
+    inception3_c(inplanes, inner_planes, n = 7)
 
 Create an Inception-v3 style-C module
 (ref: Fig. 6 in [paper](https://arxiv.org/abs/1512.00567v3)).
@@ -58,7 +58,7 @@ Create an Inception-v3 style-C module
 - `inner_planes`: the number of output feature maps within each branch
 - `n`: the "grid size" (kernel size) for the convolution layers
 """
-function inception_c(inplanes, inner_planes, n = 7)
+function inception3_c(inplanes, inner_planes, n = 7)
   branch1x1 = Chain(conv_bn((1, 1), inplanes, 192)...)
 
   branch7x7_1 = Chain(conv_bn((1, 1), inplanes, inner_planes)...,
@@ -79,7 +79,7 @@ function inception_c(inplanes, inner_planes, n = 7)
 end
 
 """
-    inception_d(inplanes)
+    inception3_d(inplanes)
 
 Create an Inception-v3 style-D module
 (ref: [pytorch](https://github.com/pytorch/vision/blob/6db1569c89094cf23f3bc41f79275c45e9fcb3f3/torchvision/models/inception.py#L322)).
@@ -87,7 +87,7 @@ Create an Inception-v3 style-D module
 # Arguments
 - `inplanes`: number of input feature maps
 """
-function inception_d(inplanes)
+function inception3_d(inplanes)
   branch3x3 = Chain(conv_bn((1, 1), inplanes, 192)...,
                     conv_bn((3, 3), 192, 320; stride = 2)...)
 
@@ -103,7 +103,7 @@ function inception_d(inplanes)
 end
 
 """
-    inception_e(inplanes)
+    inception3_e(inplanes)
 
 Create an Inception-v3 style-E module
 (ref: Fig. 7 in [paper](https://arxiv.org/abs/1512.00567v3)).
@@ -111,7 +111,7 @@ Create an Inception-v3 style-E module
 # Arguments
 - `inplanes`: number of input feature maps
 """
-function inception_e(inplanes)
+function inception3_e(inplanes)
   branch1x1 = Chain(conv_bn((1, 1), inplanes, 320)...)
 
   branch3x3_1 = Chain(conv_bn((1, 1), inplanes, 384)...)
@@ -157,17 +157,17 @@ function inception3(; nclasses = 1000)
                       conv_bn((1, 1), 64, 80)...,
                       conv_bn((3, 3), 80, 192)...,
                       MaxPool((3, 3), stride = 2),
-                      inception_a(192, 32),
-                      inception_a(256, 64),
-                      inception_a(288, 64),
-                      inception_b(288),
-                      inception_c(768, 128),
-                      inception_c(768, 160),
-                      inception_c(768, 160),
-                      inception_c(768, 192),
-                      inception_d(768),
-                      inception_e(1280),
-                      inception_e(2048)),
+                      inception3_a(192, 32),
+                      inception3_a(256, 64),
+                      inception3_a(288, 64),
+                      inception3_b(288),
+                      inception3_c(768, 128),
+                      inception3_c(768, 160),
+                      inception3_c(768, 160),
+                      inception3_c(768, 192),
+                      inception3_d(768),
+                      inception3_e(1280),
+                      inception3_e(2048)),
                 Chain(AdaptiveMeanPool((1, 1)),
                       Dropout(0.2),
                       MLUtils.flatten,

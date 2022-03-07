@@ -38,13 +38,13 @@ cat_channels(xy...) = cat(xy...; dims = 3)
 
 # Utility function for pretty printing large models
 function _maybe_big_show(io, model)
-    if isdefined(Flux, :_big_show)
-      if isnothing(get(io, :typeinfo, nothing)) # e.g. top level in REPL
-        Flux._big_show(io, model)
-      else
-        show(io, model)
-      end
+  if isdefined(Flux, :_big_show)
+    if isnothing(get(io, :typeinfo, nothing)) # e.g. top level in REPL
+      Flux._big_show(io, model)
     else
       show(io, model)
     end
+  else
+    show(io, model)
   end
+end

@@ -11,10 +11,10 @@ Create a Densenet bottleneck layer
 """
 function dense_bottleneck(inplanes, outplanes)
   inner_channels = 4 * outplanes
-  m = Chain(conv_bn((1, 1), inplanes, inner_channels; bias = false, rev = true)...,
-            conv_bn((3, 3), inner_channels, outplanes; pad = 1, bias = false, rev = true)...)
-
-  SkipConnection(m, (mx, x) -> cat(x, mx; dims = 3))
+  
+  Parallel(cat_channels, 
+           conv_bn((1, 1), inplanes, inner_channels; bias = false, rev = true)...,
+           conv_bn((3, 3), inner_channels, outplanes; pad = 1, bias = false, rev = true)...)
 end
 
 """
