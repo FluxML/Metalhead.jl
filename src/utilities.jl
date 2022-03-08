@@ -28,13 +28,13 @@ See also [`addrelu`](#).
 reluadd(x, y) = @. relu(x) + relu(y)
 
 """
-    cat_channels(x, y)
+    cat_channels(x, y, zs...)
 
-Concatenate `x` and `y` along the channel dimension (third dimension).
-Equivalent to `cat(x, y; dims=3)`.
-Convenient binary reduction operator for use with `Parallel`.
+Concatenate `x` and `y` (and any `z`s) along the channel dimension (third dimension).
+Equivalent to `cat(x, y, zs...; dims=3)`.
+Convenient reduction operator for use with `Parallel`.
 """
-cat_channels(x, y) = cat(x, y; dims = 3)
+cat_channels(xy...) = cat(xy...; dims = 3)
 
 # Utility function for pretty printing large models
 function _maybe_big_show(io, model)
