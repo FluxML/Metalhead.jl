@@ -15,8 +15,8 @@ Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 [compat]
 BSON = "0.3.2"
 Flux = "0.12"
-MLUtils = "0.1.2"
 Functors = "0.2"
+MLUtils = "0.1.2, 0.2"
 NNlib = "0.7.34, 0.8"
 julia = "1.4"
 

@@ -28,34 +28,23 @@ See also [`addrelu`](#).
 reluadd(x, y) = @. relu(x) + relu(y)
 
 """
-    weights(model)
+    cat_channels(x, y, zs...)
 
-Load the pre-trained weights for `model` using the stored artifacts.
+Concatenate `x` and `y` (and any `z`s) along the channel dimension (third dimension).
+Equivalent to `cat(x, y, zs...; dims=3)`.
+Convenient reduction operator for use with `Parallel`.
 """
-function weights(model)
-  try
-    path = joinpath(@artifact_str(model), "$model.bson")
-    return BSON.load(path, @__MODULE__)[:weights]
-  catch e
-    throw(ArgumentError("No pre-trained weights available for $model."))
-  end
-end
+cat_channels(xy...) = cat(xy...; dims = 3)
 
-"""
-    loadpretrain!(model, name)
-
-Load the pre-trained weight artifacts matching `<name>.bson` into `model`.
-"""
-loadpretrain!(model, name) = Flux.loadparams!(model, weights(name))
-
+# Utility function for pretty printing large models
 function _maybe_big_show(io, model)
-  if isdefined(Flux, :_big_show)
-    if isnothing(get(io, :typeinfo, nothing)) # e.g. top level in REPL
-      Flux._big_show(io, model)
+    if isdefined(Flux, :_big_show)
+      if isnothing(get(io, :typeinfo, nothing)) # e.g. top level in REPL
+        Flux._big_show(io, model)
+      else
+        show(io, model)
+      end
     else
       show(io, model)
     end
-  else
-    show(io, model)
   end
-end
