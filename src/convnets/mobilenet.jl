@@ -14,6 +14,7 @@ Create a MobileNetv2 model.
   - `c`: The number of output feature maps
   - `n`: The number of times a block is repeated
   - `s`: The stride of the convolutional kernel
+  - `a`: The activation function used in the bottleneck layer
 - `max_width`: The maximum number of feature maps in any layer of the network
 - `nclasses`: The number of output classes
 """
@@ -24,10 +25,10 @@ function mobilenetv2(width_mult, configs; max_width = 1280, nclasses = 1000)
   append!(layers, conv_bn((3, 3), 3, inplanes, stride = 2))
 
   # building inverted residual blocks
-  for (t, c, n, s) in configs
+  for (t, c, n, s, a) in configs
     outplanes = _round_channels(c * width_mult, width_mult == 0.1 ? 4 : 8)
     for i in 1:n
-      push!(layers, invertedresidual(3, inplanes, inplanes * t, outplanes, relu6;
+      push!(layers, invertedresidual(3, inplanes, inplanes * t, outplanes, a;
                                      stride = i == 1 ? s : 1))
       inplanes = outplanes
     end
@@ -44,14 +45,14 @@ end
 
 # Layer configurations for MobileNetv2
 const mobilenetv2_configs = [
-  # t, c, n, s
-  (1, 16, 1, 1),
-  (6, 24, 2, 2),
-  (6, 32, 3, 2),
-  (6, 64, 4, 2),
-  (6, 96, 3, 1),
-  (6, 160, 3, 2),
-  (6, 320, 1, 1)
+#  t,   c, n, s,     a
+  (1,  16, 1, 1, relu6),
+  (6,  24, 2, 2, relu6),
+  (6,  32, 3, 2, relu6),
+  (6,  64, 4, 2, relu6),
+  (6,  96, 3, 1, relu6),
+  (6, 160, 3, 2, relu6),
+  (6, 320, 1, 1, relu6)
 ]
 
 # Model definition for MobileNetv2
@@ -106,8 +107,8 @@ Create a MobileNetv3 model.
   - `c::Float` - The multiplier factor for deciding the number of feature maps in the hidden layer
   - `t::Int` - The number of output feature maps for a given block
   - `r::Int` - The reduction factor (`>= 1` or `nothing` to skip) for squeeze and excite layers
-  - `use_hs::Bool` - Whether to use Hard-Swish activation function
   - `s::Int` - The stride of the convolutional kernel
+  - `a` - The activation function used in the bottleneck (typically `hardswish` or `relu`)
 - `max_width`: The maximum number of feature maps in any layer of the network
 - `nclasses`: the number of output classes
 """
@@ -118,12 +119,11 @@ function mobilenetv3(width_mult, configs; max_width = 1024, nclasses = 1000)
   append!(layers, conv_bn((3, 3), 3, inplanes, hardswish; stride = 2))
   explanes = 0
   # building inverted residual blocks
-  for (k, t, c, r, use_hs, s) in configs
+  for (k, t, c, r, a, s) in configs
     # inverted residual layers
     outplanes = _round_channels(c * width_mult, 8)
     explanes = _round_channels(inplanes * t, 8)
-    activation = use_hs ? hardswish : relu
-    push!(layers, invertedresidual(k, inplanes, explanes, outplanes, activation;
+    push!(layers, invertedresidual(k, inplanes, explanes, outplanes, a;
                                    stride = s, reduction = r))
     inplanes = outplanes
   end
@@ -143,36 +143,36 @@ end
 # Configurations for small and large mode for MobileNetv3
 mobilenetv3_configs = Dict(
   :small => [
-    # k, t, c, SE, HS, s 
-    (3, 1, 16, 4, false, 2),
-    (3, 4.5, 24, nothing, false, 2),
-    (3, 3.67, 24, nothing, false, 1),
-    (5, 4, 40, 4, true, 2),
-    (5, 6, 40, 4, true, 1),
-    (5, 6, 40, 4, true, 1),
-    (5, 3, 48, 4, true, 1),
-    (5, 3, 48, 4, true, 1),
-    (5, 6, 96, 4, true, 2),
-    (5, 6, 96, 4, true, 1),
-    (5, 6, 96, 4, true, 1),
+  #  k,    t,  c,      SE,         a, s
+    (3,    1, 16,       4,      relu, 2),
+    (3,  4.5, 24, nothing,      relu, 2),
+    (3, 3.67, 24, nothing,      relu, 1),
+    (5,    4, 40,       4, hardswish, 2),
+    (5,    6, 40,       4, hardswish, 1),
+    (5,    6, 40,       4, hardswish, 1),
+    (5,    3, 48,       4, hardswish, 1),
+    (5,    3, 48,       4, hardswish, 1),
+    (5,    6, 96,       4, hardswish, 2),
+    (5,    6, 96,       4, hardswish, 1),
+    (5,    6, 96,       4, hardswish, 1),
   ], 
   :large => [
-    # k, t, c, SE, HS, s 
-    (3, 1, 16, nothing, false, 1),
-    (3, 4, 24, nothing, false, 2),
-    (3, 3, 24, nothing, false, 1),
-    (5, 3, 40, 4, false, 2),
-    (5, 3, 40, 4, false, 1),
-    (5, 3, 40, 4, false, 1),
-    (3, 6, 80, nothing, true, 2),
-    (3, 2.5, 80, nothing, true, 1),
-    (3, 2.3, 80, nothing, true, 1),
-    (3, 2.3, 80, nothing, true, 1),
-    (3, 6, 112, 4, true, 1),
-    (3, 6, 112, 4, true, 1),
-    (5, 6, 160, 4, true, 2),
-    (5, 6, 160, 4, true, 1),
-    (5, 6, 160, 4, true, 1)
+  #  k,   t,   c,      SE,         a, s
+    (3,   1,  16, nothing,      relu, 1),
+    (3,   4,  24, nothing,      relu, 2),
+    (3,   3,  24, nothing,      relu, 1),
+    (5,   3,  40,       4,      relu, 2),
+    (5,   3,  40,       4,      relu, 1),
+    (5,   3,  40,       4,      relu, 1),
+    (3,   6,  80, nothing, hardswish, 2),
+    (3, 2.5,  80, nothing, hardswish, 1),
+    (3, 2.3,  80, nothing, hardswish, 1),
+    (3, 2.3,  80, nothing, hardswish, 1),
+    (3,   6, 112,       4, hardswish, 1),
+    (3,   6, 112,       4, hardswish, 1),
+    (5,   6, 160,       4, hardswish, 2),
+    (5,   6, 160,       4, hardswish, 1),
+    (5,   6, 160,       4, hardswish, 1)
   ]
 )
 
