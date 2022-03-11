@@ -140,3 +140,14 @@ GC.gc()
     end
   end
 end
+
+GC.gc()
+
+@testset "ConvMixer" verbose = true begin
+  @testset for mode in [:base, :large, :small]
+    m = ConvMixer(mode)
+
+    @test size(m(rand(Float32, 224, 224, 3, 2))) == (1000, 2)
+    @test_skip gradtest(m, rand(Float32, 224, 224, 3, 2))
+  end
+end
