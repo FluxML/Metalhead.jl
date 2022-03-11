@@ -1,6 +1,6 @@
 """
     conv_bn(kernelsize, inplanes, outplanes, activation = relu;
-            rev = false,
+            rev = false, preact = true,
             stride = 1, pad = 0, dilation = 1, groups = 1, [bias, weight, init],
             initβ = Flux.zeros32, initγ = Flux.ones32, ϵ = 1f-5, momentum = 1f-1)
 
@@ -12,6 +12,7 @@ Create a convolution + batch normalization pair with ReLU activation.
 - `outplanes`: number of output feature maps
 - `activation`: the activation function for the final layer
 - `rev`: set to `true` to place the batch norm before the convolution
+- `preact`: set to `true` to place the activation function before the batch norm
 - `stride`: stride of the convolution kernel
 - `pad`: padding of the convolution kernel
 - `dilation`: dilation of the convolution kernel
@@ -21,7 +22,7 @@ Create a convolution + batch normalization pair with ReLU activation.
 - `ϵ`, `momentum`: batch norm parameters (see [`Flux.BatchNorm`](#))
 """
 function conv_bn(kernelsize, inplanes, outplanes, activation = relu;
-                 rev = false,
+                 rev = false, preact = false,
                  initβ = Flux.zeros32, initγ = Flux.ones32, ϵ = 1f-5, momentum = 1f-1,
                  kwargs...)
   layers = []
@@ -32,6 +33,10 @@ function conv_bn(kernelsize, inplanes, outplanes, activation = relu;
   else
     activations = (conv = identity, bn = activation)
     bnplanes = outplanes
+  end
+
+  if preact
+    activations = (conv = activation, bn = identity)
   end
 
   push!(layers, Conv(kernelsize, Int(inplanes) => Int(outplanes), activations.conv; kwargs...))
