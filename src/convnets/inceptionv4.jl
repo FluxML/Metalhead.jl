@@ -131,4 +131,7 @@ end
 
 @functor Inception4
 
-(m::Inception4)  = m.layers(x)
+(m::Inception4)(x)  = m.layers(x)
+
+backbone(m::Inception4) = m.layers[1]
+classifier(m::Inception4) = m.layers[2]

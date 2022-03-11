@@ -96,6 +96,15 @@ end
 GC.safepoint()
 GC.gc()
 
+@testset "Inception4" begin
+  m = Inception4()
+  @test size(m(rand(Float32, 299, 299, 3, 2))) == (1000, 2)
+  @test_skip gradtest(m, rand(Float32, 299, 299, 3, 2))
+end
+
+GC.safepoint()
+GC.gc()
+
 @testset "SqueezeNet" begin
     m = SqueezeNet()
     @test size(m(x_224)) == (1000, 1)
