@@ -34,7 +34,8 @@ include("convnets/convmixer.jl")
 include("other/mlpmixer.jl")
 
 # ViT-based models
-include("vit-based/vit.jl")
+# TODO: add this back in when we are ready
+# include("vit-based/vit.jl")
 
 include("pretrain.jl")
 

@@ -25,6 +25,6 @@ end
 GC.gc()
 
 # ViT tests
-@testset verbose = true "ViTs" begin
-  include("vit-based.jl")
-end
+# @testset verbose = true "ViTs" begin
+#   include("vit-based.jl")
+# end
