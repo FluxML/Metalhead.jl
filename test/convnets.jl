@@ -76,6 +76,12 @@ end
   @test_skip gradtest(m, rand(Float32, 299, 299, 3, 2))
 end
 
+@testset "Inception4" begin
+  m = Inception4()
+  @test size(m(rand(Float32, 299, 299, 3, 2))) == (1000, 2)
+  @test_skip gradtest(m, rand(Float32, 299, 299, 3, 2))
+end
+
 @testset "SqueezeNet" begin
   m = SqueezeNet()
   @test size(m(rand(Float32, 227, 227, 3, 2))) == (1000, 2)
