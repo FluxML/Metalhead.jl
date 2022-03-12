@@ -225,7 +225,7 @@ function (m::SpatialGatingUnit)(x)
 end
 
 """
-    spatial_gating_block(planes, npatches; mlp_ratio = 4.0, mlp_layer = gated_mlp, 
+    spatial_gating_block(planes, npatches; mlp_ratio = 4.0, mlp_layer = gated_mlp_block, 
                          norm_layer = LayerNorm, dropout = 0.0, drop_path_rate = 0., 
                          activation = gelu)
 
@@ -237,20 +237,18 @@ Creates a feedforward block based on the gMLP model architecture described in th
 - `npatches`: the number of patches of the input
 - `mlp_ratio`: ratio of the number of hidden channels in the channel mixing MLP to the number
                 of planes in the block
-- `mlp_layer`: the MLP block to use
 - `norm_layer`: the normalisation layer to use
 - `dropout`: the dropout rate to use in the MLP blocks
 - `drop_path_rate`: Stochastic depth rate
 - `activation`: the activation function to use in the MLP blocks
 """
-function spatial_gating_block(planes, npatches; mlp_ratio = 4.0, mlp_layer = gated_mlp, 
-                              norm_layer = LayerNorm, dropout = 0.0, drop_path_rate = 0., 
+function spatial_gating_block(planes, npatches; mlp_ratio = 4.0, norm_layer = LayerNorm,
+                              mlp_layer = gated_mlp_block, dropout = 0., drop_path_rate = 0.,
                               activation = gelu)
   channelplanes = Int(mlp_ratio * planes)
   sgu = inplanes -> SpatialGatingUnit(inplanes, npatches; norm_layer)
   return SkipConnection(Chain(norm_layer(planes),
-                              mlp_layer(planes, channelplanes; activation, gate_layer = sgu, 
-                                        dropout),
+                              mlp_layer(sgu, planes, channelplanes; activation, dropout),
                               DropPath(drop_path_rate)), +)
 end
 
@@ -280,7 +278,7 @@ function gMLP(size::Symbol = :base; patch_size::Int = 16, imsize::NTuple{2} = (2
   patch_size = _to_tuple(patch_size)
   depth = mixer_configs[size][:depth]
   embedplanes = mixer_configs[size][:planes]
-  layers = mlpmixer(spatial_gating_block, imsize; mlp_ratio = 4.0, mlp_layer = gated_mlp, 
+  layers = mlpmixer(spatial_gating_block, imsize; mlp_ratio = 4.0, mlp_layer = gated_mlp_block, 
                     patch_size, embedplanes, drop_path_rate, depth, nclasses)
 
   gMLP(layers)
