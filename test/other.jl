@@ -7,8 +7,8 @@ using Flux
 			m = MLPMixer(mode; drop_path_rate)
 			@test size(m(rand(Float32, 224, 224, 3, 2))) == (1000, 2)
 			@test_skip gradtest(m, rand(Float32, 224, 224, 3, 2))
+			GC.gc()
 		end
-		GC.gc()
 	end
 end
 
@@ -18,8 +18,8 @@ end
 			m = ResMLP(mode; drop_path_rate)
 			@test size(m(rand(Float32, 224, 224, 3, 2))) == (1000, 2)
 			@test_skip gradtest(m, rand(Float32, 224, 224, 3, 1))
+			GC.gc()
 		end
-		GC.gc()
 	end
 end
 
@@ -29,7 +29,7 @@ end
 			m = gMLP(mode; drop_path_rate)
 			@test size(m(rand(Float32, 224, 224, 3, 2))) == (1000, 2)
 			@test_skip gradtest(m, rand(Float32, 224, 224, 3, 2))
+			GC.gc()
 		end
-		GC.gc()
 	end
 end

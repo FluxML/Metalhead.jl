@@ -17,7 +17,7 @@ include("others.jl")
 
 export Attention, MHAttention,
        PatchEmbedding, ViPosEmbedding, ClassTokens,
-       mlp_block, gated_mlp,
+       mlp_block, gated_mlp_block,
        LayerScale, DropPath,
        ChannelLayerNorm, prenorm,
        skip_identity, skip_projection,
