@@ -45,4 +45,4 @@
 
 ## Getting Started
 
-You can find the Metalhead.jl getting started guide [here](# "Quickstart").
+You can find the Metalhead.jl getting started guide [here](https://fluxml.ai/Metalhead.jl/dev/docs/tutorials/quickstart.html).
