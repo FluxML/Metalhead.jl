@@ -210,8 +210,7 @@ Creates a spatial gating unit as described in the gMLP paper.
 function SpatialGatingUnit(planes::Int, npatches::Int; norm_layer = LayerNorm)
   gateplanes = planes ÷ 2
   norm = norm_layer(gateplanes)
-  proj = Dense(npatches, npatches)
-
+  proj = Dense(Array{Float32}(undef, npatches, npatches), ones(npatches))
   return SpatialGatingUnit(norm, proj)
 end
 
