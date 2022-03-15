@@ -38,6 +38,7 @@ Creates a model with the MLPMixer architecture.
 
 # Arguments
 - `block`: the type of mixer block to use in the model - architecture dependent
+           (a constructor of the form `block(embedplanes, npatches; drop_path_rate, kwargs...)`)
 - `imsize`: the size of the input image
 - `inchannels`: the number of input channels
 - `norm_layer`: the normalization layer to use in the model
@@ -204,7 +205,7 @@ Creates a spatial gating unit as described in the gMLP paper.
 function SpatialGatingUnit(planes::Int, npatches::Int; norm_layer = LayerNorm)
   gateplanes = planes ÷ 2
   norm = norm_layer(gateplanes)
-  proj = Dense(Array{Float32}(undef, npatches, npatches), ones(npatches))
+  proj = Dense(2 * eps(Float32) .* rand(Float32, npatches, npatches), ones(npatches))
   return SpatialGatingUnit(norm, proj)
 end
 

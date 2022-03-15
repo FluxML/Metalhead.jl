@@ -12,7 +12,7 @@ patches.
 - `embedplanes`: the number of channels in the embedding
 - `norm_layer`: the normalization layer - by default the identity function but otherwise takes a 
                 single argument constructor for a normalization layer like LayerNorm or BatchNorm
-- `flatten`: whether to flatten the input after the embedding
+- `flatten`: set true to flatten the input spatial dimensions after the embedding
 """
 function PatchEmbedding(imsize::NTuple{2} = (224, 224); inchannels = 3, patch_size = (16, 16), 
                         embedplanes = 768, norm_layer = planes -> identity, flatten = true)
