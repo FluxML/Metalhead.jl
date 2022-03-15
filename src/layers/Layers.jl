@@ -13,6 +13,7 @@ include("embeddings.jl")
 include("mlp.jl")
 include("normalise.jl")
 include("conv.jl")
+include("relative_index.jl")
 
 export Attention, MHAttention,
        PatchEmbedding, ViPosEmbedding, ClassTokens,
