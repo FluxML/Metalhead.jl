@@ -48,3 +48,30 @@ function _maybe_big_show(io, model)
       show(io, model)
     end
   end
+
+"""
+For U-Net
+"""
+function _random_normal(shape...)
+  return Float32.(rand(Normal(0.f0,0.02f0),shape...))
+end
+  
+"""
+For U-Net
+"""      
+expand_dims(x,n::Int) = reshape(x,ones(Int64,n)...,size(x)...)
+
+
+"""
+For U-Net
+"""
+function squeeze(x) 
+      if size(x)[end] != 1
+          return dropdims(x, dims = tuple(findall(size(x) .== 1)...))
+      else
+          # For the case BATCH_SIZE = 1
+          int_val = dropdims(x, dims = tuple(findall(size(x) .== 1)...))
+          return reshape(int_val,size(int_val)...,1)
+      end
+end
+  

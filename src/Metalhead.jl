@@ -7,6 +7,7 @@ using BSON
 using Artifacts, LazyArtifacts
 using Statistics
 using MLUtils
+using Distributions: Normal
 
 import Functors
 
@@ -27,6 +28,7 @@ include("convnets/densenet.jl")
 include("convnets/squeezenet.jl")
 include("convnets/mobilenet.jl")
 include("convnets/convnext.jl")
+include("convnets/unet.jl")
 
 # Other models
 include("other/mlpmixer.jl")
@@ -45,11 +47,12 @@ export  AlexNet,
         MobileNetv2, MobileNetv3,
         MLPMixer,
         ViT,
-        ConvNeXt
+        ConvNeXt,
+        Unet
 
 # use Flux._big_show to pretty print large models
 for T in (:AlexNet, :VGG, :ResNet, :GoogLeNet, :Inception3, :SqueezeNet, :DenseNet, :ResNeXt, 
-          :MobileNetv2, :MobileNetv3, :MLPMixer, :ViT, :ConvNeXt)
+          :MobileNetv2, :MobileNetv3, :MLPMixer, :ViT, :ConvNeXt, :Unet)
   @eval Base.show(io::IO, ::MIME"text/plain", model::$T) = _maybe_big_show(io, model)
 end
 
