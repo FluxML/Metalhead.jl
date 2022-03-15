@@ -1,5 +1,5 @@
 """
-    transformer_encoder(planes, depth, heads, mlppanes; dropout = 0.)
+  transformer_encoder(planes, depth, nheads; mlp_ratio = 4.0, dropout = 0.)
 
 Transformer as used in the base ViT architecture.
 ([reference](https://arxiv.org/abs/2010.11929)).
@@ -7,14 +7,15 @@ Transformer as used in the base ViT architecture.
 # Arguments
 - `planes`: number of input channels
 - `depth`: number of attention blocks
-- `heads`: number of attention heads
-- `mlppanes`: number of hidden channels in the MLP block
+- `nheads`: number of attention heads
+- `mlp_ratio`: ratio of MLP layers to the number of input channels
 - `dropout`: dropout rate
 """
-function transformer_encoder(planes, depth, heads, mlpplanes; dropout = 0.)
-  layers = [Chain(SkipConnection(prenorm(planes, MHAttention(planes, heads; attn_drop = dropout,
+function transformer_encoder(planes, depth, nheads; mlp_ratio = 4.0, dropout = 0.)
+  layers = [Chain(SkipConnection(prenorm(planes, MHAttention(planes, nheads; attn_drop = dropout,
                                                              proj_drop = dropout)), +),
-                  SkipConnection(prenorm(planes, mlp_block(planes, mlpplanes; dropout)), +))
+                  SkipConnection(prenorm(planes, mlp_block(planes, floor(Int, mlp_ratio * planes);
+                                                           dropout)), +))
             for _ in 1:depth]
   Chain(layers...)
 end
@@ -33,7 +34,7 @@ Creates a Vision Transformer (ViT) model.
 - `patch_size`: size of the patches
 - `embedplanes`: the number of channels after the patch embedding
 - `depth`: number of blocks in the transformer
-- `heads`: number of attention heads in the transformer
+- `nheads`: number of attention heads in the transformer
 - `mlpplanes`: number of hidden channels in the MLP block in the transformer
 - `dropout`: dropout rate
 - `emb_dropout`: dropout rate for the positional embedding layer
@@ -41,7 +42,7 @@ Creates a Vision Transformer (ViT) model.
 - `nclasses`: number of classes in the output
 """
 function vit(imsize::NTuple{2} = (256, 256); inchannels = 3, patch_size = (16, 16),
-             embedplanes = 768, depth = 6, heads = 16, mlpplanes = 2048, dropout = 0.1,
+             embedplanes = 768, depth = 6, nheads = 16, mlp_ratio = 4.0, dropout = 0.1,
              emb_dropout = 0.1, pool = :class, nclasses = 1000)
 
   @assert pool in [:class, :mean]
@@ -51,31 +52,31 @@ function vit(imsize::NTuple{2} = (256, 256); inchannels = 3, patch_size = (16, 1
                      ClassTokens(embedplanes),
                      ViPosEmbedding(embedplanes, npatches + 1),
                      Dropout(emb_dropout),
-                     transformer_encoder(embedplanes, depth, heads, mlpplanes; dropout),
+                     transformer_encoder(embedplanes, depth, nheads; mlp_ratio, dropout),
                      (pool == :class) ? x -> x[:, 1, :] : seconddimmean),
                Chain(LayerNorm(embedplanes), Dense(embedplanes, nclasses, tanh_fast)))
 end
 
-vit_configs = Dict()
+vit_configs = Dict(:tiny => (depth = 12, embedplanes = 192, nheads = 3),
+                   :small => (depth = 12, embedplanes = 384, nheads = 6),
+                   :base => (depth = 12, embedplanes = 768, nheads = 12),
+                   :large => (depth = 24, embedplanes = 1024, nheads = 16),
+                   :huge => (depth = 32, embedplanes = 1280, nheads = 16),
+                   :giant => (depth = 40, embedplanes = 1408, nheads = 16, mlp_ratio = 48/11),
+                   :gigantic => (depth = 48, embedplanes = 1664, nheads = 16, mlp_ratio = 64/13))
 
 """
-    ViT(imsize::NTuple{2} = (256, 256); inchannels = 3, patch_size = (16, 16),
-        embedplanes = 768, depth = 6, heads = 16, mlpplanes = 2048,
-        dropout = 0.1, emb_dropout = 0.1, pool = :class, nclasses = 1000)
+    ViT(mode::Symbol = base; imsize::NTuple{2} = (256, 256), inchannels = 3, patch_size = (16, 16), pool = :class, 
+        nclasses = 1000)
 
 Creates a Vision Transformer (ViT) model.
 ([reference](https://arxiv.org/abs/2010.11929)).
 
 # Arguments
+- `mode`: the model configuration, one of [:tiny, :small, :base, :large, :huge, :giant, :gigantic]
 - `imsize`: image size
 - `inchannels`: number of input channels
 - `patch_size`: size of the patches
-- `embedplanes`: the number of channels after the patch embedding
-- `depth`: number of blocks in the transformer
-- `heads`: number of attention heads in the transformer
-- `mlpplanes`: number of hidden channels in the MLP block in the transformer
-- `dropout`: dropout rate
-- `emb_dropout`: dropout rate for the positional embedding layer
 - `pool`: pooling type, either :class or :mean
 - `nclasses`: number of classes in the output
 
@@ -85,12 +86,11 @@ struct ViT
   layers
 end
 
-function ViT(imsize::NTuple{2} = (256, 256); inchannels = 3, patch_size = (16, 16),
-             embedplanes = 768, depth = 12, heads = 16, mlpplanes = 3072,
-             dropout = 0.1, emb_dropout = 0.1, pool = :class, nclasses = 1000)
-
-  layers = vit(imsize; inchannels, patch_size, embedplanes, depth, heads, mlpplanes,
-               dropout, emb_dropout, pool, nclasses)
+function ViT(mode::Symbol = :base; imsize::NTuple{2} = (256, 256), inchannels = 3,
+             patch_size = (16, 16), pool = :class, nclasses = 1000)
+  @assert mode in keys(vit_configs) "`mode` must be one of $(keys(vit_configs))"
+  kwargs = vit_configs[mode]
+  layers = vit(imsize; inchannels, patch_size, nclasses, pool, kwargs...)
 
   ViT(layers)
 end

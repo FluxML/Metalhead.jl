@@ -30,11 +30,11 @@ Multi-head self-attention layer.
 """
 function MHAttention(planes, nheads = 8; qkv_bias = false, attn_drop = 0., proj_drop = 0.)
   @assert planes % nheads == 0 "planes should be divisible by nheads"
-  qkv = Dense(planes, planes * 3; bias = qkv_bias)
+  qkv_layer = Dense(planes, planes * 3; bias = qkv_bias)
   attn_drop = Dropout(attn_drop)
   proj = Chain(Dense(planes, planes), Dropout(proj_drop))
 
-  MHAttention(nheads, proj, attn_drop, qkv)
+  MHAttention(nheads, qkv_layer, attn_drop, proj)
 end
 
 @functor MHAttention
