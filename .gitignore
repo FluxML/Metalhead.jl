@@ -6,3 +6,5 @@
 # manifests
 docs/Manifest.toml
 Manifest.toml
+#vscode settings
+.vscode/
