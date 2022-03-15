@@ -7,6 +7,7 @@ using BSON
 using Artifacts, LazyArtifacts
 using Statistics
 using MLUtils
+using NeuralAttentionlib
 
 import Functors
 
