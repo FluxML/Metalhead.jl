@@ -22,4 +22,5 @@ export Attention, MHAttention,
        skip_identity, skip_projection,
        conv_bn,
        invertedresidual, squeeze_excite
+       get_relative_index
 end
