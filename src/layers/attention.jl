@@ -1,31 +1,48 @@
-struct MHAttention{A, B, C}
+"""
+    struct MHAttention{P, Q, R}
+
+Multi-head self-attention layer.
+
+# Arguments:
+- `nheads`: Number of heads
+- `qkv_layer`: layer to be used for getting the query, key and value
+- `attn_drop`: dropout rate after the self-attention layer
+- `projection`: projection layer to be used after self-attention
+"""
+struct MHAttention{P, Q, R}
   nheads::Integer
-  projection::A
-  attn_drop::B
-  qkv_layer::C
-  scale::Number
+  qkv_layer::P
+  attn_drop::Q
+  projection::R
 end
 
+"""
+    MHAttention(planes, nheads = 8; qkv_bias = false, attn_drop = 0., proj_drop = 0.)
+
+Multi-head self-attention layer.
+
+# Arguments:
+- `planes`: number of input channels
+- `nheads`: number of heads
+- `qkv_bias`: whether to use bias in the layer to get the query, key and value
+- `attn_drop`: dropout rate after the self-attention layer
+- `proj_drop`: dropout rate after the projection layer
+"""
 function MHAttention(planes, nheads = 8; qkv_bias = false, attn_drop = 0., proj_drop = 0.)
   @assert planes % nheads == 0 "planes should be divisible by nheads"
-  scale = sqrt(planes / nheads)
   qkv = Dense(planes, planes * 3; bias = qkv_bias)
   attn_drop = Dropout(attn_drop)
   proj = Chain(Dense(planes, planes), Dropout(proj_drop))
 
-  MHAttention(nheads, proj, attn_drop, qkv, scale)
+  MHAttention(nheads, proj, attn_drop, qkv)
 end
 
 @functor MHAttention
 
-function (m::MHAttention)(x::AbstractArray{T}) where T
+function (m::MHAttention)(x::AbstractArray{T, 3}) where T
   B, C, N = size(x)
-  qkv = reshape(m.qkv_layer(x), B ÷ m.nheads, m.nheads, C, N, 3)
-  q, k, v = map(dropdims $ (; dims = 5), chunk(qkv, 3; dims = 5))
-  attn = NeuralAttentionlib.unwrap_collapse(NeuralAttentionlib.matmul(q,
-          permutedims(k, (2, 1, 3, 4)))) * convert(T, m.scale)
-  attn = m.attn_drop(softmax(attn))
-  x = NeuralAttentionlib.unwrap_collapse(NeuralAttentionlib.matmul(attn, v))
-  x = reshape(x, (B, C, N))
-  x = m.projection(x)
+  q, k, v = chunk(reshape(m.qkv_layer(x), B ÷ m.nheads, m.nheads, C, 3 * N), 3; dims = 4)
+  scale = convert(T, sqrt(size(q, 1) / m.nheads))
+  attn = m.attn_drop(softmax(NeuralAttentionlib.matmul(q, permutedims(k, (2, 1, 3, 4))) * scale))
+  x = m.projection(reshape(NeuralAttentionlib.matmul(attn, v), (B, C, N)))
 end

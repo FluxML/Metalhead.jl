@@ -1,5 +1,5 @@
 """
-    transformer_encoder(planes, depth, heads, headplanes, mlppanes; dropout = 0.)
+    transformer_encoder(planes, depth, heads, mlppanes; dropout = 0.)
 
 Transformer as used in the base ViT architecture.
 ([reference](https://arxiv.org/abs/2010.11929)).
@@ -8,12 +8,12 @@ Transformer as used in the base ViT architecture.
 - `planes`: number of input channels
 - `depth`: number of attention blocks
 - `heads`: number of attention heads
-- `headplanes`: number of hidden channels per head
 - `mlppanes`: number of hidden channels in the MLP block
 - `dropout`: dropout rate
 """
 function transformer_encoder(planes, depth, heads, mlpplanes; dropout = 0.)
-  layers = [Chain(SkipConnection(prenorm(planes, MHAttention(planes, heads; attn_drop = dropout)), +),
+  layers = [Chain(SkipConnection(prenorm(planes, MHAttention(planes, heads; attn_drop = dropout,
+                                                             proj_drop = dropout)), +),
                   SkipConnection(prenorm(planes, mlp_block(planes, mlpplanes; dropout)), +))
             for _ in 1:depth]
   Chain(layers...)
@@ -35,14 +35,13 @@ Creates a Vision Transformer (ViT) model.
 - `depth`: number of blocks in the transformer
 - `heads`: number of attention heads in the transformer
 - `mlpplanes`: number of hidden channels in the MLP block in the transformer
-- `headplanes`: number of hidden channels per head in the transformer
 - `dropout`: dropout rate
 - `emb_dropout`: dropout rate for the positional embedding layer
 - `pool`: pooling type, either :class or :mean
 - `nclasses`: number of classes in the output
 """
 function vit(imsize::NTuple{2} = (256, 256); inchannels = 3, patch_size = (16, 16),
-             embedplanes = 768, depth = 6, heads = 16, mlpplanes = 2048, dropout = 0.1, 
+             embedplanes = 768, depth = 6, heads = 16, mlpplanes = 2048, dropout = 0.1,
              emb_dropout = 0.1, pool = :class, nclasses = 1000)
 
   @assert pool in [:class, :mean]
@@ -54,16 +53,14 @@ function vit(imsize::NTuple{2} = (256, 256); inchannels = 3, patch_size = (16, 1
                      Dropout(emb_dropout),
                      transformer_encoder(embedplanes, depth, heads, mlpplanes; dropout),
                      (pool == :class) ? x -> x[:, 1, :] : seconddimmean),
-               Chain(LayerNorm(embedplanes), Dense(embedplanes, nclasses)))
+               Chain(LayerNorm(embedplanes), Dense(embedplanes, nclasses, tanh_fast)))
 end
 
-struct ViT
-  layers
-end
+vit_configs = Dict()
 
 """
     ViT(imsize::NTuple{2} = (256, 256); inchannels = 3, patch_size = (16, 16),
-        embedplanes = 768, depth = 6, heads = 16, mlpplanes = 2048, headplanes = 64,
+        embedplanes = 768, depth = 6, heads = 16, mlpplanes = 2048,
         dropout = 0.1, emb_dropout = 0.1, pool = :class, nclasses = 1000)
 
 Creates a Vision Transformer (ViT) model.
@@ -77,7 +74,6 @@ Creates a Vision Transformer (ViT) model.
 - `depth`: number of blocks in the transformer
 - `heads`: number of attention heads in the transformer
 - `mlpplanes`: number of hidden channels in the MLP block in the transformer
-- `headplanes`: number of hidden channels per head in the transformer
 - `dropout`: dropout rate
 - `emb_dropout`: dropout rate for the positional embedding layer
 - `pool`: pooling type, either :class or :mean
@@ -85,6 +81,10 @@ Creates a Vision Transformer (ViT) model.
 
 See also [`Metalhead.vit`](#).
 """
+struct ViT
+  layers
+end
+
 function ViT(imsize::NTuple{2} = (256, 256); inchannels = 3, patch_size = (16, 16),
              embedplanes = 768, depth = 12, heads = 16, mlpplanes = 3072,
              dropout = 0.1, emb_dropout = 0.1, pool = :class, nclasses = 1000)
