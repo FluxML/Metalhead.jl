@@ -136,4 +136,3 @@ function invertedresidual(kernel_size, inplanes, hidden_planes, outplanes, activ
 end
 invertedresidual(kernel_size::Integer, args...; kwargs...) =
   invertedresidual((kernel_size, kernel_size), args...; kwargs...)
-
