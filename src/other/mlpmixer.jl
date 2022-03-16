@@ -19,9 +19,9 @@ function mixerblock(planes, npatches; mlp_ratio = (0.5, 4.0), mlp_layer = mlp_bl
                     dropout = 0., drop_path_rate = 0., activation = gelu)
   tokenplanes, channelplanes = [Int(r * planes) for r in mlp_ratio]
   return Chain(SkipConnection(Chain(LayerNorm(planes),
-                                    x -> permutedims(x, (2, 1, 3)),
+                                    permute_dims((2, 1, 3)),
                                     mlp_layer(npatches, tokenplanes; activation, dropout),
-                                    x -> permutedims(x, (2, 1, 3)),
+                                    permute_dims((2, 1, 3)),
                                     DropPath(drop_path_rate)), +),
                SkipConnection(Chain(LayerNorm(planes),
                                     mlp_layer(planes, channelplanes; activation, dropout),
@@ -74,7 +74,7 @@ struct MLPMixer
 end
 
 """
-    MLPMixer(size::Symbol = :base; patch_size::Int = 16, imsize::NTuple{2} = (224, 224),
+    MLPMixer(size::Symbol = :base; patch_size::NTuple{2} = (16, 16), imsize::NTuple{2} = (224, 224),
              drop_path_rate = 0., nclasses = 1000)
 
 Creates a model with the MLPMixer architecture.
@@ -127,9 +127,9 @@ Creates a block for the ResMixer architecture.
 function resmixerblock(planes, npatches; mlp_ratio = 4.0, mlp_layer = mlp_block,
                        dropout = 0., drop_path_rate = 0., activation = gelu, λ = 1e-4)
 return Chain(SkipConnection(Chain(Flux.Diagonal(planes),
-                                  x -> permutedims(x, (2, 1, 3)),
+                                  permute_dims((2, 1, 3)),
                                   Dense(npatches, npatches),
-                                  x -> permutedims(x, (2, 1, 3)),
+                                  permute_dims((2, 1, 3)),
                                   LayerScale(planes, λ),
                                   DropPath(drop_path_rate)), +),
              SkipConnection(Chain(Flux.Diagonal(planes),
@@ -143,7 +143,7 @@ struct ResMLP
 end
 
 """
-    ResMLP(size::Symbol = :base; patch_size::Int = 16, imsize::NTuple{2} = (224, 224),
+    ResMLP(size::Symbol = :base; patch_size::NTuple{2} = (16, 16), imsize::NTuple{2} = (224, 224),
            drop_path_rate = 0., nclasses = 1000)
 
 Creates a model with the ResMLP architecture.
@@ -158,7 +158,7 @@ Creates a model with the ResMLP architecture.
 
 See also [`Metalhead.mlpmixer`](#).
 """
-function ResMLP(size::Symbol = :base; patch_size::Int = 16, imsize::NTuple{2} = (224, 224),
+function ResMLP(size::Symbol = :base; patch_size::NTuple{2} = (16, 16), imsize::NTuple{2} = (224, 224),
                 drop_path_rate = 0., nclasses = 1000)
   @assert size in keys(mixer_configs) "`size` must be one of $(keys(mixer_configs))"
   patch_size = _to_tuple(patch_size)
@@ -251,7 +251,7 @@ struct gMLP
 end
 
 """
-    gMLP(size::Symbol = :base; patch_size::Int = 16, imsize::NTuple{2} = (224, 224),
+    gMLP(size::Symbol = :base; patch_size::NTuple{2} = (16, 16), imsize::NTuple{2} = (224, 224),
          drop_path_rate = 0., nclasses = 1000)
 
 Creates a model with the gMLP architecture.
@@ -266,7 +266,7 @@ Creates a model with the gMLP architecture.
 
 See also [`Metalhead.mlpmixer`](#).
 """
-function gMLP(size::Symbol = :base; patch_size::Int = 16, imsize::NTuple{2} = (224, 224),
+function gMLP(size::Symbol = :base; patch_size::NTuple{2} = (16, 16), imsize::NTuple{2} = (224, 224),
               drop_path_rate = 0., nclasses = 1000)
   @assert size in keys(mixer_configs) "`size` must be one of $(keys(mixer_configs))"
   patch_size = _to_tuple(patch_size)

@@ -1,6 +1,7 @@
 """
-    PatchEmbedding(imsize::NTuple{2} = (224, 224); inchannels = 3, patch_size = (16, 16), 
-                   embedplanes = 768, norm_layer = planes -> identity, flatten = true)
+    PatchEmbedding(imsize::NTuple{2} = (224, 224); inchannels = 3,
+                   patch_size::NTuple{2} = (16, 16), embedplanes = 768,
+                   norm_layer = planes -> identity, flatten = true)
 
 Patch embedding layer used by many vision transformer-like models to split the input image into 
 patches.
@@ -14,8 +15,9 @@ patches.
                 single argument constructor for a normalization layer like LayerNorm or BatchNorm
 - `flatten`: set true to flatten the input spatial dimensions after the embedding
 """
-function PatchEmbedding(imsize::NTuple{2} = (224, 224); inchannels = 3, patch_size = (16, 16),
-                        embedplanes = 768, norm_layer = planes -> identity, flatten = true)
+function PatchEmbedding(imsize::NTuple{2} = (224, 224); inchannels = 3,
+                        patch_size::NTuple{2} = (16, 16), embedplanes = 768,
+                        norm_layer = planes -> identity, flatten = true)
 
   im_height, im_width = imsize
   patch_height, patch_width = patch_size
@@ -24,7 +26,7 @@ function PatchEmbedding(imsize::NTuple{2} = (224, 224); inchannels = 3, patch_si
   "Image dimensions must be divisible by the patch size."
 
   return Chain(Conv(patch_size, inchannels => embedplanes; stride = patch_size),
-               flatten ? x -> permutedims(reshape(x, (:, size(x, 3), size(x, 4))), (2, 1, 3)) 
+               flatten ? x -> permutedims(reshape(x, (:, size(x, 3), size(x, 4))), (2, 1, 3))
                        : identity,
                norm_layer(embedplanes))
 end

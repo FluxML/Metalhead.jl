@@ -11,11 +11,11 @@ Creates a single block of ConvNeXt.
 """
 function convnextblock(planes, drop_path_rate = 0., λ = 1f-6)
   layers = SkipConnection(Chain(DepthwiseConv((7, 7), planes => planes; pad = 3), 
-                                x -> permutedims(x, (3, 1, 2, 4)),
+                                permute_dims((3, 1, 2, 4)),
                                 LayerNorm(planes; ϵ = 1f-6),
                                 mlp_block(planes, 4 * planes),
                                 LayerScale(planes, λ),
-                                x -> permutedims(x, (2, 3, 1, 4)),
+                                permute_dims((2, 3, 1, 4)),
                                 DropPath(drop_path_rate)), +)
   return layers
 end
@@ -36,7 +36,7 @@ Creates the layers for a ConvNeXt model.
 """
 function convnext(depths, planes; inchannels = 3, drop_path_rate = 0., λ = 1f-6, nclasses = 1000)
   @assert length(depths) == length(planes) "`planes` should have exactly one value for each block"
-  
+
   downsample_layers = []
   stem = Chain(Conv((4, 4), inchannels => planes[1]; stride = 4),
                ChannelLayerNorm(planes[1]; ϵ = 1f-6))
@@ -46,7 +46,7 @@ function convnext(depths, planes; inchannels = 3, drop_path_rate = 0., λ = 1f-6
                               Conv((2, 2), planes[m] => planes[m + 1]; stride = 2))
     push!(downsample_layers, downsample_layer)
   end
-  
+
   stages = []
   dp_rates = LinRange{Float32}(0., drop_path_rate, sum(depths))
   cur = 0

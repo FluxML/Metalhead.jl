@@ -1,5 +1,3 @@
-_to_tuple(x::Int) = (x, x)
-
 # Utility function for classifier head of vision transformer-like models
 seconddimmean(x) = dropdims(mean(x, dims = 2); dims = 2)
 
@@ -38,15 +36,23 @@ Convenient binary reduction operator for use with `Parallel`.
 """
 cat_channels(x, y) = cat(x, y; dims = 3)
 
+"""
+    permute_dims(perm)
+
+Convenience function for permuting the dimensions of an array.
+Equivalent to `permutedims(x, perm)`.
+"""
+permute_dims(perm) = Base.Fix2(permutedims, perm)
+
 # Utility function for pretty printing large models
 function _maybe_big_show(io, model)
-    if isdefined(Flux, :_big_show)
-      if isnothing(get(io, :typeinfo, nothing)) # e.g. top level in REPL
-        Flux._big_show(io, model)
-      else
-        show(io, model)
-      end
+  if isdefined(Flux, :_big_show)
+    if isnothing(get(io, :typeinfo, nothing)) # e.g. top level in REPL
+      Flux._big_show(io, model)
     else
       show(io, model)
     end
+  else
+    show(io, model)
   end
+end
