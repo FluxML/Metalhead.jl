@@ -20,6 +20,7 @@ Functors = "0.2"
 MLUtils = "0.1.2, 0.2"
 NNlib = "0.7.34, 0.8"
 julia = "1.4"
+NeuralAttentionlib = "0.0.3"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
