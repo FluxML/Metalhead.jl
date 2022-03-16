@@ -16,7 +16,7 @@ include("normalise.jl")
 include("conv.jl")
 include("others.jl")
 
-export Attention, MHAttention,
+export MHAttention,
        PatchEmbedding, ViPosEmbedding, ClassTokens,
        mlp_block, gated_mlp_block,
        LayerScale, DropPath,
