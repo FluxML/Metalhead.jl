@@ -94,7 +94,8 @@ function MLPMixer(size::Symbol = :base; patch_size::NTuple{2, Int} = (16, 16),
   @assert size in keys(mixer_configs) "`size` must be one of $(keys(mixer_configs))"
   depth = mixer_configs[size][:depth]
   embedplanes = mixer_configs[size][:planes]
-  layers = mlpmixer(mixerblock, imsize; patch_size, embedplanes, depth, drop_path_rate, nclasses)
+  layers = mlpmixer(mixerblock, imsize; patch_size, embedplanes, depth, dropout,
+                    drop_path_rate, nclasses)
   MLPMixer(layers)
 end
 
