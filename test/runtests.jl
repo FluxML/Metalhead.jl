@@ -15,10 +15,14 @@ end
   include("convnets.jl")
 end
 
+GC.gc()
+
 # Other tests
 @testset verbose = true "Other" begin
   include("other.jl")
 end
+
+GC.gc()
 
 # ViT tests
 @testset verbose = true "ViTs" begin
