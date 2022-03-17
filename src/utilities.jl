@@ -52,7 +52,5 @@ function _maybe_big_show(io, model)
     else
       show(io, model)
     end
-  else
-    show(io, model)
   end
 end
