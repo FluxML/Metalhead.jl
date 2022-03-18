@@ -1,4 +1,4 @@
-#Utility function for obtaining relative index in shifted window transformer
+#Utility function for obtaining relative index and biasin shifted window transformer
 #Created by Weihang Xia
 using Flux
 using Base.Threads
@@ -21,12 +21,33 @@ function get_relative_index(window_size::Tuple)
     relative_coordinate=broadcast.(-,coordinate_flatten_1,coordinate_flatten_2);
     coordinate_flatten_1=nothing;
     coordinate_flatten_2=nothing;#RAM management
-    relative_index=Matrix{Any}(undef,window_size[1]*window_size[2],window_size[1]*window_size[2])
-    @threads for i in 1:length(relative_coordinate[1])#use Multi-threading technique to boost performance
-        relative_index[i]=relative_coordinate[1][i];
-        relative_index[i]+=(window_size[1]-1);
-        relative_index[i]*=2*window_size[2]-1;
-        relative_index[i]+=relative_coordinate[2][i]+window_size[2]-1;
+    relative_index=Matrix{Any}(undef,window_size[1]*window_size[2],window_size[1]*window_size[2]);
+    if Flux.CUDA.functional()
+        Flux.CUDA.@sync for i in 1:length(relative_coordinate[1])#use Multi-threading technique to boost performance
+            relative_index[i]=relative_coordinate[1][i];
+            relative_index[i]+=(window_size[1]-1);
+            relative_index[i]*=2*window_size[2]-1;
+            relative_index[i]+=relative_coordinate[2][i]+window_size[2]-1;
+        end
+    else
+        @threads for i in 1:length(relative_coordinate[1])#use Multi-threading technique to boost performance
+            relative_index[i]=relative_coordinate[1][i];
+            relative_index[i]+=(window_size[1]-1);
+            relative_index[i]*=2*window_size[2]-1;
+            relative_index[i]+=relative_coordinate[2][i]+window_size[2]-1;
+        end
     end
-    return relative_index
+    return Array(transpose(relative_index))
+end
+
+function get_relative_bias(window_size::Tuple,n_heads)
+    num_window_elements = window_size[1] * window_size[2];
+    relative_position_index=get_relative_index(window_size);
+    relative_position_bias=zeros((2 * window_size[1] - 1) * (2 * window_size[2] - 1), n_heads);#Initialize relative bias
+    Random.rand!(Distributions.truncated(Normal(0,0.02)), relative_position_bias);#replace zeros with small random numbers
+    relative_position_bias=collect(relative_position_bias_table[i+1,:] for i in relative_position_index);
+    relative_position_bias=Flux.stack(relative_position_bias,2);#flatten the tensor
+    relative_position_bias=reshape(relative_position_bias,:,num_window_elements,num_window_elements);
+    relative_position_bias=Flux.unsqueeze(relative_position_bias,1);#expand dimension
+    return relative_position_bias
 end

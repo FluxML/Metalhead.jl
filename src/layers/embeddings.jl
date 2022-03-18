@@ -55,3 +55,22 @@ function (m::ClassTokens)(x)
 end
 
 @functor ClassTokens
+
+struct PatchMerging
+  input_resolution
+  norm
+  reduction
+end
+
+function PatchMerging(input_resolution, dim, norm_layer=LayerNorm)#input_resolution returns (h,w)
+  h,w=input_resolution;
+  reduction=Dense(4*dim,2*dim;bias=false);
+  norm=LayerNorm(4*dim);
+  PatchMerging(input_resolution,norm,reduction);
+end
+@functor PatchMerging
+function (pm::PatchMerging)(x)
+  b=size(x)[1];
+  h,w=pm.input_resolution;
+  c=size(x)[3];
+  x=reshape(x,b,h,w,c);

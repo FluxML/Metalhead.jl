@@ -4,6 +4,8 @@ using Flux
 using Flux: outputsize, Zygote
 using Functors
 using Statistics
+using Random
+using Distributions
 using MLUtils
 
 include("../utilities.jl")
@@ -22,5 +24,5 @@ export Attention, MHAttention,
        skip_identity, skip_projection,
        conv_bn,
        invertedresidual, squeeze_excite
-       get_relative_index
+       get_relative_index,get_relative_bias
 end
