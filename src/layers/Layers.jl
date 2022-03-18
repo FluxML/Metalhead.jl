@@ -9,7 +9,7 @@ using Distributions
 using MLUtils
 
 include("../utilities.jl")
-
+include("windowpartition.jl")
 include("attention.jl")
 include("embeddings.jl")
 include("mlp.jl")
@@ -24,5 +24,6 @@ export Attention, MHAttention,
        skip_identity, skip_projection,
        conv_bn,
        invertedresidual, squeeze_excite
+       window_partition,window_reverse
        get_relative_index,get_relative_bias
 end
