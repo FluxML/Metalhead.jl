@@ -56,3 +56,43 @@ function (mha::MHAttention)(x)
   xhead = chunk(x, nheads, dims = 1)
   return mha.projection(mha.heads(xhead...))
 end
+
+struct WindowAttention{S,T}
+  relative_bias::S
+  qkv::T
+  qk_scale::S
+  n_heads
+  window_size
+  attn_drop::T
+  proj::T
+  proj_drop::T
+end
+
+function WindowAttention(window_size;dim,n_heads;qkv_bias,qk_scale=(dim//n_heads) ^ -0.5;attn_drop=0.,drop=0.)
+  relative_bias=get_relative_bias(window_size,n_heads);
+  qk_scale= qk_scale
+  n_heads=n_heads
+  window_size=window_size
+  qkv=Dense(dim,dim*3,bias=qkv_bias);
+  attn_drop=Dropout(attn_drop);
+  proj=Dense(dim,dim);
+  proj_drop=Dropout(drop)
+end
+@functor WindowAttention
+function (wa::WindowAttention)(x,mask=nothing)#x is a window partitioned data
+  q, k, v = chunk(wa.qkv(x), 3, dims = 1);
+  attn = batched_mul(batched_transpose(q), k) * wa.qk_scale;
+  attn = score + Flux.unsqueeze(wa.relative_bias,1);
+  if mask===nothing
+    attn=softmax(attn)
+  else
+    edge=size(mask)[1]
+    attn=reshape(attn,size(attn)[1]//edge,edge,wa.n_heads,wa.window_size[1]*wa.window_size[2],wa.window_size[1]*wa.window_size[2])+unsqueeze(unsqueeze(mask,2),1);
+    attn=softmax(attn);
+  end
+  attn=wa.attn_drop(attn);
+  x=batched_mul(batched_transpose(attn),v);
+  x=wa.proj(x);
+  x=wa.proj_drop(x);
+  return x
+end
