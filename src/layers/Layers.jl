@@ -13,10 +13,12 @@ include("embeddings.jl")
 include("mlp.jl")
 include("normalise.jl")
 include("conv.jl")
+include("others.jl")
 
 export Attention, MHAttention,
        PatchEmbedding, ViPosEmbedding, ClassTokens,
-       mlp_block,
+       mlp_block, gated_mlp_block,
+       LayerScale, DropPath,
        ChannelLayerNorm, prenorm,
        skip_identity, skip_projection,
        conv_bn,
