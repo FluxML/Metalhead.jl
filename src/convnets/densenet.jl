@@ -80,7 +80,7 @@ function densenet(inplanes, growth_rates; reduction = 0.5, nclasses = 1000)
 end
 
 """
-    densenet(nblocks; growth_rate = 32, reduction = 0.5, num_classes = 1000)
+    densenet(nblocks; growth_rate = 32, reduction = 0.5, nclasses = 1000)
 
 Create a DenseNet model
 ([reference](https://arxiv.org/abs/1608.06993)).

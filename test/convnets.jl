@@ -83,6 +83,8 @@ end
   @test_skip gradtest(m, rand(Float32, 227, 227, 3, 2))
 end
 
+GC.gc()
+
 @testset "DenseNet" begin
   @testset for model in [DenseNet121, DenseNet161, DenseNet169, DenseNet201]
     m = model()
@@ -125,6 +127,8 @@ end
     end
   end
 end
+
+GC.gc()
 
 @testset "ConvNeXt" verbose = true begin
   @testset for mode in [:tiny, :small, :base, :large, :xlarge]

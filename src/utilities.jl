@@ -1,5 +1,7 @@
+_to_tuple(x::Int) = (x, x)
+
 # Utility function for classifier head of vision transformer-like models
-_seconddimmean(x) = dropdims(mean(x, dims = 2); dims = 2)
+seconddimmean(x) = dropdims(mean(x, dims = 2); dims = 2)
 
 # utility function for making sure that all layers have a channel size divisible by 8
 # used by MobileNet variants

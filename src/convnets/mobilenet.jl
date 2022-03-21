@@ -131,11 +131,9 @@ function mobilenetv3(width_mult, configs; max_width = 1024, nclasses = 1000)
   # building last several layers
   output_channel = max_width
   output_channel = width_mult > 1.0 ? _round_channels(output_channel * width_mult, 8) : output_channel
-  classifier = (
-    Dense(explanes, output_channel, hardswish),
-    Dropout(0.2),
-    Dense(output_channel, nclasses),
-  )
+  classifier = (Dense(explanes, output_channel, hardswish),
+                Dropout(0.2),
+                Dense(output_channel, nclasses))
 
   return Chain(Chain(layers...,
                      conv_bn((1, 1), inplanes, explanes, hardswish, bias = false)...),

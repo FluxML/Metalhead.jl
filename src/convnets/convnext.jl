@@ -1,5 +1,5 @@
 """
-    convnextblock(planes, drop_path = 0., λ = 1f-6)
+    convnextblock(planes, drop_path_rate = 0., λ = 1f-6)
 
 Creates a single block of ConvNeXt.
 ([reference](https://arxiv.org/abs/2201.03545))
@@ -7,19 +7,16 @@ Creates a single block of ConvNeXt.
 # Arguments:
 - `planes`: number of input channels.
 - `drop_path_rate`: Stochastic depth rate.
-- `λ`: Init value for [LayerScale](https://arxiv.org/abs/2103.17239)
+- `λ`: Init value for LayerScale
 """
 function convnextblock(planes, drop_path_rate = 0., λ = 1f-6)
-  γ = Flux.ones32(planes) * λ
-  LayerScale(x) = x .* γ
-  scale = λ > 0 ? identity : LayerScale
   layers = SkipConnection(Chain(DepthwiseConv((7, 7), planes => planes; pad = 3), 
                                 x -> permutedims(x, (3, 1, 2, 4)),
                                 LayerNorm(planes; ϵ = 1f-6),
                                 mlp_block(planes, 4 * planes),
-                                scale, # LayerScale
+                                LayerScale(planes, λ),
                                 x -> permutedims(x, (2, 3, 1, 4)),
-                                Dropout(drop_path_rate, dims = 4)), +)
+                                DropPath(drop_path_rate)), +)
   return layers
 end
 
@@ -89,9 +86,12 @@ Creates a ConvNeXt model.
 - `drop_path_rate`: Stochastic depth rate.
 - `λ`: Init value for [LayerScale](https://arxiv.org/abs/2103.17239)
 - `nclasses`: number of output classes
+
+See also [`Metalhead.convnext`](#).
 """
 function ConvNeXt(mode::Symbol = :base; inchannels = 3, drop_path_rate = 0., λ = 1f-6, 
                   nclasses = 1000)
+  @assert mode in keys(convnext_configs) "`size` must be one of $(collect(keys(convnext_configs)))"
   depths = convnext_configs[mode][:depths]
   planes = convnext_configs[mode][:planes]
   layers = convnext(depths, planes; inchannels, drop_path_rate, λ, nclasses)
