@@ -27,6 +27,7 @@ include("convnets/densenet.jl")
 include("convnets/squeezenet.jl")
 include("convnets/mobilenet.jl")
 include("convnets/convnext.jl")
+include("convnets/unet.jl")
 
 # Other models
 include("other/mlpmixer.jl")
@@ -45,7 +46,8 @@ export  AlexNet,
         MobileNetv2, MobileNetv3,
         MLPMixer, ResMLP, gMLP,
         ViT,
-        ConvNeXt
+        ConvNeXt,
+        UNetDynamic
 
 # use Flux._big_show to pretty print large models
 for T in (:AlexNet, :VGG, :ResNet, :GoogLeNet, :Inception3, :SqueezeNet, :DenseNet, :ResNeXt, 

@@ -140,3 +140,13 @@ GC.gc()
     end
   end
 end
+
+@testset "UNetDynamic" verbose = true begin
+  @test_nowarn begin
+      model = UNetDynamic(Models.xresnet18(), (128, 128, 3, 1), 4)
+      @test Flux.outputsize(model, (128, 128, 3, 1)) == (128, 128, 4, 1)
+
+      model = UNetDynamic(Models.xresnet18(), (128, 128, 3, 1), 4, fdownscale=1)
+      @test Flux.outputsize(model, (128, 128, 3, 1)) == (64, 64, 4, 1)
+  end
+end
