@@ -47,7 +47,7 @@ function get_relative_bias(window_size::Tuple,n_heads)
     Random.rand!(Distributions.truncated(Normal(0,0.02)), relative_position_bias);#replace zeros with small random numbers
     relative_position_bias=collect(relative_position_bias[i+1,:] for i in relative_position_index);
     relative_position_bias=Flux.stack(relative_position_bias,2);#flatten the tensor
-    relative_position_bias=reshape(relative_position_bias,:,num_window_elements,num_window_elements);
-    relative_position_bias=Flux.unsqueeze(relative_position_bias,1);#expand dimension
+    relative_position_bias=reshape(relative_position_bias,num_window_elements,num_window_elements,:);
+    relative_position_bias=Flux.unsqueeze(relative_position_bias,3);#expand dimension
     return relative_position_bias
 end

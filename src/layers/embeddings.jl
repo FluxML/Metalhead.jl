@@ -74,3 +74,4 @@ function (pm::PatchMerging)(x)
   h,w=pm.input_resolution;
   c=size(x)[3];
   x=reshape(x,b,h,w,c);
+end

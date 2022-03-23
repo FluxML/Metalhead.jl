@@ -9,6 +9,7 @@ using Distributions
 using MLUtils
 
 include("../utilities.jl")
+include("attn_mask.jl")
 include("windowpartition.jl")
 include("attention.jl")
 include("embeddings.jl")
@@ -16,9 +17,9 @@ include("mlp.jl")
 include("normalise.jl")
 include("conv.jl")
 include("relative_index.jl")
-
-export Attention, MHAttention,
-       PatchEmbedding, ViPosEmbedding, ClassTokens,
+include("swin_block.jl")
+export Attention, MHAttention,WindowAttention
+       PatchEmbedding, ViPosEmbedding, ClassTokens,PatchMerging
        mlp_block,
        ChannelLayerNorm, prenorm,
        skip_identity, skip_projection,

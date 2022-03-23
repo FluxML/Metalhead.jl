@@ -67,31 +67,34 @@ struct WindowAttention
   proj
 end
 
-function WindowAttention(window_size;dim,n_heads;qkv_bias,qk_scale=(dim//n_heads) ^ -0.5;attn_drop=0.,drop=0.)
-  relative_bias=get_relative_bias(window_size,n_heads);
-  qk_scale= qk_scale
-  n_heads=n_heads
-  window_size=window_size
-  qkv=Dense(dim,dim*3,bias=qkv_bias);
-  attn_drop=Dropout(attn_drop);
-  proj=Dense(dim,dim);
-  proj=Chain(proj,Dropout(drop));
+function WindowAttention(window_size,dim,n_heads,qkv_bias=true,qk_scale=(dim//n_heads) ^ -0.5,attn_drop=0.,drop=0.)
+  relative_bias = get_relative_bias(window_size,n_heads);
+  n_heads = n_heads;
+  window_size = window_size;
+  qk_scale = qk_scale;
+  qkv_bias=qkv_bias;
+  qkv = Dense(dim,dim*3,bias=qkv_bias);
+  attn_drop = Dropout(attn_drop);
+  proj = Dense(dim,dim);
+  proj = Chain(proj,Dropout(drop));
 end
+
 @functor WindowAttention (relative_bias,)
-function (wa::WindowAttention)(x,mask=nothing)#x is a window partitioned data of size (num_windows * batchsize,window height, window width, channels)
-  q, k, v = chunk(attn.qkv(x), 3, dims = 1);
+
+function (wa::WindowAttention)(x,mask=nothing)#x is a window partitioned data of size (window height, window width, channels, num_windows * batchsize)
+  q, k, v = chunk(wa.qkv(x), 3, dims = 1);
   attn = batched_mul(batched_transpose(q), k) .* wa.qk_scale;
-  attn = attn + Flux.unsqueeze(wa.relative_bias,1);
+  attn = broadcast(+ , attn , wa.relative_bias);
   if mask===nothing
-    attn=softmax(attn)
+    attn=softmax(attn);
   else
-    edge=size(mask)[1]
+    edge=size(mask)[1];
     attn=reshape(attn,size(attn)[1]//edge,edge,wa.n_heads,wa.window_size[1]*wa.window_size[2],wa.window_size[1]*wa.window_size[2])+unsqueeze(unsqueeze(mask,2),1);
     attn=softmax(attn);
   end
   attn=wa.attn_drop(attn);
-  x=batched_mul(batched_transpose(attn),v);
-  x=wa.proj(x);
-  x=wa.proj_drop(x);
-  return x
+  attn=batched_mul(batched_transpose(attn),v);
+  attn=wa.proj(attn);
+  attn=wa.proj_drop(attn);
+  return attn
 end
