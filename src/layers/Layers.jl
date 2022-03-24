@@ -18,7 +18,7 @@ include("embeddings.jl")
 include("mlp.jl")
 include("normalise.jl")
 include("relative_index.jl")
-#include("swin_block.jl")
+include("swin_block.jl")
 include("windowpartition.jl")
 export Attention, MHAttention,WindowAttention
        get_attn_mask,DropPath
