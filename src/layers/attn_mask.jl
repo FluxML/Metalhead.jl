@@ -1,4 +1,4 @@
-function get_attn_mask(window_size,shift_size,h,w)
+function get_attn_mask(window_size::Tuple,shift_size::Int,h::Int,w::Int)
     if shift_size <= 0
         return nothing
     else
