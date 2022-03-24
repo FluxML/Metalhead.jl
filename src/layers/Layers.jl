@@ -10,15 +10,18 @@ using MLUtils
 
 include("../utilities.jl")
 include("attn_mask.jl")
-include("windowpartition.jl")
+
 include("attention.jl")
+include("conv.jl")
+include("droppath.jl")
 include("embeddings.jl")
 include("mlp.jl")
 include("normalise.jl")
-include("conv.jl")
 include("relative_index.jl")
-include("swin_block.jl")
+#include("swin_block.jl")
+include("windowpartition.jl")
 export Attention, MHAttention,WindowAttention
+       get_attn_mask,DropPath
        PatchEmbedding, ViPosEmbedding, ClassTokens,PatchMerging
        mlp_block,
        ChannelLayerNorm, prenorm,

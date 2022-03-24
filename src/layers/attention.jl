@@ -67,7 +67,7 @@ struct WindowAttention
   proj
 end
 
-function WindowAttention(window_size,dim,n_heads,qkv_bias=true,qk_scale=(dim//n_heads) ^ -0.5,attn_drop=0.,drop=0.)
+function WindowAttention(window_size,dim,n_heads;qkv_bias=true,qk_scale=(dim/n_heads) ^ -0.5,attn_drop=0.,drop=0.)
   relative_bias = get_relative_bias(window_size,n_heads);
   n_heads = n_heads;
   window_size = window_size;
@@ -77,9 +77,10 @@ function WindowAttention(window_size,dim,n_heads,qkv_bias=true,qk_scale=(dim//n_
   attn_drop = Dropout(attn_drop);
   proj = Dense(dim,dim);
   proj = Chain(proj,Dropout(drop));
+  WindowAttention(relative_bias,qkv,qk_scale,n_heads,window_size,attn_drop,proj);
 end
 
-@functor WindowAttention (relative_bias,)
+@functor WindowAttention (relative_bias,qkv,attn_drop,proj)
 
 function (wa::WindowAttention)(x,mask=nothing)#x is a window partitioned data of size (window height, window width, channels, num_windows * batchsize)
   q, k, v = chunk(wa.qkv(x), 3, dims = 1);
