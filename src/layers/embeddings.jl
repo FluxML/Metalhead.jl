@@ -62,16 +62,24 @@ struct PatchMerging
   reduction
 end
 
-function PatchMerging(input_resolution, dim, norm_layer=LayerNorm)#input_resolution returns (h,w)
+function PatchMerging(input_resolution, dim, norm_layer=LayerNorm)#input_resolution returns (h,w), which is the img_size
   h,w=input_resolution;
   reduction=Dense(4*dim,2*dim;bias=false);
   norm=LayerNorm(4*dim);
   PatchMerging(input_resolution,norm,reduction);
 end
-@functor PatchMerging
+@functor PatchMerging (reduction,norm)
 function (pm::PatchMerging)(x)
-  b=size(x)[1];
+  b=size(x)[4];
   h,w=pm.input_resolution;
+  @assert iseven(h)&&iseven(w) "h,w are odd"
   c=size(x)[3];
-  x=reshape(x,b,h,w,c);
+  x=reshape(x,h,w,c,b);
+  x1=x[1:2:end,1:2:end,:,:]
+  x2=x[2:2:end,1:2:end,:,:]
+  x3=x[1:2:end,2:2:end,:,:]
+  x4=x[2:2:end,2:2:end,:,:]
+  x=cat(x1,x2,x3,x4;dims=3)
+  x=pm.reduction(pm.norm(x))
+  return x
 end
