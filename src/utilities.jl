@@ -40,7 +40,7 @@ cat_channels(xy...) = cat(xy...; dims = 3)
     swapdims(perm)
 
 Convenience function for permuting the dimensions of an array.
-`perm` is a vector or a tuple of length `ndims(A)` specifying the permutation.
+`perm` is a vector or tuple specifying a permutation of the input dimensions.
 Equivalent to `permutedims(x, perm)`.
 """
 swapdims(perm) = Base.Fix2(permutedims, perm)
