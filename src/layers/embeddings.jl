@@ -1,4 +1,4 @@
-_flatify(x) = permutedims(reshape(x, (:, size(x, 3), size(x, 4))), (2, 1, 3))
+_flatten_spatial(x) = permutedims(reshape(x, (:, size(x, 3), size(x, 4))), (2, 1, 3))
 
 """
     PatchEmbedding(imsize::NTuple{2, Int} = (224, 224); inchannels = 3,
@@ -28,7 +28,7 @@ function PatchEmbedding(imsize::NTuple{2, Int} = (224, 224); inchannels = 3,
   "Image dimensions must be divisible by the patch size."
 
   return Chain(Conv(patch_size, inchannels => embedplanes; stride = patch_size),
-               flatten ? _flatify : identity,
+               flatten ? _flatten_spatial : identity,
                norm_layer(embedplanes))
 end
 

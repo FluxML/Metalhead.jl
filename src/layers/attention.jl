@@ -1,5 +1,5 @@
 """
-    struct MHAttention{P, Q, R}
+    MHAttention(nheads::Int, qkv_layer, attn_drop, projection)
 
 Multi-head self-attention layer.
 
@@ -10,7 +10,7 @@ Multi-head self-attention layer.
 - `projection`: projection layer to be used after self-attention
 """
 struct MHAttention{P, Q, R}
-  nheads::Integer
+  nheads::Int
   qkv_layer::P
   attn_drop::Q
   projection::R

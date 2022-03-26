@@ -37,12 +37,13 @@ Convenient reduction operator for use with `Parallel`.
 cat_channels(xy...) = cat(xy...; dims = 3)
 
 """
-    permute_dims(perm)
+    swapdims(perm)
 
 Convenience function for permuting the dimensions of an array.
+`perm` is a vector or a tuple of length `ndims(A)` specifying the permutation.
 Equivalent to `permutedims(x, perm)`.
 """
-permute_dims(perm) = Base.Fix2(permutedims, perm)
+swapdims(perm) = Base.Fix2(permutedims, perm)
 
 # Utility function for pretty printing large models
 function _maybe_big_show(io, model)

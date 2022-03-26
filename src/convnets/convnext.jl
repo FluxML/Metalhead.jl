@@ -11,11 +11,11 @@ Creates a single block of ConvNeXt.
 """
 function convnextblock(planes, drop_path_rate = 0., λ = 1f-6)
   layers = SkipConnection(Chain(DepthwiseConv((7, 7), planes => planes; pad = 3), 
-                                permute_dims((3, 1, 2, 4)),
+                                swapdims((3, 1, 2, 4)),
                                 LayerNorm(planes; ϵ = 1f-6),
                                 mlp_block(planes, 4 * planes),
                                 LayerScale(planes, λ),
-                                permute_dims((2, 3, 1, 4)),
+                                swapdims((2, 3, 1, 4)),
                                 DropPath(drop_path_rate)), +)
   return layers
 end
