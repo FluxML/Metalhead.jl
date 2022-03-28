@@ -1,13 +1,13 @@
-# Adapted from https://github.com/MichaelHatherly/Publish.jl
-name: Publish
+name: PublishStable
 
 on:
   push:
-    branches: 'master'
+    tags:
+      - '*'
 
 jobs:
   publish:
-    name: "Publish Documentation (dev)"
+    name: "Publish Documentation (stable)"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -17,17 +17,16 @@ jobs:
           path: gh-pages
       - uses: julia-actions/setup-julia@latest
         with:
-          version: '1'
+          version: '1.6'
       - name: Install dependencies
-        run: |
-          julia --color=yes --project=. -e 'using Pkg; Pkg.instantiate()'
+        run: julia --color=yes --project=. -e 'using Pkg; Pkg.instantiate()'
       - name: Build and deploy
         run: |
           cd gh-pages
           julia --color=yes --project=../docs -e "using Pkg; Pkg.instantiate()"
-          julia --color=yes --project=../docs -e 'include("../docs/make.jl"); build_and_deploy("dev")'
+          julia --color=yes --project=../docs -e 'include("../docs/make.jl"); build_and_deploy("stable")'
           git config user.name github-actions
           git config user.email github-actions@github.com
           git add .
-          git commit -m "(dev) Built by Publish.jl."
+          git commit -m "(stable) Built by Publish.jl."
           git push
