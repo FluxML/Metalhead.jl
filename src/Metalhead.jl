@@ -7,7 +7,7 @@ using BSON
 using Artifacts, LazyArtifacts
 using Statistics
 using MLUtils
-
+using Distributions
 import Functors
 
 include("utilities.jl")
@@ -33,6 +33,7 @@ include("other/mlpmixer.jl")
 
 # ViT-based models
 include("vit-based/vit.jl")
+include("vit-based/swin.jl")
 
 include("pretrain.jl")
 
@@ -44,7 +45,7 @@ export  AlexNet,
         ResNeXt,
         MobileNetv2, MobileNetv3,
         MLPMixer,
-        ViT,
+        ViT,SwinTransformer
         ConvNeXt
 
 # use Flux._big_show to pretty print large models

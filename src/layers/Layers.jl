@@ -23,7 +23,7 @@ include("windowpartition.jl")
 export Attention, MHAttention,WindowAttention
        get_attn_mask,DropPath
        PatchEmbedding, ViPosEmbedding, ClassTokens,PatchMerging
-       mlp_block,
+       mlp_block,swin_block
        ChannelLayerNorm, prenorm,
        skip_identity, skip_projection,
        conv_bn,

@@ -9,7 +9,8 @@ struct PatchEmbedding
   patch_width::Int
 end
 
-PatchEmbedding(patch_size) = PatchEmbedding(patch_size, patch_size)
+PatchEmbedding(patch_size) = PatchEmbedding(patch_size, patch_size);
+PatchEmbedding(patch_size::Tuple)=PatchEmbedding(patch_size[1],patch_size[2]);
 
 function (p::PatchEmbedding)(x)
   h, w, c, n = size(x)
@@ -57,16 +58,17 @@ end
 @functor ClassTokens
 
 struct PatchMerging
-  input_resolution
+  input_resolution::Tuple
+  dim::Int
   norm
   reduction
 end
 
-function PatchMerging(input_resolution, dim, norm_layer=LayerNorm)#input_resolution returns (h,w), which is the img_size
-  h,w=input_resolution;
-  reduction=Dense(4*dim,2*dim;bias=false);
-  norm=LayerNorm(4*dim);
-  PatchMerging(input_resolution,norm,reduction);
+function PatchMerging(input_resolution::Tuple, dim::Int, norm_layer=LayerNorm)#input_resolution returns (h,w), which is the img_size
+  input_resolution=input_resolution;
+  reduction = Dense(4*dim,2*dim,false);
+  norm = LayerNorm(4*dim);
+  PatchMerging(input_resolution,dim,norm,reduction);
 end
 @functor PatchMerging (reduction,norm)
 function (pm::PatchMerging)(x)
@@ -80,6 +82,5 @@ function (pm::PatchMerging)(x)
   x3=x[1:2:end,2:2:end,:,:]
   x4=x[2:2:end,2:2:end,:,:]
   x=cat(x1,x2,x3,x4;dims=3)
-  x=pm.reduction(pm.norm(x))
-  return x
+  return pm.reduction(pm.norm(x)) 
 end

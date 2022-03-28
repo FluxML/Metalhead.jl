@@ -8,21 +8,22 @@ struct swin_block
     mlp
 end
 
-function swin_block(dim,img_size,num_heads,window_size,shift_size,qkv_bias=true,qk_scale=(dim//n_heads) ^ -0.5,mlp_ratio,drop=0.0,attn_drop=0.0,drop_path=0.0,act_layer=gelu,norm_layer=LayerNorm)
+function swin_block(dim,img_size,num_heads,window_size,shift,mlp_ratio,qkv_bias=true,qk_scale=(dim//num_heads) ^ -0.5,drop=0.0,attn_drop=0.0,drop_path=0.0,act_layer=gelu,norm_layer=LayerNorm)
     window_size=window_size;
     img_size=img_size;
-    norm1=norm_layer(dim);
-    norm2=norm_layer(dim);
-    if min(img_size)<=window_size
+    norm1=norm_layer([dim]);
+    norm2=norm_layer([dim]);
+    if minimum(img_size)<=minimum(window_size)
         shift_size=0;
-        window_size=min(img_size);
+        window_size=minimum(img_size);
     else
-        shift_size=shift_size;
+        shift_size=shift;
     end
-    @assert 0<=shift_size<window_size "shift_size too large!"
+    @assert 0<=shift_size<minimum(window_size) "shift_size too large!"
     w_attn=WindowAttention(window_size, dim, num_heads, qkv_bias, qk_scale, attn_drop, drop);
-    mlp=mlp_block(dim,Int(dim*mlp_ratio);drop,Dense,act_layer);
+    mlp=mlp_block(dim,Int(dim*mlp_ratio);dropout=drop,dense=Dense,activation=act_layer);
     drop_path=DropPath(drop_path);
+    swin_block(img_size,norm1,norm2,window_size,w_attn,shift_size,mlp);
 end
 
 @functor swin_block (norm1,norm2,w_attn,mlp)
@@ -52,29 +53,4 @@ function (sb::swin_block)(x)
     x=reshape(x,size(shortcut)[1]*size(shortcut)[2],size(shortcut)[3],size(shortcut)[4]);
     x=broadcast(+,x,sb.drop_path(sb.mlp(sb.norm2(x))))
     return x
-end
-
-struct BasicLayer
-    norm_layer
-    downsample
-    blocks
-end
-
-function BasicLayer(dim,img_size,depth,num_heads,window_size,mlp_ratio,qkv_bias=true,qk_scale=(dim//n_heads) ^ -0.5,drop=0.,attn_drop=0.,drop_path=0.,downsample=nothing)
-    norm_layer=LayerNorm(dim);
-    downsample=downsample(dim,img_size,norm_layer);
-    shift_size_indicator(x)=floor(Int,iseven(x)*min(window_size)/2)
-    seq=[swin_block(dim,img_size,num_heads,window_size,shift_size_indicator(i),qkv_bias,qk_scale,mlp_ratio,drop,attn_drop,drop_path,gelu,norm_layer) for i in 1:depth];
-    blocks=Chain(seq...);
-    BasicLayer(norm_layer,downsample,blocks);
-end
-
-@functor BasicLayer
-
-function (b::BasicLayer)(x)
-    if b.downsample===nothing
-        return b.blocks(x)
-    else
-        return b.downsample(b.blocks(x))
-    end
 end
