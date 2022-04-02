@@ -100,8 +100,19 @@ GC.gc()
 end
 
 @testset "MobileNet" verbose = true begin
-  @testset "MobileNetv2" begin
+  @testset "MobileNetv1" begin
+    m = MobileNetv1()
 
+    @test size(m(rand(Float32, 224, 224, 3, 2))) == (1000, 2)
+    if MobileNetv1 in PRETRAINED_MODELS
+      @test (MobileNetv1(pretrain = true); true)
+    else
+      @test_throws ArgumentError MobileNetv1(pretrain = true)
+    end
+    @test_skip gradtest(m, rand(Float32, 224, 224, 3, 2))
+  end
+
+  @testset "MobileNetv2" begin
     m = MobileNetv2()
 
     @test size(m(rand(Float32, 224, 224, 3, 2))) == (1000, 2)
