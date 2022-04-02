@@ -32,9 +32,9 @@ function mobilenetv1(imsize, width_mult, config;
     for _ in 1:repeats
       outch = outch * width_mult
       layer = if dw
-        depthwise_sep_conv_bn((3, 3), inch, outch, activation; stride = stride)
+        depthwise_sep_conv_bn((3, 3), inch, outch, activation; stride = stride, pad = 1)
       else
-        conv_bn((3, 3), inch, outch, activation; stride = stride)
+        conv_bn((3, 3), inch, outch, activation; stride = stride, pad = 1)
       end
       append!(layers, layer)
       inch = outch
