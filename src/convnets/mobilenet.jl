@@ -10,7 +10,6 @@
 Create a MobileNetv1 model ([reference](https://arxiv.org/abs/1704.04861v1)).
 
 # Arguments
-- `imsize`: A 2-tuple indicating the input spatial dimensions
 - `width_mult`: Controls the number of output feature maps in each block
                 (with 1.0 being the default in the paper)
 - `configs`: A "list of tuples" configuration for each layer that details:
@@ -21,31 +20,29 @@ Create a MobileNetv1 model ([reference](https://arxiv.org/abs/1704.04861v1)).
 - `fcsize`: The intermediate fully-connected size between the convolution and final layers
 - `nclasses`: The number of output classes
 """
-function mobilenetv1(imsize, width_mult, config;
+function mobilenetv1(width_mult, config;
                      activation = relu,
                      inchannels = 3,
                      nclasses = 1000,
                      fcsize = 1024)
   layers = []
-  inch = inchannels
   for (dw, outch, stride, repeats) in config
     for _ in 1:repeats
       outch = outch * width_mult
       layer = if dw
-        depthwise_sep_conv_bn((3, 3), inch, outch, activation; stride = stride, pad = 1)
+        depthwise_sep_conv_bn((3, 3), inchannels, outch, activation; stride = stride, pad = 1)
       else
-        conv_bn((3, 3), inch, outch, activation; stride = stride, pad = 1)
+        conv_bn((3, 3), inchannels, outch, activation; stride = stride, pad = 1)
       end
       append!(layers, layer)
-      inch = outch
+      inchannels = outch
     end
   end
-  push!(layers, MeanPool((7, 7)))
-  convsize = prod(Flux.outputsize(layers, (imsize..., inchannels, 1)))
 
   return Chain(Chain(layers...),
-               Chain(MLUtils.flatten,
-                     Dense(convsize, fcsize, activation),
+               Chain(GlobalMeanPool(),
+                     MLUtils.flatten,
+                     Dense(inchannels, fcsize, activation),
                      Dense(fcsize, nclasses)))
 end
 
@@ -64,15 +61,13 @@ const mobilenetv1_configs = [
 ]
 
 """
-    MobileNetv1(imsize::Dims{2} = (224, 224), width_mult = 1;
-                pretrain = false, nclasses = 1000)
+    MobileNetv1(width_mult = 1; pretrain = false, nclasses = 1000)
 
 Create a MobileNetv1 model with the baseline configuration 
 ([reference](https://arxiv.org/abs/1704.04861v1)).
 Set `pretrain` to `true` to load the pretrained weights for ImageNet.
 
 # Arguments
-- `imsize`: A 2-tuple indicating the input spatial dimensions
 - `width_mult`: Controls the number of output feature maps in each block
                 (with 1.0 being the default in the paper;
                  this is usually a value between 0.1 and 1.4)
@@ -85,9 +80,8 @@ struct MobileNetv1
   layers
 end
 
-function MobileNetv1(imsize::Dims{2} = (224, 224), width_mult = 1;
-                     pretrain = false, nclasses = 1000)
-  layers = mobilenetv1(imsize, width_mult, mobilenetv1_configs; nclasses = nclasses)
+function MobileNetv1(width_mult::Number = 1; pretrain = false, nclasses = 1000)
+  layers = mobilenetv1(width_mult, mobilenetv1_configs; nclasses = nclasses)
   pretrain && loadpretrain!(layers, string("MobileNetv1"))
 
   return MobileNetv1(layers)
