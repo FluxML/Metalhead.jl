@@ -1,3 +1,105 @@
+# MobileNetv1
+
+"""
+    mobilenetv1(imsize, width_mult, config;
+                activation = relu,
+                inchannels = 3,
+                nclasses = 1000,
+                fcsize = 1024)
+
+Create a MobileNetv1 model ([reference](https://arxiv.org/abs/1704.04861v1)).
+
+# Arguments
+- `imsize`: A 2-tuple indicating the input spatial dimensions
+- `width_mult`: Controls the number of output feature maps in each block
+                (with 1.0 being the default in the paper)
+- `configs`: A "list of tuples" configuration for each layer that details:
+  - `dw`: Set true to use a depthwise separable convolution or false for regular convolution
+  - `o`: The number of output feature maps
+  - `s`: The stride of the convolutional kernel
+  - `r`: The number of time this configuration block is repeated
+- `fcsize`: The intermediate fully-connected size between the convolution and final layers
+- `nclasses`: The number of output classes
+"""
+function mobilenetv1(imsize, width_mult, config;
+                     activation = relu,
+                     inchannels = 3,
+                     nclasses = 1000,
+                     fcsize = 1024)
+  layers = []
+  inch = inchannels
+  for (dw, outch, stride, repeats) in config
+    for _ in 1:repeats
+      outch = outch * width_mult
+      layer = if dw
+        depthwise_sep_conv_bn((3, 3), inch, outch, activation; stride = stride)
+      else
+        conv_bn((3, 3), inch, outch, activation; stride = stride)
+      end
+      append!(layers, layer)
+      inch = outch
+    end
+  end
+  push!(layers, MeanPool((7, 7)))
+  convsize = prod(Flux.outputsize(layers, (imsize..., inchannels, 1)))
+
+  return Chain(Chain(layers...),
+               Chain(MLUtils.flatten,
+                     Dense(convsize, fcsize, activation),
+                     Dense(fcsize, nclasses)))
+end
+
+const mobilenetv1_configs = [
+#     dw,    c, s, r
+  (false,   32, 2, 1),
+  ( true,   64, 1, 1),
+  ( true,  128, 2, 1),
+  ( true,  128, 1, 1),
+  ( true,  256, 2, 1),
+  ( true,  256, 1, 1),
+  ( true,  512, 2, 1),
+  ( true,  512, 1, 5),
+  ( true, 1024, 2, 1),
+  ( true, 1024, 1, 1)
+]
+
+"""
+    MobileNetv1(imsize::NTuple{2, Int} = (224, 224), width_mult = 1;
+                pretrain = false, nclasses = 1000)
+
+Create a MobileNetv1 model with the baseline configuration 
+([reference](https://arxiv.org/abs/1704.04861v1)).
+Set `pretrain` to `true` to load the pretrained weights for ImageNet.
+
+# Arguments
+- `imsize`: A 2-tuple indicating the input spatial dimensions
+- `width_mult`: Controls the number of output feature maps in each block
+                (with 1.0 being the default in the paper;
+                 this is usually a value between 0.1 and 1.4)
+- `pretrain`: Whether to load the pre-trained weights for ImageNet
+- `nclasses`: The number of output classes
+
+See also [`Metalhead.mobilenetv1`](#).
+"""
+struct MobileNetv1
+  layers
+end
+
+function MobileNetv1(imsize::NTuple{2, Int} = (224, 224), width_mult = 1;
+                     pretrain = false, nclasses = 1000)
+  layers = mobilenetv1(imsize, width_mult, mobilenetv1_configs; nclasses = nclasses)
+  pretrain && loadpretrain!(layers, string("MobileNetv1"))
+
+  return MobileNetv1(layers)
+end
+
+@functor MobileNetv1
+
+(m::MobileNetv1)(x) = m.layers(x)
+
+backbone(m::MobileNetv1) = m.layers[1]
+classifier(m::MobileNetv1) = m.layers[2]
+
 # MobileNetv2
 
 """
