@@ -64,7 +64,7 @@ const mobilenetv1_configs = [
 ]
 
 """
-    MobileNetv1(imsize::NTuple{2, Int} = (224, 224), width_mult = 1;
+    MobileNetv1(imsize::Dims{2} = (224, 224), width_mult = 1;
                 pretrain = false, nclasses = 1000)
 
 Create a MobileNetv1 model with the baseline configuration 
@@ -85,7 +85,7 @@ struct MobileNetv1
   layers
 end
 
-function MobileNetv1(imsize::NTuple{2, Int} = (224, 224), width_mult = 1;
+function MobileNetv1(imsize::Dims{2} = (224, 224), width_mult = 1;
                      pretrain = false, nclasses = 1000)
   layers = mobilenetv1(imsize, width_mult, mobilenetv1_configs; nclasses = nclasses)
   pretrain && loadpretrain!(layers, string("MobileNetv1"))

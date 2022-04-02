@@ -112,7 +112,7 @@ struct VGG
 end
 
 """
-    VGG(imsize::NTuple{2,Int}; config, inchannels, batchnorm = false, nclasses, fcsize, dropout)
+    VGG(imsize::Dims{2}; config, inchannels, batchnorm = false, nclasses, fcsize, dropout)
 
 Construct a VGG model with the specified input image size. Typically, the image size is `(224, 224)`.
 
@@ -125,7 +125,7 @@ Construct a VGG model with the specified input image size. Typically, the image 
             (see [`Metalhead.vgg_classifier_layers`](#))
 - `dropout`: dropout level between fully connected layers
 """
-function VGG(imsize::NTuple{2, <:Integer};
+function VGG(imsize::Dims{2};
              config, inchannels, batchnorm = false, nclasses, fcsize, dropout)
   layers = vgg(imsize; config = config,
                        inchannels = inchannels,
