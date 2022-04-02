@@ -22,6 +22,6 @@ export MHAttention,
        LayerScale, DropPath,
        ChannelLayerNorm, prenorm,
        skip_identity, skip_projection,
-       conv_bn,
+       conv_bn, depthwise_sep_conv_bn,
        invertedresidual, squeeze_excite
 end
