@@ -149,6 +149,7 @@ GC.gc()
       @test size(m(rand(Float32, 224, 224, 3, 2))) == (1000, 2)
       @test_skip gradtest(m, rand(Float32, 224, 224, 3, 2))
     end
+    GC.gc()
   end
 end
 
