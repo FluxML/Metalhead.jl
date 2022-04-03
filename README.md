@@ -30,7 +30,7 @@
 | [gMLP](https://arxiv.org/abs/2105.08050)     | [`gMLP`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.gMLP.html)     | N            |
 | [ViT](https://arxiv.org/abs/2010.11929)     | [`ViT`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.ViT.html)     | N            |
 | [ConvNeXt](https://arxiv.org/abs/2201.03545)     | [`ConvNeXt`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.ConvNeXt.html)     | N            |
-
+| [ConvMixer](https://arxiv.org/abs/2201.09792)     | [`ConvMixer`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.ConvMixer.html)     | N            |
 
 ## Getting Started
 

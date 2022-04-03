@@ -36,7 +36,8 @@ function conv_bn(kernelsize, inplanes, outplanes, activation = relu;
   end
 
   if preact
-    activations = (conv = activation, bn = identity)
+    rev ? throw(ArgumentError("preact and rev cannot be set at the same time")) :
+          activations = (conv = activation, bn = identity)
   end
 
   push!(layers, Conv(kernelsize, Int(inplanes) => Int(outplanes), activations.conv; kwargs...))
