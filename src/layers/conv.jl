@@ -13,6 +13,7 @@ Create a convolution + batch normalization pair with ReLU activation.
 - `activation`: the activation function for the final layer
 - `rev`: set to `true` to place the batch norm before the convolution
 - `preact`: set to `true` to place the activation function before the batch norm
+            (only compatible with `rev = false`)
 - `stride`: stride of the convolution kernel
 - `pad`: padding of the convolution kernel
 - `dilation`: dilation of the convolution kernel
