@@ -12,29 +12,28 @@ PRETRAINED_MODELS = []
 end
 
 @testset "VGG" begin
-  @testset "$model(BN=$bn)" for model in [VGG11, VGG13, VGG16, VGG19], bn in [true, false]
-    imsize = (224, 224)
-    m = model(batchnorm = bn)
+  @testset "VGG($sz, batchnorm=$bn)" for sz in [11, 13, 16, 19], bn in [true, false]
+    m = VGG(sz, batchnorm = bn)
 
-    @test size(m(rand(Float32, imsize..., 3, 1))) == (1000, 1)
-    if (model, bn) in PRETRAINED_MODELS
-      @test (model(batchnorm = bn, pretrain = true); true)
+    @test size(m(rand(Float32, 224, 224, 3, 1))) == (1000, 1)
+    if (VGG, sz, bn) in PRETRAINED_MODELS
+      @test (VGG(sz, batchnorm = bn, pretrain = true); true)
     else
-      @test_throws ArgumentError model(batchnorm = bn, pretrain = true)
+      @test_throws ArgumentError VGG(sz, batchnorm = bn, pretrain = true)
     end
-    @test_skip gradtest(m, rand(Float32, imsize..., 3, 1))
+    @test_skip gradtest(m, rand(Float32, 224, 224, 3, 1))
   end
 end
 
 @testset "ResNet" begin
-  @testset for model in [ResNet18, ResNet34, ResNet50, ResNet101, ResNet152]
-    m = model()
+  @testset "ResNet($sz)" for sz in [18, 34, 50, 101, 152]
+    m = ResNet(sz)
 
     @test size(m(rand(Float32, 256, 256, 3, 1))) == (1000, 1)
-    if model in PRETRAINED_MODELS
-      @test (model(pretrain = true); true)
+    if (ResNet, sz) in PRETRAINED_MODELS
+      @test (ResNet(sz, pretrain = true); true)
     else
-      @test_throws ArgumentError model(pretrain = true)
+      @test_throws ArgumentError ResNet(sz, pretrain = true)
     end
     @test_skip gradtest(m, rand(Float32, 256, 256, 3, 2))
   end
@@ -86,14 +85,14 @@ end
 GC.gc()
 
 @testset "DenseNet" begin
-  @testset for model in [DenseNet121, DenseNet161, DenseNet169, DenseNet201]
-    m = model()
+  @testset for sz in [121, 161, 169, 201]
+    m = DenseNet(sz)
 
     @test size(m(rand(Float32, 224, 224, 3, 1))) == (1000, 1)
-    if model in PRETRAINED_MODELS
-      @test (model(pretrain = true); true)
+    if (DenseNet, sz) in PRETRAINED_MODELS
+      @test (DenseNet(sz, pretrain = true); true)
     else
-      @test_throws ArgumentError model(pretrain = true)
+      @test_throws ArgumentError DenseNet(sz, pretrain = true)
     end
     @test_skip gradtest(m, rand(Float32, 224, 224, 3, 1))
   end
