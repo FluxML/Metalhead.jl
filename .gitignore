@@ -6,3 +6,6 @@
 # manifests
 docs/Manifest.toml
 Manifest.toml
+
+# docs theme
+_flux-theme

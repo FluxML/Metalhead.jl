@@ -21,7 +21,7 @@ function transformer_encoder(planes, depth, nheads; mlp_ratio = 4.0, dropout = 0
 end
 
 """
-    vit(imsize::NTuple{2, Int} = (256, 256); inchannels = 3, patch_size::NTuple{2, Int} = (16, 16),
+    vit(imsize::Dims{2} = (256, 256); inchannels = 3, patch_size::Dims{2} = (16, 16),
         embedplanes = 768, depth = 6, nheads = 16, mlp_ratio = 4.0, dropout = 0.1,
         emb_dropout = 0.1, pool = :class, nclasses = 1000)
 
@@ -41,7 +41,7 @@ Creates a Vision Transformer (ViT) model.
 - `pool`: pooling type, either :class or :mean
 - `nclasses`: number of classes in the output
 """
-function vit(imsize::NTuple{2, Int} = (256, 256); inchannels = 3, patch_size::NTuple{2, Int} = (16, 16),
+function vit(imsize::Dims{2} = (256, 256); inchannels = 3, patch_size::Dims{2} = (16, 16),
              embedplanes = 768, depth = 6, nheads = 16, mlp_ratio = 4.0, dropout = 0.1,
              emb_dropout = 0.1, pool = :class, nclasses = 1000)
 
@@ -66,8 +66,8 @@ vit_configs = Dict(:tiny => (depth = 12, embedplanes = 192, nheads = 3),
                    :gigantic => (depth = 48, embedplanes = 1664, nheads = 16, mlp_ratio = 64/13))
 
 """
-    ViT(mode::Symbol = base; imsize::NTuple{2, Int} = (256, 256), inchannels = 3,
-        patch_size::NTuple{2, Int} = (16, 16), pool = :class, nclasses = 1000)
+    ViT(mode::Symbol = base; imsize::Dims{2} = (256, 256), inchannels = 3,
+        patch_size::Dims{2} = (16, 16), pool = :class, nclasses = 1000)
 
 Creates a Vision Transformer (ViT) model.
 ([reference](https://arxiv.org/abs/2010.11929)).
@@ -86,8 +86,8 @@ struct ViT
   layers
 end
 
-function ViT(mode::Symbol = :base; imsize::NTuple{2, Int} = (256, 256), inchannels = 3,
-             patch_size::NTuple{2, Int} = (16, 16), pool = :class, nclasses = 1000)
+function ViT(mode::Symbol = :base; imsize::Dims{2} = (256, 256), inchannels = 3,
+             patch_size::Dims{2} = (16, 16), pool = :class, nclasses = 1000)
   @assert mode in keys(vit_configs) "`mode` must be one of $(keys(vit_configs))"
   kwargs = vit_configs[mode]
   layers = vit(imsize; inchannels, patch_size, nclasses, pool, kwargs...)

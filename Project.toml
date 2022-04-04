@@ -1,6 +1,6 @@
 name = "Metalhead"
 uuid = "dbeba491-748d-5e0e-a39e-b530a07fa0cc"
-version = "0.7.0-DEV"
+version = "0.7.0"
 
 [deps]
 Artifacts = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
@@ -27,6 +27,8 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [publish]
 title = "Metalhead.jl"
+theme = "_flux-theme"
+ignore = ["^(gh-pages|juliamnt|julia.dmg)$"]
 
 [targets]
 test = ["Test"]
