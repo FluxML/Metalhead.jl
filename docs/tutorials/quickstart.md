@@ -18,7 +18,7 @@ Now, we can use this model with Flux like any other model. Below, we train it on
 ```julia
 using Flux: onehotbatch
 
-batchsize = 4
+batchsize = 1
 data = [(rand(Float32, 224, 224, 3, batchsize), onehotbatch(rand(1:1000, batchsize), 1:1000))
         for _ in 1:3]
 opt = ADAM()
