@@ -29,8 +29,8 @@ function mobilenetv1(width_mult, config;
                      fcsize = 1024)
   layers = []
   for (dw, outch, stride, repeats) in config
+    outch = Int(outch * width_mult)
     for _ in 1:repeats
-      outch = outch * width_mult
       layer = if dw
         depthwise_sep_conv_bn((3, 3), inchannels, outch, activation; stride = stride, pad = 1)
       else
