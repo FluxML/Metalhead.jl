@@ -85,7 +85,7 @@ depthwise_sep_conv_bn(kernelsize, inplanes, outplanes, activation = relu;
   vcat(conv_bn(kernelsize, inplanes, inplanes, activation;
                rev = rev, initβ = initβ, initγ = initγ,
                ϵ = ϵ, momentum = momentum,
-               stride = stride, groups = inplanes, kwargs...),
+               stride = stride, groups = Int(inplanes), kwargs...),
        conv_bn((1, 1), inplanes, outplanes, activation;
                rev = rev, initβ = initβ, initγ = initγ,
                ϵ = ϵ, momentum = momentum))
