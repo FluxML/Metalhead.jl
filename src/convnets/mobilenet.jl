@@ -1,7 +1,7 @@
 # MobileNetv1
 
 """
-    mobilenetv1(imsize, width_mult, config;
+    mobilenetv1(width_mult, config;
                 activation = relu,
                 inchannels = 3,
                 nclasses = 1000,
