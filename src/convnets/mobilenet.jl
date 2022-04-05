@@ -17,6 +17,8 @@ Create a MobileNetv1 model ([reference](https://arxiv.org/abs/1704.04861v1)).
   - `o`: The number of output feature maps
   - `s`: The stride of the convolutional kernel
   - `r`: The number of time this configuration block is repeated
+- `activate`: The activation function to use throughout the network
+- `inchannels`: The number of input feature maps``
 - `fcsize`: The intermediate fully-connected size between the convolution and final layers
 - `nclasses`: The number of output classes
 """
