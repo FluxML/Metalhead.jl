@@ -9,7 +9,7 @@ Creates a `Flux.Scale` layer that performs "`LayerScale`"
 - `λ`: initialisation value for the learnable diagonal matrix.
 """
 LayerScale(planes::Int, λ) =
-    λ > 0 ? Flux.Scale(fill(Float32(λ), planes), bias = false) : identity
+    λ > 0 ? Flux.Scale(fill(Float32(λ), planes), false) : identity
 
 """
     DropPath(p)
