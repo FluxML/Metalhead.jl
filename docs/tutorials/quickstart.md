@@ -14,7 +14,7 @@ model = ResNet(18)
 ```
 
 Now, we can use this model with Flux like any other model. Below, we train it on some randomly generated data.
-{cell=quickstart}
+
 ```julia
 using Flux: onehotbatch
 
