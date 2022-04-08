@@ -19,7 +19,7 @@ end
 
 @functor ChannelLayerNorm
 
-(m::ChannelLayerNorm)(x) = m.λ.(m.diag(MLUtils.normalise(x, dims = ndims(x) - 1, ϵ = m.ϵ)))
+(m::ChannelLayerNorm)(x) = m.diag(MLUtils.normalise(x, dims = ndims(x) - 1, ϵ = m.ϵ))
 
 function ChannelLayerNorm(sz::Int, λ = identity; ϵ = 1f-5)
   diag = Flux.Scale(1, 1, sz, λ)
