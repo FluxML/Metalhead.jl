@@ -125,13 +125,13 @@ Creates a block for the ResMixer architecture.
 """
 function resmixerblock(planes, npatches; mlp_ratio = 4.0, mlp_layer = mlp_block,
                        dropout = 0., drop_path_rate = 0., activation = gelu, λ = 1e-4)
-return Chain(SkipConnection(Chain(Flux.Diagonal(planes),
+return Chain(SkipConnection(Chain(Flux.Scale(planes),
                                   swapdims((2, 1, 3)),
                                   Dense(npatches, npatches),
                                   swapdims((2, 1, 3)),
                                   LayerScale(planes, λ),
                                   DropPath(drop_path_rate)), +),
-             SkipConnection(Chain(Flux.Diagonal(planes),
+             SkipConnection(Chain(Flux.Scale(planes),
                                   mlp_layer(planes, Int(mlp_ratio * planes); dropout, activation),
                                   LayerScale(planes, λ),
                                   DropPath(drop_path_rate)), +))
