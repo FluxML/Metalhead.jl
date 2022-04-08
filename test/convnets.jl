@@ -6,35 +6,34 @@ PRETRAINED_MODELS = []
 
 @testset "AlexNet" begin
   model = AlexNet()
-  @test size(model(rand(Float32, 256, 256, 3, 2))) == (1000, 2)
+  @test size(model(rand(Float32, 256, 256, 3, 1))) == (1000, 1)
   @test_throws ArgumentError AlexNet(pretrain = true)
-  @test_skip gradtest(model, rand(Float32, 256, 256, 3, 2))
+  @test_skip gradtest(model, rand(Float32, 256, 256, 3, 1))
 end
 
 @testset "VGG" begin
-  @testset "$model(BN=$bn)" for model in [VGG11, VGG13, VGG16, VGG19], bn in [true, false]
-    imsize = (224, 224)
-    m = model(batchnorm = bn)
+  @testset "VGG($sz, batchnorm=$bn)" for sz in [11, 13, 16, 19], bn in [true, false]
+    m = VGG(sz, batchnorm = bn)
 
-    @test size(m(rand(Float32, imsize..., 3, 2))) == (1000, 2)
-    if (model, bn) in PRETRAINED_MODELS
-      @test (model(batchnorm = bn, pretrain = true); true)
+    @test size(m(rand(Float32, 224, 224, 3, 1))) == (1000, 1)
+    if (VGG, sz, bn) in PRETRAINED_MODELS
+      @test (VGG(sz, batchnorm = bn, pretrain = true); true)
     else
-      @test_throws ArgumentError model(batchnorm = bn, pretrain = true)
+      @test_throws ArgumentError VGG(sz, batchnorm = bn, pretrain = true)
     end
-    @test_skip gradtest(m, rand(Float32, imsize..., 3, 2))
+    @test_skip gradtest(m, rand(Float32, 224, 224, 3, 1))
   end
 end
 
 @testset "ResNet" begin
-  @testset for model in [ResNet18, ResNet34, ResNet50, ResNet101, ResNet152]
-    m = model()
+  @testset "ResNet($sz)" for sz in [18, 34, 50, 101, 152]
+    m = ResNet(sz)
 
-    @test size(m(rand(Float32, 256, 256, 3, 2))) == (1000, 2)
-    if model in PRETRAINED_MODELS
-      @test (model(pretrain = true); true)
+    @test size(m(rand(Float32, 256, 256, 3, 1))) == (1000, 1)
+    if (ResNet, sz) in PRETRAINED_MODELS
+      @test (ResNet(sz, pretrain = true); true)
     else
-      @test_throws ArgumentError model(pretrain = true)
+      @test_throws ArgumentError ResNet(sz, pretrain = true)
     end
     @test_skip gradtest(m, rand(Float32, 256, 256, 3, 2))
   end
@@ -44,7 +43,7 @@ end
                          channel_config = [1, 1],
                          block_config = [2, 2, 2, 2])
 
-    @test size(m(rand(Float32, 256, 256, 3, 2))) == (1000, 2)
+    @test size(m(rand(Float32, 256, 256, 3, 1))) == (1000, 1)
   end
 end
 
@@ -52,7 +51,7 @@ end
   @testset for depth in [50, 101, 152]
     m = ResNeXt(depth)
 
-    @test size(m(rand(Float32, 224, 224, 3, 2))) == (1000, 2)
+    @test size(m(rand(Float32, 224, 224, 3, 1))) == (1000, 1)
     if ResNeXt in PRETRAINED_MODELS
       @test (ResNeXt(depth, pretrain = true); true)
     else
@@ -64,77 +63,83 @@ end
 
 @testset "GoogLeNet" begin
   m = GoogLeNet()
-  @test size(m(rand(Float32, 224, 224, 3, 2))) == (1000, 2)
+  @test size(m(rand(Float32, 224, 224, 3, 1))) == (1000, 1)
   @test_throws ArgumentError (GoogLeNet(pretrain = true); true)
-  @test_skip gradtest(m, rand(Float32, 224, 224, 3, 2))
+  @test_skip gradtest(m, rand(Float32, 224, 224, 3, 1))
 end
 
 @testset "Inception3" begin
   m = Inception3()
-  @test size(m(rand(Float32, 299, 299, 3, 2))) == (1000, 2)
+  @test size(m(rand(Float32, 224, 224, 3, 1))) == (1000, 1)
   @test_throws ArgumentError Inception3(pretrain = true)
-  @test_skip gradtest(m, rand(Float32, 299, 299, 3, 2))
+  @test_skip gradtest(m, rand(Float32, 224, 224, 3, 2))
 end
 
 @testset "SqueezeNet" begin
   m = SqueezeNet()
-  @test size(m(rand(Float32, 227, 227, 3, 2))) == (1000, 2)
+  @test size(m(rand(Float32, 224, 224, 3, 1))) == (1000, 1)
   @test_throws ArgumentError (SqueezeNet(pretrain = true); true)
-  @test_skip gradtest(m, rand(Float32, 227, 227, 3, 2))
+  @test_skip gradtest(m, rand(Float32, 224, 224, 3, 1))
 end
 
 GC.gc()
 
 @testset "DenseNet" begin
-  @testset for model in [DenseNet121, DenseNet161, DenseNet169, DenseNet201]
-    m = model()
+  @testset for sz in [121, 161, 169, 201]
+    m = DenseNet(sz)
 
-    @test size(m(rand(Float32, 224, 224, 3, 2))) == (1000, 2)
-    if model in PRETRAINED_MODELS
-      @test (model(pretrain = true); true)
+    @test size(m(rand(Float32, 224, 224, 3, 1))) == (1000, 1)
+    if (DenseNet, sz) in PRETRAINED_MODELS
+      @test (DenseNet(sz, pretrain = true); true)
     else
-      @test_throws ArgumentError model(pretrain = true)
+      @test_throws ArgumentError DenseNet(sz, pretrain = true)
     end
-    @test_skip gradtest(m, rand(Float32, 224, 224, 3, 2))
+    @test_skip gradtest(m, rand(Float32, 224, 224, 3, 1))
   end
 end
+
+GC.gc()
 
 @testset "MobileNet" verbose = true begin
   @testset "MobileNetv1" begin
     m = MobileNetv1()
 
-    @test size(m(rand(Float32, 224, 224, 3, 2))) == (1000, 2)
+    @test size(m(rand(Float32, 224, 224, 3, 1))) == (1000, 1)
     if MobileNetv1 in PRETRAINED_MODELS
       @test (MobileNetv1(pretrain = true); true)
     else
       @test_throws ArgumentError MobileNetv1(pretrain = true)
     end
-    @test_skip gradtest(m, rand(Float32, 224, 224, 3, 2))
+    @test_skip gradtest(m, rand(Float32, 224, 224, 3, 1))
   end
+
+  GC.gc()
 
   @testset "MobileNetv2" begin
     m = MobileNetv2()
 
-    @test size(m(rand(Float32, 224, 224, 3, 2))) == (1000, 2)
+    @test size(m(rand(Float32, 224, 224, 3, 1))) == (1000, 1)
     if MobileNetv2 in PRETRAINED_MODELS
       @test (MobileNetv2(pretrain = true); true)
     else
       @test_throws ArgumentError MobileNetv2(pretrain = true)
     end
-    @test_skip gradtest(m, rand(Float32, 224, 224, 3, 2))
+    @test_skip gradtest(m, rand(Float32, 224, 224, 3, 1))
   end
+
+  GC.gc()
 
   @testset "MobileNetv3" verbose = true begin
     @testset for mode in [:small, :large]
       m = MobileNetv3(mode)
 
-      @test size(m(rand(Float32, 224, 224, 3, 2))) == (1000, 2)
+      @test size(m(rand(Float32, 224, 224, 3, 1))) == (1000, 1)
       if MobileNetv3 in PRETRAINED_MODELS
         @test (MobileNetv3(mode; pretrain = true); true)
       else
         @test_throws ArgumentError MobileNetv3(mode; pretrain = true)
       end
-      @test_skip gradtest(m, rand(Float32, 224, 224, 3, 2))
+      @test_skip gradtest(m, rand(Float32, 224, 224, 3, 1))
     end
   end
 end
@@ -146,8 +151,8 @@ GC.gc()
     @testset for drop_path_rate in [0.0, 0.5, 0.99]
       m = ConvNeXt(mode; drop_path_rate)
 
-      @test size(m(rand(Float32, 224, 224, 3, 2))) == (1000, 2)
-      @test_skip gradtest(m, rand(Float32, 224, 224, 3, 2))
+      @test size(m(rand(Float32, 224, 224, 3, 1))) == (1000, 1)
+      @test_skip gradtest(m, rand(Float32, 224, 224, 3, 1))
     end
     GC.gc()
   end
@@ -159,7 +164,7 @@ GC.gc()
   @testset for mode in [:base, :large, :small]
     m = ConvMixer(mode)
 
-    @test size(m(rand(Float32, 224, 224, 3, 2))) == (1000, 2)
-    @test_skip gradtest(m, rand(Float32, 224, 224, 3, 2))
+    @test size(m(rand(Float32, 224, 224, 3, 1))) == (1000, 1)
+    @test_skip gradtest(m, rand(Float32, 224, 224, 3, 1))
   end
 end

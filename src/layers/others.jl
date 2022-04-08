@@ -1,30 +1,15 @@
 """
-    LayerScale(scale) 
-
-Implements LayerScale.
-([reference](https://arxiv.org/abs/2103.17239))
-
-# Arguments
-- `scale`: Scaling factor, a learnable diagonal matrix which is multiplied to the input.
-"""
-struct LayerScale{T<:AbstractVector{<:Real}}
-    scale::T
-end
-
-"""
     LayerScale(λ, planes::Int)
 
-Implements LayerScale.
-([reference](https://arxiv.org/abs/2103.17239))
+Creates a `Flux.Scale` layer that performs "`LayerScale`"
+([reference](https://arxiv.org/abs/2103.17239)).
 
 # Arguments
 - `planes`: Size of channel dimension in the input.
 - `λ`: initialisation value for the learnable diagonal matrix.
 """
-LayerScale(planes::Int, λ) = λ > 0 ? LayerScale(fill(Float32(λ), planes)) : identity
-
-@functor LayerScale
-(m::LayerScale)(x::AbstractArray) = m.scale .* x
+LayerScale(planes::Int, λ) =
+    λ > 0 ? Flux.Scale(fill(Float32(λ), planes), false) : identity
 
 """
     DropPath(p)

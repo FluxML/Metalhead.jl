@@ -1,7 +1,7 @@
 # MobileNetv1
 
 """
-    mobilenetv1(imsize, width_mult, config;
+    mobilenetv1(width_mult, config;
                 activation = relu,
                 inchannels = 3,
                 nclasses = 1000,
@@ -17,6 +17,8 @@ Create a MobileNetv1 model ([reference](https://arxiv.org/abs/1704.04861v1)).
   - `o`: The number of output feature maps
   - `s`: The stride of the convolutional kernel
   - `r`: The number of time this configuration block is repeated
+- `activate`: The activation function to use throughout the network
+- `inchannels`: The number of input feature maps``
 - `fcsize`: The intermediate fully-connected size between the convolution and final layers
 - `nclasses`: The number of output classes
 """
@@ -27,8 +29,8 @@ function mobilenetv1(width_mult, config;
                      fcsize = 1024)
   layers = []
   for (dw, outch, stride, repeats) in config
+    outch = Int(outch * width_mult)
     for _ in 1:repeats
-      outch = outch * width_mult
       layer = if dw
         depthwise_sep_conv_bn((3, 3), inchannels, outch, activation; stride = stride, pad = 1)
       else
