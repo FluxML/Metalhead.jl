@@ -40,9 +40,9 @@ end
 @functor MHAttention
 
 function (m::MHAttention)(x::AbstractArray{T, 3}) where T
-  B, C, N = size(x)
-  q, k, v = chunk(reshape(m.qkv_layer(x), B ÷ m.nheads, m.nheads, C, 3 * N), 3; dims = 4)
+  features, len_seq, batch_size = size(x)
+  q, k, v = chunk(reshape(m.qkv_layer(x), features ÷ m.nheads, m.nheads, len_seq, 3 * batch_size), 3; dims = 4)
   scale = convert(T, sqrt(size(q, 1) / m.nheads))
   attn = m.attn_drop(softmax(NeuralAttentionlib.matmul(q, permutedims(k, (2, 1, 3, 4))) * scale))
-  x = m.projection(reshape(NeuralAttentionlib.matmul(attn, v), (B, C, N)))
+  x = m.projection(reshape(NeuralAttentionlib.matmul(attn, v), (features, len_seq, batch_size)))
 end
