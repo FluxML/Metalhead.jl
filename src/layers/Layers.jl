@@ -7,6 +7,7 @@ using Statistics
 using Random
 using Distributions
 using MLUtils
+using NeuralAttentionlib
 
 include("../utilities.jl")
 include("attn_mask.jl")
@@ -20,9 +21,9 @@ include("normalise.jl")
 include("relative_index.jl")
 include("swin_block.jl")
 include("windowpartition.jl")
-export Attention, MHAttention,WindowAttention
+export MHAttention,WindowAttention
        get_attn_mask,DropPath
-       PatchEmbedding, ViPosEmbedding, ClassTokens,PatchMerging
+       PatchEmbedding,ProjectedPatchEmbedding, ViPosEmbedding, ClassTokens,PatchMerging
        mlp_block,swin_block
        ChannelLayerNorm, prenorm,
        skip_identity, skip_projection,

@@ -23,6 +23,40 @@ end
 
 @functor PatchEmbedding
 
+struct ProjectedPatchEmbedding
+  patch_height::Int
+  patch_width::Int
+  proj
+  norm_layer
+end
+
+function ProjectedPatchEmbedding(p_h,p_w,in_channel,embed_dim,norm_layer=nothing)
+  patch_height=p_h;
+  patch_width=p_w;
+  proj=Conv((1,1),in_channel=>embed_dim,stride=(patch_height,patch_width),pad=SamePad())
+  if norm_layer !== nothing
+   norm_layer=LayerNorm(embed_dim);
+  else
+    norm_layer=norm_layer
+  end
+  ProjectedPatchEmbedding(patch_height,patch_width,proj,norm_layer)
+end
+@functor ProjectedPatchEmbedding (proj,norm_layer)
+function (p::ProjectedPatchEmbedding)(x)
+  h, w, c, n = size(x)
+  hp, wp = h ÷ p.patch_height, w ÷ p.patch_width
+  xpatch = reshape(x, hp, p.patch_height, wp, p.patch_width, c, n)
+
+  xpatch=reshape(permutedims(xpatch, (1, 3, 5, 2, 4, 6)), p.patch_height * p.patch_width * c, 
+                 hp * wp, n)
+  xpatch=p.proj(xpatch);
+  if p.norm_layer!==nothing
+    xpatch=p.norm_layer(xpatch)
+  else
+  end
+  return xpatch
+end
+
 """
     ViPosEmbedding(embedsize, npatches; init = (dims) -> rand(Float32, dims))
 

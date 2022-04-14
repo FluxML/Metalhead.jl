@@ -12,7 +12,7 @@ end
 @functor DropPath ()
 
 function (dp::DropPath)(x::Array)
-    if dp.droprate==0
+    if dp.droprate<=0
         return x
     else
         shape=ones(Int,length(size(x)));
@@ -20,6 +20,6 @@ function (dp::DropPath)(x::Array)
         shape=Tuple(shape);
         mask=rand(dp.distribution,shape);
         mask=convert(Array{Int},mask)
-        return broadcast(*,x,mask)
+        return broadcast(*,x./(1-dp.droprate),mask)
     end
 end

@@ -3,9 +3,7 @@
             rev = false,
             stride = 1, pad = 0, dilation = 1, groups = 1, [bias, weight, init],
             initβ = Flux.zeros32, initγ = Flux.ones32, ϵ = 1f-5, momentum = 1f-1)
-
 Create a convolution + batch normalization pair with ReLU activation.
-
 # Arguments
 - `kernelsize`: size of the convolution kernel (tuple)
 - `inplanes`: number of input feature maps
@@ -44,10 +42,8 @@ end
 
 """
     skip_projection(inplanes, outplanes, downsample = false)
-
 Create a skip projection
 ([reference](https://arxiv.org/abs/1512.03385v1)).
-
 # Arguments:
 - `inplanes`: the number of input feature maps
 - `outplanes`: the number of output feature maps
@@ -60,10 +56,8 @@ skip_projection(inplanes, outplanes, downsample = false) = downsample ?
 # array -> PaddedView(0, array, outplanes) for zero padding arrays
 """
     skip_identity(inplanes, outplanes[, downsample])
-
 Create a identity projection
 ([reference](https://arxiv.org/abs/1512.03385v1)).
-
 # Arguments:
 - `inplanes`: the number of input feature maps
 - `outplanes`: the number of output feature maps
@@ -84,10 +78,8 @@ skip_identity(inplanes, outplanes, downsample) = skip_identity(inplanes, outplan
 
 """
     squeeze_excite(channels, reduction = 4)
-
 Squeeze and excitation layer used by MobileNet variants
 ([reference](https://arxiv.org/abs/1905.02244)).
-
 # Arguments
 - `channels`: the number of input/output feature maps
 - `reduction = 4`: the reduction factor for the number of hidden feature maps
@@ -103,10 +95,8 @@ end
 """
     invertedresidual(kernel_size, inplanes, hidden_planes, outplanes, activation = relu;
                      stride, reduction = nothing)
-
 Create a basic inverted residual block for MobileNet variants
 ([reference](https://arxiv.org/abs/1905.02244)).
-
 # Arguments
 - `kernel_size`: The kernel size of the convolutional layers
 - `inplanes`: The number of input feature maps
@@ -136,4 +126,3 @@ function invertedresidual(kernel_size, inplanes, hidden_planes, outplanes, activ
 end
 invertedresidual(kernel_size::Integer, args...; kwargs...) =
   invertedresidual((kernel_size, kernel_size), args...; kwargs...)
-

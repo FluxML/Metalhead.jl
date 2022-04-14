@@ -49,5 +49,5 @@ function get_relative_bias(window_size::Tuple,n_heads)
     relative_position_bias=Flux.stack(relative_position_bias,2);#flatten the tensor
     relative_position_bias=reshape(relative_position_bias,num_window_elements,num_window_elements,:);
     relative_position_bias=Flux.unsqueeze(relative_position_bias,3);#expand dimension
-    return relative_position_bias
+    return relative_position_bias #num_window_elements,num_window_elements,1,n_heads
 end
