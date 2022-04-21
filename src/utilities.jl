@@ -34,7 +34,44 @@ Concatenate `x` and `y` (and any `z`s) along the channel dimension (third dimens
 Equivalent to `cat(x, y, zs...; dims=3)`.
 Convenient reduction operator for use with `Parallel`.
 """
-cat_channels(xy...) = cat(xy...; dims = 3)
+cat_channels(xy...) = inferredcat(xy...; dims = 3)
+
+function inferredcat(xs::T...; dims = :)::T where T <: AbstractArray
+  cat(xs...; dims = dims)
+end
+
+# `rrule` doesn't infer through `_project` neatly
+# function Zygote.ChainRules.rrule(::typeof(inferredcat), xs::T...; dims = :)::T where T <: AbstractArray
+#     sz = size.(xs)
+#     function inferredcat_pullback(Δ)
+#         (Zygote.ChainRules.NoTangent(), makesub(Δ, size(Δ)[dims], sz, dims = dims)...,)
+#     end
+#     inferredcat(xs...; dims = dims), inferredcat_pullback
+# end
+
+Zygote.@adjoint function inferredcat(xs::T...; dims = :) where T <: AbstractArray
+  sz = size.(xs)
+  lz = length.(xs)
+  inferredcat(xs..., dims = dims), Δ -> (partition_grad(Δ, size(Δ)[dims], sz, dims = dims)...,)
+end
+
+function partition_grad(d::AbstractArray{T,N}, x, sz; dims = :) where {T,N}
+  sizeatdim = map(x -> x[dims], sz)
+    x_start = 1
+    m = map(enumerate(sizeatdim)) do (i, ix)
+      x_stop = x_start + ix - 1
+      p::Base.UnitRange{Int64} = x_start:x_stop
+      x_start = x_start + ix
+      p
+    end
+    function gen_indices(m, sz)
+      map(m, sz) do m, sz
+        ntuple(x -> x == dims ? m : 1:sz[x], N)
+      end
+    end
+    ix = gen_indices(m, sz)
+    map(ix_ -> @view(d[ix_...]), ix)
+end
 
 """
     swapdims(perm)
