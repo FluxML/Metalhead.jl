@@ -20,6 +20,7 @@ GC.gc()
 # Other tests
 @testset verbose = true "Other" begin
   include("other.jl")
+  include("infer.jl")
 end
 
 GC.gc()
