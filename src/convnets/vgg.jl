@@ -16,13 +16,13 @@ function vgg_block(ifilters, ofilters, depth, batchnorm)
   layers = []
   for _ in 1:depth
     if batchnorm
-      append!(layers, conv_bn(k, ifilters, ofilters; pad = p, bias = false))
+      push!(layers, Chain(conv_bn(k, ifilters, ofilters; pad = p, bias = false)...))
     else
       push!(layers, Conv(k, ifilters => ofilters, relu, pad = p))
     end
     ifilters = ofilters
   end
-  return layers
+  return Chain(layers...)
 end
 
 """
@@ -41,11 +41,11 @@ function vgg_convolutional_layers(config, batchnorm, inchannels)
   layers = []
   ifilters = inchannels
   for c in config
-    append!(layers, vgg_block(ifilters, c..., batchnorm))
+    push!(layers, vgg_block(ifilters, c..., batchnorm))
     push!(layers, MaxPool((2,2), stride=2))
     ifilters, _ = c
   end
-  return layers
+  return Chain(layers...)
 end
 
 """
@@ -70,7 +70,7 @@ function vgg_classifier_layers(imsize, nclasses, fcsize, dropout)
   push!(layers, Dropout(dropout))
   push!(layers, Dense(fcsize, nclasses))
 
-  return layers
+  return Chain(layers...)
 end
 
 """

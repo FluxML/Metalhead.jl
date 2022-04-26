@@ -28,8 +28,8 @@ Create a DenseNet transition sequence
 - `outplanes`: number of output feature maps
 """
 transition(inplanes, outplanes) =
-  [conv_bn((1, 1), inplanes, outplanes; bias = false, rev = true)...,
-   MeanPool((2, 2))]
+  Chain([conv_bn((1, 1), inplanes, outplanes; bias = false, rev = true)...,
+   MeanPool((2, 2))]...)
 
 """
     dense_block(inplanes, growth_rates)
@@ -43,8 +43,8 @@ the number of output feature maps by `growth_rates` with each block
 - `growth_rates`: the growth (additive) rates of output feature maps
                   after each block (a vector of `k`s from the ref)
 """
-dense_block(inplanes, growth_rates) = [dense_bottleneck(i, o)
-  for (i, o) in zip(inplanes .+ cumsum([0, growth_rates[1:(end - 1)]...]), growth_rates)]
+dense_block(inplanes, growth_rates) = Chain([dense_bottleneck(i, o)
+  for (i, o) in zip(inplanes .+ cumsum([0, growth_rates[1:(end - 1)]...]), growth_rates)]...)
 
 """
     densenet(inplanes, growth_rates; reduction = 0.5, nclasses = 1000)
@@ -66,9 +66,9 @@ function densenet(inplanes, growth_rates; reduction = 0.5, nclasses = 1000)
   outplanes = 0
   for (i, rates) in enumerate(growth_rates)
     outplanes = inplanes + sum(rates)
-    append!(layers, dense_block(inplanes, rates))
+    push!(layers, dense_block(inplanes, rates))
     (i != length(growth_rates)) && 
-      append!(layers, transition(outplanes, floor(Int, outplanes * reduction)))
+      push!(layers, transition(outplanes, floor(Int, outplanes * reduction)))
     inplanes = floor(Int, outplanes * reduction)
   end
   push!(layers, BatchNorm(outplanes, relu))
