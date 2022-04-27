@@ -41,7 +41,7 @@ function mobilenetv1(width_mult, config;
     end
   end
 
-  return Chain(Chain(layers...),
+  return Chain(Chain(layers),
                Chain(GlobalMeanPool(),
                      MLUtils.flatten,
                      Dense(inchannels, fcsize, activation),
@@ -136,8 +136,7 @@ function mobilenetv2(width_mult, configs; max_width = 1280, nclasses = 1000)
   outplanes = (width_mult > 1) ? _round_channels(max_width * width_mult, width_mult == 0.1 ? 4 : 8) :
                                  max_width
 
-  return Chain(Chain(layers...,
-                     conv_bn((1, 1), inplanes, outplanes, relu6, bias = false)...),
+  return Chain(Chain(layers), conv_bn((1, 1), inplanes, outplanes, relu6, bias = false),
                Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten, Dense(outplanes, nclasses)))
 end
 
@@ -229,13 +228,12 @@ function mobilenetv3(width_mult, configs; max_width = 1024, nclasses = 1000)
   # building last several layers
   output_channel = max_width
   output_channel = width_mult > 1.0 ? _round_channels(output_channel * width_mult, 8) : output_channel
-  classifier = (Dense(explanes, output_channel, hardswish),
-                Dropout(0.2),
-                Dense(output_channel, nclasses))
+  classifier = Chain(Dense(explanes, output_channel, hardswish),
+                     Dropout(0.2),
+                     Dense(output_channel, nclasses))
 
-  return Chain(Chain(layers...,
-                     conv_bn((1, 1), inplanes, explanes, hardswish, bias = false)...),
-               Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten, classifier...))
+  return Chain(Chain(layers), conv_bn((1, 1), inplanes, explanes, hardswish, bias = false),
+               Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten, classifier))
 end
 
 # Configurations for small and large mode for MobileNetv3

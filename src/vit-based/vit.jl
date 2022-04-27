@@ -17,7 +17,7 @@ function transformer_encoder(planes, depth, nheads; mlp_ratio = 4.0, dropout = 0
                   SkipConnection(prenorm(planes, mlp_block(planes, floor(Int, mlp_ratio * planes);
                                                            dropout)), +))
             for _ in 1:depth]
-  Chain(layers...)
+  Chain(layers)
 end
 
 """

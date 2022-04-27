@@ -56,8 +56,8 @@ function mlpmixer(block, imsize::Dims{2} = (224, 224); inchannels = 3, norm_laye
   npatches = prod(imsize .÷ patch_size)
   dp_rates = LinRange{Float32}(0., drop_path_rate, depth)
   layers = Chain(PatchEmbedding(imsize; inchannels, patch_size, embedplanes),
-                 [block(embedplanes, npatches; drop_path_rate = dp_rates[i], kwargs...)
-                  for i in 1:depth]...)
+                 Chain([block(embedplanes, npatches; drop_path_rate = dp_rates[i], kwargs...)
+                  for i in 1:depth]))
 
   classification_head = Chain(norm_layer(embedplanes), seconddimmean, Dense(embedplanes, nclasses))
   return Chain(layers, classification_head)

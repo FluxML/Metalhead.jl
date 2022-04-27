@@ -12,8 +12,8 @@ Create a basic residual block
 """
 function basicblock(inplanes, outplanes, downsample = false)
   stride = downsample ? 2 : 1
-  Chain(conv_bn((3, 3), inplanes, outplanes[1]; stride = stride, pad = 1, bias = false)...,
-        conv_bn((3, 3), outplanes[1], outplanes[2], identity; stride = 1, pad = 1, bias = false)...)
+  Chain(conv_bn((3, 3), inplanes, outplanes[1]; stride = stride, pad = 1, bias = false),
+        conv_bn((3, 3), outplanes[1], outplanes[2], identity; stride = 1, pad = 1, bias = false))
 end
 
 """
@@ -36,9 +36,9 @@ The original paper uses `stride == [2, 1, 1]` when `downsample == true` instead.
 """
 function bottleneck(inplanes, outplanes, downsample = false;
                     stride = [1, (downsample ? 2 : 1), 1])
-  Chain(conv_bn((1, 1), inplanes, outplanes[1]; stride = stride[1], bias = false)...,
-        conv_bn((3, 3), outplanes[1], outplanes[2]; stride = stride[2], pad = 1, bias = false)...,
-        conv_bn((1, 1), outplanes[2], outplanes[3], identity; stride = stride[3], bias = false)...)
+  Chain(conv_bn((1, 1), inplanes, outplanes[1]; stride = stride[1], bias = false),
+        conv_bn((3, 3), outplanes[1], outplanes[2]; stride = stride[2], pad = 1, bias = false),
+        conv_bn((1, 1), outplanes[2], outplanes[3], identity; stride = stride[3], bias = false))
 end
 
 
@@ -102,7 +102,7 @@ function resnet(block, residuals::AbstractVector{<:NTuple{2, Any}}, connection =
     baseplanes *= 2
   end
 
-  return Chain(Chain(layers...),
+  return Chain(Chain(layers),
                Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten, Dense(inplanes, nclasses)))
 end
 
