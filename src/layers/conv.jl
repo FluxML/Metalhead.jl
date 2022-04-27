@@ -45,7 +45,22 @@ function conv_bn(kernelsize, inplanes, outplanes, activation = relu;
   push!(layers, BatchNorm(Int(bnplanes), activations.bn;
                           initβ = initβ, initγ = initγ, ϵ = ϵ, momentum = momentum))
 
-  return rev ? reverse(layers) : layers
+  return rev ? reverse(layers) : fuse_conv_bn(layers...)
+end
+
+function fuse_conv_bn(conv, bn)
+  outplanes = size(conv.weight)[end]
+  kernelsize = size(conv.weight)[1:end-2]
+  w_conv = reshape(conv.weight, :, last(size(conv.weight)))
+  w_bn = diagm(bn.γ ./ (sqrt.(bn.ϵ .+ bn.σ²)))
+  w_new = reshape(w_conv * w_bn, kernelsize..., :, Int(outplanes))
+  b_bn = bn.β .- ((bn.γ .* bn.μ) ./ (sqrt.(bn.σ² .+ bn.ϵ)))
+  b_new = (w_bn * conv.bias) .+ b_bn
+  copyto!(conv.weight, w_new)
+  if !all(iszero, b_new)
+    copyto!(conv.bias, b_new)
+  end
+  conv
 end
 
 """
