@@ -16,7 +16,7 @@ function vgg_block(ifilters, ofilters, depth, batchnorm)
   layers = []
   for _ in 1:depth
     if batchnorm
-      append!(layers, conv_bn(k, ifilters, ofilters; pad = p, bias = false))
+      push!(layers, conv_bn(k, ifilters, ofilters; pad = p, bias = false))
     else
       push!(layers, Conv(k, ifilters => ofilters, relu, pad = p))
     end
@@ -62,15 +62,12 @@ Create VGG classifier (fully connected) layers
 - `dropout`: the dropout level between each fully connected layer
 """
 function vgg_classifier_layers(imsize, nclasses, fcsize, dropout)
-  layers = []
-  push!(layers, MLUtils.flatten)
-  push!(layers, Dense(Int(prod(imsize)), fcsize, relu))
-  push!(layers, Dropout(dropout))
-  push!(layers, Dense(fcsize, fcsize, relu))
-  push!(layers, Dropout(dropout))
-  push!(layers, Dense(fcsize, nclasses))
-
-  return layers
+  return Chain(MLUtils.flatten,
+               Dense(Int(prod(imsize)), fcsize, relu),
+               Dropout(dropout),
+               Dense(fcsize, fcsize, relu),
+               Dropout(dropout),
+               Dense(fcsize, nclasses))
 end
 
 """
@@ -94,7 +91,7 @@ function vgg(imsize; config, inchannels, batchnorm = false, nclasses, fcsize, dr
   conv = vgg_convolutional_layers(config, batchnorm, inchannels)
   imsize = outputsize(conv, (imsize..., inchannels); padbatch = true)[1:3]
   class = vgg_classifier_layers(imsize, nclasses, fcsize, dropout)
-  return Chain(Chain(conv), Chain(class))
+  return Chain(Chain(conv), class)
 end
 
 const vgg_conv_config = Dict(:A => [(64,1), (128,1), (256,2), (512,2), (512,2)],

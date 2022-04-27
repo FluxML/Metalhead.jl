@@ -28,8 +28,7 @@ Create a DenseNet transition sequence
 - `outplanes`: number of output feature maps
 """
 transition(inplanes, outplanes) =
-  Chain(conv_bn((1, 1), inplanes, outplanes; bias = false, rev = true),
-   MeanPool((2, 2)))
+  Chain(conv_bn((1, 1), inplanes, outplanes; bias = false, rev = true), MeanPool((2, 2)))
 
 """
     dense_block(inplanes, growth_rates)
@@ -68,8 +67,8 @@ function densenet(inplanes, growth_rates; reduction = 0.5, nclasses = 1000)
   for (i, rates) in enumerate(growth_rates)
     outplanes = inplanes + sum(rates)
     append!(layers, dense_block(inplanes, rates))
-    (i != length(growth_rates)) && 
-      append!(layers, transition(outplanes, floor(Int, outplanes * reduction)))
+    (i != length(growth_rates)) &&
+      push!(layers, transition(outplanes, floor(Int, outplanes * reduction)))
     inplanes = floor(Int, outplanes * reduction)
   end
   push!(layers, BatchNorm(outplanes, relu))

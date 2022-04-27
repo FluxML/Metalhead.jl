@@ -31,12 +31,10 @@ function mobilenetv1(width_mult, config;
   for (dw, outch, stride, repeats) in config
     outch = Int(outch * width_mult)
     for _ in 1:repeats
-      layer = if dw
-        depthwise_sep_conv_bn((3, 3), inchannels, outch, activation; stride = stride, pad = 1)
-      else
-        conv_bn((3, 3), inchannels, outch, activation; stride = stride, pad = 1)
-      end
-      append!(layers, layer)
+      layer = dw ? depthwise_sep_conv_bn((3, 3), inchannels, outch, activation;
+                                         stride = stride, pad = 1) :
+                   conv_bn((3, 3), inchannels, outch, activation; stride = stride, pad = 1)
+      push!(layers, layer)
       inchannels = outch
     end
   end
@@ -120,7 +118,7 @@ function mobilenetv2(width_mult, configs; max_width = 1280, nclasses = 1000)
   # building first layer
   inplanes = _round_channels(32 * width_mult, width_mult == 0.1 ? 4 : 8)
   layers = []
-  append!(layers, conv_bn((3, 3), 3, inplanes, stride = 2))
+  push!(layers, conv_bn((3, 3), 3, inplanes, stride = 2))
 
   # building inverted residual blocks
   for (t, c, n, s, a) in configs
@@ -136,7 +134,7 @@ function mobilenetv2(width_mult, configs; max_width = 1280, nclasses = 1000)
   outplanes = (width_mult > 1) ? _round_channels(max_width * width_mult, width_mult == 0.1 ? 4 : 8) :
                                  max_width
 
-  return Chain(Chain(layers), conv_bn((1, 1), inplanes, outplanes, relu6, bias = false),
+  return Chain(Chain(Chain(layers), conv_bn((1, 1), inplanes, outplanes, relu6, bias = false)),
                Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten, Dense(outplanes, nclasses)))
 end
 
@@ -185,7 +183,7 @@ end
 (m::MobileNetv2)(x) = m.layers(x)
 
 backbone(m::MobileNetv2) = m.layers[1]
-classifier(m::MobileNetv2) = m.layers[2:end]
+classifier(m::MobileNetv2) = m.layers[2]
 
 # MobileNetv3
 
@@ -213,7 +211,7 @@ function mobilenetv3(width_mult, configs; max_width = 1024, nclasses = 1000)
   # building first layer
   inplanes = _round_channels(16 * width_mult, 8)
   layers = []
-  append!(layers, conv_bn((3, 3), 3, inplanes, hardswish; stride = 2))
+  push!(layers, conv_bn((3, 3), 3, inplanes, hardswish; stride = 2))
   explanes = 0
   # building inverted residual blocks
   for (k, t, c, r, a, s) in configs
@@ -232,7 +230,7 @@ function mobilenetv3(width_mult, configs; max_width = 1024, nclasses = 1000)
                      Dropout(0.2),
                      Dense(output_channel, nclasses))
 
-  return Chain(Chain(layers), conv_bn((1, 1), inplanes, explanes, hardswish, bias = false),
+  return Chain(Chain(Chain(layers), conv_bn((1, 1), inplanes, explanes, hardswish, bias = false)),
                Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten, classifier))
 end
 
@@ -308,4 +306,4 @@ end
 (m::MobileNetv3)(x) = m.layers(x)
 
 backbone(m::MobileNetv3) = m.layers[1]
-classifier(m::MobileNetv3) = m.layers[2:end]
+classifier(m::MobileNetv3) = m.layers[2]

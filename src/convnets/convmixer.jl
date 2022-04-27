@@ -21,7 +21,7 @@ function convmixer(planes, depth; inchannels = 3, kernel_size = (9, 9),
                                                preact = true, groups = planes, pad = SamePad()), +),
                   conv_bn((1, 1), planes, planes, activation; preact = true)) for _ in 1:depth]
   head = Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten, Dense(planes, nclasses))
-  return Chain(stem, Chain(blocks), head)
+  return Chain(Chain(stem, Chain(blocks)), head)
 end
 
 convmixer_config = Dict(:base => Dict(:planes => 1536, :depth => 20, :kernel_size => (9, 9),

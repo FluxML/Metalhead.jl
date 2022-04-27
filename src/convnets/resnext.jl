@@ -40,7 +40,7 @@ function resnext(cardinality, width, widen_factor = 2, connection = (x, y) -> @.
   inplanes = 64
   baseplanes = 128
   layers = []
-  append!(layers, conv_bn((7, 7), 3, inplanes; stride = 2, pad = (3, 3)))
+  push!(layers, conv_bn((7, 7), 3, inplanes; stride = 2, pad = (3, 3)))
   push!(layers, MaxPool((3, 3), stride = (2, 2), pad = (1, 1)))
   for (i, nrepeats) in enumerate(block_config)
     # output planes within a block

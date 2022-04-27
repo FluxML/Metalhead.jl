@@ -82,7 +82,7 @@ function resnet(block, residuals::AbstractVector{<:NTuple{2, Any}}, connection =
   inplanes = 64
   baseplanes = 64
   layers = []
-  append!(layers, conv_bn((7, 7), 3, inplanes; stride = 2, pad = 3, bias = false))
+  push!(layers, conv_bn((7, 7), 3, inplanes; stride = 2, pad = 3, bias = false))
   push!(layers, MaxPool((3, 3), stride = (2, 2), pad = (1, 1)))
   for (i, nrepeats) in enumerate(block_config)
     # output planes within a block
