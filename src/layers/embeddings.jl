@@ -13,7 +13,7 @@ patches.
 - `inchannels`: the number of channels in the input image
 - `patch_size`: the size of the patches
 - `embedplanes`: the number of channels in the embedding
-- `norm_layer`: the normalization layer - by default the identity function but otherwise takes a 
+- `norm_layer`: the normalization layer - by default the identity function but otherwise takes a
                 single argument constructor for a normalization layer like LayerNorm or BatchNorm
 - `flatten`: set true to flatten the input spatial dimensions after the embedding
 """

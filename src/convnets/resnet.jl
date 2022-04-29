@@ -246,7 +246,7 @@ function ResNet(depth::Int = 50; pretrain = false, nclasses = 1000)
     model
 end
 
-# Compat with Methalhead 0.6; remove in 0.7
+# Compat with Metalhead 0.6; remove in 0.7
 @deprecate ResNet18(; kw...) ResNet(18; kw...)
 @deprecate ResNet34(; kw...) ResNet(34; kw...)
 @deprecate ResNet50(; kw...) ResNet(50; kw...)

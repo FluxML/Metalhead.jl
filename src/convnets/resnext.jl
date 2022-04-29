@@ -23,7 +23,7 @@ end
 """
     resnext(cardinality, width, widen_factor = 2, connection = (x, y) -> @. relu(x) + relu(y);
           block_config, nclasses = 1000)
-    
+
 Create a ResNeXt model
 ([reference](https://arxiv.org/abs/1611.05431)).
 
