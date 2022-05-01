@@ -11,6 +11,8 @@ PRETRAINED_MODELS = []
   @test_skip gradtest(model, rand(Float32, 256, 256, 3, 1))
 end
 
+GC.gc()
+
 @testset "VGG" begin
   @testset "VGG($sz, batchnorm=$bn)" for sz in [11, 13, 16, 19], bn in [true, false]
     m = VGG(sz, batchnorm = bn)
@@ -24,6 +26,8 @@ end
     @test_skip gradtest(m, rand(Float32, 224, 224, 3, 1))
   end
 end
+
+GC.gc()
 
 @testset "ResNet" begin
   @testset "ResNet($sz)" for sz in [18, 34, 50, 101, 152]
@@ -47,6 +51,8 @@ end
   end
 end
 
+GC.gc()
+
 @testset "ResNeXt" begin
   @testset for depth in [50, 101, 152]
     m = ResNeXt(depth)
@@ -61,6 +67,8 @@ end
   end
 end
 
+GC.gc()
+
 @testset "GoogLeNet" begin
   m = GoogLeNet()
   @test size(m(rand(Float32, 224, 224, 3, 1))) == (1000, 1)
@@ -68,12 +76,16 @@ end
   @test_skip gradtest(m, rand(Float32, 224, 224, 3, 1))
 end
 
+GC.gc()
+
 @testset "Inception3" begin
   m = Inception3()
   @test size(m(rand(Float32, 224, 224, 3, 1))) == (1000, 1)
   @test_throws ArgumentError Inception3(pretrain = true)
   @test_skip gradtest(m, rand(Float32, 224, 224, 3, 2))
 end
+
+GC.gc()
 
 @testset "SqueezeNet" begin
   m = SqueezeNet()
@@ -147,7 +159,7 @@ end
 GC.gc()
 
 @testset "ConvNeXt" verbose = true begin
-  @testset for mode in [:tiny, :small, :base, :large, :xlarge]
+  @testset for mode in [:tiny, :small, :base, :large] #, :xlarge]
     @testset for drop_path_rate in [0.0, 0.5, 0.99]
       m = ConvNeXt(mode; drop_path_rate)
 

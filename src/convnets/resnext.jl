@@ -13,19 +13,17 @@ Create a basic residual block as defined in the paper for ResNeXt
 """
 function resnextblock(inplanes, outplanes, cardinality, width, downsample = false)
   stride = downsample ? 2 : 1
-
   hidden_channels = cardinality * width
-
-  return Chain(conv_bn((1, 1), inplanes, hidden_channels; stride = 1, bias = false)...,
+  return Chain(conv_bn((1, 1), inplanes, hidden_channels; stride = 1, bias = false),
                conv_bn((3, 3), hidden_channels, hidden_channels;
-                        stride = stride, pad = 1, bias = false, groups = cardinality)...,
-               conv_bn((1, 1), hidden_channels, outplanes; stride = 1, bias = false)...)
+                        stride = stride, pad = 1, bias = false, groups = cardinality),
+               conv_bn((1, 1), hidden_channels, outplanes; stride = 1, bias = false))
 end
 
 """
     resnext(cardinality, width, widen_factor = 2, connection = (x, y) -> @. relu(x) + relu(y);
           block_config, nclasses = 1000)
-    
+
 Create a ResNeXt model
 ([reference](https://arxiv.org/abs/1611.05431)).
 
@@ -42,7 +40,7 @@ function resnext(cardinality, width, widen_factor = 2, connection = (x, y) -> @.
   inplanes = 64
   baseplanes = 128
   layers = []
-  append!(layers, conv_bn((7, 7), 3, inplanes; stride = 2, pad = (3, 3)))
+  push!(layers, conv_bn((7, 7), 3, inplanes; stride = 2, pad = (3, 3)))
   push!(layers, MaxPool((3, 3), stride = (2, 2), pad = (1, 1)))
   for (i, nrepeats) in enumerate(block_config)
     # output planes within a block
@@ -62,13 +60,13 @@ function resnext(cardinality, width, widen_factor = 2, connection = (x, y) -> @.
     width *= widen_factor
   end
 
-  return Chain(Chain(layers...),
+  return Chain(Chain(layers),
                Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten, Dense(inplanes, nclasses)))
 end
 
 """
     ResNeXt(cardinality, width; block_config, nclasses = 1000)
-    
+
 Create a ResNeXt model
 ([reference](https://arxiv.org/abs/1611.05431)).
 
