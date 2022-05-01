@@ -45,7 +45,7 @@ function conv_bn(kernelsize, inplanes, outplanes, activation = relu;
   push!(layers, BatchNorm(Int(bnplanes), activations.bn;
                           initβ = initβ, initγ = initγ, ϵ = ϵ, momentum = momentum))
 
-  return rev ? Chain(reverse(layers)) : Chain(layers)
+  return rev ? reverse(layers) : layers
 end
 
 """
@@ -82,13 +82,13 @@ depthwise_sep_conv_bn(kernelsize, inplanes, outplanes, activation = relu;
                       initβ = Flux.zeros32, initγ = Flux.ones32,
                       ϵ = 1f-5, momentum = 1f-1,
                       stride = 1, kwargs...) =
-  Chain(vcat(conv_bn(kernelsize, inplanes, inplanes, activation;
-                     rev = rev, initβ = initβ, initγ = initγ,
-                     ϵ = ϵ, momentum = momentum,
-                     stride = stride, groups = Int(inplanes), kwargs...),
-             conv_bn((1, 1), inplanes, outplanes, activation;
-                     rev = rev, initβ = initβ, initγ = initγ,
-                     ϵ = ϵ, momentum = momentum)))
+  vcat(conv_bn(kernelsize, inplanes, inplanes, activation;
+               rev = rev, initβ = initβ, initγ = initγ,
+               ϵ = ϵ, momentum = momentum,
+               stride = stride, groups = Int(inplanes), kwargs...),
+      conv_bn((1, 1), inplanes, outplanes, activation;
+              rev = rev, initβ = initβ, initγ = initγ,
+              ϵ = ϵ, momentum = momentum))
 
 """
     skip_projection(inplanes, outplanes, downsample = false)
@@ -102,8 +102,8 @@ Create a skip projection
 - `downsample`: set to `true` to downsample the input
 """
 skip_projection(inplanes, outplanes, downsample = false) = downsample ?
-  conv_bn((1, 1), inplanes, outplanes, identity; stride = 2, bias = false) :
-  conv_bn((1, 1), inplanes, outplanes, identity; stride = 1, bias = false)
+  Chain(conv_bn((1, 1), inplanes, outplanes, identity; stride = 2, bias = false)) :
+  Chain(conv_bn((1, 1), inplanes, outplanes, identity; stride = 1, bias = false))
 
 # array -> PaddedView(0, array, outplanes) for zero padding arrays
 """
@@ -144,8 +144,8 @@ Squeeze and excitation layer used by MobileNet variants
 function squeeze_excite(channels, reduction = 4)
   @assert (reduction >= 1) "`reduction` must be >= 1"
   SkipConnection(Chain(AdaptiveMeanPool((1, 1)),
-                       conv_bn((1, 1), channels, channels ÷ reduction, relu; bias = false),
-                       conv_bn((1, 1), channels ÷ reduction, channels, hardσ)), .*)
+                       conv_bn((1, 1), channels, channels ÷ reduction, relu; bias = false)...,
+                       conv_bn((1, 1), channels ÷ reduction, channels, hardσ)...), .*)
 end
 
 """
@@ -171,14 +171,14 @@ function invertedresidual(kernel_size, inplanes, hidden_planes, outplanes, activ
   @assert stride in [1, 2] "`stride` has to be 1 or 2"
 
   pad = @. (kernel_size - 1) ÷ 2
-  conv1 = (inplanes == hidden_planes) ? identity : conv_bn((1, 1), inplanes, hidden_planes, activation; bias = false)
+  conv1 = (inplanes == hidden_planes) ? identity : Chain(conv_bn((1, 1), inplanes, hidden_planes, activation; bias = false))
   selayer = isnothing(reduction) ? identity : squeeze_excite(hidden_planes, reduction)
 
   invres = Chain(conv1,
                  conv_bn(kernel_size, hidden_planes, hidden_planes, activation;
-                         bias = false, stride, pad = pad, groups = hidden_planes),
+                         bias = false, stride, pad = pad, groups = hidden_planes)...,
                  selayer,
-                 conv_bn((1, 1), hidden_planes, outplanes, identity; bias = false))
+                 conv_bn((1, 1), hidden_planes, outplanes, identity; bias = false)...)
 
   (stride == 1 && inplanes == outplanes) ? SkipConnection(invres, +) : invres
 end
