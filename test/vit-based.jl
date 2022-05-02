@@ -6,6 +6,7 @@ using Flux
     m = ViT(mode)
     @test size(m(x_256)) == (1000, 1)
     @test gradtest(m, x_256)
+    GC.safepoint()
     GC.gc()
   end
 end

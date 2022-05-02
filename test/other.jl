@@ -7,6 +7,7 @@ using Flux
       m = MLPMixer(mode; drop_path_rate)
       @test size(m(x_224)) == (1000, 1)
       @test gradtest(m, x_224)
+      GC.safepoint()
       GC.gc()
     end
   end
@@ -18,6 +19,7 @@ end
       m = ResMLP(mode; drop_path_rate)
       @test size(m(x_224)) == (1000, 1)
       @test gradtest(m, x_224)
+      GC.safepoint()
       GC.gc()
     end
   end
@@ -29,6 +31,7 @@ end
       m = gMLP(mode; drop_path_rate)
       @test size(m(x_224)) == (1000, 1)
       @test gradtest(m, x_224)
+      GC.safepoint()
       GC.gc()
     end
   end
