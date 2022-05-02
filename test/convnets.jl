@@ -11,6 +11,7 @@ PRETRAINED_MODELS = []
   @test gradtest(model, x_256)
 end
 
+GC.safepoint()
 GC.gc()
 
 @testset "VGG" begin
@@ -24,10 +25,12 @@ GC.gc()
       @test_throws ArgumentError VGG(sz, batchnorm = bn, pretrain = true)
     end
     @test gradtest(m, x_224)
+    GC.safepoint()
     GC.gc()
   end
 end
 
+GC.safepoint()
 GC.gc()
 
 @testset "ResNet" begin
@@ -41,6 +44,7 @@ GC.gc()
       @test_throws ArgumentError ResNet(sz, pretrain = true)
     end
     @test gradtest(m, x_256)
+    GC.safepoint()
     GC.gc()
   end
 
@@ -54,6 +58,7 @@ GC.gc()
   end
 end
 
+GC.safepoint()
 GC.gc()
 
 @testset "ResNeXt" begin
@@ -67,9 +72,12 @@ GC.gc()
       @test_throws ArgumentError ResNeXt(depth, pretrain = true)
     end
     @test gradtest(m, x_224)
+    GC.safepoint()
+    GC.gc()
   end
 end
 
+GC.safepoint()
 GC.gc()
 
 @testset "GoogLeNet" begin
@@ -79,6 +87,7 @@ GC.gc()
   @test gradtest(m, x_224)
 end
 
+GC.safepoint()
 GC.gc()
 
 @testset "Inception3" begin
@@ -88,6 +97,7 @@ GC.gc()
   @test gradtest(m, x_224)
 end
 
+GC.safepoint()
 GC.gc()
 
 @testset "SqueezeNet" begin
@@ -97,6 +107,7 @@ GC.gc()
   @test gradtest(m, x_224)
 end
 
+GC.safepoint()
 GC.gc()
 
 @testset "DenseNet" begin
@@ -110,9 +121,12 @@ GC.gc()
       @test_throws ArgumentError DenseNet(sz, pretrain = true)
     end
     @test gradtest(m, x_224)
+    GC.safepoint()
+    GC.gc()
   end
 end
 
+GC.safepoint()
 GC.gc()
 
 @testset "MobileNet" verbose = true begin
@@ -128,6 +142,7 @@ GC.gc()
     @test gradtest(m, x_224)
   end
 
+  GC.safepoint()
   GC.gc()
 
   @testset "MobileNetv2" begin
@@ -142,6 +157,7 @@ GC.gc()
     @test gradtest(m, x_224)
   end
 
+  GC.safepoint()
   GC.gc()
 
   @testset "MobileNetv3" verbose = true begin
@@ -159,6 +175,7 @@ GC.gc()
   end
 end
 
+GC.safepoint()
 GC.gc()
 
 @testset "ConvNeXt" verbose = true begin
@@ -168,11 +185,13 @@ GC.gc()
 
       @test size(m(x_224)) == (1000, 1)
       @test gradtest(m, x_224)
+      GC.safepoint()
       GC.gc()
     end
   end
 end
 
+GC.safepoint()
 GC.gc()
 
 @testset "ConvMixer" verbose = true begin
@@ -181,6 +200,7 @@ GC.gc()
 
     @test size(m(x_224)) == (1000, 1)
     @test gradtest(m, x_224)
+    GC.safepoint()
     GC.gc()
   end
 end
