@@ -15,7 +15,7 @@ GC.safepoint()
 GC.gc()
 
 @testset "VGG" begin
-  @testset "VGG($sz, batchnorm=$bn)" for sz in [19, 16, 13, 11], bn in [true, false]
+  @testset "VGG($sz, batchnorm=$bn)" for sz in [11, 13, 16, 19], bn in [true, false]
     m = VGG(sz, batchnorm = bn)
 
     @test size(m(x_224)) == (1000, 1)
@@ -34,7 +34,7 @@ GC.safepoint()
 GC.gc()
 
 @testset "ResNet" begin
-  @testset "ResNet($sz)" for sz in [152, 101, 50, 34, 18]
+  @testset "ResNet($sz)" for sz in [18, 34, 50, 101, 152]
     m = ResNet(sz)
 
     @test size(m(x_256)) == (1000, 1)
@@ -62,7 +62,7 @@ GC.safepoint()
 GC.gc()
 
 @testset "ResNeXt" begin
-  @testset for depth in [152, 101, 50]
+  @testset for depth in [50, 101, 152]
     m = ResNeXt(depth)
 
     @test size(m(x_224)) == (1000, 1)
@@ -111,7 +111,7 @@ GC.safepoint()
 GC.gc()
 
 @testset "DenseNet" begin
-  @testset for sz in [201, 169, 161, 121]
+  @testset for sz in [121, 169, 169, 201]
     m = DenseNet(sz)
 
     @test size(m(x_224)) == (1000, 1)
@@ -161,7 +161,7 @@ GC.gc()
   GC.gc()
 
   @testset "MobileNetv3" verbose = true begin
-    @testset for mode in [:large, :small]
+    @testset for mode in [:small, :large]
       m = MobileNetv3(mode)
 
       @test size(m(x_224)) == (1000, 1)
@@ -179,7 +179,7 @@ GC.safepoint()
 GC.gc()
 
 @testset "ConvNeXt" verbose = true begin
-  @testset for mode in [:large, :base, :small] # :tiny, #, :xlarge]
+  @testset for mode in [:small, :base, :large] # :tiny, #, :xlarge]
     @testset for drop_path_rate in [0.0, 0.5]
       m = ConvNeXt(mode; drop_path_rate)
 
@@ -195,7 +195,7 @@ GC.safepoint()
 GC.gc()
 
 @testset "ConvMixer" verbose = true begin
-  @testset for mode in [:large, :base, :small]
+  @testset for mode in [:small, :base, :large]
     m = ConvMixer(mode)
 
     @test size(m(x_224)) == (1000, 1)
