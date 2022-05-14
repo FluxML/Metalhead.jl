@@ -54,6 +54,4 @@ export VGG11, VGG13, VGG16, VGG19,
 include("pretrain.jl")
 include("registries.jl")
 
-export MODELS
-
 end # module
