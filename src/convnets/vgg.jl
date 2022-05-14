@@ -16,7 +16,7 @@ function vgg_block(ifilters, ofilters, depth, batchnorm)
   layers = []
   for _ in 1:depth
     if batchnorm
-      push!(layers, conv_bn(k, ifilters, ofilters; pad = p, bias = false))
+      append!(layers, conv_bn(k, ifilters, ofilters; pad = p, bias = false))
     else
       push!(layers, Conv(k, ifilters => ofilters, relu, pad = p))
     end

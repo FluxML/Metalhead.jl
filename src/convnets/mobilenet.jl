@@ -34,7 +34,7 @@ function mobilenetv1(width_mult, config;
       layer = dw ? depthwise_sep_conv_bn((3, 3), inchannels, outch, activation;
                                          stride = stride, pad = 1) :
                    conv_bn((3, 3), inchannels, outch, activation; stride = stride, pad = 1)
-      push!(layers, layer)
+      append!(layers, layer)
       inchannels = outch
     end
   end
@@ -118,7 +118,7 @@ function mobilenetv2(width_mult, configs; max_width = 1280, nclasses = 1000)
   # building first layer
   inplanes = _round_channels(32 * width_mult, width_mult == 0.1 ? 4 : 8)
   layers = []
-  push!(layers, conv_bn((3, 3), 3, inplanes, stride = 2))
+  append!(layers, conv_bn((3, 3), 3, inplanes, stride = 2))
 
   # building inverted residual blocks
   for (t, c, n, s, a) in configs
@@ -134,7 +134,7 @@ function mobilenetv2(width_mult, configs; max_width = 1280, nclasses = 1000)
   outplanes = (width_mult > 1) ? _round_channels(max_width * width_mult, width_mult == 0.1 ? 4 : 8) :
                                  max_width
 
-  return Chain(Chain(Chain(layers), conv_bn((1, 1), inplanes, outplanes, relu6, bias = false)),
+  return Chain(Chain(Chain(layers), conv_bn((1, 1), inplanes, outplanes, relu6, bias = false)...),
                Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten, Dense(outplanes, nclasses)))
 end
 
@@ -211,7 +211,7 @@ function mobilenetv3(width_mult, configs; max_width = 1024, nclasses = 1000)
   # building first layer
   inplanes = _round_channels(16 * width_mult, 8)
   layers = []
-  push!(layers, conv_bn((3, 3), 3, inplanes, hardswish; stride = 2))
+  append!(layers, conv_bn((3, 3), 3, inplanes, hardswish; stride = 2))
   explanes = 0
   # building inverted residual blocks
   for (k, t, c, r, a, s) in configs
@@ -230,7 +230,7 @@ function mobilenetv3(width_mult, configs; max_width = 1024, nclasses = 1000)
                      Dropout(0.2),
                      Dense(output_channel, nclasses))
 
-  return Chain(Chain(Chain(layers), conv_bn((1, 1), inplanes, explanes, hardswish, bias = false)),
+  return Chain(Chain(Chain(layers), conv_bn((1, 1), inplanes, explanes, hardswish, bias = false)...),
                Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten, classifier))
 end
 

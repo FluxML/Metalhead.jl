@@ -12,8 +12,8 @@ Create a basic residual block
 """
 function basicblock(inplanes, outplanes, downsample = false)
   stride = downsample ? 2 : 1
-  Chain(conv_bn((3, 3), inplanes, outplanes[1]; stride = stride, pad = 1, bias = false),
-        conv_bn((3, 3), outplanes[1], outplanes[2], identity; stride = 1, pad = 1, bias = false))
+  Chain(conv_bn((3, 3), inplanes, outplanes[1]; stride = stride, pad = 1, bias = false)...,
+        conv_bn((3, 3), outplanes[1], outplanes[2], identity; stride = 1, pad = 1, bias = false)...)
 end
 
 """
@@ -36,11 +36,10 @@ The original paper uses `stride == [2, 1, 1]` when `downsample == true` instead.
 """
 function bottleneck(inplanes, outplanes, downsample = false;
                     stride = [1, (downsample ? 2 : 1), 1])
-  Chain(conv_bn((1, 1), inplanes, outplanes[1]; stride = stride[1], bias = false),
-        conv_bn((3, 3), outplanes[1], outplanes[2]; stride = stride[2], pad = 1, bias = false),
-        conv_bn((1, 1), outplanes[2], outplanes[3], identity; stride = stride[3], bias = false))
+  Chain(conv_bn((1, 1), inplanes, outplanes[1]; stride = stride[1], bias = false)...,
+        conv_bn((3, 3), outplanes[1], outplanes[2]; stride = stride[2], pad = 1, bias = false)...,
+        conv_bn((1, 1), outplanes[2], outplanes[3], identity; stride = stride[3], bias = false)...)
 end
-
 
 """
     bottleneck_v1(inplanes, outplanes, downsample = false)
@@ -82,7 +81,7 @@ function resnet(block, residuals::AbstractVector{<:NTuple{2, Any}}, connection =
   inplanes = 64
   baseplanes = 64
   layers = []
-  push!(layers, conv_bn((7, 7), 3, inplanes; stride = 2, pad = 3, bias = false))
+  append!(layers, conv_bn((7, 7), 3, inplanes; stride = 2, pad = 3, bias = false))
   push!(layers, MaxPool((3, 3), stride = (2, 2), pad = (1, 1)))
   for (i, nrepeats) in enumerate(block_config)
     # output planes within a block
