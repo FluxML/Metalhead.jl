@@ -135,8 +135,7 @@ const densenet_config = Dict(121 => (6, 12, 24, 16),
                              201 => (6, 12, 48, 32))
 
 """
-    DenseNet(config::Int = 121; pretrain = false)
-    DenseNet(transition_config::NTuple{N,Int})
+    DenseNet(config::Int = 121; pretrain = false, nclasses = 10)
 
 Create a DenseNet model with specified configuration. Currently supported values are (121, 161, 169, 201)
 ([reference](https://arxiv.org/abs/1608.06993)).
