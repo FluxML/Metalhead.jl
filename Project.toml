@@ -5,6 +5,7 @@ version = "0.7.1"
 [deps]
 Artifacts = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
 BSON = "fbb218c0-5317-5bc6-957e-2ee96dd4b1f0"
+FeatureRegistries = "c6aefb4f-3ac3-4095-8805-528476b02c02"
 Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
 Functors = "d9f16b24-f501-4c13-a1f2-28368ffc5196"
 LazyArtifacts = "4af54fe1-eca0-43a8-85a7-787d91b784e3"
@@ -19,8 +20,9 @@ Flux = "0.13"
 Functors = "0.2"
 MLUtils = "0.2"
 NNlib = "0.7.34, 0.8"
-julia = "1.6"
 NeuralAttentionlib = "0.0"
+FeatureRegistries = "0.1"
+julia = "1.6"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

@@ -145,9 +145,6 @@ Create an Inception-v3 model ([reference](https://arxiv.org/abs/1512.00567v3)).
 
 # Arguments
 - `nclasses`: the number of output classes
-
-!!! warning
-    `inception3` does not currently support pretrained weights.
 """
 function inception3(; nclasses = 1000)
   layer = Chain(Chain(conv_bn((3, 3), 3, 32; stride = 2)...,

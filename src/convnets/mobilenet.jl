@@ -67,6 +67,9 @@ Create a MobileNetv1 model with the baseline configuration
 ([reference](https://arxiv.org/abs/1704.04861v1)).
 Set `pretrain` to `true` to load the pretrained weights for ImageNet.
 
+!!! warning
+    `MobileNetv1` does not currently support pretrained weights.
+
 # Arguments
 - `width_mult`: Controls the number of output feature maps in each block
                 (with 1.0 being the default in the paper;
@@ -160,7 +163,10 @@ end
 
 Create a MobileNetv2 model with the specified configuration.
 ([reference](https://arxiv.org/abs/1801.04381)).
-Set `pretrain` to `true` to load the pretrained weights for ImageNet. 
+Set `pretrain` to `true` to load the pretrained weights for ImageNet.
+
+!!! warning
+    `MobileNetv2` does not currently support pretrained weights.
 
 # Arguments
 - `width_mult`: Controls the number of output feature maps in each block
@@ -281,6 +287,9 @@ end
 Create a MobileNetv3 model with the specified configuration.
 ([reference](https://arxiv.org/abs/1905.02244)).
 Set `pretrain = true` to load the model with pre-trained weights for ImageNet.
+
+!!! warning
+    `MobileNetv3` does not currently support pretrained weights.
 
 # Arguments
 - `mode`: :small or :large for the size of the model (see paper).

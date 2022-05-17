@@ -106,7 +106,7 @@ Create a ResNeXt model with specified configuration. Currently supported values 
 Set `pretrain = true` to load the model with pre-trained weights for ImageNet.
 
 !!! warning
-  `ResNeXt` does not currently support pretrained weights.
+    `ResNeXt` does not currently support pretrained weights.
 
 See also [`Metalhead.resnext`](#).
 """

@@ -89,7 +89,7 @@ Create a VGG model
 """
 function vgg(imsize; config, inchannels, batchnorm = false, nclasses, fcsize, dropout)
   conv = vgg_convolutional_layers(config, batchnorm, inchannels)
-  imsize = outputsize(conv, (imsize..., inchannels); padbatch = true)[1:3]
+  imsize = Flux.outputsize(conv, (imsize..., inchannels); padbatch = true)[1:3]
   class = vgg_classifier_layers(imsize, nclasses, fcsize, dropout)
   return Chain(Chain(conv), class)
 end

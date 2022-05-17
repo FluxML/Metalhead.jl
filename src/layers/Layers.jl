@@ -1,7 +1,6 @@
 module Layers
 
 using Flux
-using Flux: outputsize, Zygote
 using Functors
 using Statistics
 using MLUtils
