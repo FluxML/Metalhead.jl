@@ -1,5 +1,5 @@
 """
-    MHAttention(nheads::Int, qkv_layer, attn_drop, projection)
+    MHAttention(nheads::Integer, qkv_layer, attn_drop, projection)
 
 Multi-head self-attention layer.
 
@@ -10,14 +10,14 @@ Multi-head self-attention layer.
 - `projection`: projection layer to be used after self-attention
 """
 struct MHAttention{P, Q, R}
-  nheads::Int
+  nheads::Integer
   qkv_layer::P
   attn_drop::Q
   projection::R
 end
 
 """
-    MHAttention(planes::Int, nheads::Int = 8; qkv_bias::Bool = false, attn_drop = 0., proj_drop = 0.)
+    MHAttention(planes::Integer, nheads::Integer = 8; qkv_bias::Bool = false, attn_drop = 0., proj_drop = 0.)
 
 Multi-head self-attention layer.
 
@@ -28,7 +28,7 @@ Multi-head self-attention layer.
 - `attn_drop`: dropout rate after the self-attention layer
 - `proj_drop`: dropout rate after the projection layer
 """
-function MHAttention(planes::Int, nheads::Int = 8; qkv_bias::Bool = false, attn_drop = 0., proj_drop = 0.)
+function MHAttention(planes::Integer, nheads::Integer = 8; qkv_bias::Bool = false, attn_drop = 0., proj_drop = 0.)
   @assert planes % nheads == 0 "planes should be divisible by nheads"
   qkv_layer = Dense(planes, planes * 3; bias = qkv_bias)
   attn_drop = Dropout(attn_drop)
