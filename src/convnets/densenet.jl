@@ -114,7 +114,7 @@ struct DenseNet
 end
 
 function DenseNet(nblocks::NTuple{N, <:Integer};
-                  growth_rate = 32, reduction = 0.5, nclasses = 1000) where N
+                  growth_rate = 32, reduction = 0.5, nclasses = 1000) where {N}
   layers = densenet(nblocks; growth_rate = growth_rate,
                              reduction = reduction,
                              nclasses = nclasses)
