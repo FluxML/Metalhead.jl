@@ -5,7 +5,6 @@ using Flux: outputsize, Zygote
 using Functors
 using Statistics
 using MLUtils
-using NeuralAttentionlib
 
 include("../utilities.jl")
 
