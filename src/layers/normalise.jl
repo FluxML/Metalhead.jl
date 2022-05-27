@@ -2,7 +2,7 @@
 prenorm(planes, fn) = Chain(LayerNorm(planes), fn)
 
 """
-    ChannelLayerNorm(sz::Int, λ = identity; ϵ = 1f-5)
+    ChannelLayerNorm(sz::Integer, λ = identity; ϵ = 1f-5)
 
 A variant of LayerNorm where the input is normalised along the
 channel dimension. The input is expected to have channel dimension with size 
@@ -21,7 +21,7 @@ end
 
 (m::ChannelLayerNorm)(x) = m.diag(MLUtils.normalise(x, dims = ndims(x) - 1, ϵ = m.ϵ))
 
-function ChannelLayerNorm(sz::Int, λ = identity; ϵ = 1f-5)
+function ChannelLayerNorm(sz::Integer, λ = identity; ϵ = 1f-5)
   diag = Flux.Scale(1, 1, sz, λ)
   return ChannelLayerNorm(diag, ϵ)
 end

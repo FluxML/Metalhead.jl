@@ -190,7 +190,7 @@ struct SpatialGatingUnit{T, F}
 end
 
 """
-    SpatialGatingUnit(planes::Int, npatches::Int; norm_layer = LayerNorm)
+    SpatialGatingUnit(planes::Integer, npatches::Integer; norm_layer = LayerNorm)
 
 Creates a spatial gating unit as described in the gMLP paper.
 ([reference](https://arxiv.org/abs/2105.08050))
@@ -200,7 +200,7 @@ Creates a spatial gating unit as described in the gMLP paper.
 - `npatches`: the number of patches of the input
 - `norm_layer`: the normalisation layer to use
 """
-function SpatialGatingUnit(planes::Int, npatches::Int; norm_layer = LayerNorm)
+function SpatialGatingUnit(planes::Integer, npatches::Integer; norm_layer = LayerNorm)
   gateplanes = planes ÷ 2
   norm = norm_layer(gateplanes)
   proj = Dense(2 * eps(Float32) .* rand(Float32, npatches, npatches), ones(npatches))

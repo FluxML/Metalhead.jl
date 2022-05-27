@@ -28,9 +28,9 @@ function mobilenetv1(width_mult, config;
                      nclasses = 1000,
                      fcsize = 1024)
   layers = []
-  for (dw, outch, stride, repeats) in config
+  for (dw, outch, stride, nrepeats) in config
     outch = Int(outch * width_mult)
-    for _ in 1:repeats
+    for _ in 1:nrepeats
       layer = dw ? depthwise_sep_conv_bn((3, 3), inchannels, outch, activation;
                                          stride = stride, pad = 1) :
                    conv_bn((3, 3), inchannels, outch, activation; stride = stride, pad = 1)
@@ -198,11 +198,11 @@ Create a MobileNetv3 model.
                 (with 1.0 being the default in the paper;
                  this is usually a value between 0.1 and 1.4)
 - `configs`: a "list of tuples" configuration for each layer that details:
-  - `k::Int` - The size of the convolutional kernel
+  - `k::Integer` - The size of the convolutional kernel
   - `c::Float` - The multiplier factor for deciding the number of feature maps in the hidden layer
-  - `t::Int` - The number of output feature maps for a given block
-  - `r::Int` - The reduction factor (`>= 1` or `nothing` to skip) for squeeze and excite layers
-  - `s::Int` - The stride of the convolutional kernel
+  - `t::Integer` - The number of output feature maps for a given block
+  - `r::Integer` - The reduction factor (`>= 1` or `nothing` to skip) for squeeze and excite layers
+  - `s::Integer` - The stride of the convolutional kernel
   - `a` - The activation function used in the bottleneck (typically `hardswish` or `relu`)
 - `max_width`: The maximum number of feature maps in any layer of the network
 - `nclasses`: the number of output classes

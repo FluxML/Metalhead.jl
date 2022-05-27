@@ -1,5 +1,5 @@
 """
-    LayerScale(λ, planes::Int)
+    LayerScale(λ, planes::Integer)
 
 Creates a `Flux.Scale` layer that performs "`LayerScale`"
 ([reference](https://arxiv.org/abs/2103.17239)).
@@ -8,7 +8,7 @@ Creates a `Flux.Scale` layer that performs "`LayerScale`"
 - `planes`: Size of channel dimension in the input.
 - `λ`: initialisation value for the learnable diagonal matrix.
 """
-LayerScale(planes::Int, λ) =
+LayerScale(planes::Integer, λ) =
     λ > 0 ? Flux.Scale(fill(Float32(λ), planes), false) : identity
 
 """

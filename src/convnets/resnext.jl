@@ -99,7 +99,7 @@ const resnext_config = Dict(
 )
 
 """
-    ResNeXt(config::Int = 50; cardinality = 32, width = 4, pretrain = false, nclasses = 1000)
+    ResNeXt(config::Integer = 50; cardinality = 32, width = 4, pretrain = false, nclasses = 1000)
 
 Create a ResNeXt model with specified configuration. Currently supported values for `config` are (50, 101).
 ([reference](https://arxiv.org/abs/1611.05431)).
@@ -110,7 +110,7 @@ Set `pretrain = true` to load the model with pre-trained weights for ImageNet.
 
 See also [`Metalhead.resnext`](#).
 """
-function ResNeXt(config::Int = 50; cardinality = 32, width = 4, pretrain = false, nclasses = 1000)
+function ResNeXt(config::Integer = 50; cardinality = 32, width = 4, pretrain = false, nclasses = 1000)
   @assert config in keys(resnext_config) "`config` must be one of $(sort(collect(keys(resnext_config))))"
 
   model = ResNeXt(cardinality, width; block_config = resnext_config[config], nclasses)
