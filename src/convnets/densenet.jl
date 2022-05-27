@@ -147,9 +147,10 @@ Set `pretrain = true` to load the model with pre-trained weights for ImageNet.
 
 See also [`Metalhead.densenet`](#).
 """
-function DenseNet(config::Integer = 121; pretrain = false)
+
+function DenseNet(config::Integer = 121; pretrain = false, nclasses = 1000)
   @assert config in keys(densenet_config) "`config` must be one out of $(sort(collect(keys(densenet_config))))."
-  model = DenseNet(densenet_config[config])
+  model = DenseNet(densenet_config[config]; nclasses = nclasses)
 
   pretrain && loadpretrain!(model, string("DenseNet", config))
   return model
