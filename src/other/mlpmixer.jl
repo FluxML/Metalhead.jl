@@ -132,7 +132,7 @@ return Chain(SkipConnection(Chain(Flux.Scale(planes),
                                   LayerScale(planes, λ),
                                   DropPath(drop_path_rate)), +),
              SkipConnection(Chain(Flux.Scale(planes),
-                                  mlp_layer(planes, Integer(mlp_ratio * planes); dropout, activation),
+                                  mlp_layer(planes, Int(mlp_ratio * planes); dropout, activation),
                                   LayerScale(planes, λ),
                                   DropPath(drop_path_rate)), +))
 end
