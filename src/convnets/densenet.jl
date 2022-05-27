@@ -68,8 +68,8 @@ function densenet(inplanes, growth_rates; reduction = 0.5, nclasses = 1000)
     outplanes = inplanes + sum(rates)
     append!(layers, dense_block(inplanes, rates))
     (i != length(growth_rates)) &&
-      push!(layers, transition(outplanes, floor(Integer, outplanes * reduction)))
-    inplanes = floor(Integer, outplanes * reduction)
+      push!(layers, transition(outplanes, floor(Int, outplanes * reduction)))
+    inplanes = floor(Int, outplanes * reduction)
   end
   push!(layers, BatchNorm(outplanes, relu))
 
