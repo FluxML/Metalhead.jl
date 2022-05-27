@@ -17,7 +17,7 @@ Creates a feedforward block for the MLPMixer architecture.
 """
 function mixerblock(planes, npatches; mlp_ratio = (0.5, 4.0), mlp_layer = mlp_block, 
                     dropout = 0., drop_path_rate = 0., activation = gelu)
-  tokenplanes, channelplanes = [Integer(r * planes) for r in mlp_ratio]
+  tokenplanes, channelplanes = [Int(r * planes) for r in mlp_ratio]
   return Chain(SkipConnection(Chain(LayerNorm(planes),
                                     swapdims((2, 1, 3)),
                                     mlp_layer(npatches, tokenplanes; activation, dropout),
@@ -132,7 +132,7 @@ return Chain(SkipConnection(Chain(Flux.Scale(planes),
                                   LayerScale(planes, λ),
                                   DropPath(drop_path_rate)), +),
              SkipConnection(Chain(Flux.Scale(planes),
-                                  mlp_layer(planes, Integer(mlp_ratio * planes); dropout, activation),
+                                  mlp_layer(planes, Int(mlp_ratio * planes); dropout, activation),
                                   LayerScale(planes, λ),
                                   DropPath(drop_path_rate)), +))
 end
@@ -237,7 +237,7 @@ Creates a feedforward block based on the gMLP model architecture described in th
 function spatial_gating_block(planes, npatches; mlp_ratio = 4.0, norm_layer = LayerNorm,
                               mlp_layer = gated_mlp_block, dropout = 0., drop_path_rate = 0.,
                               activation = gelu)
-  channelplanes = Integer(mlp_ratio * planes)
+  channelplanes = Int(mlp_ratio * planes)
   sgu = inplanes -> SpatialGatingUnit(inplanes, npatches; norm_layer)
   return SkipConnection(Chain(norm_layer(planes),
                               mlp_layer(sgu, planes, channelplanes; activation, dropout),
