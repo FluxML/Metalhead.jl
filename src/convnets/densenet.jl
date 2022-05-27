@@ -68,8 +68,8 @@ function densenet(inplanes, growth_rates; reduction = 0.5, nclasses = 1000)
     outplanes = inplanes + sum(rates)
     append!(layers, dense_block(inplanes, rates))
     (i != length(growth_rates)) &&
-      push!(layers, transition(outplanes, floor(Int, outplanes * reduction)))
-    inplanes = floor(Int, outplanes * reduction)
+      push!(layers, transition(outplanes, floor(Integer, outplanes * reduction)))
+    inplanes = floor(Integer, outplanes * reduction)
   end
   push!(layers, BatchNorm(outplanes, relu))
 
@@ -135,7 +135,8 @@ const densenet_config = Dict(121 => (6, 12, 24, 16),
                              201 => (6, 12, 48, 32))
 
 """
-    DenseNet(config::Int = 121; pretrain = false, nclasses = 1000)
+    DenseNet(config::Integer = 121; pretrain = false, nclasses = 1000)
+    DenseNet(transition_config::NTuple{N,Integer})
 
 Create a DenseNet model with specified configuration. Currently supported values are (121, 161, 169, 201)
 ([reference](https://arxiv.org/abs/1608.06993)).

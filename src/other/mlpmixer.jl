@@ -17,7 +17,7 @@ Creates a feedforward block for the MLPMixer architecture.
 """
 function mixerblock(planes, npatches; mlp_ratio = (0.5, 4.0), mlp_layer = mlp_block, 
                     dropout = 0., drop_path_rate = 0., activation = gelu)
-  tokenplanes, channelplanes = [Int(r * planes) for r in mlp_ratio]
+  tokenplanes, channelplanes = [Integer(r * planes) for r in mlp_ratio]
   return Chain(SkipConnection(Chain(LayerNorm(planes),
                                     swapdims((2, 1, 3)),
                                     mlp_layer(npatches, tokenplanes; activation, dropout),
@@ -132,7 +132,7 @@ return Chain(SkipConnection(Chain(Flux.Scale(planes),
                                   LayerScale(planes, λ),
                                   DropPath(drop_path_rate)), +),
              SkipConnection(Chain(Flux.Scale(planes),
-                                  mlp_layer(planes, Int(mlp_ratio * planes); dropout, activation),
+                                  mlp_layer(planes, Integer(mlp_ratio * planes); dropout, activation),
                                   LayerScale(planes, λ),
                                   DropPath(drop_path_rate)), +))
 end
@@ -190,7 +190,7 @@ struct SpatialGatingUnit{T, F}
 end
 
 """
-    SpatialGatingUnit(planes::Int, npatches::Int; norm_layer = LayerNorm)
+    SpatialGatingUnit(planes::Integer, npatches::Integer; norm_layer = LayerNorm)
 
 Creates a spatial gating unit as described in the gMLP paper.
 ([reference](https://arxiv.org/abs/2105.08050))
@@ -200,7 +200,7 @@ Creates a spatial gating unit as described in the gMLP paper.
 - `npatches`: the number of patches of the input
 - `norm_layer`: the normalisation layer to use
 """
-function SpatialGatingUnit(planes::Int, npatches::Int; norm_layer = LayerNorm)
+function SpatialGatingUnit(planes::Integer, npatches::Integer; norm_layer = LayerNorm)
   gateplanes = planes ÷ 2
   norm = norm_layer(gateplanes)
   proj = Dense(2 * eps(Float32) .* rand(Float32, npatches, npatches), ones(npatches))
@@ -237,7 +237,7 @@ Creates a feedforward block based on the gMLP model architecture described in th
 function spatial_gating_block(planes, npatches; mlp_ratio = 4.0, norm_layer = LayerNorm,
                               mlp_layer = gated_mlp_block, dropout = 0., drop_path_rate = 0.,
                               activation = gelu)
-  channelplanes = Int(mlp_ratio * planes)
+  channelplanes = Integer(mlp_ratio * planes)
   sgu = inplanes -> SpatialGatingUnit(inplanes, npatches; norm_layer)
   return SkipConnection(Chain(norm_layer(planes),
                               mlp_layer(sgu, planes, channelplanes; activation, dropout),

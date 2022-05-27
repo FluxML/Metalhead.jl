@@ -14,7 +14,7 @@ Transformer as used in the base ViT architecture.
 function transformer_encoder(planes, depth, nheads; mlp_ratio = 4.0, dropout = 0.)
   layers = [Chain(SkipConnection(prenorm(planes, MHAttention(planes, nheads; attn_drop = dropout,
                                                              proj_drop = dropout)), +),
-                  SkipConnection(prenorm(planes, mlp_block(planes, floor(Int, mlp_ratio * planes);
+                  SkipConnection(prenorm(planes, mlp_block(planes, floor(Integer, mlp_ratio * planes);
                                                            dropout)), +))
             for _ in 1:depth]
   Chain(layers)

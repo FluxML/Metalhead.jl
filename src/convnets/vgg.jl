@@ -63,7 +63,7 @@ Create VGG classifier (fully connected) layers
 """
 function vgg_classifier_layers(imsize, nclasses, fcsize, dropout)
   return Chain(MLUtils.flatten,
-               Dense(Int(prod(imsize)), fcsize, relu),
+               Dense(Integer(prod(imsize)), fcsize, relu),
                Dropout(dropout),
                Dense(fcsize, fcsize, relu),
                Dropout(dropout),
@@ -115,9 +115,9 @@ Construct a VGG model with the specified input image size. Typically, the image 
 
 ## Keyword Arguments:
 - `config` : VGG convolutional block configuration. It is defined as a vector of tuples `(output_channels, num_convolutions)` for each block 
-- `inchannels`::Int : number of input channels
+- `inchannels`::Integer : number of input channels
 - `batchnorm`::Bool : set to `true` to use batch normalization after each convolution
-- `nclasses`::Int : number of output classes
+- `nclasses`::Integer : number of output classes
 - `fcsize`: intermediate fully connected layer size
             (see [`Metalhead.vgg_classifier_layers`](#))
 - `dropout`: dropout level between fully connected layers
@@ -142,7 +142,7 @@ backbone(m::VGG) = m.layers[1]
 classifier(m::VGG) = m.layers[2]
 
 """
-    VGG(depth::Int = 16; pretrain = false, batchnorm = false)
+    VGG(depth::Integer = 16; pretrain = false, batchnorm = false)
 
 Create a VGG style model with specified `depth`. Available values include (11, 13, 16, 19).
 ([reference](https://arxiv.org/abs/1409.1556v6)).
@@ -154,7 +154,7 @@ See also [`VGG`](#).
 # Arguments
 - `pretrain`: set to `true` to load pre-trained model weights for ImageNet
 """
-function VGG(depth::Int = 16; pretrain = false, batchnorm = false, nclasses = 1000)
+function VGG(depth::Integer = 16; pretrain = false, batchnorm = false, nclasses = 1000)
   @assert depth in keys(vgg_config) "depth must be from one in $(sort(collect(keys(vgg_config))))"
 
   model = VGG((224, 224); config = vgg_conv_config[vgg_config[depth]],
