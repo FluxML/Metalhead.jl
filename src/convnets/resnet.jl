@@ -236,7 +236,7 @@ as shown below:
 resnet50_v1 = ResNet([1, 1, 4], [3, 4, 6, 3], :B; block = Metalhead.bottleneck_v1)
 ```
 """
-function ResNet(depth::Int = 50; pretrain = false, nclasses = 1000)
+function ResNet(depth::Integer = 50; pretrain = false, nclasses = 1000)
     @assert depth in keys(resnet_config) "`depth` must be one of $(sort(collect(keys(resnet_config))))"
 
     config, block = resnet_config[depth]

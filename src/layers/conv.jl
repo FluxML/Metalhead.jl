@@ -41,8 +41,8 @@ function conv_bn(kernelsize, inplanes, outplanes, activation = relu;
           activations = (conv = activation, bn = identity)
   end
 
-  push!(layers, Conv(kernelsize, Int(inplanes) => Int(outplanes), activations.conv; kwargs...))
-  push!(layers, BatchNorm(Int(bnplanes), activations.bn;
+  push!(layers, Conv(kernelsize, Integer(inplanes) => Integer(outplanes), activations.conv; kwargs...))
+  push!(layers, BatchNorm(Integer(bnplanes), activations.bn;
                           initβ = initβ, initγ = initγ, ϵ = ϵ, momentum = momentum))
 
   return rev ? reverse(layers) : layers
@@ -85,7 +85,7 @@ depthwise_sep_conv_bn(kernelsize, inplanes, outplanes, activation = relu;
   vcat(conv_bn(kernelsize, inplanes, inplanes, activation;
                rev = rev, initβ = initβ, initγ = initγ,
                ϵ = ϵ, momentum = momentum,
-               stride = stride, groups = Int(inplanes), kwargs...),
+               stride = stride, groups = Integer(inplanes), kwargs...),
       conv_bn((1, 1), inplanes, outplanes, activation;
               rev = rev, initβ = initβ, initγ = initγ,
               ϵ = ϵ, momentum = momentum))

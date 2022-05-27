@@ -17,7 +17,7 @@ patches.
                 single argument constructor for a normalization layer like LayerNorm or BatchNorm
 - `flatten`: set true to flatten the input spatial dimensions after the embedding
 """
-function PatchEmbedding(imsize::Dims{2} = (224, 224); inchannels::Int = 3,
+function PatchEmbedding(imsize::Dims{2} = (224, 224); inchannels::Integer = 3,
                         patch_size::Dims{2} = (16, 16), embedplanes = 768,
                         norm_layer = planes -> identity, flatten = true)
 
@@ -33,7 +33,7 @@ function PatchEmbedding(imsize::Dims{2} = (224, 224); inchannels::Int = 3,
 end
 
 """
-    ViPosEmbedding(embedsize::Int, npatches::Int; init = (dims::Dims{2}) -> rand(Float32, dims))
+    ViPosEmbedding(embedsize::Integer, npatches::Integer; init = (dims::Dims{2}) -> rand(Float32, dims))
 
 Positional embedding layer used by many vision transformer-like models.
 """
@@ -41,7 +41,7 @@ struct ViPosEmbedding{T}
   vectors::T
 end
 
-ViPosEmbedding(embedsize::Int, npatches::Int; init = (dims::Dims{2}) -> rand(Float32, dims)) =
+ViPosEmbedding(embedsize::Integer, npatches::Integer; init = (dims::Dims{2}) -> rand(Float32, dims)) =
   ViPosEmbedding(init((embedsize, npatches)))
 
 (p::ViPosEmbedding)(x) = x .+ p.vectors
