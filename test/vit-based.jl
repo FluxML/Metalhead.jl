@@ -2,10 +2,11 @@ using Metalhead, Test
 using Flux
 
 @testset "ViT" begin
-  for mode in [:tiny, :small, :base, :large] #,:huge, :giant, :gigantic]
+  for mode in [:small, :base, :large] # :tiny, #,:huge, :giant, :gigantic]
     m = ViT(mode)
-    @test size(m(rand(Float32, 256, 256, 3, 1))) == (1000, 1)
-    @test_skip gradtest(m, rand(Float32, 256, 256, 3, 1))
+    @test size(m(x_256)) == (1000, 1)
+    @test gradtest(m, x_256)
+    GC.safepoint()
+    GC.gc()
   end
-  GC.gc()
 end

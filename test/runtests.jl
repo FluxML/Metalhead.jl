@@ -10,11 +10,15 @@ function gradtest(model, input)
   return true
 end
 
+x_224 = rand(Float32, 224, 224, 3, 1)
+x_256 = rand(Float32, 256, 256, 3, 1)
+
 # CNN tests
 @testset verbose = true "ConvNets" begin
   include("convnets.jl")
 end
 
+GC.safepoint()
 GC.gc()
 
 # Other tests
@@ -22,6 +26,7 @@ GC.gc()
   include("other.jl")
 end
 
+GC.safepoint()
 GC.gc()
 
 # ViT tests
