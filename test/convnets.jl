@@ -111,7 +111,7 @@ GC.safepoint()
 GC.gc()
 
 @testset "DenseNet" begin
-  @testset for sz in [121, 169, 169, 201]
+  @testset for sz in [121, 161, 169, 201]
     m = DenseNet(sz)
 
     @test size(m(x_224)) == (1000, 1)
