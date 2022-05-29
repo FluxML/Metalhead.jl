@@ -48,7 +48,7 @@ function mobilenetv1(width_mult, config;
 end
 
 const mobilenetv1_configs = [
-    #     dw,    c, s, r
+    # dw, c, s, r
     (false, 32, 2, 1),
     (true, 64, 1, 1),
     (true, 128, 2, 1),
@@ -145,7 +145,7 @@ end
 
 # Layer configurations for MobileNetv2
 const mobilenetv2_configs = [
-    #  t,   c, n, s,     a
+    # t, c, n, s, a
     (1, 16, 1, 1, relu6),
     (6, 24, 2, 2, relu6),
     (6, 32, 3, 2, relu6),

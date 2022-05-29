@@ -46,17 +46,16 @@ Creates a Vision Transformer (ViT) model.
 function vit(imsize::Dims{2} = (256, 256); inchannels = 3, patch_size::Dims{2} = (16, 16),
              embedplanes = 768, depth = 6, nheads = 16, mlp_ratio = 4.0, dropout = 0.1,
              emb_dropout = 0.1, pool = :class, nclasses = 1000)
-
-  @assert pool in [:class, :mean]
-  "Pool type must be either :class (class token) or :mean (mean pooling)"
-  npatches = prod(imsize .÷ patch_size)
-  return Chain(Chain(PatchEmbedding(imsize; inchannels, patch_size, embedplanes),
-                     ClassTokens(embedplanes),
-                     ViPosEmbedding(embedplanes, npatches + 1),
-                     Dropout(emb_dropout),
-                     transformer_encoder(embedplanes, depth, nheads; mlp_ratio, dropout),
-                     (pool == :class) ? x -> selectdim(x, 2, 1) : seconddimmean),
-               Chain(LayerNorm(embedplanes), Dense(embedplanes, nclasses, tanh_fast)))
+    @assert pool in [:class, :mean]
+    "Pool type must be either :class (class token) or :mean (mean pooling)"
+    npatches = prod(imsize .÷ patch_size)
+    return Chain(Chain(PatchEmbedding(imsize; inchannels, patch_size, embedplanes),
+                       ClassTokens(embedplanes),
+                       ViPosEmbedding(embedplanes, npatches + 1),
+                       Dropout(emb_dropout),
+                       transformer_encoder(embedplanes, depth, nheads; mlp_ratio, dropout),
+                       (pool == :class) ? x -> selectdim(x, 2, 1) : seconddimmean),
+                 Chain(LayerNorm(embedplanes), Dense(embedplanes, nclasses, tanh_fast)))
 end
 
 vit_configs = Dict(:tiny => (depth = 12, embedplanes = 192, nheads = 3),
