@@ -11,13 +11,15 @@ Transformer as used in the base ViT architecture.
 - `mlp_ratio`: ratio of MLP layers to the number of input channels
 - `dropout`: dropout rate
 """
-function transformer_encoder(planes, depth, nheads; mlp_ratio = 4.0, dropout = 0.)
-  layers = [Chain(SkipConnection(prenorm(planes, MHAttention(planes, nheads; attn_drop = dropout,
-                                                             proj_drop = dropout)), +),
-                  SkipConnection(prenorm(planes, mlp_block(planes, floor(Int, mlp_ratio * planes);
-                                                           dropout)), +))
-            for _ in 1:depth]
-  Chain(layers)
+function transformer_encoder(planes, depth, nheads; mlp_ratio = 4.0, dropout = 0.0)
+    layers = [Chain(SkipConnection(prenorm(planes,
+                                           MHAttention(planes, nheads; attn_drop = dropout,
+                                                       proj_drop = dropout)), +),
+                    SkipConnection(prenorm(planes,
+                                           mlp_block(planes, floor(Int, mlp_ratio * planes);
+                                                     dropout)), +))
+              for _ in 1:depth]
+    Chain(layers)
 end
 
 """
@@ -62,8 +64,10 @@ vit_configs = Dict(:tiny => (depth = 12, embedplanes = 192, nheads = 3),
                    :base => (depth = 12, embedplanes = 768, nheads = 12),
                    :large => (depth = 24, embedplanes = 1024, nheads = 16),
                    :huge => (depth = 32, embedplanes = 1280, nheads = 16),
-                   :giant => (depth = 40, embedplanes = 1408, nheads = 16, mlp_ratio = 48/11),
-                   :gigantic => (depth = 48, embedplanes = 1664, nheads = 16, mlp_ratio = 64/13))
+                   :giant => (depth = 40, embedplanes = 1408, nheads = 16,
+                              mlp_ratio = 48 / 11),
+                   :gigantic => (depth = 48, embedplanes = 1664, nheads = 16,
+                                 mlp_ratio = 64 / 13))
 
 """
     ViT(mode::Symbol = base; imsize::Dims{2} = (256, 256), inchannels = 3,
@@ -83,16 +87,16 @@ Creates a Vision Transformer (ViT) model.
 See also [`Metalhead.vit`](#).
 """
 struct ViT
-  layers
+    layers::Any
 end
 
 function ViT(mode::Symbol = :base; imsize::Dims{2} = (256, 256), inchannels = 3,
              patch_size::Dims{2} = (16, 16), pool = :class, nclasses = 1000)
-  @assert mode in keys(vit_configs) "`mode` must be one of $(keys(vit_configs))"
-  kwargs = vit_configs[mode]
-  layers = vit(imsize; inchannels, patch_size, nclasses, pool, kwargs...)
+    @assert mode in keys(vit_configs) "`mode` must be one of $(keys(vit_configs))"
+    kwargs = vit_configs[mode]
+    layers = vit(imsize; inchannels, patch_size, nclasses, pool, kwargs...)
 
-  ViT(layers)
+    ViT(layers)
 end
 
 (m::ViT)(x) = m.layers(x)

@@ -20,16 +20,15 @@ patches.
 function PatchEmbedding(imsize::Dims{2} = (224, 224); inchannels::Integer = 3,
                         patch_size::Dims{2} = (16, 16), embedplanes = 768,
                         norm_layer = planes -> identity, flatten = true)
+    im_height, im_width = imsize
+    patch_height, patch_width = patch_size
 
-  im_height, im_width = imsize
-  patch_height, patch_width = patch_size
+    @assert (im_height % patch_height == 0) && (im_width % patch_width == 0)
+    "Image dimensions must be divisible by the patch size."
 
-  @assert (im_height % patch_height == 0) && (im_width % patch_width == 0)
-  "Image dimensions must be divisible by the patch size."
-
-  return Chain(Conv(patch_size, inchannels => embedplanes; stride = patch_size),
-               flatten ? _flatten_spatial : identity,
-               norm_layer(embedplanes))
+    return Chain(Conv(patch_size, inchannels => embedplanes; stride = patch_size),
+                 flatten ? _flatten_spatial : identity,
+                 norm_layer(embedplanes))
 end
 
 """
@@ -38,11 +37,13 @@ end
 Positional embedding layer used by many vision transformer-like models.
 """
 struct ViPosEmbedding{T}
-  vectors::T
+    vectors::T
 end
 
-ViPosEmbedding(embedsize::Integer, npatches::Integer; init = (dims::Dims{2}) -> rand(Float32, dims)) =
-  ViPosEmbedding(init((embedsize, npatches)))
+function ViPosEmbedding(embedsize::Integer, npatches::Integer;
+                        init = (dims::Dims{2}) -> rand(Float32, dims))
+    ViPosEmbedding(init((embedsize, npatches)))
+end
 
 (p::ViPosEmbedding)(x) = x .+ p.vectors
 
@@ -54,7 +55,7 @@ ViPosEmbedding(embedsize::Integer, npatches::Integer; init = (dims::Dims{2}) -> 
 Appends class tokens to an input with embedding dimension `dim` for use in many vision transformer models.
 """
 struct ClassTokens{T}
-  token::T
+    token::T
 end
 
 ClassTokens(dim::Integer; init = Flux.zeros32) = ClassTokens(init(dim, 1, 1))

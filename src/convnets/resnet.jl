@@ -11,9 +11,11 @@ Create a basic residual block
 - `downsample`: set to `true` to downsample the input
 """
 function basicblock(inplanes, outplanes, downsample = false)
-  stride = downsample ? 2 : 1
-  Chain(conv_bn((3, 3), inplanes, outplanes[1]; stride = stride, pad = 1, bias = false)...,
-        conv_bn((3, 3), outplanes[1], outplanes[2], identity; stride = 1, pad = 1, bias = false)...)
+    stride = downsample ? 2 : 1
+    Chain(conv_bn((3, 3), inplanes, outplanes[1]; stride = stride, pad = 1,
+                  bias = false)...,
+          conv_bn((3, 3), outplanes[1], outplanes[2], identity; stride = 1, pad = 1,
+                  bias = false)...)
 end
 
 """
@@ -36,9 +38,11 @@ The original paper uses `stride == [2, 1, 1]` when `downsample == true` instead.
 """
 function bottleneck(inplanes, outplanes, downsample = false;
                     stride = [1, (downsample ? 2 : 1), 1])
-  Chain(conv_bn((1, 1), inplanes, outplanes[1]; stride = stride[1], bias = false)...,
-        conv_bn((3, 3), outplanes[1], outplanes[2]; stride = stride[2], pad = 1, bias = false)...,
-        conv_bn((1, 1), outplanes[2], outplanes[3], identity; stride = stride[3], bias = false)...)
+    Chain(conv_bn((1, 1), inplanes, outplanes[1]; stride = stride[1], bias = false)...,
+          conv_bn((3, 3), outplanes[1], outplanes[2]; stride = stride[2], pad = 1,
+                  bias = false)...,
+          conv_bn((1, 1), outplanes[2], outplanes[3], identity; stride = stride[3],
+                  bias = false)...)
 end
 
 """
@@ -55,8 +59,9 @@ layer which has a stride of 2.
                within the residual block
 - `downsample`: set to `true` to downsample the input
 """
-bottleneck_v1(inplanes, outplanes, downsample = false) =
+function bottleneck_v1(inplanes, outplanes, downsample = false)
     bottleneck(inplanes, outplanes, downsample; stride = [(downsample ? 2 : 1), 1, 1])
+end
 
 """
     resnet(block, residuals::NTuple{2, Any}, connection = addrelu;
@@ -78,31 +83,34 @@ Create a ResNet model
 """
 function resnet(block, residuals::AbstractVector{<:NTuple{2, Any}}, connection = addrelu;
                 channel_config, block_config, nclasses = 1000)
-  inplanes = 64
-  baseplanes = 64
-  layers = []
-  append!(layers, conv_bn((7, 7), 3, inplanes; stride = 2, pad = 3, bias = false))
-  push!(layers, MaxPool((3, 3), stride = (2, 2), pad = (1, 1)))
-  for (i, nrepeats) in enumerate(block_config)
-    # output planes within a block
-    outplanes = baseplanes .* channel_config
-    # push first skip connection on using first residual
-    # downsample the residual path if this is the first repetition of a block
-    push!(layers, Parallel(connection, block(inplanes, outplanes, i != 1),
-                                       residuals[i][1](inplanes, outplanes[end], i != 1)))
-    # push remaining skip connections on using second residual
-    inplanes = outplanes[end]
-    for _ in 2:nrepeats
-      push!(layers, Parallel(connection, block(inplanes, outplanes, false),
-                                         residuals[i][2](inplanes, outplanes[end], false)))
-      inplanes = outplanes[end]
+    inplanes = 64
+    baseplanes = 64
+    layers = []
+    append!(layers, conv_bn((7, 7), 3, inplanes; stride = 2, pad = 3, bias = false))
+    push!(layers, MaxPool((3, 3), stride = (2, 2), pad = (1, 1)))
+    for (i, nrepeats) in enumerate(block_config)
+        # output planes within a block
+        outplanes = baseplanes .* channel_config
+        # push first skip connection on using first residual
+        # downsample the residual path if this is the first repetition of a block
+        push!(layers,
+              Parallel(connection, block(inplanes, outplanes, i != 1),
+                       residuals[i][1](inplanes, outplanes[end], i != 1)))
+        # push remaining skip connections on using second residual
+        inplanes = outplanes[end]
+        for _ in 2:nrepeats
+            push!(layers,
+                  Parallel(connection, block(inplanes, outplanes, false),
+                           residuals[i][2](inplanes, outplanes[end], false)))
+            inplanes = outplanes[end]
+        end
+        # next set of output plane base is doubled
+        baseplanes *= 2
     end
-    # next set of output plane base is doubled
-    baseplanes *= 2
-  end
 
-  return Chain(Chain(layers),
-               Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten, Dense(inplanes, nclasses)))
+    return Chain(Chain(layers),
+                 Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten,
+                       Dense(inplanes, nclasses)))
 end
 
 """
@@ -126,17 +134,16 @@ Create a ResNet model
 - `nclasses`: the number of output classes
 """
 function resnet(block, shortcut_config::AbstractVector{<:Symbol}, args...; kwargs...)
-  shortcut_dict = Dict(
-    :A => (skip_identity, skip_identity),
-    :B => (skip_projection, skip_identity),
-    :C => (skip_projection, skip_projection))
+    shortcut_dict = Dict(:A => (skip_identity, skip_identity),
+                         :B => (skip_projection, skip_identity),
+                         :C => (skip_projection, skip_projection))
 
-  if any(sc -> !haskey(shortcut_dict,sc),shortcut_config)
-    error("Unrecognized shortcut_config ($shortcut_config) passed to `resnet` (use only :A, :B, or :C).")
-  end
+    if any(sc -> !haskey(shortcut_dict, sc), shortcut_config)
+        error("Unrecognized shortcut_config ($shortcut_config) passed to `resnet` (use only :A, :B, or :C).")
+    end
 
-  shortcut = [shortcut_dict[sc] for sc in shortcut_config]
-  resnet(block, shortcut, args...; kwargs...)
+    shortcut = [shortcut_dict[sc] for sc in shortcut_config]
+    resnet(block, shortcut, args...; kwargs...)
 end
 
 function resnet(block, shortcut_config::Symbol, args...; block_config, kwargs...)
@@ -144,14 +151,15 @@ function resnet(block, shortcut_config::Symbol, args...; block_config, kwargs...
            block_config = block_config, kwargs...)
 end
 
-resnet(block, residuals::NTuple{2}, args...; kwargs...) = resnet(block, [residuals], args...; kwargs...)
+function resnet(block, residuals::NTuple{2}, args...; kwargs...)
+    resnet(block, [residuals], args...; kwargs...)
+end
 
-const resnet_config =
-  Dict(18 => (([1, 1], [2, 2, 2, 2], [:A, :B, :B, :B]), basicblock),
-       34 => (([1, 1], [3, 4, 6, 3], [:A, :B, :B, :B]), basicblock),
-       50 => (([1, 1, 4], [3, 4, 6, 3], [:B, :B, :B, :B]), bottleneck),
-       101 => (([1, 1, 4], [3, 4, 23, 3], [:B, :B, :B, :B]), bottleneck),
-       152 => (([1, 1, 4], [3, 8, 36, 3], [:B, :B, :B, :B]), bottleneck))
+const resnet_config = Dict(18 => (([1, 1], [2, 2, 2, 2], [:A, :B, :B, :B]), basicblock),
+                           34 => (([1, 1], [3, 4, 6, 3], [:A, :B, :B, :B]), basicblock),
+                           50 => (([1, 1, 4], [3, 4, 6, 3], [:B, :B, :B, :B]), bottleneck),
+                           101 => (([1, 1, 4], [3, 4, 23, 3], [:B, :B, :B, :B]), bottleneck),
+                           152 => (([1, 1, 4], [3, 8, 36, 3], [:B, :B, :B, :B]), bottleneck))
 
 """
     ResNet(channel_config, block_config, shortcut_config;
@@ -173,19 +181,19 @@ See also [`resnet`](#).
 - `nclasses`: the number of output classes
 """
 struct ResNet
-  layers
+    layers::Any
 end
 
 function ResNet(channel_config, block_config, shortcut_config;
                 block, connection = addrelu, nclasses = 1000)
-  layers = resnet(block,
-                  shortcut_config,
-                  connection;
-                  channel_config = channel_config,
-                  block_config = block_config,
-                  nclasses = nclasses)
+    layers = resnet(block,
+                    shortcut_config,
+                    connection;
+                    channel_config = channel_config,
+                    block_config = block_config,
+                    nclasses = nclasses)
 
-  ResNet(layers)
+    ResNet(layers)
 end
 
 @functor ResNet
