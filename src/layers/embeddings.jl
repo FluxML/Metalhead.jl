@@ -60,7 +60,7 @@ end
 ClassTokens(dim::Integer; init = Flux.zeros32) = ClassTokens(init(dim, 1, 1))
 
 function (m::ClassTokens)(x::AbstractArray{T, 3}) where {T}
-  tokens = m.token .* fill!(similar(x, 1, 1, size(x, 3)), one(T))
+  tokens = m.token .* fill(one(T), (1, 1, size(x, 3)))
   return hcat(tokens, x)
 end
 
