@@ -15,17 +15,17 @@ Creates a feedforward block for the MLPMixer architecture.
 - `drop_path_rate`: Stochastic depth rate
 - `activation`: the activation function to use in the MLP blocks
 """
-function mixerblock(planes, npatches; mlp_ratio = (0.5, 4.0), mlp_layer = mlp_block, 
-                    dropout = 0., drop_path_rate = 0., activation = gelu)
-  tokenplanes, channelplanes = [Int(r * planes) for r in mlp_ratio]
-  return Chain(SkipConnection(Chain(LayerNorm(planes),
-                                    swapdims((2, 1, 3)),
-                                    mlp_layer(npatches, tokenplanes; activation, dropout),
-                                    swapdims((2, 1, 3)),
-                                    DropPath(drop_path_rate)), +),
-               SkipConnection(Chain(LayerNorm(planes),
-                                    mlp_layer(planes, channelplanes; activation, dropout),
-                                    DropPath(drop_path_rate)), +))
+function mixerblock(planes, npatches; mlp_ratio = (0.5, 4.0), mlp_layer = mlp_block,
+                    dropout = 0.0, drop_path_rate = 0.0, activation = gelu)
+    tokenplanes, channelplanes = [Int(r * planes) for r in mlp_ratio]
+    return Chain(SkipConnection(Chain(LayerNorm(planes),
+                                      swapdims((2, 1, 3)),
+                                      mlp_layer(npatches, tokenplanes; activation, dropout),
+                                      swapdims((2, 1, 3)),
+                                      DropPath(drop_path_rate)), +),
+                 SkipConnection(Chain(LayerNorm(planes),
+                                      mlp_layer(planes, channelplanes; activation, dropout),
+                                      DropPath(drop_path_rate)), +))
 end
 
 """
@@ -50,27 +50,30 @@ Creates a model with the MLPMixer architecture.
 - `kwargs`: additional arguments (if any) to pass to the mixer block. Will use the defaults if 
             not specified.
 """
-function mlpmixer(block, imsize::Dims{2} = (224, 224); inchannels = 3, norm_layer = LayerNorm,
-                  patch_size::Dims{2} = (16, 16), embedplanes = 512, drop_path_rate = 0.,
+function mlpmixer(block, imsize::Dims{2} = (224, 224); inchannels = 3,
+                  norm_layer = LayerNorm,
+                  patch_size::Dims{2} = (16, 16), embedplanes = 512, drop_path_rate = 0.0,
                   depth = 12, nclasses = 1000, kwargs...)
-  npatches = prod(imsize .÷ patch_size)
-  dp_rates = LinRange{Float32}(0., drop_path_rate, depth)
-  layers = Chain(PatchEmbedding(imsize; inchannels, patch_size, embedplanes),
-                 Chain([block(embedplanes, npatches; drop_path_rate = dp_rates[i], kwargs...)
-                  for i in 1:depth]))
+    npatches = prod(imsize .÷ patch_size)
+    dp_rates = LinRange{Float32}(0.0, drop_path_rate, depth)
+    layers = Chain(PatchEmbedding(imsize; inchannels, patch_size, embedplanes),
+                   Chain([block(embedplanes, npatches; drop_path_rate = dp_rates[i],
+                                kwargs...)
+                          for i in 1:depth]))
 
-  classification_head = Chain(norm_layer(embedplanes), seconddimmean, Dense(embedplanes, nclasses))
-  return Chain(layers, classification_head)
+    classification_head = Chain(norm_layer(embedplanes), seconddimmean,
+                                Dense(embedplanes, nclasses))
+    return Chain(layers, classification_head)
 end
 
 # Configurations for MLPMixer models
-mixer_configs = Dict(:small => Dict(:depth => 8,  :planes => 512),
-                     :base  => Dict(:depth => 12, :planes => 768),
+mixer_configs = Dict(:small => Dict(:depth => 8, :planes => 512),
+                     :base => Dict(:depth => 12, :planes => 768),
                      :large => Dict(:depth => 24, :planes => 1024),
-                     :huge  => Dict(:depth => 32, :planes => 1280))
+                     :huge => Dict(:depth => 32, :planes => 1280))
 
 struct MLPMixer
-  layers
+    layers::Any
 end
 
 """
@@ -90,12 +93,13 @@ Creates a model with the MLPMixer architecture.
 See also [`Metalhead.mlpmixer`](#).
 """
 function MLPMixer(size::Symbol = :base; patch_size::Dims{2} = (16, 16),
-                  imsize::Dims{2} = (224, 224), drop_path_rate = 0., nclasses = 1000)
-  @assert size in keys(mixer_configs) "`size` must be one of $(keys(mixer_configs))"
-  depth = mixer_configs[size][:depth]
-  embedplanes = mixer_configs[size][:planes]
-  layers = mlpmixer(mixerblock, imsize; patch_size, embedplanes, depth, drop_path_rate, nclasses)
-  MLPMixer(layers)
+                  imsize::Dims{2} = (224, 224), drop_path_rate = 0.0, nclasses = 1000)
+    @assert size in keys(mixer_configs) "`size` must be one of $(keys(mixer_configs))"
+    depth = mixer_configs[size][:depth]
+    embedplanes = mixer_configs[size][:planes]
+    layers = mlpmixer(mixerblock, imsize; patch_size, embedplanes, depth, drop_path_rate,
+                      nclasses)
+    MLPMixer(layers)
 end
 
 @functor MLPMixer
@@ -124,21 +128,22 @@ Creates a block for the ResMixer architecture.
 - `λ`: initialisation constant for the LayerScale
 """
 function resmixerblock(planes, npatches; mlp_ratio = 4.0, mlp_layer = mlp_block,
-                       dropout = 0., drop_path_rate = 0., activation = gelu, λ = 1e-4)
-return Chain(SkipConnection(Chain(Flux.Scale(planes),
-                                  swapdims((2, 1, 3)),
-                                  Dense(npatches, npatches),
-                                  swapdims((2, 1, 3)),
-                                  LayerScale(planes, λ),
-                                  DropPath(drop_path_rate)), +),
-             SkipConnection(Chain(Flux.Scale(planes),
-                                  mlp_layer(planes, Int(mlp_ratio * planes); dropout, activation),
-                                  LayerScale(planes, λ),
-                                  DropPath(drop_path_rate)), +))
+                       dropout = 0.0, drop_path_rate = 0.0, activation = gelu, λ = 1e-4)
+    return Chain(SkipConnection(Chain(Flux.Scale(planes),
+                                      swapdims((2, 1, 3)),
+                                      Dense(npatches, npatches),
+                                      swapdims((2, 1, 3)),
+                                      LayerScale(planes, λ),
+                                      DropPath(drop_path_rate)), +),
+                 SkipConnection(Chain(Flux.Scale(planes),
+                                      mlp_layer(planes, Int(mlp_ratio * planes); dropout,
+                                                activation),
+                                      LayerScale(planes, λ),
+                                      DropPath(drop_path_rate)), +))
 end
 
 struct ResMLP
-  layers
+    layers::Any
 end
 
 """
@@ -158,13 +163,13 @@ Creates a model with the ResMLP architecture.
 See also [`Metalhead.mlpmixer`](#).
 """
 function ResMLP(size::Symbol = :base; patch_size::Dims{2} = (16, 16),
-                imsize::Dims{2} = (224, 224), drop_path_rate = 0., nclasses = 1000)
-  @assert size in keys(mixer_configs) "`size` must be one of $(keys(mixer_configs))"
-  depth = mixer_configs[size][:depth]
-  embedplanes = mixer_configs[size][:planes]
-  layers = mlpmixer(resmixerblock, imsize; mlp_ratio = 4.0, patch_size, embedplanes,
-                    drop_path_rate, depth, nclasses)
-  ResMLP(layers)
+                imsize::Dims{2} = (224, 224), drop_path_rate = 0.0, nclasses = 1000)
+    @assert size in keys(mixer_configs) "`size` must be one of $(keys(mixer_configs))"
+    depth = mixer_configs[size][:depth]
+    embedplanes = mixer_configs[size][:planes]
+    layers = mlpmixer(resmixerblock, imsize; mlp_ratio = 4.0, patch_size, embedplanes,
+                      drop_path_rate, depth, nclasses)
+    ResMLP(layers)
 end
 
 @functor ResMLP
@@ -185,8 +190,8 @@ Creates a spatial gating unit as described in the gMLP paper.
 - `proj`: the projection layer to use
 """
 struct SpatialGatingUnit{T, F}
-  norm::T
-  proj::F
+    norm::T
+    proj::F
 end
 
 """
@@ -201,19 +206,19 @@ Creates a spatial gating unit as described in the gMLP paper.
 - `norm_layer`: the normalisation layer to use
 """
 function SpatialGatingUnit(planes::Integer, npatches::Integer; norm_layer = LayerNorm)
-  gateplanes = planes ÷ 2
-  norm = norm_layer(gateplanes)
-  proj = Dense(2 * eps(Float32) .* rand(Float32, npatches, npatches), ones(npatches))
-  return SpatialGatingUnit(norm, proj)
+    gateplanes = planes ÷ 2
+    norm = norm_layer(gateplanes)
+    proj = Dense(2 * eps(Float32) .* rand(Float32, npatches, npatches), ones(npatches))
+    return SpatialGatingUnit(norm, proj)
 end
 
 @functor SpatialGatingUnit
 
 function (m::SpatialGatingUnit)(x)
-  u, v = chunk(x, 2; dims = 1)
-  v = m.norm(v)
-  v = m.proj(permutedims(v, (2, 1, 3)))
-  return u .* permutedims(v, (2, 1, 3))
+    u, v = chunk(x, 2; dims = 1)
+    v = m.norm(v)
+    v = m.proj(permutedims(v, (2, 1, 3)))
+    return u .* permutedims(v, (2, 1, 3))
 end
 
 """
@@ -235,17 +240,18 @@ Creates a feedforward block based on the gMLP model architecture described in th
 - `activation`: the activation function to use in the MLP blocks
 """
 function spatial_gating_block(planes, npatches; mlp_ratio = 4.0, norm_layer = LayerNorm,
-                              mlp_layer = gated_mlp_block, dropout = 0., drop_path_rate = 0.,
+                              mlp_layer = gated_mlp_block, dropout = 0.0,
+                              drop_path_rate = 0.0,
                               activation = gelu)
-  channelplanes = Int(mlp_ratio * planes)
-  sgu = inplanes -> SpatialGatingUnit(inplanes, npatches; norm_layer)
-  return SkipConnection(Chain(norm_layer(planes),
-                              mlp_layer(sgu, planes, channelplanes; activation, dropout),
-                              DropPath(drop_path_rate)), +)
+    channelplanes = Int(mlp_ratio * planes)
+    sgu = inplanes -> SpatialGatingUnit(inplanes, npatches; norm_layer)
+    return SkipConnection(Chain(norm_layer(planes),
+                                mlp_layer(sgu, planes, channelplanes; activation, dropout),
+                                DropPath(drop_path_rate)), +)
 end
 
 struct gMLP
-  layers
+    layers::Any
 end
 
 """
@@ -265,14 +271,13 @@ Creates a model with the gMLP architecture.
 See also [`Metalhead.mlpmixer`](#).
 """
 function gMLP(size::Symbol = :base; patch_size::Dims{2} = (16, 16),
-              imsize::Dims{2} = (224, 224), drop_path_rate = 0., nclasses = 1000)
-  @assert size in keys(mixer_configs) "`size` must be one of $(keys(mixer_configs))"
-  depth = mixer_configs[size][:depth]
-  embedplanes = mixer_configs[size][:planes]
-  layers = mlpmixer(spatial_gating_block, imsize; mlp_layer = gated_mlp_block,
-                    patch_size, embedplanes, drop_path_rate, depth, nclasses)
-
-  gMLP(layers)
+              imsize::Dims{2} = (224, 224), drop_path_rate = 0.0, nclasses = 1000)
+    @assert size in keys(mixer_configs) "`size` must be one of $(keys(mixer_configs))"
+    depth = mixer_configs[size][:depth]
+    embedplanes = mixer_configs[size][:planes]
+    layers = mlpmixer(spatial_gating_block, imsize; mlp_layer = gated_mlp_block,
+                      patch_size, embedplanes, drop_path_rate, depth, nclasses)
+    gMLP(layers)
 end
 
 @functor gMLP

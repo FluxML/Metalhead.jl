@@ -27,37 +27,37 @@ function mobilenetv1(width_mult, config;
                      inchannels = 3,
                      nclasses = 1000,
                      fcsize = 1024)
-  layers = []
-  for (dw, outch, stride, nrepeats) in config
-    outch = Int(outch * width_mult)
-    for _ in 1:nrepeats
-      layer = dw ? depthwise_sep_conv_bn((3, 3), inchannels, outch, activation;
-                                         stride = stride, pad = 1) :
-                   conv_bn((3, 3), inchannels, outch, activation; stride = stride, pad = 1)
-      append!(layers, layer)
-      inchannels = outch
+    layers = []
+    for (dw, outch, stride, nrepeats) in config
+        outch = Int(outch * width_mult)
+        for _ in 1:nrepeats
+            layer = dw ?
+                    depthwise_sep_conv_bn((3, 3), inchannels, outch, activation;
+                                          stride = stride, pad = 1) :
+                    conv_bn((3, 3), inchannels, outch, activation; stride = stride, pad = 1)
+            append!(layers, layer)
+            inchannels = outch
+        end
     end
-  end
-
-  return Chain(Chain(layers),
-               Chain(GlobalMeanPool(),
-                     MLUtils.flatten,
-                     Dense(inchannels, fcsize, activation),
-                     Dense(fcsize, nclasses)))
+    return Chain(Chain(layers),
+                 Chain(GlobalMeanPool(),
+                       MLUtils.flatten,
+                       Dense(inchannels, fcsize, activation),
+                       Dense(fcsize, nclasses)))
 end
 
 const mobilenetv1_configs = [
-#     dw,    c, s, r
-  (false,   32, 2, 1),
-  ( true,   64, 1, 1),
-  ( true,  128, 2, 1),
-  ( true,  128, 1, 1),
-  ( true,  256, 2, 1),
-  ( true,  256, 1, 1),
-  ( true,  512, 2, 1),
-  ( true,  512, 1, 5),
-  ( true, 1024, 2, 1),
-  ( true, 1024, 1, 1)
+    # dw, c, s, r
+    (false, 32, 2, 1),
+    (true, 64, 1, 1),
+    (true, 128, 2, 1),
+    (true, 128, 1, 1),
+    (true, 256, 2, 1),
+    (true, 256, 1, 1),
+    (true, 512, 2, 1),
+    (true, 512, 1, 5),
+    (true, 1024, 2, 1),
+    (true, 1024, 1, 1),
 ]
 
 """
@@ -77,14 +77,13 @@ Set `pretrain` to `true` to load the pretrained weights for ImageNet.
 See also [`Metalhead.mobilenetv1`](#).
 """
 struct MobileNetv1
-  layers
+    layers::Any
 end
 
 function MobileNetv1(width_mult::Number = 1; pretrain = false, nclasses = 1000)
-  layers = mobilenetv1(width_mult, mobilenetv1_configs; nclasses = nclasses)
-  pretrain && loadpretrain!(layers, string("MobileNetv1"))
-
-  return MobileNetv1(layers)
+    layers = mobilenetv1(width_mult, mobilenetv1_configs; nclasses = nclasses)
+    pretrain && loadpretrain!(layers, string("MobileNetv1"))
+    return MobileNetv1(layers)
 end
 
 @functor MobileNetv1
@@ -95,7 +94,6 @@ backbone(m::MobileNetv1) = m.layers[1]
 classifier(m::MobileNetv1) = m.layers[2]
 
 # MobileNetv2
-
 """
     mobilenetv2(width_mult, configs; max_width = 1280, nclasses = 1000)
 
@@ -115,44 +113,45 @@ Create a MobileNetv2 model.
 - `nclasses`: The number of output classes
 """
 function mobilenetv2(width_mult, configs; max_width = 1280, nclasses = 1000)
-  # building first layer
-  inplanes = _round_channels(32 * width_mult, width_mult == 0.1 ? 4 : 8)
-  layers = []
-  append!(layers, conv_bn((3, 3), 3, inplanes, stride = 2))
-
-  # building inverted residual blocks
-  for (t, c, n, s, a) in configs
-    outplanes = _round_channels(c * width_mult, width_mult == 0.1 ? 4 : 8)
-    for i in 1:n
-      push!(layers, invertedresidual(3, inplanes, inplanes * t, outplanes, a;
-                                     stride = i == 1 ? s : 1))
-      inplanes = outplanes
+    # building first layer
+    inplanes = _round_channels(32 * width_mult, width_mult == 0.1 ? 4 : 8)
+    layers = []
+    append!(layers, conv_bn((3, 3), 3, inplanes, stride = 2))
+    # building inverted residual blocks
+    for (t, c, n, s, a) in configs
+        outplanes = _round_channels(c * width_mult, width_mult == 0.1 ? 4 : 8)
+        for i in 1:n
+            push!(layers,
+                  invertedresidual(3, inplanes, inplanes * t, outplanes, a;
+                                   stride = i == 1 ? s : 1))
+            inplanes = outplanes
+        end
     end
-  end
-
-  # building last several layers
-  outplanes = (width_mult > 1) ? _round_channels(max_width * width_mult, width_mult == 0.1 ? 4 : 8) :
-                                 max_width
-
-  return Chain(Chain(Chain(layers), conv_bn((1, 1), inplanes, outplanes, relu6, bias = false)...),
-               Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten, Dense(outplanes, nclasses)))
+    # building last several layers
+    outplanes = (width_mult > 1) ?
+                _round_channels(max_width * width_mult, width_mult == 0.1 ? 4 : 8) :
+                max_width
+    return Chain(Chain(Chain(layers),
+                       conv_bn((1, 1), inplanes, outplanes, relu6, bias = false)...),
+                 Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten,
+                       Dense(outplanes, nclasses)))
 end
 
 # Layer configurations for MobileNetv2
 const mobilenetv2_configs = [
-#  t,   c, n, s,     a
-  (1,  16, 1, 1, relu6),
-  (6,  24, 2, 2, relu6),
-  (6,  32, 3, 2, relu6),
-  (6,  64, 4, 2, relu6),
-  (6,  96, 3, 1, relu6),
-  (6, 160, 3, 2, relu6),
-  (6, 320, 1, 1, relu6)
+    # t, c, n, s,  a
+    (1, 16, 1, 1, relu6),
+    (6, 24, 2, 2, relu6),
+    (6, 32, 3, 2, relu6),
+    (6, 64, 4, 2, relu6),
+    (6, 96, 3, 1, relu6),
+    (6, 160, 3, 2, relu6),
+    (6, 320, 1, 1, relu6),
 ]
 
 # Model definition for MobileNetv2
 struct MobileNetv2
-  layers
+    layers::Any
 end
 
 """
@@ -172,10 +171,9 @@ Set `pretrain` to `true` to load the pretrained weights for ImageNet.
 See also [`Metalhead.mobilenetv2`](#).
 """
 function MobileNetv2(width_mult::Number = 1; pretrain = false, nclasses = 1000)
-  layers = mobilenetv2(width_mult, mobilenetv2_configs; nclasses = nclasses)
-  pretrain && loadpretrain!(layers, string("MobileNetv2"))
-
-  MobileNetv2(layers)
+    layers = mobilenetv2(width_mult, mobilenetv2_configs; nclasses = nclasses)
+    pretrain && loadpretrain!(layers, string("MobileNetv2"))
+    MobileNetv2(layers)
 end
 
 @functor MobileNetv2
@@ -186,7 +184,6 @@ backbone(m::MobileNetv2) = m.layers[1]
 classifier(m::MobileNetv2) = m.layers[2]
 
 # MobileNetv3
-
 """
     mobilenetv3(width_mult, configs; max_width = 1024, nclasses = 1000)
 
@@ -208,71 +205,70 @@ Create a MobileNetv3 model.
 - `nclasses`: the number of output classes
 """
 function mobilenetv3(width_mult, configs; max_width = 1024, nclasses = 1000)
-  # building first layer
-  inplanes = _round_channels(16 * width_mult, 8)
-  layers = []
-  append!(layers, conv_bn((3, 3), 3, inplanes, hardswish; stride = 2))
-  explanes = 0
-  # building inverted residual blocks
-  for (k, t, c, r, a, s) in configs
-    # inverted residual layers
-    outplanes = _round_channels(c * width_mult, 8)
-    explanes = _round_channels(inplanes * t, 8)
-    push!(layers, invertedresidual(k, inplanes, explanes, outplanes, a;
-                                   stride = s, reduction = r))
-    inplanes = outplanes
-  end
-
-  # building last several layers
-  output_channel = max_width
-  output_channel = width_mult > 1.0 ? _round_channels(output_channel * width_mult, 8) : output_channel
-  classifier = Chain(Dense(explanes, output_channel, hardswish),
-                     Dropout(0.2),
-                     Dense(output_channel, nclasses))
-
-  return Chain(Chain(Chain(layers), conv_bn((1, 1), inplanes, explanes, hardswish, bias = false)...),
-               Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten, classifier))
+    # building first layer
+    inplanes = _round_channels(16 * width_mult, 8)
+    layers = []
+    append!(layers, conv_bn((3, 3), 3, inplanes, hardswish; stride = 2))
+    explanes = 0
+    # building inverted residual blocks
+    for (k, t, c, r, a, s) in configs
+        # inverted residual layers
+        outplanes = _round_channels(c * width_mult, 8)
+        explanes = _round_channels(inplanes * t, 8)
+        push!(layers,
+              invertedresidual(k, inplanes, explanes, outplanes, a;
+                               stride = s, reduction = r))
+        inplanes = outplanes
+    end
+    # building last several layers
+    output_channel = max_width
+    output_channel = width_mult > 1.0 ? _round_channels(output_channel * width_mult, 8) :
+                     output_channel
+    classifier = Chain(Dense(explanes, output_channel, hardswish),
+                       Dropout(0.2),
+                       Dense(output_channel, nclasses))
+    return Chain(Chain(Chain(layers),
+                       conv_bn((1, 1), inplanes, explanes, hardswish, bias = false)...),
+                 Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten, classifier))
 end
 
 # Configurations for small and large mode for MobileNetv3
-mobilenetv3_configs = Dict(
-  :small => [
-  #  k,    t,  c,      SE,         a, s
-    (3,    1, 16,       4,      relu, 2),
-    (3,  4.5, 24, nothing,      relu, 2),
-    (3, 3.67, 24, nothing,      relu, 1),
-    (5,    4, 40,       4, hardswish, 2),
-    (5,    6, 40,       4, hardswish, 1),
-    (5,    6, 40,       4, hardswish, 1),
-    (5,    3, 48,       4, hardswish, 1),
-    (5,    3, 48,       4, hardswish, 1),
-    (5,    6, 96,       4, hardswish, 2),
-    (5,    6, 96,       4, hardswish, 1),
-    (5,    6, 96,       4, hardswish, 1),
-  ], 
-  :large => [
-  #  k,   t,   c,      SE,         a, s
-    (3,   1,  16, nothing,      relu, 1),
-    (3,   4,  24, nothing,      relu, 2),
-    (3,   3,  24, nothing,      relu, 1),
-    (5,   3,  40,       4,      relu, 2),
-    (5,   3,  40,       4,      relu, 1),
-    (5,   3,  40,       4,      relu, 1),
-    (3,   6,  80, nothing, hardswish, 2),
-    (3, 2.5,  80, nothing, hardswish, 1),
-    (3, 2.3,  80, nothing, hardswish, 1),
-    (3, 2.3,  80, nothing, hardswish, 1),
-    (3,   6, 112,       4, hardswish, 1),
-    (3,   6, 112,       4, hardswish, 1),
-    (5,   6, 160,       4, hardswish, 2),
-    (5,   6, 160,       4, hardswish, 1),
-    (5,   6, 160,       4, hardswish, 1)
-  ]
-)
+mobilenetv3_configs = Dict(:small => [
+                               # k, t,  c, SE, a, s
+                               (3, 1, 16, 4, relu, 2),
+                               (3, 4.5, 24, nothing, relu, 2),
+                               (3, 3.67, 24, nothing, relu, 1),
+                               (5, 4, 40, 4, hardswish, 2),
+                               (5, 6, 40, 4, hardswish, 1),
+                               (5, 6, 40, 4, hardswish, 1),
+                               (5, 3, 48, 4, hardswish, 1),
+                               (5, 3, 48, 4, hardswish, 1),
+                               (5, 6, 96, 4, hardswish, 2),
+                               (5, 6, 96, 4, hardswish, 1),
+                               (5, 6, 96, 4, hardswish, 1),
+                           ],
+                           :large => [
+                               # k, t, c, SE, a, s
+                               (3, 1, 16, nothing, relu, 1),
+                               (3, 4, 24, nothing, relu, 2),
+                               (3, 3, 24, nothing, relu, 1),
+                               (5, 3, 40, 4, relu, 2),
+                               (5, 3, 40, 4, relu, 1),
+                               (5, 3, 40, 4, relu, 1),
+                               (3, 6, 80, nothing, hardswish, 2),
+                               (3, 2.5, 80, nothing, hardswish, 1),
+                               (3, 2.3, 80, nothing, hardswish, 1),
+                               (3, 2.3, 80, nothing, hardswish, 1),
+                               (3, 6, 112, 4, hardswish, 1),
+                               (3, 6, 112, 4, hardswish, 1),
+                               (5, 6, 160, 4, hardswish, 2),
+                               (5, 6, 160, 4, hardswish, 1),
+                               (5, 6, 160, 4, hardswish, 1),
+                           ])
 
 # Model definition for MobileNetv3
 struct MobileNetv3
-  layers
+    layers::Any
 end
 
 """
@@ -292,13 +288,14 @@ Set `pretrain = true` to load the model with pre-trained weights for ImageNet.
 
 See also [`Metalhead.mobilenetv3`](#).
 """
-function MobileNetv3(mode::Symbol = :small, width_mult::Number = 1; pretrain = false, nclasses = 1000)
-  @assert mode in [:large, :small] "`mode` has to be either :large or :small"
-
-  max_width = (mode == :large) ? 1280 : 1024
-  layers = mobilenetv3(width_mult, mobilenetv3_configs[mode]; max_width = max_width, nclasses = nclasses)
-  pretrain && loadpretrain!(layers, string("MobileNetv3", mode))
-  MobileNetv3(layers)
+function MobileNetv3(mode::Symbol = :small, width_mult::Number = 1; pretrain = false,
+                     nclasses = 1000)
+    @assert mode in [:large, :small] "`mode` has to be either :large or :small"
+    max_width = (mode == :large) ? 1280 : 1024
+    layers = mobilenetv3(width_mult, mobilenetv3_configs[mode]; max_width = max_width,
+                         nclasses = nclasses)
+    pretrain && loadpretrain!(layers, string("MobileNetv3", mode))
+    MobileNetv3(layers)
 end
 
 @functor MobileNetv3
