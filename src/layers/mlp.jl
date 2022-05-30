@@ -11,10 +11,10 @@ Feedforward block used in many MLPMixer-like and vision-transformer models.
 - `dropout`: Dropout rate.
 - `activation`: Activation function to use.
 """
-function mlp_block(inplanes::Integer, hidden_planes::Integer, outplanes::Integer = inplanes; 
-                   dropout = 0., activation = gelu)
-  Chain(Dense(inplanes, hidden_planes, activation), Dropout(dropout),
-        Dense(hidden_planes, outplanes), Dropout(dropout))
+function mlp_block(inplanes::Integer, hidden_planes::Integer, outplanes::Integer = inplanes;
+                   dropout = 0.0, activation = gelu)
+    Chain(Dense(inplanes, hidden_planes, activation), Dropout(dropout),
+          Dense(hidden_planes, outplanes), Dropout(dropout))
 end
 
 """
@@ -33,12 +33,12 @@ Feedforward block based on the implementation in the paper "Pay Attention to MLP
 - `activation`: Activation function to use.
 """
 function gated_mlp_block(gate_layer, inplanes::Integer, hidden_planes::Integer,
-                         outplanes::Integer = inplanes; dropout = 0., activation = gelu)
-  @assert hidden_planes % 2 == 0 "`hidden_planes` must be even for gated MLP"
-  return Chain(Dense(inplanes, hidden_planes, activation),
-               Dropout(dropout),
-               gate_layer(hidden_planes),
-               Dense(hidden_planes ÷ 2, outplanes),
-               Dropout(dropout))
+                         outplanes::Integer = inplanes; dropout = 0.0, activation = gelu)
+    @assert hidden_planes % 2==0 "`hidden_planes` must be even for gated MLP"
+    return Chain(Dense(inplanes, hidden_planes, activation),
+                 Dropout(dropout),
+                 gate_layer(hidden_planes),
+                 Dense(hidden_planes ÷ 2, outplanes),
+                 Dropout(dropout))
 end
 gated_mlp_block(::typeof(identity), args...; kwargs...) = mlp_block(args...; kwargs...)

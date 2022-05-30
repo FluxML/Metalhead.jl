@@ -4,9 +4,9 @@ seconddimmean(x) = dropdims(mean(x, dims = 2); dims = 2)
 # utility function for making sure that all layers have a channel size divisible by 8
 # used by MobileNet variants
 function _round_channels(channels, divisor, min_value = divisor)
-  new_channels = max(min_value, floor(Int, channels + divisor / 2) ÷ divisor * divisor)
-  # Make sure that round down does not go down by more than 10%
-  return (new_channels < 0.9 * channels) ? new_channels + divisor : new_channels
+    new_channels = max(min_value, floor(Int, channels + divisor / 2) ÷ divisor * divisor)
+    # Make sure that round down does not go down by more than 10%
+    return (new_channels < 0.9 * channels) ? new_channels + divisor : new_channels
 end
 
 """
@@ -47,11 +47,11 @@ swapdims(perm) = Base.Fix2(permutedims, perm)
 
 # Utility function for pretty printing large models
 function _maybe_big_show(io, model)
-  if isdefined(Flux, :_big_show)
-    if isnothing(get(io, :typeinfo, nothing)) # e.g. top level in REPL
-      Flux._big_show(io, model)
-    else
-      show(io, model)
+    if isdefined(Flux, :_big_show)
+        if isnothing(get(io, :typeinfo, nothing)) # e.g. top level in REPL
+            Flux._big_show(io, model)
+        else
+            show(io, model)
+        end
     end
-  end
 end

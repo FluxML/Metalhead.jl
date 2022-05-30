@@ -24,28 +24,26 @@ Create a convolution + batch normalization pair with activation.
 """
 function conv_bn(kernelsize, inplanes, outplanes, activation = relu;
                  rev = false, preact = false,
-                 initβ = Flux.zeros32, initγ = Flux.ones32, ϵ = 1f-5, momentum = 1f-1,
+                 initβ = Flux.zeros32, initγ = Flux.ones32, ϵ = 1.0f-5, momentum = 1.0f-1,
                  kwargs...)
-  layers = []
-
-  if rev
-    activations = (conv = activation, bn = identity)
-    bnplanes = inplanes
-  else
-    activations = (conv = identity, bn = activation)
-    bnplanes = outplanes
-  end
-
-  if preact
-    rev ? throw(ArgumentError("preact and rev cannot be set at the same time")) :
-          activations = (conv = activation, bn = identity)
-  end
-
-  push!(layers, Conv(kernelsize, Int(inplanes) => Int(outplanes), activations.conv; kwargs...))
-  push!(layers, BatchNorm(Int(bnplanes), activations.bn;
-                          initβ = initβ, initγ = initγ, ϵ = ϵ, momentum = momentum))
-
-  return rev ? reverse(layers) : layers
+    layers = []
+    if rev
+        activations = (conv = activation, bn = identity)
+        bnplanes = inplanes
+    else
+        activations = (conv = identity, bn = activation)
+        bnplanes = outplanes
+    end
+    if preact
+        rev ? throw(ArgumentError("preact and rev cannot be set at the same time")) :
+        activations = (conv = activation, bn = identity)
+    end
+    push!(layers,
+          Conv(kernelsize, Int(inplanes) => Int(outplanes), activations.conv; kwargs...))
+    push!(layers,
+          BatchNorm(Int(bnplanes), activations.bn;
+                    initβ = initβ, initγ = initγ, ϵ = ϵ, momentum = momentum))
+    return rev ? reverse(layers) : layers
 end
 
 """
@@ -77,18 +75,19 @@ See Fig. 3 in [reference](https://arxiv.org/abs/1704.04861v1).
 - `initβ`, `initγ`: initialization for the batch norm (see [`Flux.BatchNorm`](#))
 - `ϵ`, `momentum`: batch norm parameters (see [`Flux.BatchNorm`](#))
 """
-depthwise_sep_conv_bn(kernelsize, inplanes, outplanes, activation = relu;
-                      rev = false,
-                      initβ = Flux.zeros32, initγ = Flux.ones32,
-                      ϵ = 1f-5, momentum = 1f-1,
-                      stride = 1, kwargs...) =
-  vcat(conv_bn(kernelsize, inplanes, inplanes, activation;
-               rev = rev, initβ = initβ, initγ = initγ,
-               ϵ = ϵ, momentum = momentum,
-               stride = stride, groups = Int(inplanes), kwargs...),
-      conv_bn((1, 1), inplanes, outplanes, activation;
-              rev = rev, initβ = initβ, initγ = initγ,
-              ϵ = ϵ, momentum = momentum))
+function depthwise_sep_conv_bn(kernelsize, inplanes, outplanes, activation = relu;
+                               rev = false,
+                               initβ = Flux.zeros32, initγ = Flux.ones32,
+                               ϵ = 1.0f-5, momentum = 1.0f-1,
+                               stride = 1, kwargs...)
+    vcat(conv_bn(kernelsize, inplanes, inplanes, activation;
+                 rev = rev, initβ = initβ, initγ = initγ,
+                 ϵ = ϵ, momentum = momentum,
+                 stride = stride, groups = Int(inplanes), kwargs...),
+         conv_bn((1, 1), inplanes, outplanes, activation;
+                 rev = rev, initβ = initβ, initγ = initγ,
+                 ϵ = ϵ, momentum = momentum))
+end
 
 """
     skip_projection(inplanes, outplanes, downsample = false)
@@ -101,9 +100,11 @@ Create a skip projection
 - `outplanes`: the number of output feature maps
 - `downsample`: set to `true` to downsample the input
 """
-skip_projection(inplanes, outplanes, downsample = false) = downsample ?
-  Chain(conv_bn((1, 1), inplanes, outplanes, identity; stride = 2, bias = false)) :
-  Chain(conv_bn((1, 1), inplanes, outplanes, identity; stride = 1, bias = false))
+function skip_projection(inplanes, outplanes, downsample = false)
+    downsample ?
+    Chain(conv_bn((1, 1), inplanes, outplanes, identity; stride = 2, bias = false)) :
+    Chain(conv_bn((1, 1), inplanes, outplanes, identity; stride = 1, bias = false))
+end
 
 # array -> PaddedView(0, array, outplanes) for zero padding arrays
 """
@@ -118,15 +119,16 @@ Create a identity projection
 - `downsample`: this argument is ignored but it is needed for compatibility with [`resnet`](#).
 """
 function skip_identity(inplanes, outplanes)
-  if outplanes > inplanes
-    return Chain(MaxPool((1, 1), stride = 2),
-                 y -> cat(y, zeros(eltype(y),
-                                   size(y, 1),
-                                   size(y, 2),
-                                   outplanes - inplanes, size(y, 4)); dims = 3))
-  else
-    return identity
-  end
+    if outplanes > inplanes
+        return Chain(MaxPool((1, 1), stride = 2),
+                     y -> cat(y,
+                              zeros(eltype(y),
+                                    size(y, 1),
+                                    size(y, 2),
+                                    outplanes - inplanes, size(y, 4)); dims = 3))
+    else
+        return identity
+    end
 end
 skip_identity(inplanes, outplanes, downsample) = skip_identity(inplanes, outplanes)
 
@@ -142,10 +144,11 @@ Squeeze and excitation layer used by MobileNet variants
                    (must be >= 1)
 """
 function squeeze_excite(channels, reduction = 4)
-  @assert (reduction >= 1) "`reduction` must be >= 1"
-  SkipConnection(Chain(AdaptiveMeanPool((1, 1)),
-                       conv_bn((1, 1), channels, channels ÷ reduction, relu; bias = false)...,
-                       conv_bn((1, 1), channels ÷ reduction, channels, hardσ)...), .*)
+    @assert (reduction>=1) "`reduction` must be >= 1"
+    SkipConnection(Chain(AdaptiveMeanPool((1, 1)),
+                         conv_bn((1, 1), channels, channels ÷ reduction, relu;
+                                 bias = false)...,
+                         conv_bn((1, 1), channels ÷ reduction, channels, hardσ)...), .*)
 end
 
 """
@@ -166,21 +169,22 @@ Create a basic inverted residual block for MobileNet variants
                in a squeeze and excite layer (see [`squeeze_excite`](#)).
                Must be >= 1 or `nothing` for no squeeze and excite layer.
 """
-function invertedresidual(kernel_size, inplanes, hidden_planes, outplanes, activation = relu;
+function invertedresidual(kernel_size, inplanes, hidden_planes, outplanes,
+                          activation = relu;
                           stride, reduction = nothing)
-  @assert stride in [1, 2] "`stride` has to be 1 or 2"
+    @assert stride in [1, 2] "`stride` has to be 1 or 2"
+    pad = @. (kernel_size - 1) ÷ 2
+    conv1 = (inplanes == hidden_planes) ? identity :
+            Chain(conv_bn((1, 1), inplanes, hidden_planes, activation; bias = false))
+    selayer = isnothing(reduction) ? identity : squeeze_excite(hidden_planes, reduction)
+    invres = Chain(conv1,
+                   conv_bn(kernel_size, hidden_planes, hidden_planes, activation;
+                           bias = false, stride, pad = pad, groups = hidden_planes)...,
+                   selayer,
+                   conv_bn((1, 1), hidden_planes, outplanes, identity; bias = false)...)
 
-  pad = @. (kernel_size - 1) ÷ 2
-  conv1 = (inplanes == hidden_planes) ? identity : Chain(conv_bn((1, 1), inplanes, hidden_planes, activation; bias = false))
-  selayer = isnothing(reduction) ? identity : squeeze_excite(hidden_planes, reduction)
-
-  invres = Chain(conv1,
-                 conv_bn(kernel_size, hidden_planes, hidden_planes, activation;
-                         bias = false, stride, pad = pad, groups = hidden_planes)...,
-                 selayer,
-                 conv_bn((1, 1), hidden_planes, outplanes, identity; bias = false)...)
-
-  (stride == 1 && inplanes == outplanes) ? SkipConnection(invres, +) : invres
+    (stride == 1 && inplanes == outplanes) ? SkipConnection(invres, +) : invres
 end
-invertedresidual(kernel_size::Integer, args...; kwargs...) =
-  invertedresidual((kernel_size, kernel_size), args...; kwargs...)
+function invertedresidual(kernel_size::Integer, args...; kwargs...)
+    invertedresidual((kernel_size, kernel_size), args...; kwargs...)
+end

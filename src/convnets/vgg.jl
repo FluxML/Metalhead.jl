@@ -11,18 +11,18 @@ A VGG block of convolution layers
 - `batchnorm`: set to `true` to include batch normalization after each convolution
 """
 function vgg_block(ifilters, ofilters, depth, batchnorm)
-  k = (3,3)
-  p = (1,1)
-  layers = []
-  for _ in 1:depth
-    if batchnorm
-      append!(layers, conv_bn(k, ifilters, ofilters; pad = p, bias = false))
-    else
-      push!(layers, Conv(k, ifilters => ofilters, relu, pad = p))
+    k = (3, 3)
+    p = (1, 1)
+    layers = []
+    for _ in 1:depth
+        if batchnorm
+            append!(layers, conv_bn(k, ifilters, ofilters; pad = p, bias = false))
+        else
+            push!(layers, Conv(k, ifilters => ofilters, relu, pad = p))
+        end
+        ifilters = ofilters
     end
-    ifilters = ofilters
-  end
-  return layers
+    return layers
 end
 
 """
@@ -38,14 +38,14 @@ Create VGG convolution layers
 - `inchannels`: number of input channels
 """
 function vgg_convolutional_layers(config, batchnorm, inchannels)
-  layers = []
-  ifilters = inchannels
-  for c in config
-    append!(layers, vgg_block(ifilters, c..., batchnorm))
-    push!(layers, MaxPool((2,2), stride=2))
-    ifilters, _ = c
-  end
-  return layers
+    layers = []
+    ifilters = inchannels
+    for c in config
+        append!(layers, vgg_block(ifilters, c..., batchnorm))
+        push!(layers, MaxPool((2, 2), stride = 2))
+        ifilters, _ = c
+    end
+    return layers
 end
 
 """
@@ -62,12 +62,12 @@ Create VGG classifier (fully connected) layers
 - `dropout`: the dropout level between each fully connected layer
 """
 function vgg_classifier_layers(imsize, nclasses, fcsize, dropout)
-  return Chain(MLUtils.flatten,
-               Dense(Int(prod(imsize)), fcsize, relu),
-               Dropout(dropout),
-               Dense(fcsize, fcsize, relu),
-               Dropout(dropout),
-               Dense(fcsize, nclasses))
+    return Chain(MLUtils.flatten,
+                 Dense(Int(prod(imsize)), fcsize, relu),
+                 Dropout(dropout),
+                 Dense(fcsize, fcsize, relu),
+                 Dropout(dropout),
+                 Dense(fcsize, nclasses))
 end
 
 """
@@ -88,16 +88,16 @@ Create a VGG model
 - `dropout`: dropout level between fully connected layers
 """
 function vgg(imsize; config, inchannels, batchnorm = false, nclasses, fcsize, dropout)
-  conv = vgg_convolutional_layers(config, batchnorm, inchannels)
-  imsize = outputsize(conv, (imsize..., inchannels); padbatch = true)[1:3]
-  class = vgg_classifier_layers(imsize, nclasses, fcsize, dropout)
-  return Chain(Chain(conv), class)
+    conv = vgg_convolutional_layers(config, batchnorm, inchannels)
+    imsize = outputsize(conv, (imsize..., inchannels); padbatch = true)[1:3]
+    class = vgg_classifier_layers(imsize, nclasses, fcsize, dropout)
+    return Chain(Chain(conv), class)
 end
 
-const vgg_conv_config = Dict(:A => [(64,1), (128,1), (256,2), (512,2), (512,2)],
-                             :B => [(64,2), (128,2), (256,2), (512,2), (512,2)],
-                             :D => [(64,2), (128,2), (256,3), (512,3), (512,3)],
-                             :E => [(64,2), (128,2), (256,4), (512,4), (512,4)])
+const vgg_conv_config = Dict(:A => [(64, 1), (128, 1), (256, 2), (512, 2), (512, 2)],
+                             :B => [(64, 2), (128, 2), (256, 2), (512, 2), (512, 2)],
+                             :D => [(64, 2), (128, 2), (256, 3), (512, 3), (512, 3)],
+                             :E => [(64, 2), (128, 2), (256, 4), (512, 4), (512, 4)])
 
 const vgg_config = Dict(11 => :A,
                         13 => :B,
@@ -105,7 +105,7 @@ const vgg_config = Dict(11 => :A,
                         19 => :E)
 
 struct VGG
-  layers
+    layers::Any
 end
 
 """
@@ -124,14 +124,14 @@ Construct a VGG model with the specified input image size. Typically, the image 
 """
 function VGG(imsize::Dims{2};
              config, inchannels, batchnorm = false, nclasses, fcsize, dropout)
-  layers = vgg(imsize; config = config,
-                       inchannels = inchannels,
-                       batchnorm = batchnorm,
-                       nclasses = nclasses,
-                       fcsize = fcsize,
-                       dropout = dropout)
+    layers = vgg(imsize; config = config,
+                 inchannels = inchannels,
+                 batchnorm = batchnorm,
+                 nclasses = nclasses,
+                 fcsize = fcsize,
+                 dropout = dropout)
 
-  VGG(layers)
+    VGG(layers)
 end
 
 @functor VGG
@@ -155,21 +155,19 @@ See also [`VGG`](#).
 - `pretrain`: set to `true` to load pre-trained model weights for ImageNet
 """
 function VGG(depth::Integer = 16; pretrain = false, batchnorm = false, nclasses = 1000)
-  @assert depth in keys(vgg_config) "depth must be from one in $(sort(collect(keys(vgg_config))))"
-
-  model = VGG((224, 224); config = vgg_conv_config[vgg_config[depth]],
-                          inchannels = 3,
-                          batchnorm = batchnorm,
-                          nclasses = nclasses,
-                          fcsize = 4096,
-                          dropout = 0.5)
-
-  if pretrain && !batchnorm
-    loadpretrain!(model, string("VGG", depth))
-  elseif pretrain
-    loadpretrain!(model, "VGG$(depth)-BN)")
-  end
-  model
+    @assert depth in keys(vgg_config) "depth must be from one in $(sort(collect(keys(vgg_config))))"
+    model = VGG((224, 224); config = vgg_conv_config[vgg_config[depth]],
+                inchannels = 3,
+                batchnorm = batchnorm,
+                nclasses = nclasses,
+                fcsize = 4096,
+                dropout = 0.5)
+    if pretrain && !batchnorm
+        loadpretrain!(model, string("VGG", depth))
+    elseif pretrain
+        loadpretrain!(model, "VGG$(depth)-BN)")
+    end
+    model
 end
 
 # deprecations
