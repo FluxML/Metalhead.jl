@@ -35,6 +35,8 @@
 | [ConvNeXt](https://arxiv.org/abs/2201.03545)     | [`ConvNeXt`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.ConvNeXt.html)       | N            |
 | [ConvMixer](https://arxiv.org/abs/2201.09792)    | [`ConvMixer`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.ConvMixer.html)     | N            |
 
+To contribute new models, see our [contributing docs](https://fluxml.ai/Metalhead.jl/dev/docs/developer-guide/contributing.html).
+
 ## Getting Started
 
 You can find the Metalhead.jl getting started guide [here](https://fluxml.ai/Metalhead.jl/dev/docs/tutorials/quickstart.html).
