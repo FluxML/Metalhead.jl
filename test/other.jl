@@ -1,6 +1,3 @@
-using Metalhead, Test
-using Flux
-
 @testset "MLPMixer" begin
 	@testset for mode in [:small, :base, :large] # :huge]
 		@testset for drop_path_rate in [0.0, 0.5]
