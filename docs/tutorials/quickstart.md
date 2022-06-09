@@ -5,15 +5,44 @@
 using Flux, Metalhead
 ```
 
-Using a model from Metalhead is as simple as selecting a model from the table of [available models](#). For example, below we use the ResNet-18 model.
+Using a model from Metalhead is as simple as selecting a model from the table of [available models](#). For example, below we use the pre-trained ResNet-18 model.
 {cell=quickstart}
 ```julia
 using Flux, Metalhead
 
-model = ResNet(18)
+model = ResNet(18; pretrain = true)
 ```
 
-Now, we can use this model with Flux like any other model. Below, we train it on some randomly generated data.
+Now, we can use this model with Flux like any other model.
+
+First, let's check the accuracy on a test image from ImageNet.
+{cell=quickstart}
+```julia
+using Images
+
+# test image
+img = Images.load(download("https://cdn.pixabay.com/photo/2015/05/07/11/02/guitar-756326_960_720.jpg"))
+```
+We'll use the popular [DataAugmentation.jl](https://github.com/lorenzoh/DataAugmentation.jl) library to crop our input image, convert it to a plain array, and normalize the pixels.
+{cell=quickstart}
+```julia
+using DataAugmentation
+
+DATA_MEAN = (0.485, 0.456, 0.406)
+DATA_STD = (0.229, 0.224, 0.225)
+
+augmentations = CenterCrop((224, 224)) |>
+                ImageToTensor() |>
+                Normalize(DATA_MEAN, DATA_STD)
+data = apply(augmentations, Image(img)) |> itemdata
+
+# image net labels
+labels = readlines(download("https://raw.githubusercontent.com/pytorch/hub/master/imagenet_classes.txt"))
+
+Flux.onecold(model(data), labels)
+```
+
+Below, we train it on some randomly generated data.
 
 ```julia
 using Flux: onehotbatch
