@@ -258,6 +258,6 @@ function ResNet(depth::Integer = 50; pretrain = false, nclasses = 1000)
     @assert depth in keys(resnet_config) "`depth` must be one of $(sort(collect(keys(resnet_config))))"
     config, block = resnet_config[depth]
     model = ResNet(config...; block = block, nclasses = nclasses)
-    pretrain && loadpretrain!(model, string("ResNet", depth))
+    pretrain && loadpretrain!(model, string("resnet", depth))
     return model
 end

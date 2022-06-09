@@ -3,7 +3,17 @@ using Flux
 using Flux: Zygote
 using Images
 
-const PRETRAINED_MODELS = [(VGG, 11, false)]
+const PRETRAINED_MODELS = [
+  (VGG, 11, false),
+  (VGG, 13, false),
+  (VGG, 16, false),
+  (VGG, 19, false),
+  (ResNet, 18),
+  (ResNet, 34),
+  (ResNet, 50),
+  (ResNet, 101),
+  (ResNet, 152),
+]
 
 function gradtest(model, input)
     y, pb = Zygote.pullback(() -> model(input), Flux.params(model))
@@ -29,9 +39,9 @@ const TEST_X = permutedims(convert(Array{Float32}, channelview(TEST_IMG)), (3,2,
 const TEST_LBLS = readlines(download("https://raw.githubusercontent.com/pytorch/hub/master/imagenet_classes.txt"))
 
 function acctest(model)
-  @show ypred = Flux.onecold(model(TEST_X), TEST_LBLS)
+  ypred = Flux.onecold(model(TEST_X), TEST_LBLS)
 
-  return ypred == "acoustic guitar"
+  return only(ypred) == "acoustic guitar"
 end
 
 x_224 = rand(Float32, 224, 224, 3, 1)
