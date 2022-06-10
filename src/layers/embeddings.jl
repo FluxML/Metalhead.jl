@@ -59,9 +59,12 @@ end
 
 ClassTokens(dim::Integer; init = Flux.zeros32) = ClassTokens(init(dim, 1, 1))
 
+_fill_like(y::AbstractArray{T, 3}) where {T} = fill!(similar(y, 1, 1, size(y, 3)), one(T))
+ChainRulesCore.@non_differentiable _fill_like(y)
+
 function (m::ClassTokens)(x::AbstractArray{T, 3}) where {T}
-  tokens = m.token .* fill(one(T), (1, 1, size(x, 3)))
-  return hcat(tokens, x)
+    tokens = m.token .* _fill_like(x)
+    return hcat(tokens, x)
 end
 
 @functor ClassTokens
