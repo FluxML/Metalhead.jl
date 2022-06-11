@@ -179,7 +179,7 @@ GC.gc()
             GC.safepoint()
             GC.gc()
         end
-    end 
+    end
 end
 
 GC.safepoint()
@@ -187,9 +187,10 @@ GC.gc()
 
 @testset "ConvMixer" verbose=true begin
     @testset for mode in [:small, :base, :large]
-    m = ConvMixer(mode)
-    @test size(m(x_224)) == (1000, 1)
-    @test gradtest(m, x_224)
-    GC.safepoint()
-    GC.gc()
-end end
+        m = ConvMixer(mode)
+        @test size(m(x_224)) == (1000, 1)
+        @test gradtest(m, x_224)
+        GC.safepoint()
+        GC.gc()
+    end
+end
