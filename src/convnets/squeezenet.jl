@@ -14,7 +14,7 @@ Create a fire module
 function fire(inplanes, squeeze_planes, expand1x1_planes, expand3x3_planes)
     branch_1 = Conv((1, 1), inplanes => squeeze_planes, relu)
     branch_2 = Conv((1, 1), squeeze_planes => expand1x1_planes, relu)
-    branch_3 = Conv((3, 3), squeeze_planes => expand3x3_planes; pad = 1, relu)
+    branch_3 = Conv((3, 3), squeeze_planes => expand3x3_planes, relu; pad = 1)
 
     return Chain(branch_1,
                  Parallel(cat_channels,

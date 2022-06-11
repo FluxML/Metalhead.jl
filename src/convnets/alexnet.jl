@@ -9,7 +9,7 @@ Create an AlexNet model
   - `nclasses`: the number of output classes
 """
 function alexnet(; nclasses = 1000)
-    layers = Chain(Chain(Conv((11, 11), 3 => 64; stride = (4, 4), relu, pad = (2, 2)),
+    layers = Chain(Chain(Conv((11, 11), 3 => 64, relu; stride = (4, 4), pad = (2, 2)),
                          MaxPool((3, 3); stride = (2, 2)),
                          Conv((5, 5), 64 => 192, relu; pad = (2, 2)),
                          MaxPool((3, 3); stride = (2, 2)),

@@ -66,9 +66,6 @@ function resnext(cardinality, width, widen_factor = 2,
         # double width after every cluster of blocks
         width *= widen_factor
     end
-    baseplanes = outplanes
-    # double width after every cluster of blocks
-    width *= widen_factor
     return Chain(Chain(layers),
                  Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten,
                        Dense(inplanes, nclasses)))
