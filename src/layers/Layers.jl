@@ -1,8 +1,10 @@
 module Layers
 
 using Flux
-using Flux: outputsize, Zygote
+using NNlib
+using NNlibCUDA
 using Functors
+using ChainRulesCore
 using Statistics
 using MLUtils
 
@@ -10,10 +12,10 @@ include("../utilities.jl")
 
 include("attention.jl")
 include("embeddings.jl")
-include("mlp.jl")
+include("mlp-linear.jl")
 include("normalise.jl")
 include("conv.jl")
-include("others.jl")
+include("drop.jl")
 
 export MHAttention,
        PatchEmbedding, ViPosEmbedding, ClassTokens,

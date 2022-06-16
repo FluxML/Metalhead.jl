@@ -1,4 +1,19 @@
 """
+    LayerScale(λ, planes::Integer)
+
+Creates a `Flux.Scale` layer that performs "`LayerScale`"
+([reference](https://arxiv.org/abs/2103.17239)).
+
+# Arguments
+
+  - `planes`: Size of channel dimension in the input.
+  - `λ`: initialisation value for the learnable diagonal matrix.
+"""
+function LayerScale(planes::Integer, λ)
+    return λ > 0 ? Flux.Scale(fill(Float32(λ), planes), false) : identity
+end
+
+"""
     mlp_block(inplanes::Integer, hidden_planes::Integer, outplanes::Integer = inplanes; 
               dropout = 0., activation = gelu)
 
