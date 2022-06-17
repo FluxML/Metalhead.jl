@@ -1,7 +1,7 @@
 ## Inceptionv3
 
 """
-    inception3_a(inplanes, pool_proj)
+    inceptionv3_a(inplanes, pool_proj)
 
 Create an Inception-v3 style-A module
 (ref: Fig. 5 in [paper](https://arxiv.org/abs/1512.00567v3)).
@@ -11,7 +11,7 @@ Create an Inception-v3 style-A module
   - `inplanes`: number of input feature maps
   - `pool_proj`: the number of output feature maps for the pooling projection
 """
-function inception3_a(inplanes, pool_proj)
+function inceptionv3_a(inplanes, pool_proj)
     branch1x1 = Chain(conv_bn((1, 1), inplanes, 64))
     branch5x5 = Chain(conv_bn((1, 1), inplanes, 48)...,
                       conv_bn((5, 5), 48, 64; pad = 2)...)
@@ -25,7 +25,7 @@ function inception3_a(inplanes, pool_proj)
 end
 
 """
-    inception3_b(inplanes)
+    inceptionv3_b(inplanes)
 
 Create an Inception-v3 style-B module
 (ref: Fig. 10 in [paper](https://arxiv.org/abs/1512.00567v3)).
@@ -34,7 +34,7 @@ Create an Inception-v3 style-B module
 
   - `inplanes`: number of input feature maps
 """
-function inception3_b(inplanes)
+function inceptionv3_b(inplanes)
     branch3x3_1 = Chain(conv_bn((3, 3), inplanes, 384; stride = 2))
     branch3x3_2 = Chain(conv_bn((1, 1), inplanes, 64)...,
                         conv_bn((3, 3), 64, 96; pad = 1)...,
@@ -45,7 +45,7 @@ function inception3_b(inplanes)
 end
 
 """
-    inception3_c(inplanes, inner_planes, n = 7)
+    inceptionv3_c(inplanes, inner_planes, n = 7)
 
 Create an Inception-v3 style-C module
 (ref: Fig. 6 in [paper](https://arxiv.org/abs/1512.00567v3)).
@@ -56,7 +56,7 @@ Create an Inception-v3 style-C module
   - `inner_planes`: the number of output feature maps within each branch
   - `n`: the "grid size" (kernel size) for the convolution layers
 """
-function inception3_c(inplanes, inner_planes, n = 7)
+function inceptionv3_c(inplanes, inner_planes, n = 7)
     branch1x1 = Chain(conv_bn((1, 1), inplanes, 192))
     branch7x7_1 = Chain(conv_bn((1, 1), inplanes, inner_planes)...,
                         conv_bn((1, n), inner_planes, inner_planes; pad = (0, 3))...,
@@ -73,7 +73,7 @@ function inception3_c(inplanes, inner_planes, n = 7)
 end
 
 """
-    inception3_d(inplanes)
+    inceptionv3_d(inplanes)
 
 Create an Inception-v3 style-D module
 (ref: [pytorch](https://github.com/pytorch/vision/blob/6db1569c89094cf23f3bc41f79275c45e9fcb3f3/torchvision/models/inception.py#L322)).
@@ -82,7 +82,7 @@ Create an Inception-v3 style-D module
 
   - `inplanes`: number of input feature maps
 """
-function inception3_d(inplanes)
+function inceptionv3_d(inplanes)
     branch3x3 = Chain(conv_bn((1, 1), inplanes, 192)...,
                       conv_bn((3, 3), 192, 320; stride = 2)...)
     branch7x7x3 = Chain(conv_bn((1, 1), inplanes, 192)...,
@@ -95,7 +95,7 @@ function inception3_d(inplanes)
 end
 
 """
-    inception3_e(inplanes)
+    inceptionv3_e(inplanes)
 
 Create an Inception-v3 style-E module
 (ref: Fig. 7 in [paper](https://arxiv.org/abs/1512.00567v3)).
@@ -104,7 +104,7 @@ Create an Inception-v3 style-E module
 
   - `inplanes`: number of input feature maps
 """
-function inception3_e(inplanes)
+function inceptionv3_e(inplanes)
     branch1x1 = Chain(conv_bn((1, 1), inplanes, 320))
     branch3x3_1 = Chain(conv_bn((1, 1), inplanes, 384))
     branch3x3_1a = Chain(conv_bn((1, 3), 384, 384; pad = (0, 1)))
@@ -127,7 +127,7 @@ function inception3_e(inplanes)
 end
 
 """
-    inception3(; nclasses = 1000)
+    inceptionv3(; nclasses = 1000)
 
 Create an Inception-v3 model ([reference](https://arxiv.org/abs/1512.00567v3)).
 
@@ -137,9 +137,9 @@ Create an Inception-v3 model ([reference](https://arxiv.org/abs/1512.00567v3)).
 
 !!! warning
     
-    `inception3` does not currently support pretrained weights.
+    `inceptionv3` does not currently support pretrained weights.
 """
-function inception3(; nclasses = 1000)
+function inceptionv3(; nclasses = 1000)
     layer = Chain(Chain(conv_bn((3, 3), 3, 32; stride = 2)...,
                         conv_bn((3, 3), 32, 32)...,
                         conv_bn((3, 3), 32, 64; pad = 1)...,
@@ -147,17 +147,17 @@ function inception3(; nclasses = 1000)
                         conv_bn((1, 1), 64, 80)...,
                         conv_bn((3, 3), 80, 192)...,
                         MaxPool((3, 3); stride = 2),
-                        inception3_a(192, 32),
-                        inception3_a(256, 64),
-                        inception3_a(288, 64),
-                        inception3_b(288),
-                        inception3_c(768, 128),
-                        inception3_c(768, 160),
-                        inception3_c(768, 160),
-                        inception3_c(768, 192),
-                        inception3_d(768),
-                        inception3_e(1280),
-                        inception3_e(2048)),
+                        inceptionv3_a(192, 32),
+                        inceptionv3_a(256, 64),
+                        inceptionv3_a(288, 64),
+                        inceptionv3_b(288),
+                        inceptionv3_c(768, 128),
+                        inceptionv3_c(768, 160),
+                        inceptionv3_c(768, 160),
+                        inceptionv3_c(768, 192),
+                        inceptionv3_d(768),
+                        inceptionv3_e(1280),
+                        inceptionv3_e(2048)),
                   Chain(AdaptiveMeanPool((1, 1)),
                         Dropout(0.2),
                         MLUtils.flatten,
@@ -166,10 +166,10 @@ function inception3(; nclasses = 1000)
 end
 
 """
-    Inception3(; pretrain = false, nclasses = 1000)
+    Inceptionv3(; pretrain = false, nclasses = 1000)
 
 Create an Inception-v3 model ([reference](https://arxiv.org/abs/1512.00567v3)).
-See also [`inception3`](#).
+See also [`inceptionv3`](#).
 
 # Arguments
 
@@ -178,24 +178,26 @@ See also [`inception3`](#).
 
 !!! warning
     
-    `Inception3` does not currently support pretrained weights.
+    `Inceptionv3` does not currently support pretrained weights.
 """
-struct Inception3
+struct Inceptionv3
     layers::Any
 end
 
-function Inception3(; pretrain = false, nclasses = 1000)
-    layers = inception3(; nclasses = nclasses)
-    pretrain && loadpretrain!(layers, "Inception3")
-    return Inception3(layers)
+function Inceptionv3(; pretrain = false, nclasses = 1000)
+    layers = inceptionv3(; nclasses = nclasses)
+    pretrain && loadpretrain!(layers, "Inceptionv3")
+    return Inceptionv3(layers)
 end
 
-@functor Inception3
+@functor Inceptionv3
 
-(m::Inception3)(x) = m.layers(x)
+(m::Inceptionv3)(x) = m.layers(x)
 
-backbone(m::Inception3) = m.layers[1]
-classifier(m::Inception3) = m.layers[2]
+backbone(m::Inceptionv3) = m.layers[1]
+classifier(m::Inceptionv3) = m.layers[2]
+
+@deprecate Inception3 Inceptionv3
 
 ## Inceptionv4
 
@@ -221,7 +223,7 @@ function mixed_5a()
                     MaxPool((3, 3); stride = 2))
 end
 
-function inception4_a()
+function inceptionv4_a()
     branch1 = Chain(conv_bn((1, 1), 384, 96)...)
     branch2 = Chain(conv_bn((1, 1), 384, 64)...,
                     conv_bn((3, 3), 64, 96; pad = 1)...)
@@ -241,7 +243,7 @@ function reduction_a()
     return Parallel(cat_channels, branch1, branch2, branch3)
 end
 
-function inception4_b()
+function inceptionv4_b()
     branch1 = Chain(conv_bn((1, 1), 1024, 384)...)
     branch2 = Chain(conv_bn((1, 1), 1024, 192)...,
                     conv_bn((1, 7), 192, 224; pad = (0, 3))...,
@@ -266,7 +268,7 @@ function reduction_b()
     return Parallel(cat_channels, branch1, branch2, branch3)
 end
 
-function inception4_c()
+function inceptionv4_c()
     branch1 = Chain(conv_bn((1, 1), 1536, 256)...)
     branch2 = Chain(conv_bn((1, 1), 1536, 384)...,
                     Parallel(cat_channels,
@@ -282,73 +284,76 @@ function inception4_c()
     return Parallel(cat_channels, branch1, branch2, branch3, branch4)
 end
 
-function inception4(; inchannels = 3, dropout = 0.0, nclasses = 1000)
+"""
+    inceptionv4(; inchannels = 3, dropout = 0.0, nclasses = 1000)
+"""
+function inceptionv4(; inchannels = 3, dropout = 0.0, nclasses = 1000)
     body = Chain(conv_bn((3, 3), inchannels, 32; stride = 2)...,
                  conv_bn((3, 3), 32, 32)...,
                  conv_bn((3, 3), 32, 64; pad = 1)...,
                  mixed_3a(),
                  mixed_4a(),
                  mixed_5a(),
-                 inception4_a(),
-                 inception4_a(),
-                 inception4_a(),
-                 inception4_a(),
+                 inceptionv4_a(),
+                 inceptionv4_a(),
+                 inceptionv4_a(),
+                 inceptionv4_a(),
                  reduction_a(),  # mixed_6a
-                 inception4_b(),
-                 inception4_b(),
-                 inception4_b(),
-                 inception4_b(),
-                 inception4_b(),
-                 inception4_b(),
-                 inception4_b(),
+                 inceptionv4_b(),
+                 inceptionv4_b(),
+                 inceptionv4_b(),
+                 inceptionv4_b(),
+                 inceptionv4_b(),
+                 inceptionv4_b(),
+                 inceptionv4_b(),
                  reduction_b(),  # mixed_7a
-                 inception4_c(),
-                 inception4_c(),
-                 inception4_c())
+                 inceptionv4_c(),
+                 inceptionv4_c(),
+                 inceptionv4_c())
     head = Chain(GlobalMeanPool(), MLUtils.flatten, Dropout(dropout), Dense(1536, nclasses))
     return Chain(body, head)
 end
 
-struct Inception4
+struct Inceptionv4
     layers::Any
 end
 
-function Inception4(; inchannels = 3, dropout = 0.0, nclasses = 1000)
-    layers = inception4(; inchannels, dropout, nclasses)
-    return Inception4(layers)
+function Inceptionv4(; inchannels = 3, dropout = 0.0, nclasses = 1000)
+    layers = inceptionv4(; inchannels, dropout, nclasses)
+    return Inceptionv4(layers)
 end
 
-@functor Inception4
+@functor Inceptionv4
 
-(m::Inception4)(x) = m.layers(x)
+(m::Inceptionv4)(x) = m.layers(x)
 
-backbone(m::Inception4) = m.layers[1]
-classifier(m::Inception4) = m.layers[2]
+backbone(m::Inceptionv4) = m.layers[1]
+classifier(m::Inceptionv4) = m.layers[2]
 
 ## Inception-ResNetv2
 
-function mixed5_b()
+function mixed_5b()
     branch1 = Chain(conv_bn((1, 1), 192, 96)...)
     branch2 = Chain(conv_bn((1, 1), 192, 48)...,
                     conv_bn((5, 5), 48, 64; pad = 2)...)
     branch3 = Chain(conv_bn((1, 1), 192, 64)...,
                     conv_bn((3, 3), 64, 96; pad = 1)...,
-                    conv_bn((7, 1), 64, 64; pad = 1)...)
+                    conv_bn((3, 3), 96, 96; pad = 1)...)
     branch4 = Chain(MeanPool((3, 3); pad = 1, stride = 1),
                     conv_bn((1, 1), 192, 64)...)
     return Parallel(cat_channels, branch1, branch2, branch3, branch4)
 end
 
-function block35(scale = 1.0)
+function block35(scale = 1.0f0)
     branch1 = Chain(conv_bn((1, 1), 320, 32)...)
     branch2 = Chain(conv_bn((1, 1), 320, 32)...,
-                    conv_bn((3, 3), 32, 32)...)
+                    conv_bn((3, 3), 32, 32; pad = 1)...)
     branch3 = Chain(conv_bn((1, 1), 320, 32)...,
                     conv_bn((3, 3), 32, 48; pad = 1)...,
                     conv_bn((3, 3), 48, 64; pad = 1)...)
     branch4 = Chain(conv_bn((1, 1), 128, 320)...)
     return SkipConnection(Chain(Parallel(cat_channels, branch1, branch2, branch3),
-                                branch4, scale(scale; activation = relu)), +)
+                                branch4, inputscale(scale; activation = relu)), +)
 end
 
 function mixed_6a()
@@ -360,14 +365,14 @@ function mixed_6a()
     return Parallel(cat_channels, branch1, branch2, branch3)
 end
 
-function block17(scale = 1.0)
+function block17(scale = 1.0f0)
     branch1 = Chain(conv_bn((1, 1), 1088, 192)...)
     branch2 = Chain(conv_bn((1, 1), 1088, 128)...,
-                    conv_bn((1, 7), 128, 160; pad = (0, 3)...),
+                    conv_bn((1, 7), 128, 160; pad = (0, 3))...,
                     conv_bn((7, 1), 160, 192; pad = (3, 0))...)
     branch3 = Chain(conv_bn((1, 1), 384, 1088)...)
     return SkipConnection(Chain(Parallel(cat_channels, branch1, branch2),
-                                branch3, scale(scale; activation = relu)), +)
+                                branch3, inputscale(scale; activation = relu)), +)
 end
 
 function mixed_7a()
@@ -382,7 +387,7 @@ function mixed_7a()
     return Parallel(cat_channels, branch1, branch2, branch3, branch4)
 end
 
-function block8(scale = 1.0; no_relu = false)
+function block8(scale = 1.0f0; no_relu = false)
     branch1 = Chain(conv_bn((1, 1), 2080, 192)...)
     branch2 = Chain(conv_bn((1, 1), 2080, 192)...,
                     conv_bn((1, 3), 192, 224; pad = (0, 1))...,
@@ -390,10 +395,10 @@ function block8(scale = 1.0; no_relu = false)
     branch3 = Chain(conv_bn((1, 1), 448, 2080)...)
     activation = no_relu ? identity : relu
     return SkipConnection(Chain(Parallel(cat_channels, branch1, branch2),
-                                branch3, scale(scale; activation = activation)), +)
+                                branch3, inputscale(scale; activation = activation)), +)
 end
 
-function inception_resnetv2(; inchannels = 3, dropout = 0.0, nclasses = 1000)
+function inceptionresnetv2(; inchannels = 3, dropout = 0.0, nclasses = 1000)
     body = Chain(conv_bn((3, 3), inchannels, 32; stride = 2)...,
                  conv_bn((3, 3), 32, 32)...,
                  conv_bn((3, 3), 32, 64; pad = 1)...,
@@ -402,29 +407,29 @@ function inception_resnetv2(; inchannels = 3, dropout = 0.0, nclasses = 1000)
                  conv_bn((3, 3), 80, 192)...,
                  MaxPool((3, 3); stride = 2),
                  mixed_5b(),
-                 [block35(0.17) for _ in 1:10]...,
+                 [block35(0.17f0) for _ in 1:10]...,
                  mixed_6a(),
-                 [block17(0.10) for _ in 1:20]...,
+                 [block17(0.10f0) for _ in 1:20]...,
                  mixed_7a(),
-                 [block8(0.20) for _ in 1:9]...,
+                 [block8(0.20f0) for _ in 1:9]...,
                  block8(; no_relu = true),
                  conv_bn((1, 1), 2080, 1536)...)
     head = Chain(GlobalMeanPool(), MLUtils.flatten, Dropout(dropout), Dense(1536, nclasses))
     return Chain(body, head)
 end
 
-struct Inception_ResNetv2
+struct InceptionResNetv2
     layers::Any
 end
 
-function Inception_ResNetv2(; inchannels = 3, dropout = 0.0, nclasses = 1000)
-    layers = inception_resnetv2(; inchannels, dropout, nclasses)
-    return Inception_ResNetv2(layers)
+function InceptionResNetv2(; inchannels = 3, dropout = 0.0, nclasses = 1000)
+    layers = inceptionresnetv2(; inchannels, dropout, nclasses)
+    return InceptionResNetv2(layers)
 end
 
-@functor Inception_ResNetv2
+@functor InceptionResNetv2
 
-(m::Inception_ResNetv2)(x) = m.layers(x)
+(m::InceptionResNetv2)(x) = m.layers(x)
 
-backbone(m::Inception_ResNetv2) = m.layers[1]
-classifier(m::Inception_ResNetv2) = m.layers[2]
+backbone(m::InceptionResNetv2) = m.layers[1]
+classifier(m::InceptionResNetv2) = m.layers[2]
