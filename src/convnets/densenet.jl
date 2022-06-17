@@ -11,11 +11,12 @@ Create a Densenet bottleneck layer
     (and scaling factor for inner feature maps; see ref)
 """
 function dense_bottleneck(inplanes, outplanes)
-  inner_channels = 4 * outplanes
-
-  SkipConnection(Chain(conv_bn((1, 1), inplanes, inner_channels; bias = false, rev = true)...,
-                       conv_bn((3, 3), inner_channels, outplanes; pad = 1, bias = false, rev = true)...),
-                 cat_channels)
+    inner_channels = 4 * outplanes
+    return SkipConnection(Chain(conv_bn((1, 1), inplanes, inner_channels; bias = false,
+                                        rev = true)...,
+                                conv_bn((3, 3), inner_channels, outplanes; pad = 1,
+                                        bias = false, rev = true)...),
+                          cat_channels)
 end
 
 """

@@ -50,9 +50,11 @@ function (m::MHAttention)(x::AbstractArray{T, 3}) where {T}
     scale = convert(T, sqrt(size(query, 1) / m.nheads))
     key_reshaped = reshape(permutedims(key, (2, 1, 3, 4)), m.nheads, nfeatures ÷ m.nheads,
                            seq_len * batch_size)
-    query_reshaped = reshape(permutedims(query, (1, 2, 3, 4)), nfeatures ÷ m.nheads, m.nheads, seq_len * batch_size)
+    query_reshaped = reshape(permutedims(query, (1, 2, 3, 4)), nfeatures ÷ m.nheads,
+                             m.nheads, seq_len * batch_size)
     attention = m.attn_drop(softmax(batched_mul(query_reshaped, key_reshaped) .* scale))
-    value_reshaped = reshape(permutedims(value, (1, 2, 3, 4)), nfeatures ÷ m.nheads, m.nheads, seq_len * batch_size)
+    value_reshaped = reshape(permutedims(value, (1, 2, 3, 4)), nfeatures ÷ m.nheads,
+                             m.nheads, seq_len * batch_size)
     pre_projection = reshape(batched_mul(attention, value_reshaped),
                              (nfeatures, seq_len, batch_size))
     y = m.projection(reshape(pre_projection, size(pre_projection, 1), :))

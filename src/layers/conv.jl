@@ -126,11 +126,11 @@ Create a identity projection
 function skip_identity(inplanes, outplanes)
     if outplanes > inplanes
         return Chain(MaxPool((1, 1); stride = 2),
-                     y -> cat(y,
-                              zeros(eltype(y),
-                                    size(y, 1),
-                                    size(y, 2),
-                                    outplanes - inplanes, size(y, 4)); dims = 3))
+                     y -> cat_channels(y,
+                                       zeros(eltype(y),
+                                             size(y, 1),
+                                             size(y, 2),
+                                             outplanes - inplanes, size(y, 4))))
     else
         return identity
     end

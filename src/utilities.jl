@@ -34,7 +34,16 @@ Concatenate `x` and `y` (and any `z`s) along the channel dimension (third dimens
 Equivalent to `cat(x, y, zs...; dims=3)`.
 Convenient reduction operator for use with `Parallel`.
 """
-cat_channels(xy...) = cat(xy...; dims = 3)
+cat_channels(xy...) = cat(xy...; dims = Val(3))
+
+"""
+    scale(λ; activation = identity)
+
+Scale the input by a scalar λ and apply an activation function to it.
+Equivalent to `activation.(λ .* x)`.
+"""
+scale(λ; activation) = activation.(Base.Fix1(.*, λ))
+scale(λ; ::typeof(identity)) = Base.Fix1(.*, λ)
 
 """
     swapdims(perm)
@@ -47,13 +56,13 @@ swapdims(perm) = Base.Fix2(permutedims, perm)
 
 # Utility function for pretty printing large models
 function _maybe_big_show(io, model)
-  if isdefined(Flux, :_big_show)
-    if isnothing(get(io, :typeinfo, nothing)) # e.g. top level in REPL
-      Flux._big_show(io, model)
+    if isdefined(Flux, :_big_show)
+        if isnothing(get(io, :typeinfo, nothing)) # e.g. top level in REPL
+            Flux._big_show(io, model)
+        else
+            show(io, model)
+        end
     else
-      show(io, model)
+        show(io, model)
     end
-  else
-    show(io, model)
-  end
 end
