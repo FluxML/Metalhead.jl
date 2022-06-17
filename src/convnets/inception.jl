@@ -286,6 +286,15 @@ end
 
 """
     inceptionv4(; inchannels = 3, dropout = 0.0, nclasses = 1000)
+
+Create an Inceptionv4 model.
+([reference](https://arxiv.org/abs/1602.07261))
+
+# Arguments
+
+  - inchannels: number of input channels.
+  - dropout: rate of dropout in classifier head.
+  - nclasses: the number of output classes.
 """
 function inceptionv4(; inchannels = 3, dropout = 0.0, nclasses = 1000)
     body = Chain(conv_bn((3, 3), inchannels, 32; stride = 2)...,
@@ -314,6 +323,18 @@ function inceptionv4(; inchannels = 3, dropout = 0.0, nclasses = 1000)
     return Chain(body, head)
 end
 
+"""
+    Inceptionv4(; inchannels = 3, dropout = 0.0, nclasses = 1000)
+
+Creates an Inceptionv4 model.
+([reference](https://arxiv.org/abs/1602.07261))
+
+# Arguments
+
+  - inchannels: number of input channels.
+  - dropout: rate of dropout in classifier head.
+  - nclasses: the number of output classes.
+"""
 struct Inceptionv4
     layers::Any
 end
@@ -398,6 +419,18 @@ function block8(scale = 1.0f0; no_relu = false)
                                 branch3, inputscale(scale; activation = activation)), +)
 end
 
+"""
+    inceptionresnetv2(; inchannels = 3, dropout = 0.0, nclasses = 1000)
+
+Creates an InceptionResNetv2 model.
+([reference](https://arxiv.org/abs/1602.07261))
+
+# Arguments
+
+  - inchannels: number of input channels.
+  - dropout: rate of dropout in classifier head.
+  - nclasses: the number of output classes.
+"""
 function inceptionresnetv2(; inchannels = 3, dropout = 0.0, nclasses = 1000)
     body = Chain(conv_bn((3, 3), inchannels, 32; stride = 2)...,
                  conv_bn((3, 3), 32, 32)...,
@@ -418,6 +451,18 @@ function inceptionresnetv2(; inchannels = 3, dropout = 0.0, nclasses = 1000)
     return Chain(body, head)
 end
 
+"""
+    InceptionResNetv2(; inchannels = 3, dropout = 0.0, nclasses = 1000)
+
+Creates an InceptionResNetv2 model.
+([reference](https://arxiv.org/abs/1602.07261))
+
+# Arguments
+
+  - inchannels: number of input channels.
+  - dropout: rate of dropout in classifier head.
+  - nclasses: the number of output classes.
+"""
 struct InceptionResNetv2
     layers::Any
 end

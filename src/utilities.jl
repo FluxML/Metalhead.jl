@@ -39,12 +39,12 @@ cat_channels(xy...) = cat(xy...; dims = Val(3))
 """
     inputscale(λ; activation = identity)
 
-Scale the input (assumed to be an `AbstractArray`) by a scalar λ and applies an activation
-function to it. Equivalent to `activation.(λ .* x)`.
+Scale the input by a scalar λ and applies an activation function to it.
+Equivalent to `activation.(λ .* x)`.
 """
 inputscale(λ; activation = identity) = x -> _input_scale(x, λ, activation)
-_input_scale(x::AbstractArray, λ, activation) = activation.(λ .* x)
-_input_scale(x::AbstractArray, λ, ::typeof(identity)) = λ .* x
+_input_scale(x, λ, activation) = activation.(λ .* x)
+_input_scale(x, λ, ::typeof(identity)) = λ .* x
 
 """
     swapdims(perm)
