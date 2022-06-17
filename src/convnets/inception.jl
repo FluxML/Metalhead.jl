@@ -198,6 +198,7 @@ backbone(m::Inceptionv3) = m.layers[1]
 classifier(m::Inceptionv3) = m.layers[2]
 
 @deprecate Inception3 Inceptionv3
+@deprecate inception3 inceptionv3
 
 ## Inceptionv4
 
@@ -408,15 +409,14 @@ function mixed_7a()
     return Parallel(cat_channels, branch1, branch2, branch3, branch4)
 end
 
-function block8(scale = 1.0f0; no_relu = false)
+function block8(scale = 1.0f0; activation = identity)
     branch1 = Chain(conv_bn((1, 1), 2080, 192)...)
     branch2 = Chain(conv_bn((1, 1), 2080, 192)...,
                     conv_bn((1, 3), 192, 224; pad = (0, 1))...,
                     conv_bn((3, 1), 224, 256; pad = (1, 0))...)
     branch3 = Chain(conv_bn((1, 1), 448, 2080)...)
-    activation = no_relu ? identity : relu
     return SkipConnection(Chain(Parallel(cat_channels, branch1, branch2),
-                                branch3, inputscale(scale; activation = activation)), +)
+                                branch3, inputscale(scale; activation)), +)
 end
 
 """
@@ -445,7 +445,7 @@ function inceptionresnetv2(; inchannels = 3, dropout = 0.0, nclasses = 1000)
                  [block17(0.10f0) for _ in 1:20]...,
                  mixed_7a(),
                  [block8(0.20f0) for _ in 1:9]...,
-                 block8(; no_relu = true),
+                 block8(; activation = relu),
                  conv_bn((1, 1), 2080, 1536)...)
     head = Chain(GlobalMeanPool(), MLUtils.flatten, Dropout(dropout), Dense(1536, nclasses))
     return Chain(body, head)
