@@ -489,7 +489,7 @@ classifier(m::InceptionResNetv2) = m.layers[2]
 
 """
     xception_block(inchannels, outchannels, nrepeats; stride = 1, start_with_relu = true, 
-                        grow_first = true)
+                        grow_at_start = true)
 
 Create an Xception block.
 ([reference](https://arxiv.org/abs/1610.02357))
@@ -501,11 +501,11 @@ Create an Xception block.
   - `nrepeats`: number of repeats of depthwise separable convolution layers.
   - `stride`: stride by which to downsample the input.
   - `start_with_relu`: if true, start the block with a ReLU activation.
-  - `grow_first`: if true, increase the number of channels at the first convolution.
+  - `grow_at_start`: if true, increase the number of channels at the first convolution.
 """
 function xception_block(inchannels, outchannels, nrepeats; stride = 1,
                         start_with_relu = true,
-                        grow_first = true)
+                        grow_at_start = true)
     if outchannels != inchannels || stride != 1
         skip = conv_bn((1, 1), inchannels, outchannels, identity; stride = stride,
                        bias = false)
@@ -514,7 +514,7 @@ function xception_block(inchannels, outchannels, nrepeats; stride = 1,
     end
     layers = []
     for i in 1:nrepeats
-        if grow_first
+        if grow_at_start
             inc = i == 1 ? inchannels : outchannels
             outc = outchannels
         else
@@ -551,7 +551,7 @@ function xception(; inchannels = 3, dropout = 0.0, nclasses = 1000)
                  xception_block(128, 256, 2; stride = 2),
                  xception_block(256, 728, 2; stride = 2),
                  [xception_block(728, 728, 3) for _ in 1:8]...,
-                 xception_block(728, 1024, 2; stride = 2, grow_first = false),
+                 xception_block(728, 1024, 2; stride = 2, grow_at_start = false),
                  depthwise_sep_conv_bn((3, 3), 1024, 1536; pad = 1)...,
                  depthwise_sep_conv_bn((3, 3), 1536, 2048; pad = 1)...)
     head = Chain(GlobalMeanPool(), MLUtils.flatten, Dropout(dropout), Dense(2048, nclasses))
