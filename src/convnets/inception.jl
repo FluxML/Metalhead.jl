@@ -286,9 +286,9 @@ Create an Inceptionv4 model.
 
 # Arguments
 
-  - inchannels: number of input channels.
-  - dropout: rate of dropout in classifier head.
-  - nclasses: the number of output classes.
+  - `inchannels`: number of input channels.
+  - `dropout`: rate of dropout in classifier head.
+  - `nclasses`: the number of output classes.
 """
 function inceptionv4(; inchannels = 3, dropout = 0.0, nclasses = 1000)
     body = Chain(conv_bn((3, 3), inchannels, 32; stride = 2)...,
@@ -326,9 +326,9 @@ Creates an Inceptionv4 model.
 # Arguments
 
   - `pretrain`: set to `true` to load the pre-trained weights for ImageNet
-  - inchannels: number of input channels.
-  - dropout: rate of dropout in classifier head.
-  - nclasses: the number of output classes.
+  - `inchannels`: number of input channels.
+  - `dropout`: rate of dropout in classifier head.
+  - `nclasses`: the number of output classes.
 
 !!! warning
     
@@ -426,9 +426,9 @@ Creates an InceptionResNetv2 model.
 
 # Arguments
 
-  - inchannels: number of input channels.
-  - dropout: rate of dropout in classifier head.
-  - nclasses: the number of output classes.
+  - `inchannels`: number of input channels.
+  - `dropout`: rate of dropout in classifier head.
+  - `nclasses`: the number of output classes.
 """
 function inceptionresnetv2(; inchannels = 3, dropout = 0.0, nclasses = 1000)
     body = Chain(conv_bn((3, 3), inchannels, 32; stride = 2)...,
@@ -459,9 +459,9 @@ Creates an InceptionResNetv2 model.
 # Arguments
 
   - `pretrain`: set to `true` to load the pre-trained weights for ImageNet
-  - inchannels: number of input channels.
-  - dropout: rate of dropout in classifier head.
-  - nclasses: the number of output classes.
+  - `inchannels`: number of input channels.
+  - `dropout`: rate of dropout in classifier head.
+  - `nclasses`: the number of output classes.
 
 !!! warning
     
@@ -496,12 +496,12 @@ Create an Xception block.
 
 # Arguments
 
-  - inchannels: number of input channels.
-  - outchannels: number of output channels.
-  - nrepeats: number of repeats of depthwise separable convolution layers.
-  - stride: stride by which to downsample the input.
-  - start_with_relu: if true, start the block with a ReLU activation.
-  - grow_first: if true, increase the number of channels at the first convolution.
+  - `inchannels`: number of input channels.
+  - `outchannels`: number of output channels.
+  - `nrepeats`: number of repeats of depthwise separable convolution layers.
+  - `stride`: stride by which to downsample the input.
+  - `start_with_relu`: if true, start the block with a ReLU activation.
+  - `grow_first`: if true, increase the number of channels at the first convolution.
 """
 function xception_block(inchannels, outchannels, nrepeats; stride = 1,
                         start_with_relu = true,

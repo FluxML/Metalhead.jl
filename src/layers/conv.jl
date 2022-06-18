@@ -64,9 +64,9 @@ Create a depthwise separable convolution chain as used in MobileNetv1.
 This is sequence of layers:
 
   - a `kernelsize` depthwise convolution from `inplanes => inplanes`
-  - a batch norm layer + `activation` (if `use_bn1`; otherwise `activation` is applied to the convolution output)
+  - a batch norm layer + `activation` (if `use_bn[1] == true`; otherwise `activation` is applied to the convolution output)
   - a `kernelsize` convolution from `inplanes => outplanes`
-  - a batch norm layer + `activation` (if `use_bn2`; otherwise `activation` is applied to the convolution output)
+  - a batch norm layer + `activation` (if `use_bn[2] == true`; otherwise `activation` is applied to the convolution output)
 
 See Fig. 3 in [reference](https://arxiv.org/abs/1704.04861v1).
 
