@@ -1,8 +1,8 @@
 """
     conv_bn(kernelsize, inplanes, outplanes, activation = relu;
-                 rev = false, preact = false, use_bn = true,
-                 initβ = Flux.zeros32, initγ = Flux.ones32, ϵ = 1.0f-5, momentum = 1.0f-1,
-                 kwargs...)
+                 rev = false, preact = false, use_bn = true, stride = 1, pad = 0, dilation = 1,
+                 groups = 1, [bias, weight, init], initβ = Flux.zeros32, initγ = Flux.ones32,
+                 ϵ = 1.0f-5, momentum = 1.0f-1)
 
 Create a convolution + batch normalization pair with activation.
 
@@ -55,10 +55,10 @@ end
 
 """
     depthwise_sep_conv_bn(kernelsize, inplanes, outplanes, activation = relu;
-                               rev = false, use_bn1 = true, use_bn2 = true,
+                               rev = false, use_bn = (true, true),
+                               stride = 1, pad = 0, dilation = 1, [bias, weight, init],
                                initβ = Flux.zeros32, initγ = Flux.ones32,
-                               ϵ = 1.0f-5, momentum = 1.0f-1,
-                               stride = 1, kwargs...)
+                               ϵ = 1.0f-5, momentum = 1.0f-1)
 
 Create a depthwise separable convolution chain as used in MobileNetv1.
 This is sequence of layers:
@@ -77,8 +77,7 @@ See Fig. 3 in [reference](https://arxiv.org/abs/1704.04861v1).
   - `outplanes`: number of output feature maps
   - `activation`: the activation function for the final layer
   - `rev`: set to `true` to place the batch norm before the convolution
-  - `use_bn1`: set to `true` to use a batch norm after the depthwise convolution
-  - `use_bn2`: set to `true` to use a batch norm after the pointwise convolution
+  - `use_bn`: a tuple of two booleans to specify whether to use batch normalization for the first and second convolution
   - `stride`: stride of the first convolution kernel
   - `pad`: padding of the first convolution kernel
   - `dilation`: dilation of the first convolution kernel
@@ -87,16 +86,16 @@ See Fig. 3 in [reference](https://arxiv.org/abs/1704.04861v1).
   - `ϵ`, `momentum`: batch norm parameters (see [`Flux.BatchNorm`](#))
 """
 function depthwise_sep_conv_bn(kernelsize, inplanes, outplanes, activation = relu;
-                               rev = false, use_bn1 = true, use_bn2 = true,
+                               rev = false, use_bn = (true, true),
                                initβ = Flux.zeros32, initγ = Flux.ones32,
                                ϵ = 1.0f-5, momentum = 1.0f-1,
                                stride = 1, kwargs...)
     return vcat(conv_bn(kernelsize, inplanes, inplanes, activation;
                         rev = rev, initβ = initβ, initγ = initγ,
-                        ϵ = ϵ, momentum = momentum, use_bn = use_bn1,
+                        ϵ = ϵ, momentum = momentum, use_bn = use_bn[1],
                         stride = stride, groups = Int(inplanes), kwargs...),
                 conv_bn((1, 1), inplanes, outplanes, activation;
-                        rev = rev, initβ = initβ, initγ = initγ, use_bn = use_bn2,
+                        rev = rev, initβ = initβ, initγ = initγ, use_bn = use_bn[2],
                         ϵ = ϵ, momentum = momentum))
 end
 
