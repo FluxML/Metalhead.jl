@@ -72,7 +72,6 @@ function densenet(inplanes, growth_rates; reduction = 0.5, nclasses = 1000)
     layers = []
     append!(layers, conv_bn((7, 7), 3, inplanes; stride = 2, pad = (3, 3), bias = false))
     push!(layers, MaxPool((3, 3); stride = 2, pad = (1, 1)))
-
     outplanes = 0
     for (i, rates) in enumerate(growth_rates)
         outplanes = inplanes + sum(rates)
@@ -82,7 +81,6 @@ function densenet(inplanes, growth_rates; reduction = 0.5, nclasses = 1000)
         inplanes = floor(Int, outplanes * reduction)
     end
     push!(layers, BatchNorm(outplanes, relu))
-
     return Chain(Chain(layers),
                  Chain(AdaptiveMeanPool((1, 1)),
                        MLUtils.flatten,
@@ -131,7 +129,6 @@ function DenseNet(nblocks::NTuple{N, <:Integer};
     layers = densenet(nblocks; growth_rate = growth_rate,
                       reduction = reduction,
                       nclasses = nclasses)
-
     return DenseNet(layers)
 end
 
@@ -164,13 +161,6 @@ See also [`Metalhead.densenet`](#).
 function DenseNet(config::Integer = 121; pretrain = false, nclasses = 1000)
     @assert config in keys(densenet_config) "`config` must be one out of $(sort(collect(keys(densenet_config))))."
     model = DenseNet(densenet_config[config]; nclasses = nclasses)
-
     pretrain && loadpretrain!(model, string("DenseNet", config))
     return model
 end
-
-# deprecations
-@deprecate DenseNet121(; kw...) DenseNet(121; kw...)
-@deprecate DenseNet161(; kw...) DenseNet(161; kw...)
-@deprecate DenseNet169(; kw...) DenseNet(169; kw...)
-@deprecate DenseNet201(; kw...) DenseNet(201; kw...)

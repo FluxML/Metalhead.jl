@@ -55,14 +55,6 @@ Equivalent to `permutedims(x, perm)`.
 """
 swapdims(perm) = Base.Fix2(permutedims, perm)
 
-"""
-    applyactivation(activation, x)
-
-Apply an activation function to a given input.
-Equivalent to `activation.(x)`.
-"""
-applyactivation(activation, x) = activation.(x)
-
 # Utility function for pretty printing large models
 function _maybe_big_show(io, model)
     if isdefined(Flux, :_big_show)

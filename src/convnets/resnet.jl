@@ -256,16 +256,8 @@ resnet50_v1 = ResNet([1, 1, 4], [3, 4, 6, 3], :B; block = Metalhead.bottleneck_v
 """
 function ResNet(depth::Integer = 50; pretrain = false, nclasses = 1000)
     @assert depth in keys(resnet_config) "`depth` must be one of $(sort(collect(keys(resnet_config))))"
-
     config, block = resnet_config[depth]
     model = ResNet(config...; block = block, nclasses = nclasses)
     pretrain && loadpretrain!(model, string("ResNet", depth))
     return model
 end
-
-# Compat with Metalhead 0.6; remove in 0.7
-@deprecate ResNet18(; kw...) ResNet(18; kw...)
-@deprecate ResNet34(; kw...) ResNet(34; kw...)
-@deprecate ResNet50(; kw...) ResNet(50; kw...)
-@deprecate ResNet101(; kw...) ResNet(101; kw...)
-@deprecate ResNet152(; kw...) ResNet(152; kw...)

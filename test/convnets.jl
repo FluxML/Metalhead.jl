@@ -108,6 +108,13 @@ GC.gc()
         @test size(m(x_299)) == (1000, 2)
         @test gradtest(m, x_299)
     end
+    GC.safepoint()
+    GC.gc()
+    @testset "Xception" begin
+        m = Xception()
+        @test size(m(x_299)) == (1000, 2)
+        @test gradtest(m, x_299)
+    end
 end
 
 GC.safepoint()

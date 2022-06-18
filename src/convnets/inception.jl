@@ -134,10 +134,6 @@ Create an Inception-v3 model ([reference](https://arxiv.org/abs/1512.00567v3)).
 # Arguments
 
   - `nclasses`: the number of output classes
-
-!!! warning
-    
-    `inceptionv3` does not currently support pretrained weights.
 """
 function inceptionv3(; nclasses = 1000)
     layer = Chain(Chain(conv_bn((3, 3), 3, 32; stride = 2)...,
@@ -196,9 +192,6 @@ end
 
 backbone(m::Inceptionv3) = m.layers[1]
 classifier(m::Inceptionv3) = m.layers[2]
-
-@deprecate Inception3 Inceptionv3
-@deprecate inception3 inceptionv3
 
 ## Inceptionv4
 
@@ -325,23 +318,29 @@ function inceptionv4(; inchannels = 3, dropout = 0.0, nclasses = 1000)
 end
 
 """
-    Inceptionv4(; inchannels = 3, dropout = 0.0, nclasses = 1000)
+    Inceptionv4(; pretrain = false, inchannels = 3, dropout = 0.0, nclasses = 1000)
 
 Creates an Inceptionv4 model.
 ([reference](https://arxiv.org/abs/1602.07261))
 
 # Arguments
 
+  - `pretrain`: set to `true` to load the pre-trained weights for ImageNet
   - inchannels: number of input channels.
   - dropout: rate of dropout in classifier head.
   - nclasses: the number of output classes.
+
+!!! warning
+    
+        `Inceptionv4`` does not currently support pretrained weights.
 """
 struct Inceptionv4
     layers::Any
 end
 
-function Inceptionv4(; inchannels = 3, dropout = 0.0, nclasses = 1000)
+function Inceptionv4(; pretrain = false, inchannels = 3, dropout = 0.0, nclasses = 1000)
     layers = inceptionv4(; inchannels, dropout, nclasses)
+    pretrain && loadpretrain!(layers, "Inceptionv4")
     return Inceptionv4(layers)
 end
 
@@ -452,23 +451,30 @@ function inceptionresnetv2(; inchannels = 3, dropout = 0.0, nclasses = 1000)
 end
 
 """
-    InceptionResNetv2(; inchannels = 3, dropout = 0.0, nclasses = 1000)
+    InceptionResNetv2(; pretrain = false, inchannels = 3, dropout = 0.0, nclasses = 1000)
 
 Creates an InceptionResNetv2 model.
 ([reference](https://arxiv.org/abs/1602.07261))
 
 # Arguments
 
+  - `pretrain`: set to `true` to load the pre-trained weights for ImageNet
   - inchannels: number of input channels.
   - dropout: rate of dropout in classifier head.
   - nclasses: the number of output classes.
+
+!!! warning
+    
+        `InceptionResNetv2` does not currently support pretrained weights.
 """
 struct InceptionResNetv2
     layers::Any
 end
 
-function InceptionResNetv2(; inchannels = 3, dropout = 0.0, nclasses = 1000)
+function InceptionResNetv2(; pretrain = false, inchannels = 3, dropout = 0.0,
+                           nclasses = 1000)
     layers = inceptionresnetv2(; inchannels, dropout, nclasses)
+    pretrain && loadpretrain!(layers, "InceptionResNetv2")
     return InceptionResNetv2(layers)
 end
 
@@ -515,7 +521,7 @@ function xception_block(inchannels, outchannels, nrepeats; stride = 1,
             inc = inchannels
             outc = i == nrepeats ? outchannels : inchannels
         end
-        push!(layers, Base.Fix1(applyactivation, relu))
+        push!(layers, x -> relu.(x))
         append!(layers,
                 depthwise_sep_conv_bn((3, 3), inc, outc; pad = 1, bias = false,
                                       use_bn1 = false, use_bn2 = false))
@@ -557,15 +563,21 @@ struct Xception
 end
 
 """
-    Xception(; inchannels = 3, dropout = 0.0, nclasses = 1000)
+    Xception(; pretrain = false, inchannels = 3, dropout = 0.0, nclasses = 1000)
 
 Creates an Xception model.
 ([reference](https://arxiv.org/abs/1610.02357))
 
 # Arguments
+
+  - pretrain: set to `true` to load the pre-trained weights for ImageNet.
   - inchannels: number of input channels.
   - dropout: rate of dropout in classifier head.
-  - nclasses: the number of output classes. 
+  - nclasses: the number of output classes.
+
+!!! warning
+    
+        `Xception` does not currently support pretrained weights.
 """
 function Xception(; inchannels = 3, dropout = 0.0, nclasses = 1000)
     layers = xception(; inchannels, dropout, nclasses)
