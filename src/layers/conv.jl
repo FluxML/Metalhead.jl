@@ -1,8 +1,8 @@
 """
     conv_bn(kernelsize, inplanes, outplanes, activation = relu;
-            rev = false, preact = true,
-            stride = 1, pad = 0, dilation = 1, groups = 1, [bias, weight, init],
-            initβ = Flux.zeros32, initγ = Flux.ones32, ϵ = 1f-5, momentum = 1f-1)
+                 rev = false, preact = false, use_bn = true,
+                 initβ = Flux.zeros32, initγ = Flux.ones32, ϵ = 1.0f-5, momentum = 1.0f-1,
+                 kwargs...)
 
 Create a convolution + batch normalization pair with activation.
 
@@ -15,6 +15,8 @@ Create a convolution + batch normalization pair with activation.
   - `rev`: set to `true` to place the batch norm before the convolution
   - `preact`: set to `true` to place the activation function before the batch norm
     (only compatible with `rev = false`)
+  - `use_bn`: set to `false` to disable batch normalization
+    (only compatible with `rev = false` and `preact = false`)
   - `stride`: stride of the convolution kernel
   - `pad`: padding of the convolution kernel
   - `dilation`: dilation of the convolution kernel
@@ -24,9 +26,13 @@ Create a convolution + batch normalization pair with activation.
   - `ϵ`, `momentum`: batch norm parameters (see [`Flux.BatchNorm`](#))
 """
 function conv_bn(kernelsize, inplanes, outplanes, activation = relu;
-                 rev = false, preact = false,
+                 rev = false, preact = false, use_bn = true,
                  initβ = Flux.zeros32, initγ = Flux.ones32, ϵ = 1.0f-5, momentum = 1.0f-1,
                  kwargs...)
+    if !use_bn
+        (preact || rev) ? throw("preact only supported with `use_bn = true`") :
+        return [Conv(kernelsize, inplanes => outplanes, activation; kwargs...)]
+    end
     layers = []
     if rev
         activations = (conv = activation, bn = identity)
@@ -49,18 +55,18 @@ end
 
 """
     depthwise_sep_conv_bn(kernelsize, inplanes, outplanes, activation = relu;
-                          rev = false,
-                          stride = 1, pad = 0, dilation = 1, [bias, weight, init],
-                          initβ = Flux.zeros32, initγ = Flux.ones32,
-                          ϵ = 1f-5, momentum = 1f-1)
+                               rev = false, use_bn1 = true, use_bn2 = true,
+                               initβ = Flux.zeros32, initγ = Flux.ones32,
+                               ϵ = 1.0f-5, momentum = 1.0f-1,
+                               stride = 1, kwargs...)
 
-Create a depthwise separable convolution chain as used in MobileNet v1.
+Create a depthwise separable convolution chain as used in MobileNetv1.
 This is sequence of layers:
 
   - a `kernelsize` depthwise convolution from `inplanes => inplanes`
-  - a batch norm layer + `activation`
+  - a batch norm layer + `activation` (if `use_bn1`; otherwise `activation` is applied to the convolution output)
   - a `kernelsize` convolution from `inplanes => outplanes`
-  - a batch norm layer + `activation`
+  - a batch norm layer + `activation` (if `use_bn2`; otherwise `activation` is applied to the convolution output)
 
 See Fig. 3 in [reference](https://arxiv.org/abs/1704.04861v1).
 
@@ -71,6 +77,8 @@ See Fig. 3 in [reference](https://arxiv.org/abs/1704.04861v1).
   - `outplanes`: number of output feature maps
   - `activation`: the activation function for the final layer
   - `rev`: set to `true` to place the batch norm before the convolution
+  - `use_bn1`: set to `true` to use a batch norm after the depthwise convolution
+  - `use_bn2`: set to `true` to use a batch norm after the pointwise convolution
   - `stride`: stride of the first convolution kernel
   - `pad`: padding of the first convolution kernel
   - `dilation`: dilation of the first convolution kernel
@@ -79,16 +87,16 @@ See Fig. 3 in [reference](https://arxiv.org/abs/1704.04861v1).
   - `ϵ`, `momentum`: batch norm parameters (see [`Flux.BatchNorm`](#))
 """
 function depthwise_sep_conv_bn(kernelsize, inplanes, outplanes, activation = relu;
-                               rev = false,
+                               rev = false, use_bn1 = true, use_bn2 = true,
                                initβ = Flux.zeros32, initγ = Flux.ones32,
                                ϵ = 1.0f-5, momentum = 1.0f-1,
                                stride = 1, kwargs...)
     return vcat(conv_bn(kernelsize, inplanes, inplanes, activation;
                         rev = rev, initβ = initβ, initγ = initγ,
-                        ϵ = ϵ, momentum = momentum,
+                        ϵ = ϵ, momentum = momentum, use_bn = use_bn1,
                         stride = stride, groups = Int(inplanes), kwargs...),
                 conv_bn((1, 1), inplanes, outplanes, activation;
-                        rev = rev, initβ = initβ, initγ = initγ,
+                        rev = rev, initβ = initβ, initγ = initγ, use_bn = use_bn2,
                         ϵ = ϵ, momentum = momentum))
 end
 
