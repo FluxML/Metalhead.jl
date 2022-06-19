@@ -1,3 +1,25 @@
+"""
+    efficientnet(scalings, block_config;
+                 inchannels = 3, nclasses = 1000, max_width = 1280)
+
+Create an EfficientNet model ([reference](https://arxiv.org/abs/1905.11946v5)).
+
+# Arguments
+
+- `scalings`: global width and depth scaling (given as a tuple)
+- `block_config`: configuration for each inverted residual block,
+                  given as a vector of tuples with elements:
+    - `n`: number of block repetitions (will be scaled by global depth scaling)
+    - `k`: kernel size
+    - `s`: kernel stride
+    - `e`: expansion ratio
+    - `i`: block input channels
+    - `o`: block output channels (will be scaled by global width scaling)
+- `inchannels`: number of input channels
+- `nclasses`: number of output classes
+- `max_width`: maximum number of output channels before the fully connected
+               classification blocks
+"""
 function efficientnet(scalings, block_config;
                       inchannels = 3, nclasses = 1000, max_width = 1280)
     wscale, dscale = scalings
@@ -9,7 +31,7 @@ function efficientnet(scalings, block_config;
     blocks = []
     for (n, k, s, e, i, o) in block_config
         in_channels = round_filter(i, 8)
-        out_channels = round_filter(o, 8)
+        out_channels = round_filter(wscale ≈ 1 ? o : ceil(Int64, wscale * o), 8)
         repeat = dscale ≈ 1 ? n : ceil(Int64, dscale * n)
 
         push!(blocks,
@@ -71,6 +93,29 @@ struct EfficientNet
   layers::Any
 end
 
+"""
+    EfficientNet(scalings, block_config;
+                 inchannels = 3, nclasses = 1000, max_width = 1280)
+
+Create an EfficientNet model ([reference](https://arxiv.org/abs/1905.11946v5)).
+See also [`efficientnet`](#).
+
+# Arguments
+
+- `scalings`: global width and depth scaling (given as a tuple)
+- `block_config`: configuration for each inverted residual block,
+                  given as a vector of tuples with elements:
+    - `n`: number of block repetitions (will be scaled by global depth scaling)
+    - `k`: kernel size
+    - `s`: kernel stride
+    - `e`: expansion ratio
+    - `i`: block input channels
+    - `o`: block output channels (will be scaled by global width scaling)
+- `inchannels`: number of input channels
+- `nclasses`: number of output classes
+- `max_width`: maximum number of output channels before the fully connected
+               classification blocks
+"""
 function EfficientNet(scalings, block_config;
                       inchannels = 3, nclasses = 1000, max_width = 1280)
   layers = efficientnet(scalings, block_config;
@@ -87,6 +132,18 @@ end
 backbone(m::EfficientNet) = m.layers[1]
 classifier(m::EfficientNet) = m.layers[2]
 
+"""
+    EfficientNet(name::Symbol; pretrain = false)
+
+Create an EfficientNet model ([reference](https://arxiv.org/abs/1905.11946v5)).
+See also [`efficientnet`](#).
+
+# Arguments
+
+- `name`: name of default configuration
+          (can be `:b0`, `:b1`, `:b2`, `:b3`, `:b4`, `:b5`, `:b6`, `:b7`, `:b8`)
+- `pretrain`: set to `true` to load the pre-trained weights for ImageNet
+"""
 function EfficientNet(name::Symbol; pretrain = false)
     @assert name in keys(efficientnet_global_configs)
         "`name` must be one of $(sort(collect(keys(efficientnet_global_configs))))"
