@@ -4,15 +4,15 @@ using Flux: Zygote
 using Images
 
 const PRETRAINED_MODELS = [
-  (VGG, 11, false),
-  (VGG, 13, false),
-  (VGG, 16, false),
-  (VGG, 19, false),
-  (ResNet, 18),
-  (ResNet, 34),
-  (ResNet, 50),
-  (ResNet, 101),
-  (ResNet, 152),
+    (VGG, 11, false),
+    (VGG, 13, false),
+    (VGG, 16, false),
+    (VGG, 19, false),
+    (ResNet, 18),
+    (ResNet, 34),
+    (ResNet, 50),
+    (ResNet, 101),
+    (ResNet, 152),
 ]
 
 function gradtest(model, input)
@@ -24,9 +24,9 @@ function gradtest(model, input)
 end
 
 function normalize(data)
-  cmean = reshape(Float32[0.485, 0.456, 0.406],(1,1,3,1))
-  cstd = reshape(Float32[0.229, 0.224, 0.225],(1,1,3,1))
-  return (data .- cmean) ./ cstd
+    cmean = reshape(Float32[0.485, 0.456, 0.406],(1,1,3,1))
+    cstd = reshape(Float32[0.229, 0.224, 0.225],(1,1,3,1))
+    return (data .- cmean) ./ cstd
 end
 
 # test image
@@ -39,9 +39,10 @@ const TEST_X = permutedims(convert(Array{Float32}, channelview(TEST_IMG)), (3,2,
 const TEST_LBLS = readlines(download("https://raw.githubusercontent.com/pytorch/hub/master/imagenet_classes.txt"))
 
 function acctest(model)
-  ypred = Flux.onecold(model(TEST_X), TEST_LBLS)
+    ypred = model(TEST_X) |> vec
+    top5 = TEST_LBLS[sortperm(ypred; rev = true)]
 
-  return only(ypred) == "acoustic guitar"
+    return "acoustic guitar" ∈ top5
 end
 
 x_224 = rand(Float32, 224, 224, 3, 1)
