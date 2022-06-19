@@ -48,8 +48,8 @@ GC.gc()
 
     @testset "Shortcut C" begin
         m = Metalhead.resnet(Metalhead.basicblock, :C;
-                            channel_config = [1, 1],
-                            block_config = [2, 2, 2, 2])
+                             channel_config = [1, 1],
+                             block_config = [2, 2, 2, 2])
         @test size(m(x_256)) == (1000, 1)
         @test gradtest(m, x_256)
     end
@@ -86,11 +86,35 @@ end
 GC.safepoint()
 GC.gc()
 
-@testset "Inception3" begin
-    m = Inception3()
-    @test size(m(x_224)) == (1000, 1)
-    @test_throws ArgumentError Inception3(pretrain = true)
-    @test gradtest(m, x_224)
+@testset "Inception" begin
+    x_299 = rand(Float32, 299, 299, 3, 2)
+    @testset "Inceptionv3" begin
+        m = Inceptionv3()
+        @test size(m(x_299)) == (1000, 2)
+        @test_throws ArgumentError Inceptionv3(pretrain = true)
+        @test gradtest(m, x_299)
+    end
+    GC.safepoint()
+    GC.gc()
+    @testset "Inceptionv4" begin
+        m = Inceptionv4()
+        @test size(m(x_299)) == (1000, 2)
+        @test gradtest(m, x_299)
+    end
+    GC.safepoint()
+    GC.gc()
+    @testset "InceptionResNetv2" begin
+        m = InceptionResNetv2()
+        @test size(m(x_299)) == (1000, 2)
+        @test gradtest(m, x_299)
+    end
+    GC.safepoint()
+    GC.gc()
+    @testset "Xception" begin
+        m = Xception()
+        @test size(m(x_299)) == (1000, 2)
+        @test gradtest(m, x_299)
+    end
 end
 
 GC.safepoint()
@@ -135,10 +159,8 @@ GC.gc()
         end
         @test gradtest(m, x_224)
     end
-
     GC.safepoint()
     GC.gc()
-
     @testset "MobileNetv2" begin
         m = MobileNetv2()
         @test size(m(x_224)) == (1000, 1)
@@ -149,10 +171,8 @@ GC.gc()
         end
         @test gradtest(m, x_224)
     end
-
     GC.safepoint()
     GC.gc()
-
     @testset "MobileNetv3" verbose = true begin
         @testset for mode in [:small, :large]
             m = MobileNetv3(mode)
@@ -166,21 +186,21 @@ GC.gc()
             @test gradtest(m, x_224)
         end
     end
-    end
+end
 
-    GC.safepoint()
-    GC.gc()
+GC.safepoint()
+GC.gc()
 
-    @testset "ConvNeXt" verbose = true begin
-        @testset for mode in [:small, :base, :large] # :tiny, #, :xlarge]
-            @testset for drop_path_rate in [0.0, 0.5]
-                m = ConvNeXt(mode; drop_path_rate)
-                @test size(m(x_224)) == (1000, 1)
-                @test gradtest(m, x_224)
-                GC.safepoint()
-                GC.gc()
-            end
+@testset "ConvNeXt" verbose = true begin
+    @testset for mode in [:small, :base, :large] # :tiny, #, :xlarge]
+        @testset for drop_path_rate in [0.0, 0.5]
+            m = ConvNeXt(mode; drop_path_rate)
+            @test size(m(x_224)) == (1000, 1)
+            @test gradtest(m, x_224)
+            GC.safepoint()
+            GC.gc()
         end
+    end
 end
 
 GC.safepoint()

@@ -34,7 +34,17 @@ Concatenate `x` and `y` (and any `z`s) along the channel dimension (third dimens
 Equivalent to `cat(x, y, zs...; dims=3)`.
 Convenient reduction operator for use with `Parallel`.
 """
-cat_channels(xy...) = cat(xy...; dims = 3)
+cat_channels(xy...) = cat(xy...; dims = Val(3))
+
+"""
+    inputscale(λ; activation = identity)
+
+Scale the input by a scalar λ and applies an activation function to it.
+Equivalent to `activation.(λ .* x)`.
+"""
+inputscale(λ; activation = identity) = x -> _input_scale(x, λ, activation)
+_input_scale(x, λ, activation) = activation.(λ .* x)
+_input_scale(x, λ, ::typeof(identity)) = λ .* x
 
 """
     swapdims(perm)
@@ -53,5 +63,7 @@ function _maybe_big_show(io, model)
         else
             show(io, model)
         end
+    else
+        show(io, model)
     end
 end

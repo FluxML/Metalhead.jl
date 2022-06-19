@@ -177,9 +177,3 @@ function VGG(depth::Integer = 16; pretrain = false, batchnorm = false, nclasses 
     end
     return model
 end
-
-# deprecations
-@deprecate VGG11(; kw...) VGG(11; kw...)
-@deprecate VGG13(; kw...) VGG(13; kw...)
-@deprecate VGG16(; kw...) VGG(16; kw...)
-@deprecate VGG19(; kw...) VGG(19; kw...)

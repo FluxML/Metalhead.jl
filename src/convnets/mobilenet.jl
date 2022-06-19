@@ -36,7 +36,7 @@ function mobilenetv1(width_mult, config;
         for _ in 1:nrepeats
             layer = dw ?
                     depthwise_sep_conv_bn((3, 3), inchannels, outch, activation;
-                                          stride = stride, pad = 1) :
+                                          stride = stride, pad = 1, bias = false) :
                     conv_bn((3, 3), inchannels, outch, activation; stride = stride, pad = 1)
             append!(layers, layer)
             inchannels = outch
