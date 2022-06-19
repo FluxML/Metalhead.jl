@@ -171,9 +171,9 @@ function VGG(depth::Integer = 16; pretrain = false, batchnorm = false, nclasses 
                 fcsize = 4096,
                 dropout = 0.5)
     if pretrain && !batchnorm
-        loadpretrain!(model, string("VGG", depth))
+        loadpretrain!(model, string("vgg", depth))
     elseif pretrain
-        loadpretrain!(model, "VGG$(depth)-BN)")
+        loadpretrain!(model, "vgg$(depth)-bn)")
     end
     return model
 end

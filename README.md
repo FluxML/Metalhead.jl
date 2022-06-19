@@ -16,8 +16,8 @@
 
 | Model Name                                       | Function                                                                                  | Pre-trained? |
 |:-------------------------------------------------|:------------------------------------------------------------------------------------------|:------------:|
-| [VGG](https://arxiv.org/abs/1409.1556)           | [`VGG`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.VGG.html)                 | N            |
-| [ResNet](https://arxiv.org/abs/1512.03385)       | [`ResNet`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.ResNet.html)           | N            |
+| [VGG](https://arxiv.org/abs/1409.1556)           | [`VGG`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.VGG.html)                 | Y (w/o BN)   |
+| [ResNet](https://arxiv.org/abs/1512.03385)       | [`ResNet`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.ResNet.html)           | Y            |
 | [GoogLeNet](https://arxiv.org/abs/1409.4842)     | [`GoogLeNet`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.GoogLeNet.html)     | N            |
 | [Inception-v3](https://arxiv.org/abs/1512.00567) | [`Inceptionv3`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.Inceptionv3.html)   | N            |
 | [Inception-v4](https://arxiv.org/abs/1602.07261) | [`Inceptionv4`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.Inceptionv4.html)   | N            |
@@ -34,6 +34,8 @@
 | [ViT](https://arxiv.org/abs/2010.11929)          | [`ViT`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.ViT.html)                 | N            |
 | [ConvNeXt](https://arxiv.org/abs/2201.03545)     | [`ConvNeXt`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.ConvNeXt.html)       | N            |
 | [ConvMixer](https://arxiv.org/abs/2201.09792)    | [`ConvMixer`](https://fluxml.ai/Metalhead.jl/dev/docstrings/Metalhead.ConvMixer.html)     | N            |
+
+To contribute new models, see our [contributing docs](https://fluxml.ai/Metalhead.jl/dev/docs/developer-guide/contributing.html).
 
 ## Getting Started
 

@@ -579,8 +579,9 @@ Creates an Xception model.
     
     `Xception` does not currently support pretrained weights.
 """
-function Xception(; inchannels = 3, dropout = 0.0, nclasses = 1000)
+function Xception(; pretrain = false, inchannels = 3, dropout = 0.0, nclasses = 1000)
     layers = xception(; inchannels, dropout, nclasses)
+    pretrain && loadpretrain!(layers, "xception")
     return Xception(layers)
 end
 

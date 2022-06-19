@@ -1,6 +1,3 @@
-using Metalhead, Test
-using Flux
-
 @testset "ViT" begin
     for mode in [:small, :base, :large] # :tiny, #,:huge, :giant, :gigantic]
         m = ViT(mode)
