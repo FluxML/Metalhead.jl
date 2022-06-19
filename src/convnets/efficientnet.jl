@@ -29,8 +29,8 @@ function efficientnet(scalings, block_config;
 
     blocks = []
     for (n, k, s, e, i, o) in block_config
-        in_channels = round_filter(i, 8)
-        out_channels = round_filter(wscale ≈ 1 ? o : ceil(Int64, wscale * o), 8)
+        in_channels = _round_channels(i, 8)
+        out_channels = _round_channels(wscale ≈ 1 ? o : ceil(Int64, wscale * o), 8)
         repeat = dscale ≈ 1 ? n : ceil(Int64, dscale * n)
 
         push!(blocks,
