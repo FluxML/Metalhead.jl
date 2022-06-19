@@ -72,14 +72,16 @@ GC.gc()
 
 @testset "EfficientNet" begin
     @testset "EfficientNet($name)" for name in [:b0, :b1, :b2, :b3, :b4, :b5, :b6, :b7, :b8]
+        xsz = Metalhead.efficientnet_global_configs[name][1]
+        x = rand(Float32, xsz...)
         m = EfficientNet(name)
-        @test size(m(x_256)) == (1000, 1)
+        @test size(m(x)) == (1000, 1)
         if (EfficientNet, name) in PRETRAINED_MODELS
             @test (EfficientNet(name, pretrain = true); true)
         else
             @test_throws ArgumentError EfficientNet(name, pretrain = true)
         end
-        @test gradtest(m, x_256)
+        @test gradtest(m, x)
         GC.safepoint()
         GC.gc()
     end

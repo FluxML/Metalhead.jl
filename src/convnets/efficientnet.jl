@@ -147,7 +147,7 @@ function EfficientNet(name::Symbol; pretrain = false)
     @assert name in keys(efficientnet_global_configs)
         "`name` must be one of $(sort(collect(keys(efficientnet_global_configs))))"
 
-    model = EfficientNet(efficientnet_global_configs[name]..., efficientnet_block_configs)
+    model = EfficientNet(efficientnet_global_configs[name][2], efficientnet_block_configs)
     pretrain && loadpretrain!(model, string("efficientnet-", name))
 
     return model
