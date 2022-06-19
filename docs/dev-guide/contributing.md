@@ -15,8 +15,8 @@ To fix a bug in Metalhead.jl, you can [open a PR](https://github.com/FluxML/Meta
 To add a new model architecture to Metalhead.jl, you can [open a PR](https://github.com/FluxML/Metalhead.jl/pulls). Keep in mind a few guiding principles for how this package is designed:
 
 - reuse layers from Flux as much as possible (e.g. use `Parallel` before defining a `Bottleneck` struct)
-- adhere as closely as possible to a reference such as a published paper (i.e. the structure of your model should be intuitive based on the paper)
-- use generic functional builders (e.g. [`resnet`](#) is the core function that build "ResNet-like" models based on the principles in the paper)
+- adhere as closely as possible to a reference such as a published paper (i.e. the structure of your model should follow intuitively from the paper)
+- use generic functional builders (e.g. [`resnet`](#) is the core function that builds "ResNet-like" models)
 - use multiple dispatch to add convenience constructors that wrap your functional builder
 
 When in doubt, just open a PR! We are more than happy to help review your code to help it align with the rest of the library. After adding a model, you might consider adding some pre-trained weights (see below).
