@@ -27,6 +27,7 @@ include("convnets/resnext.jl")
 include("convnets/densenet.jl")
 include("convnets/squeezenet.jl")
 include("convnets/mobilenet.jl")
+include("convnets/efficientnet.jl")
 include("convnets/convnext.jl")
 include("convnets/convmixer.jl")
 
