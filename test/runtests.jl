@@ -23,7 +23,7 @@ function gradtest(model, input)
     return true
 end
 
-function normalize(data)
+function normalize_imagenet(data)
     cmean = reshape(Float32[0.485, 0.456, 0.406],(1,1,3,1))
     cstd = reshape(Float32[0.229, 0.224, 0.225],(1,1,3,1))
     return (data .- cmean) ./ cstd
@@ -33,7 +33,7 @@ end
 const TEST_PATH = download("https://cdn.pixabay.com/photo/2015/05/07/11/02/guitar-756326_960_720.jpg")
 const TEST_IMG = imresize(Images.load(TEST_PATH), (224, 224))
 # CHW -> WHC
-const TEST_X = permutedims(convert(Array{Float32}, channelview(TEST_IMG)), (3,2,1)) |> normalize
+const TEST_X = permutedims(convert(Array{Float32}, channelview(TEST_IMG)), (3,2,1)) |> normalize_imagenet
 
 # image net labels
 const TEST_LBLS = readlines(download("https://raw.githubusercontent.com/pytorch/hub/master/imagenet_classes.txt"))

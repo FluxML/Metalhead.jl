@@ -35,6 +35,6 @@ All Metalhead.jl model artifacts are hosted using HuggingFace. You can find the 
 6. Open a PR to the [corresponding HuggingFace repo](https://huggingface.co/FluxML). Do this by going to the "Community" tab in the HuggingFace repository. PRs and discussions are shown as the same thing in the HuggingFace web app. You can use your local Git program to make clone the repo and make PRs if you wish. Check out the [guide on PRs to HuggingFace](https://huggingface.co/docs/hub/repositories-pull-requests-discussions) for more information.
 7. Copy the download URL for the model file that you added to HuggingFace. Make sure to grab the URL for a specific commit and not for the `main` branch.
 8. Update your Metalhead.jl PR by adding the URL to the Artifacts.toml.
-9. If the tests pass for your weights, we will merge your PR!
+9. If the tests pass for your weights, we will merge your PR! Your model should pass the `acctest` function in the Metalhead.jl test suite. If your model already exists in the repo, then these tests are already in place, and you can add your model configuration to the `PRETRAINED_MODELS` list in the `runtests.jl` file. Please refer to the ResNet tests as an example.
 
 If you want to fix existing weights, then you can follow the same set of steps.
