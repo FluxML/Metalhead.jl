@@ -21,7 +21,7 @@ First, let's check the accuracy on a test image from ImageNet.
 using Images
 
 # test image
-img = Images.load(download("https://cdn.pixabay.com/photo/2015/05/07/11/02/guitar-756326_960_720.jpg"))
+img = Images.load(download("https://cdn.pixabay.com/photo/2015/05/07/11/02/guitar-756326_960_720.jpg"));
 ```
 We'll use the popular [DataAugmentation.jl](https://github.com/lorenzoh/DataAugmentation.jl) library to crop our input image, convert it to a plain array, and normalize the pixels.
 {cell=quickstart}
@@ -39,7 +39,7 @@ data = apply(augmentations, Image(img)) |> itemdata
 # image net labels
 labels = readlines(download("https://raw.githubusercontent.com/pytorch/hub/master/imagenet_classes.txt"))
 
-Flux.onecold(model(data), labels)
+Flux.onecold(model(Flux.unsqueeze(data, 4)), labels)
 ```
 
 Below, we train it on some randomly generated data.
