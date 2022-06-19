@@ -70,6 +70,24 @@ end
 GC.safepoint()
 GC.gc()
 
+@testset "EfficientNet" begin
+    @testset "EfficientNet($name)" for name in [:b0, :b1, :b2, :b3, :b4, :b5, :b6, :b7, :b8]
+        m = EfficientNet(name)
+        @test size(m(x_256)) == (1000, 1)
+        if (EfficientNet, name) in PRETRAINED_MODELS
+            @test (EfficientNet(name, pretrain = true); true)
+        else
+            @test_throws ArgumentError EfficientNet(name, pretrain = true)
+        end
+        @test gradtest(m, x_256)
+        GC.safepoint()
+        GC.gc()
+    end
+end
+
+GC.safepoint()
+GC.gc()
+
 @testset "GoogLeNet" begin
     m = GoogLeNet()
     @test size(m(x_224)) == (1000, 1)
