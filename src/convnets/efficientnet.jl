@@ -24,9 +24,8 @@ function efficientnet(scalings, block_config;
                       inchannels = 3, nclasses = 1000, max_width = 1280)
     wscale, dscale = scalings
     out_channels = _round_channels(32, 8)
-    stem = Chain(Conv((3, 3), inchannels => out_channels;
-                      bias = false, stride = 2, pad = SamePad()),
-                 BatchNorm(out_channels, swish))
+    stem = conv_bn((3, 3), inchannels, out_channels, swish;
+                   bias = false, stride = 2, pad = SamePad())
 
     blocks = []
     for (n, k, s, e, i, o) in block_config
