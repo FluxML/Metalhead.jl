@@ -332,7 +332,7 @@ Creates an Inceptionv4 model.
 
 !!! warning
     
-        `Inceptionv4`` does not currently support pretrained weights.
+    `Inceptionv4`` does not currently support pretrained weights.
 """
 struct Inceptionv4
     layers::Any
@@ -540,9 +540,9 @@ Creates an Xception model.
 
 # Arguments
 
-  - inchannels: number of input channels.
-  - dropout: rate of dropout in classifier head.
-  - nclasses: the number of output classes.
+  - `inchannels`: number of input channels.
+  - `dropout`: rate of dropout in classifier head.
+  - `nclasses`: the number of output classes.
 """
 function xception(; inchannels = 3, dropout = 0.0, nclasses = 1000)
     body = Chain(conv_bn((3, 3), inchannels, 32; stride = 2, bias = false)...,
@@ -570,14 +570,14 @@ Creates an Xception model.
 
 # Arguments
 
-  - pretrain: set to `true` to load the pre-trained weights for ImageNet.
-  - inchannels: number of input channels.
-  - dropout: rate of dropout in classifier head.
-  - nclasses: the number of output classes.
+  - `pretrain`: set to `true` to load the pre-trained weights for ImageNet.
+  - `inchannels`: number of input channels.
+  - `dropout`: rate of dropout in classifier head.
+  - `nclasses`: the number of output classes.
 
 !!! warning
     
-        `Xception` does not currently support pretrained weights.
+    `Xception` does not currently support pretrained weights.
 """
 function Xception(; inchannels = 3, dropout = 0.0, nclasses = 1000)
     layers = xception(; inchannels, dropout, nclasses)
