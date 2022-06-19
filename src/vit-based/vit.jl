@@ -82,7 +82,7 @@ See the paper [An Image is Worth 16x16 Words: Transformers for Image Recognition
 - `pool`: pooling type, either :class or :mean
 - `nclasses`: number of classes in the output
 
-See also [`Metalhead.vit`](@ref) for a more flexible constructor.
+See also [`Metalhead.vit`](#) for a more flexible constructor.
 """
 struct ViT
   layers
