@@ -45,14 +45,13 @@ function efficientnet(scalings, block_config;
     blocks = Chain(blocks...)
 
     head_out_channels = _round_channels(max_width, 8)
-    head = Chain(Conv((1, 1), out_channels => head_out_channels;
-                      bias = false, pad = SamePad()),
-                BatchNorm(head_out_channels, swish))
+    head = conv_bn((1, 1), out_channels, head_out_channels, swish;
+                   bias = false, pad = SamePad())
 
     top = Dense(head_out_channels, nclasses)
 
-    return Chain(Chain(stem, blocks, head),
-                Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten, top))
+    return Chain(Chain(stem..., blocks, head...),
+                 Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten, top))
 end
 
 # n: # of block repetitions
