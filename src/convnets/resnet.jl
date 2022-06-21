@@ -1,259 +1,185 @@
-"""
-    basicblock(inplanes, outplanes, downsample = false)
-
-Create a basic residual block
-([reference](https://arxiv.org/abs/1512.03385v1)).
-
-# Arguments:
-
-  - `inplanes`: the number of input feature maps
-  - `outplanes`: a list of the number of output feature maps for each convolution
-    within the residual block
-  - `downsample`: set to `true` to downsample the input
-"""
-function basicblock(inplanes, outplanes, downsample = false)
-    stride = downsample ? 2 : 1
-    return Chain(conv_bn((3, 3), inplanes, outplanes[1]; stride = stride, pad = 1,
-                         bias = false)...,
-                 conv_bn((3, 3), outplanes[1], outplanes[2], identity; stride = 1, pad = 1,
-                         bias = false)...)
+function basicblock(inplanes, planes; stride = 1, downsample = identity, cardinality = 1,
+                    base_width = 64,
+                    reduce_first = 1, dilation = 1, first_dilation = nothing,
+                    act_layer = relu, norm_layer = BatchNorm,
+                    drop_block = identity, drop_path = identity)
+    expansion = 1
+    @assert cardinality==1 "BasicBlock only supports cardinality of 1"
+    @assert base_width==64 "BasicBlock does not support changing base width"
+    first_planes = planes ÷ reduce_first
+    outplanes = planes * expansion
+    first_dilation = !isnothing(first_dilation) ? first_dilation : dilation
+    conv_bn1 = Chain(Conv((3, 3), inplanes => first_planes; stride, pad = first_dilation,
+                          dilation = first_dilation, bias = false),
+                     norm_layer(first_planes))
+    drop_block = drop_block === identity ? identity : drop_block
+    conv_bn2 = Chain(Conv((3, 3), first_planes => outplanes; stride, pad = dilation,
+                          dilation = dilation, bias = false),
+                     norm_layer(outplanes))
+    return Chain(Parallel(+, downsample,
+                          Chain(conv_bn1, drop_block, act_layer, conv_bn2, drop_path)),
+                 act_layer)
 end
 
-"""
-    bottleneck(inplanes, outplanes, downsample = false; stride = [1, (downsample ? 2 : 1), 1])
-
-Create a bottleneck residual block
-([reference](https://arxiv.org/abs/1512.03385v1)). The bottleneck is composed of
-3 convolutional layers each with the given `stride`.
-By default, `stride` implements ["ResNet v1.5"](https://catalog.ngc.nvidia.com/orgs/nvidia/resources/resnet_50_v1_5_for_pytorch)
-which uses `stride == [1, 2, 1]` when `downsample == true`.
-This version is standard across various ML frameworks.
-The original paper uses `stride == [2, 1, 1]` when `downsample == true` instead.
-
-# Arguments:
-
-  - `inplanes`: the number of input feature maps
-  - `outplanes`: a list of the number of output feature maps for each convolution
-    within the residual block
-  - `downsample`: set to `true` to downsample the input
-  - `stride`: a list of the stride of the 3 convolutional layers
-"""
-function bottleneck(inplanes, outplanes, downsample = false;
-                    stride = [1, (downsample ? 2 : 1), 1])
-    return Chain(conv_bn((1, 1), inplanes, outplanes[1]; stride = stride[1],
-                         bias = false)...,
-                 conv_bn((3, 3), outplanes[1], outplanes[2]; stride = stride[2], pad = 1,
-                         bias = false)...,
-                 conv_bn((1, 1), outplanes[2], outplanes[3], identity; stride = stride[3],
-                         bias = false)...)
+function bottleneck(inplanes, planes; stride = 1, downsample = identity, cardinality = 1,
+                    base_width = 64,
+                    reduce_first = 1, dilation = 1, first_dilation = nothing,
+                    act_layer = relu, norm_layer = BatchNorm,
+                    drop_block = identity, drop_path = identity)
+    expansion = 4
+    width = floor(Int, planes * (base_width / 64)) * cardinality
+    first_planes = width ÷ reduce_first
+    outplanes = planes * expansion
+    first_dilation = !isnothing(first_dilation) ? first_dilation : dilation
+    conv_bn1 = Chain(Conv((1, 1), inplanes => first_planes; bias = false),
+                     norm_layer(first_planes))
+    conv_bn2 = Chain(Conv((3, 3), first_planes => width; stride, pad = first_dilation,
+                          dilation = first_dilation, groups = cardinality, bias = false),
+                     norm_layer(width))
+    drop_block = drop_block === identity ? identity : drop_block()
+    conv_bn3 = Chain(Conv((1, 1), width => outplanes; bias = false), norm_layer(outplanes))
+    return Chain(Parallel(+, downsample,
+                          Chain(conv_bn1, drop_block, act_layer, conv_bn2, drop_block,
+                                act_layer, conv_bn3, drop_path)),
+                 act_layer)
 end
 
-"""
-    bottleneck_v1(inplanes, outplanes, downsample = false)
-
-Create a bottleneck residual block
-([reference](https://arxiv.org/abs/1512.03385v1)). The bottleneck is composed of
-3 convolutional layers with all a stride of 1 except the first convolutional
-layer which has a stride of 2.
-
-# Arguments:
-
-  - `inplanes`: the number of input feature maps
-  - `outplanes`: a list of the number of output feature maps for each convolution
-    within the residual block
-  - `downsample`: set to `true` to downsample the input
-"""
-function bottleneck_v1(inplanes, outplanes, downsample = false)
-    return bottleneck(inplanes, outplanes, downsample;
-                      stride = [(downsample ? 2 : 1), 1, 1])
+function drop_blocks(drop_prob = 0.0)
+    return [identity, identity,
+        drop_prob == 0.0 ? DropBlock(drop_prob, 5, 0.25) : identity,
+        drop_prob == 0.0 ? DropBlock(drop_prob, 3, 1.00) : identity]
 end
 
-"""
-    resnet(block, residuals::NTuple{2, Any}, connection = addrelu;
-           channel_config, block_config, nclasses = 1000)
+function downsample_conv(kernel_size, in_channels, out_channels; stride = 1, dilation = 1,
+                         first_dilation = nothing, norm_layer = BatchNorm)
+    kernel_size = stride == 1 && dilation == 1 ? 1 : kernel_size
+    first_dilation = kernel_size[1] > 1 ?
+                     (!isnothing(first_dilation) ? first_dilation : dilation) : 1
+    pad = ((stride - 1) + dilation * (kernel_size[1] - 1)) ÷ 2
+    return Chain(Conv(kernel_size, in_channels => out_channels; stride, pad,
+                      dilation = first_dilation, bias = false),
+                 norm_layer(out_channels))
+end
 
-Create a ResNet model
-([reference](https://arxiv.org/abs/1512.03385v1)).
+function downsample_avg(kernel_size, in_channels, out_channels; stride = 1, dilation = 1,
+                        first_dilation = nothing, norm_layer = BatchNorm)
+    avg_stride = dilation == 1 ? stride : 1
+    if stride == 1 && dilation == 1
+        pool = identity
+    else
+        pad = avg_stride == 1 && dilation > 1 ? SamePad() : 0
+        pool = avg_pool_fn((2, 2); stride = avg_stride, pad)
+    end
 
-# Arguments
+    return Chain(pool,
+                 Conv((1, 1), in_channels => out_channels; stride = 1, pad = 0,
+                      bias = false),
+                 norm_layer(out_channels))
+end
 
-  - `block`: a function with input `(inplanes, outplanes, downsample=false)` that returns
-    a new residual block (see [`Metalhead.basicblock`](#) and [`Metalhead.bottleneck`](#))
-  - `residuals`: a 2-tuple of functions with input `(inplanes, outplanes, downsample=false)`,
-    each of which will return a function that will be used as a new "skip" path to match a residual block.
-    [`Metalhead.skip_identity`](#) and [`Metalhead.skip_projection`](#) can be used here.
-  - `connection`: the binary function applied to the output of residual and skip paths in a block
-  - `channel_config`: the growth rate of the output feature maps within a residual block
-  - `block_config`: a list of the number of residual blocks at each stage
-  - `nclasses`: the number of output classes
-"""
-function resnet(block, residuals::AbstractVector{<:NTuple{2, Any}}, connection = addrelu;
-                channel_config, block_config, nclasses = 1000)
-    inplanes = 64
-    baseplanes = 64
-    layers = []
-    append!(layers, conv_bn((7, 7), 3, inplanes; stride = 2, pad = 3, bias = false))
-    push!(layers, MaxPool((3, 3); stride = (2, 2), pad = (1, 1)))
-    for (i, nrepeats) in enumerate(block_config)
-        # output planes within a block
-        outplanes = baseplanes .* channel_config
-        # push first skip connection on using first residual
-        # downsample the residual path if this is the first repetition of a block
-        push!(layers,
-              Parallel(connection, block(inplanes, outplanes, i != 1),
-                       residuals[i][1](inplanes, outplanes[end], i != 1)))
-        # push remaining skip connections on using second residual
-        inplanes = outplanes[end]
-        for _ in 2:nrepeats
-            push!(layers,
-                  Parallel(connection, block(inplanes, outplanes, false),
-                           residuals[i][2](inplanes, outplanes[end], false)))
-            inplanes = outplanes[end]
+function make_blocks(block_fn, channels, block_repeats, inplanes; expansion = 1,
+                     reduce_first = 1, output_stride = 32,
+                     down_kernel_size = 1, avg_down = false, drop_block_rate = 0.0,
+                     drop_path_rate = 0.0, kwargs...)
+    kwarg_dict = Dict(kwargs...)
+    stages = []
+    net_block_idx = 1
+    net_stride = 4
+    dilation = prev_dilation = 1
+    for (stage_idx, (planes, num_blocks, db)) in enumerate(zip(channels, block_repeats,
+                                                               drop_blocks(drop_block_rate)))
+        stride = stage_idx == 1 ? 1 : 2
+        if net_stride >= output_stride
+            dilation *= stride
+            stride = 1
+        else
+            net_stride *= stride
         end
-        # next set of output plane base is doubled
-        baseplanes *= 2
+        downsample = identity
+        if stride != 1 || inplanes != planes * expansion
+            downsample = avg_down ?
+                         downsample_avg(down_kernel_size, inplanes, planes * expansion;
+                                        stride, dilation, first_dilation = prev_dilation,
+                                        norm_layer = kwarg_dict[:norm_layer]) :
+                         downsample_conv(down_kernel_size, inplanes, planes * expansion;
+                                         stride, dilation, first_dilation = prev_dilation,
+                                         norm_layer = kwarg_dict[:norm_layer])
+        end
+        block_kwargs = Dict(:reduce_first => reduce_first, :dilation => dilation,
+                            :drop_block => db, kwargs...)
+        blocks = []
+        for block_idx in 1:num_blocks
+            downsample = block_idx == 1 ? downsample : identity
+            stride = block_idx == 1 ? stride : 1
+            # stochastic depth linear decay rule
+            block_dpr = drop_path_rate * net_block_idx / (sum(block_repeats) - 1)
+            push!(blocks,
+                  block_fn(inplanes, planes; stride, downsample,
+                           first_dilation = prev_dilation,
+                           drop_path = DropPath(block_dpr), block_kwargs...))
+            prev_dilation = dilation
+            inplanes = planes * expansion
+            net_block_idx += 1
+        end
+        push!(stages, Chain(blocks...))
     end
-    # next set of output plane base is doubled
-    baseplanes *= 2
-    return Chain(Chain(layers),
-                 Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten,
-                       Dense(inplanes, nclasses)))
+    return Chain(stages...)
 end
 
-"""
-    resnet(block, shortcut_config::Symbol, connection = addrelu;
-           channel_config, block_config, nclasses = 1000)
-
-Create a ResNet model
-([reference](https://arxiv.org/abs/1512.03385v1)).
-
-# Arguments
-
-  - `block`: a function with input `(inplanes, outplanes, downsample=false)` that returns
-    a new residual block (see [`Metalhead.basicblock`](#) and [`Metalhead.bottleneck`](#))
-
-  - `shortcut_config`: the type of shortcut style (either `:A`, `:B`, or `:C`)
-    
-      + `:A`: uses a [`Metalhead.skip_identity`](#) for all residual blocks
-      + `:B`: uses a [`Metalhead.skip_projection`](#) for the first residual block
-        and [`Metalhead.skip_identity`](@) for the remaining residual blocks
-      + `:C`: uses a [`Metalhead.skip_projection`](#) for all residual blocks
-  - `connection`: the binary function applied to the output of residual and skip paths in a block
-  - `channel_config`: the growth rate of the output feature maps within a residual block
-  - `block_config`: a list of the number of residual blocks at each stage
-  - `nclasses`: the number of output classes
-"""
-function resnet(block, shortcut_config::AbstractVector{<:Symbol}, args...; kwargs...)
-    shortcut_dict = Dict(:A => (skip_identity, skip_identity),
-                         :B => (skip_projection, skip_identity),
-                         :C => (skip_projection, skip_projection))
-    if any(sc -> !haskey(shortcut_dict, sc), shortcut_config)
-        error("Unrecognized shortcut_config ($shortcut_config) passed to `resnet` (use only :A, :B, or :C).")
+function resnet(block, layers; num_classes = 1000, inchannels = 3, output_stride = 32,
+                expansion = 1,
+                cardinality = 1, base_width = 64, stem_width = 64, stem_type = :default,
+                replace_stem_pool = false, reduce_first = 1,
+                down_kernel_size = (1, 1), avg_down = false, act_layer = relu,
+                norm_layer = BatchNorm,
+                drop_rate = 0.0, drop_path_rate = 0.0, drop_block_rate = 0.0,
+                block_kwargs...)
+    @assert output_stride in (8, 16, 32)
+    @assert stem_type in [:default, :deep, :deep_tiered]
+    # Stem
+    inplanes = stem_type == :deep ? stem_width * 2 : 64
+    if stem_type == :deep
+        stem_channels = (stem_width, stem_width)
+        if stem_type == :deep_tiered
+            stem_channels = (3 * (stem_width ÷ 4), stem_width)
+        end
+        conv1 = Chain(Conv((3, 3), inchannels => stem_channels[0]; stride = 2, pad = 1,
+                           bias = false),
+                      norm_layer(stem_channels[1]),
+                      act_layer(),
+                      Conv((3, 3), stem_channels[1] => stem_channels[1]; stride = 1,
+                           pad = 1, bias = false),
+                      norm_layer(stem_channels[2]),
+                      act_layer(),
+                      Conv((3, 3), stem_channels[2] => inplanes; stride = 1, pad = 1,
+                           bias = false))
+    else
+        conv1 = Conv((7, 7), inchannels => inplanes; stride = 2, pad = 3, bias = false)
     end
-    shortcut = [shortcut_dict[sc] for sc in shortcut_config]
-    return resnet(block, shortcut, args...; kwargs...)
-end
+    bn1 = norm_layer(inplanes)
+    act1 = act_layer
+    # Stem pooling
+    if replace_stem_pool
+        stempool = Chain(Conv((3, 3), inplanes => inplanes; stride = 2, pad = 1,
+                              bias = false),
+                         norm_layer(inplanes),
+                         act_layer)
+    else
+        stempool = MaxPool((3, 3); stride = 2, pad = 1)
+    end
+    stem = Chain(conv1, bn1, act1, stempool)
 
-function resnet(block, shortcut_config::Symbol, args...; block_config, kwargs...)
-    return resnet(block, fill(shortcut_config, length(block_config)), args...;
-                  block_config = block_config, kwargs...)
-end
+    # Feature Blocks
+    channels = [64, 128, 256, 512]
+    stage_blocks = make_blocks(block, channels, layers, inplanes; cardinality, base_width,
+                               output_stride, reduce_first, avg_down,
+                               down_kernel_size, act_layer, norm_layer,
+                               drop_block_rate, drop_path_rate, block_kwargs...)
 
-function resnet(block, residuals::NTuple{2}, args...; kwargs...)
-    return resnet(block, [residuals], args...; kwargs...)
-end
+    # Head (Pooling and Classifier)
+    num_features = 512 * expansion
+    classifier = Chain(GlobalMeanPool(), Dropout(drop_rate), MLUtils.flatten,
+                       Dense(num_features, num_classes))
 
-const resnet_config = Dict(18 => (([1, 1], [2, 2, 2, 2], [:A, :B, :B, :B]), basicblock),
-                           34 => (([1, 1], [3, 4, 6, 3], [:A, :B, :B, :B]), basicblock),
-                           50 => (([1, 1, 4], [3, 4, 6, 3], [:B, :B, :B, :B]), bottleneck),
-                           101 => (([1, 1, 4], [3, 4, 23, 3], [:B, :B, :B, :B]), bottleneck),
-                           152 => (([1, 1, 4], [3, 8, 36, 3], [:B, :B, :B, :B]), bottleneck))
-
-"""
-    ResNet(channel_config, block_config, shortcut_config;
-           block, connection = addrelu, nclasses = 1000)
-
-Create a `ResNet` model
-([reference](https://arxiv.org/abs/1512.03385v1)).
-See also [`resnet`](#).
-
-# Arguments
-
-  - `channel_config`: the growth rate of the output feature maps within a residual block
-  - `block_config`: a list of the number of residual blocks at each stage
-  - `shortcut_config`: the type of shortcut style (either `:A`, `:B`, or `:C`).
-    `shortcut_config` can also be a vector of symbols if different shortcut styles are applied to
-    different residual blocks.
-  - `block`: a function with input `(inplanes, outplanes, downsample=false)` that returns
-    a new residual block (see [`Metalhead.basicblock`](#) and [`Metalhead.bottleneck`](#))
-  - `connection`: the binary function applied to the output of residual and skip paths in a block
-  - `nclasses`: the number of output classes
-"""
-struct ResNet
-    layers::Any
-end
-
-function ResNet(channel_config, block_config, shortcut_config;
-                block, connection = addrelu, nclasses = 1000)
-    layers = resnet(block,
-                    shortcut_config,
-                    connection;
-                    channel_config = channel_config,
-                    block_config = block_config,
-                    nclasses = nclasses)
-    return ResNet(layers)
-end
-
-@functor ResNet
-
-(m::ResNet)(x) = m.layers(x)
-
-backbone(m::ResNet) = m.layers[1]
-classifier(m::ResNet) = m.layers[2]
-
-"""
-    ResNet(depth = 50; pretrain = false, nclasses = 1000)
-
-Create a ResNet model with a specified depth
-([reference](https://arxiv.org/abs/1512.03385v1))
-following [these modification](https://catalog.ngc.nvidia.com/orgs/nvidia/resources/resnet_50_v1_5_for_pytorch)
-referred as ResNet v1.5.
-
-See also [`Metalhead.resnet`](#).
-
-# Arguments
-
-  - `depth`: depth of the ResNet model. Options include (18, 34, 50, 101, 152).
-  - `nclasses`: the number of output classes
-
-For `ResNet(18)` and `ResNet(34)`, the parameter-free shortcut style (type `:A`)
-is used in the first block and the three other blocks use type `:B` connection
-(following the implementation in PyTorch). The published version of
-`ResNet(18)` and `ResNet(34)` used type `:A` shortcuts for all four blocks. The
-example below shows how to create a 18 or 34-layer `ResNet` using only type `:A`
-shortcuts:
-
-```julia
-using Metalhead
-
-resnet18 = ResNet([1, 1], [2, 2, 2, 2], :A; block = Metalhead.basicblock)
-
-resnet34 = ResNet([1, 1], [3, 4, 6, 3], :A; block = Metalhead.basicblock)
-```
-
-The bottleneck of the orginal ResNet model has a stride of 2 on the first
-convolutional layer when downsampling (instead of the second convolutional layers
-as in ResNet v1.5). The architecture of the orignal ResNet model can be obtained
-as shown below:
-
-```julia
-resnet50_v1 = ResNet([1, 1, 4], [3, 4, 6, 3], :B; block = Metalhead.bottleneck_v1)
-```
-"""
-function ResNet(depth::Integer = 50; pretrain = false, nclasses = 1000)
-    @assert depth in keys(resnet_config) "`depth` must be one of $(sort(collect(keys(resnet_config))))"
-    config, block = resnet_config[depth]
-    model = ResNet(config...; block = block, nclasses = nclasses)
-    pretrain && loadpretrain!(model, string("resnet", depth))
-    return model
+    return Chain(Chain(stem, stage_blocks), classifier)
 end
