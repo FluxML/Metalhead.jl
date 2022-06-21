@@ -24,5 +24,6 @@ export MHAttention,
        ChannelLayerNorm, prenorm,
        skip_identity, skip_projection,
        conv_bn, depthwise_sep_conv_bn,
-       invertedresidual, squeeze_excite
+       invertedresidual, squeeze_excite,
+       DropBlock
 end

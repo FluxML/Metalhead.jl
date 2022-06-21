@@ -7,45 +7,48 @@ Implements DropBlock, a regularization method for convolutional networks.
 struct DropBlock{F}
     drop_prob::F
     block_size::Integer
+    gamma_scale::F
 end
 @functor DropBlock
 
-(m::DropBlock)(x) = dropblock(x, m.drop_prob, m.block_size)
+(m::DropBlock)(x) = dropblock(x, m.drop_prob, m.block_size, m.gamma_scale)
 
-DropBlock(drop_prob = 0.1, block_size = 7) = DropBlock(drop_prob, block_size)
+function DropBlock(drop_prob = 0.1, block_size = 7, gamma_scale = 1.0)
+    return DropBlock(drop_prob, block_size, gamma_scale)
+end
 
-function _dropblock_checks(x, drop_prob, T)
+function _dropblock_checks(x, drop_prob, gamma_scale, T)
     if !(T <: AbstractArray)
         throw(ArgumentError("x must be an `AbstractArray`"))
     end
     if ndims(x) != 4
         throw(ArgumentError("x must have 4 dimensions (H, W, C, N) for `DropBlock`"))
     end
-    @assert drop_prob < 0 || drop_prob > 1 "drop_prob must be between 0 and 1, got $drop_prob"
+    @assert drop_prob < 0||drop_prob > 1 "drop_prob must be between 0 and 1, got $drop_prob"
+    @assert gamma_scale < 0||gamma_scale > 1 "gamma_scale must be between 0 and 1, got $gamma_scale"
 end
-ChainRulesCore.@non_differentiable _dropblock_checks(x, drop_prob, T)
+ChainRulesCore.@non_differentiable _dropblock_checks(x, drop_prob, gamma_scale, T)
 
-function dropblock(x::T, drop_prob, block_size::Integer) where {T}
-    _dropblock_checks(x, drop_prob, T)
+function dropblock(x::T, drop_prob, block_size::Integer, gamma_scale) where {T}
+    _dropblock_checks(x, drop_prob, gamma_scale, T)
     if drop_prob == 0
         return x
     end
-    return _dropblock(x, drop_prob, block_size)
+    return _dropblock(x, drop_prob, block_size, gamma_scale)
 end
 
-function _dropblock(x::AbstractArray{T, 4}, drop_prob, block_size) where {T}
-    gamma = drop_prob / (block_size ^ 2)
-    mask = rand_like(x, Float32, (size(x, 1), size(x, 2), size(x, 3)))
-    mask .<= gamma
-    block_mask = maxpool(reshape(mask, (size(mask)[1:3]..., 1)), (block_size, block_size);
-                         pad = block_size ÷ 2, stride = (1, 1))
-    if block_size % 2 == 0
-        block_mask = block_mask[1:(end - 1), 1:(end - 1), :, :]
-    end
-    block_mask = 1 .- dropdims(block_mask; dims = 4)
-    out = (x .* reshape(block_mask, (size(block_mask)[1:3]..., 1))) * length(block_mask) /
-          sum(block_mask)
-    return out
+function _dropblock(x::AbstractArray{T, 4}, drop_prob, block_size, gamma_scale) where {T}
+    H, W, _, _ = size(x)
+    total_size = H * W
+    clipped_block_size = min(block_size, min(H, W))
+    gamma = gamma_scale * drop_prob * total_size / clipped_block_size^2 /
+            ((W - block_size + 1) * (H - block_size + 1))
+    block_mask = rand_like(x) .< gamma
+    block_mask = maxpool(convert(T, block_mask), (clipped_block_size, clipped_block_size);
+                         stride = 1, padding = clipped_block_size ÷ 2)
+    block_mask = 1 .- block_mask
+    normalize_scale = convert(T, (length(block_mask) / sum(block_mask) .+ 1e-6))
+    return x * block_mask * normalize_scale
 end
 
 """
