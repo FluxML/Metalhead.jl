@@ -1,6 +1,6 @@
 """
     mixerblock(planes, npatches; mlp_ratio = (0.5, 4.0), mlp_layer = mlp_block, 
-               dropout = 0., drop_path_rate = 0., activation = gelu)
+               drop_rate =0., drop_path_rate = 0., activation = gelu)
 
 Creates a feedforward block for the MLPMixer architecture.
 ([reference](https://arxiv.org/pdf/2105.01601))
@@ -12,20 +12,22 @@ Creates a feedforward block for the MLPMixer architecture.
   - `mlp_ratio`: number(s) that determine(s) the number of hidden channels in the token mixing MLP
     and/or the channel mixing MLP as a ratio to the number of planes in the block.
   - `mlp_layer`: the MLP layer to use in the block
-  - `dropout`: the dropout rate to use in the MLP blocks
+  - `drop_rate`: the dropout rate to use in the MLP blocks
   - `drop_path_rate`: Stochastic depth rate
   - `activation`: the activation function to use in the MLP blocks
 """
 function mixerblock(planes, npatches; mlp_ratio = (0.5, 4.0), mlp_layer = mlp_block,
-                    dropout = 0.0, drop_path_rate = 0.0, activation = gelu)
+                    drop_rate = 0.0, drop_path_rate = 0.0, activation = gelu)
     tokenplanes, channelplanes = [Int(r * planes) for r in mlp_ratio]
     return Chain(SkipConnection(Chain(LayerNorm(planes),
                                       swapdims((2, 1, 3)),
-                                      mlp_layer(npatches, tokenplanes; activation, dropout),
+                                      mlp_layer(npatches, tokenplanes; activation,
+                                                drop_rate),
                                       swapdims((2, 1, 3)),
                                       DropPath(drop_path_rate)), +),
                  SkipConnection(Chain(LayerNorm(planes),
-                                      mlp_layer(planes, channelplanes; activation, dropout),
+                                      mlp_layer(planes, channelplanes; activation,
+                                                drop_rate),
                                       DropPath(drop_path_rate)), +))
 end
 
@@ -113,7 +115,7 @@ backbone(m::MLPMixer) = m.layers[1]
 classifier(m::MLPMixer) = m.layers[2]
 
 """
-    resmixerblock(planes, npatches; dropout = 0., drop_path_rate = 0., mlp_ratio = 4.0,
+    resmixerblock(planes, npatches; drop_rate =0., drop_path_rate = 0., mlp_ratio = 4.0,
                   activation = gelu, λ = 1e-4)
 
 Creates a block for the ResMixer architecture.
@@ -126,13 +128,13 @@ Creates a block for the ResMixer architecture.
   - `mlp_ratio`: ratio of the number of hidden channels in the channel mixing MLP to the number
     of planes in the block
   - `mlp_layer`: the MLP block to use
-  - `dropout`: the dropout rate to use in the MLP blocks
+  - `drop_rate`: the dropout rate to use in the MLP blocks
   - `drop_path_rate`: Stochastic depth rate
   - `activation`: the activation function to use in the MLP blocks
   - `λ`: initialisation constant for the LayerScale
 """
 function resmixerblock(planes, npatches; mlp_ratio = 4.0, mlp_layer = mlp_block,
-                       dropout = 0.0, drop_path_rate = 0.0, activation = gelu, λ = 1e-4)
+                       drop_rate = 0.0, drop_path_rate = 0.0, activation = gelu, λ = 1e-4)
     return Chain(SkipConnection(Chain(Flux.Scale(planes),
                                       swapdims((2, 1, 3)),
                                       Dense(npatches, npatches),
@@ -140,7 +142,7 @@ function resmixerblock(planes, npatches; mlp_ratio = 4.0, mlp_layer = mlp_block,
                                       LayerScale(planes, λ),
                                       DropPath(drop_path_rate)), +),
                  SkipConnection(Chain(Flux.Scale(planes),
-                                      mlp_layer(planes, Int(mlp_ratio * planes); dropout,
+                                      mlp_layer(planes, Int(mlp_ratio * planes); drop_rate,
                                                 activation),
                                       LayerScale(planes, λ),
                                       DropPath(drop_path_rate)), +))
@@ -230,7 +232,7 @@ end
 
 """
     spatial_gating_block(planes, npatches; mlp_ratio = 4.0, mlp_layer = gated_mlp_block,
-                         norm_layer = LayerNorm, dropout = 0.0, drop_path_rate = 0.,
+                         norm_layer = LayerNorm, drop_rate = 0.0, drop_path_rate = 0.0,
                          activation = gelu)
 
 Creates a feedforward block based on the gMLP model architecture described in the paper.
@@ -243,18 +245,19 @@ Creates a feedforward block based on the gMLP model architecture described in th
   - `mlp_ratio`: ratio of the number of hidden channels in the channel mixing MLP to the number
     of planes in the block
   - `norm_layer`: the normalisation layer to use
-  - `dropout`: the dropout rate to use in the MLP blocks
+  - `drop_rate`: the dropout rate to use in the MLP blocks
   - `drop_path_rate`: Stochastic depth rate
   - `activation`: the activation function to use in the MLP blocks
 """
 function spatial_gating_block(planes, npatches; mlp_ratio = 4.0, norm_layer = LayerNorm,
-                              mlp_layer = gated_mlp_block, dropout = 0.0,
+                              mlp_layer = gated_mlp_block, drop_rate = 0.0,
                               drop_path_rate = 0.0,
                               activation = gelu)
     channelplanes = Int(mlp_ratio * planes)
     sgu = inplanes -> SpatialGatingUnit(inplanes, npatches; norm_layer)
     return SkipConnection(Chain(norm_layer(planes),
-                                mlp_layer(sgu, planes, channelplanes; activation, dropout),
+                                mlp_layer(sgu, planes, channelplanes; activation,
+                                          drop_rate),
                                 DropPath(drop_path_rate)), +)
 end
 
