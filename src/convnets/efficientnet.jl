@@ -23,20 +23,23 @@ Create an EfficientNet model ([reference](https://arxiv.org/abs/1905.11946v5)).
 function efficientnet(scalings, block_config;
                       inchannels = 3, nclasses = 1000, max_width = 1280)
     wscale, dscale = scalings
-    out_channels = _round_channels(32, 8)
+    scalew(w) = wscale ≈ 1 ? w : ceil(Int64, wscale * w)
+    scaled(d) = dscale ≈ 1 ? d : ceil(Int64, dscale * d)
+
+    out_channels = _round_channels(scalew(32), 8)
     stem = conv_bn((3, 3), inchannels, out_channels, swish;
                    bias = false, stride = 2, pad = SamePad())
 
     blocks = []
     for (n, k, s, e, i, o) in block_config
-        in_channels = _round_channels(i, 8)
-        out_channels = _round_channels(wscale ≈ 1 ? o : ceil(Int64, wscale * o), 8)
-        repeat = dscale ≈ 1 ? n : ceil(Int64, dscale * n)
+        in_channels = _round_channels(scalew(i), 8)
+        out_channels = _round_channels(scalew(o), 8)
+        repeats = scaled(n)
 
         push!(blocks,
               invertedresidual(k, in_channels, in_channels * e, out_channels, swish;
                                stride = s, reduction = 4))
-        for _ in 1:(repeat - 1)
+        for _ in 1:(repeats - 1)
             push!(blocks,
                   invertedresidual(k, out_channels, out_channels * e, out_channels, swish;
                                    stride = 1, reduction = 4))
