@@ -54,11 +54,12 @@ end
 """
     DropPath(p)
 
-Implements Stochastic Depth - equivalent to `Dropout(p; dims = 4)` when `p` ≥ 0.
+Implements Stochastic Depth - equivalent to `Dropout(p; dims = 4)` when `p` ≥ 0 and
+`identity` otherwise.
 ([reference](https://arxiv.org/abs/1603.09382))
 
 # Arguments
 
   - `p`: rate of Stochastic Depth.
 """
-DropPath(p) = p ≥ 0 ? Dropout(p; dims = 4) : identity
+DropPath(p) = p > 0 ? Dropout(p; dims = 4) : identity
