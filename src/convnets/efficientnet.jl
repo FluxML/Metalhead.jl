@@ -53,7 +53,7 @@ function efficientnet(scalings, block_config;
 
     top = Dense(head_out_channels, nclasses)
 
-    return Chain(Chain(stem..., blocks, head...),
+    return Chain(Chain([stem..., blocks, head...]),
                  Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten, top))
 end
 
