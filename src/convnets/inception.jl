@@ -340,7 +340,7 @@ struct Inceptionv4
 end
 
 function Inceptionv4(; pretrain = false, inchannels = 3, drop_rate = 0.0, nclasses = 1000)
-    layers = inceptionv4(; inchannels, dropout, nclasses)
+    layers = inceptionv4(; inchannels, drop_rate, nclasses)
     pretrain && loadpretrain!(layers, "Inceptionv4")
     return Inceptionv4(layers)
 end
