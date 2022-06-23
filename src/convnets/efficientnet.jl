@@ -13,7 +13,7 @@ Create an EfficientNet model ([reference](https://arxiv.org/abs/1905.11946v5)).
     - `k`: kernel size
     - `s`: kernel stride
     - `e`: expansion ratio
-    - `i`: block input channels
+    - `i`: block input channels (will be scaled by global width scaling)
     - `o`: block output channels (will be scaled by global width scaling)
 - `inchannels`: number of input channels
 - `nclasses`: number of output classes
@@ -110,7 +110,7 @@ See also [`efficientnet`](#).
     - `k`: kernel size
     - `s`: kernel stride
     - `e`: expansion ratio
-    - `i`: block input channels
+    - `i`: block input channels (will be scaled by global width scaling)
     - `o`: block output channels (will be scaled by global width scaling)
 - `inchannels`: number of input channels
 - `nclasses`: number of output classes
