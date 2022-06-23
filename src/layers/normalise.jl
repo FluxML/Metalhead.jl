@@ -24,4 +24,4 @@ function ChannelLayerNorm(sz::Integer, λ = identity; ϵ = 1.0f-5)
     return ChannelLayerNorm(diag, ϵ)
 end
 
-(m::ChannelLayerNorm)(x) = m.diag(MLUtils.normalise(x; dims = ndims(x) - 1, ϵ = m.ϵ))
+(m::ChannelLayerNorm)(x) = m.diag(Flux.normalise(x; dims = ndims(x) - 1, ϵ = m.ϵ))

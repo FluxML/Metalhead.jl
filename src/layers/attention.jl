@@ -1,5 +1,5 @@
 """
-    MHAttention(nheads::Integer, qkv_layer, attn_drop, projection)
+    MHAttention(nheads::Integer, qkv_layer, attn_drop_rate, projection)
 
 Multi-head self-attention layer.
 
@@ -34,9 +34,9 @@ function MHAttention(planes::Integer, nheads::Integer = 8; qkv_bias::Bool = fals
                      attn_drop_rate = 0.0, proj_drop_rate = 0.0)
     @assert planes % nheads==0 "planes should be divisible by nheads"
     qkv_layer = Dense(planes, planes * 3; bias = qkv_bias)
-    attn_drop = Dropout(attn_drop_rate)
+    attn_drop_rate = Dropout(attn_drop_rate)
     proj = Chain(Dense(planes, planes), Dropout(proj_drop_rate))
-    return MHAttention(nheads, qkv_layer, attn_drop, proj)
+    return MHAttention(nheads, qkv_layer, attn_drop_rate, proj)
 end
 
 @functor MHAttention
@@ -52,7 +52,7 @@ function (m::MHAttention)(x::AbstractArray{T, 3}) where {T}
                            seq_len * batch_size)
     query_reshaped = reshape(permutedims(query, (1, 2, 3, 4)), nfeatures ÷ m.nheads,
                              m.nheads, seq_len * batch_size)
-    attention = m.attn_drop(softmax(batched_mul(query_reshaped, key_reshaped) .* scale))
+    attention = m.attn_drop_rate(softmax(batched_mul(query_reshaped, key_reshaped) .* scale))
     value_reshaped = reshape(permutedims(value, (1, 2, 3, 4)), nfeatures ÷ m.nheads,
                              m.nheads, seq_len * batch_size)
     pre_projection = reshape(batched_mul(attention, value_reshaped),
