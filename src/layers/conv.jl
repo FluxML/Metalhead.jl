@@ -154,7 +154,7 @@ Squeeze and excitation layer used by MobileNet variants
 
   - `channels`: the number of input/output feature maps
   - `reduction = 4`: the reduction factor for the number of hidden feature maps
-    (must be >= 1)
+    (must be ≥ 1)
 """
 function squeeze_excite(channels, reduction = 4)
     @assert (reduction>=1) "`reduction` must be >= 1"
@@ -182,7 +182,7 @@ Create a basic inverted residual block for MobileNet variants
   - `stride`: The stride of the convolutional kernel, has to be either 1 or 2
   - `reduction`: The reduction factor for the number of hidden feature maps
     in a squeeze and excite layer (see [`squeeze_excite`](#)).
-    Must be >= 1 or `nothing` for no squeeze and excite layer.
+    Must be ≥ 1 or `nothing` for no squeeze and excite layer.
 """
 function invertedresidual(kernel_size, inplanes, hidden_planes, outplanes,
                           activation = relu; stride, reduction = nothing)

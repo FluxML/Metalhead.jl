@@ -79,7 +79,8 @@ Creates a Vision Transformer (ViT) model.
 
 # Arguments
 
-  - `mode`: the model configuration, one of [:tiny, :small, :base, :large, :huge, :giant, :gigantic]
+  - `mode`: the model configuration, one of
+            `[:tiny, :small, :base, :large, :huge, :giant, :gigantic]`
   - `imsize`: image size
   - `inchannels`: number of input channels
   - `patch_size`: size of the patches

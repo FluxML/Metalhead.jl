@@ -226,10 +226,6 @@ See also [`Metalhead.resnet`](#).
   - `depth`: depth of the ResNet model. Options include (18, 34, 50, 101, 152).
   - `nclasses`: the number of output classes
 
-!!! warning
-    
-    Only `ResNet(50)` currently supports pretrained weights.
-
 For `ResNet(18)` and `ResNet(34)`, the parameter-free shortcut style (type `:A`)
 is used in the first block and the three other blocks use type `:B` connection
 (following the implementation in PyTorch). The published version of

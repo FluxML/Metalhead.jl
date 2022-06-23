@@ -8,7 +8,7 @@ Creates a single block of ConvNeXt.
 
   - `planes`: number of input channels.
   - `drop_path_rate`: Stochastic depth rate.
-  - `λ`: Init value for LayerScale
+  - `λ`: Initial value for [`LayerScale`](#)
 """
 function convnextblock(planes, drop_path_rate = 0.0, λ = 1.0f-6)
     layers = SkipConnection(Chain(DepthwiseConv((7, 7), planes => planes; pad = 3),
@@ -33,7 +33,8 @@ Creates the layers for a ConvNeXt model.
   - `depths`: list with configuration for depth of each block
   - `planes`: list with configuration for number of output channels in each block
   - `drop_path_rate`: Stochastic depth rate.
-  - `λ`: Init value for [LayerScale](https://arxiv.org/abs/2103.17239)
+  - `λ`: Initial value for [`LayerScale`](#) 
+         ([reference](https://arxiv.org/abs/2103.17239))
   - `nclasses`: number of output classes
 """
 function convnext(depths, planes; inchannels = 3, drop_path_rate = 0.0, λ = 1.0f-6,
