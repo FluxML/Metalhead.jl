@@ -39,7 +39,7 @@ cat_channels(xy...) = cat(xy...; dims = Val(3))
 """
     inputscale(λ; activation = identity)
 
-Scale the input by a scalar λ and applies an activation function to it.
+Scale the input by a scalar `λ` and applies an activation function to it.
 Equivalent to `activation.(λ .* x)`.
 """
 inputscale(λ; activation = identity) = x -> _input_scale(x, λ, activation)

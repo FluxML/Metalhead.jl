@@ -332,7 +332,7 @@ Creates an Inceptionv4 model.
 
 !!! warning
     
-    `Inceptionv4`` does not currently support pretrained weights.
+    `Inceptionv4` does not currently support pretrained weights.
 """
 struct Inceptionv4
     layers::Any
@@ -464,8 +464,8 @@ Creates an InceptionResNetv2 model.
   - `nclasses`: the number of output classes.
 
 !!! warning
-    
-        `InceptionResNetv2` does not currently support pretrained weights.
+
+    `InceptionResNetv2` does not currently support pretrained weights.
 """
 struct InceptionResNetv2
     layers::Any

@@ -154,10 +154,6 @@ Create a VGG style model with specified `depth`. Available values include (11, 1
 ([reference](https://arxiv.org/abs/1409.1556v6)).
 See also [`VGG`](#).
 
-!!! warning
-    
-    `VGG` does not currently support pretrained weights.
-
 # Arguments
 
   - `pretrain`: set to `true` to load pre-trained model weights for ImageNet
