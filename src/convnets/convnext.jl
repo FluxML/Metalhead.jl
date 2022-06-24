@@ -33,8 +33,8 @@ Creates the layers for a ConvNeXt model.
   - `depths`: list with configuration for depth of each block
   - `planes`: list with configuration for number of output channels in each block
   - `drop_path_rate`: Stochastic depth rate.
-  - `λ`: Initial value for [`LayerScale`](#) 
-         ([reference](https://arxiv.org/abs/2103.17239))
+  - `λ`: Initial value for [`LayerScale`](#)
+    ([reference](https://arxiv.org/abs/2103.17239))
   - `nclasses`: number of output classes
 """
 function convnext(depths, planes; inchannels = 3, drop_path_rate = 0.0, λ = 1.0f-6,
@@ -92,7 +92,7 @@ Creates a ConvNeXt model.
 
 # Arguments:
 
-  - `inchannels`: number of input channels.
+  - `inchannels`: The number of channels in the input. The default value is 3.
   - `drop_path_rate`: Stochastic depth rate.
   - `λ`: Init value for [LayerScale](https://arxiv.org/abs/2103.17239)
   - `nclasses`: number of output classes

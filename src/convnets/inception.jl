@@ -326,7 +326,7 @@ Creates an Inceptionv4 model.
 # Arguments
 
   - `pretrain`: set to `true` to load the pre-trained weights for ImageNet
-  - `inchannels`: number of input channels.
+  - `inchannels`: The number of channels in the input. The default value is 3.
   - `dropout`: rate of dropout in classifier head.
   - `nclasses`: the number of output classes.
 
@@ -426,7 +426,7 @@ Creates an InceptionResNetv2 model.
 
 # Arguments
 
-  - `inchannels`: number of input channels.
+  - `inchannels`: The number of channels in the input. The default value is 3.
   - `dropout`: rate of dropout in classifier head.
   - `nclasses`: the number of output classes.
 """
@@ -459,12 +459,12 @@ Creates an InceptionResNetv2 model.
 # Arguments
 
   - `pretrain`: set to `true` to load the pre-trained weights for ImageNet
-  - `inchannels`: number of input channels.
+  - `inchannels`: The number of channels in the input. The default value is 3.
   - `dropout`: rate of dropout in classifier head.
   - `nclasses`: the number of output classes.
 
 !!! warning
-
+    
     `InceptionResNetv2` does not currently support pretrained weights.
 """
 struct InceptionResNetv2
@@ -496,7 +496,7 @@ Create an Xception block.
 
 # Arguments
 
-  - `inchannels`: number of input channels.
+  - `inchannels`: The number of channels in the input. The default value is 3.
   - `outchannels`: number of output channels.
   - `nrepeats`: number of repeats of depthwise separable convolution layers.
   - `stride`: stride by which to downsample the input.
@@ -540,7 +540,7 @@ Creates an Xception model.
 
 # Arguments
 
-  - `inchannels`: number of input channels.
+  - `inchannels`: The number of channels in the input. The default value is 3.
   - `dropout`: rate of dropout in classifier head.
   - `nclasses`: the number of output classes.
 """
@@ -571,7 +571,7 @@ Creates an Xception model.
 # Arguments
 
   - `pretrain`: set to `true` to load the pre-trained weights for ImageNet.
-  - `inchannels`: number of input channels.
+  - `inchannels`: The number of channels in the input. The default value is 3.
   - `dropout`: rate of dropout in classifier head.
   - `nclasses`: the number of output classes.
 
