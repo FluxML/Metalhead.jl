@@ -68,7 +68,9 @@ end
 
 function SqueezeNet(; pretrain = false)
     layers = squeezenet()
-    pretrain && loadpretrain!(layers, "SqueezeNet")
+    if pretrain
+        loadpretrain!(layers, "SqueezeNet")
+    end
     return SqueezeNet(layers)
 end
 

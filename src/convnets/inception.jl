@@ -182,7 +182,9 @@ end
 
 function Inceptionv3(; pretrain = false, nclasses = 1000)
     layers = inceptionv3(; nclasses = nclasses)
-    pretrain && loadpretrain!(layers, "Inceptionv3")
+    if pretrain
+        loadpretrain!(layers, "Inceptionv3")
+    end
     return Inceptionv3(layers)
 end
 
@@ -341,7 +343,9 @@ end
 
 function Inceptionv4(; pretrain = false, inchannels = 3, drop_rate = 0.0, nclasses = 1000)
     layers = inceptionv4(; inchannels, drop_rate, nclasses)
-    pretrain && loadpretrain!(layers, "Inceptionv4")
+    if pretrain
+        loadpretrain!(layers, "Inceptionv4")
+    end
     return Inceptionv4(layers)
 end
 
@@ -476,7 +480,9 @@ end
 function InceptionResNetv2(; pretrain = false, inchannels = 3, drop_rate = 0.0,
                            nclasses = 1000)
     layers = inceptionresnetv2(; inchannels, drop_rate, nclasses)
-    pretrain && loadpretrain!(layers, "InceptionResNetv2")
+    if pretrain
+        loadpretrain!(layers, "InceptionResNetv2")
+    end
     return InceptionResNetv2(layers)
 end
 
@@ -584,7 +590,9 @@ Creates an Xception model.
 """
 function Xception(; pretrain = false, inchannels = 3, drop_rate = 0.0, nclasses = 1000)
     layers = xception(; inchannels, drop_rate, nclasses)
-    pretrain && loadpretrain!(layers, "xception")
+    if pretrain
+        loadpretrain!(layers, "xception")
+    end
     return Xception(layers)
 end
 

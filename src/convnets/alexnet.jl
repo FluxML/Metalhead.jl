@@ -49,7 +49,9 @@ end
 
 function AlexNet(; pretrain = false, nclasses = 1000)
     layers = alexnet(; nclasses = nclasses)
-    pretrain && loadpretrain!(layers, "AlexNet")
+    if pretrain
+        loadpretrain!(layers, "AlexNet")
+    end
     return AlexNet(layers)
 end
 

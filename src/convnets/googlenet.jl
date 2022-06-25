@@ -86,7 +86,9 @@ end
 
 function GoogLeNet(; pretrain = false, nclasses = 1000)
     layers = googlenet(; nclasses = nclasses)
-    pretrain && loadpretrain!(layers, "GoogLeNet")
+    if pretrain
+        loadpretrain!(layers, "GoogLeNet")
+    end
     return GoogLeNet(layers)
 end
 
