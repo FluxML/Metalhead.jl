@@ -90,7 +90,9 @@ end
 function MobileNetv1(width_mult::Number = 1; inchannels = 3, pretrain = false,
                      nclasses = 1000)
     layers = mobilenetv1(width_mult, mobilenetv1_configs; inchannels, nclasses)
-    pretrain && loadpretrain!(layers, string("MobileNetv1"))
+    if pretrain
+        loadpretrain!(layers, string("MobileNetv1"))
+    end
     return MobileNetv1(layers)
 end
 
@@ -189,6 +191,9 @@ function MobileNetv2(width_mult::Number = 1; inchannels = 3, pretrain = false,
                      nclasses = 1000)
     layers = mobilenetv2(width_mult, mobilenetv2_configs; inchannels, nclasses)
     pretrain && loadpretrain!(layers, string("MobileNetv2"))
+    if pretrain
+        loadpretrain!(layers, string("MobileNetv2"))
+    end
     return MobileNetv2(layers)
 end
 
@@ -319,7 +324,9 @@ function MobileNetv3(mode::Symbol = :small, width_mult::Number = 1; inchannels =
     max_width = (mode == :large) ? 1280 : 1024
     layers = mobilenetv3(width_mult, mobilenetv3_configs[mode]; inchannels, max_width,
                          nclasses)
-    pretrain && loadpretrain!(layers, string("MobileNetv3", mode))
+    if pretrain
+        loadpretrain!(layers, string("MobileNetv3", mode))
+    end
     return MobileNetv3(layers)
 end
 
