@@ -9,7 +9,7 @@ Creates a ConvMixer model.
 
   - `planes`: number of planes in the output of each block
   - `depth`: number of layers
-  - `inchannels`: number of channels in the input
+  - `inchannels`: The number of channels in the input. The default value is 3.
   - `kernel_size`: kernel size of the convolutional layers
   - `patch_size`: size of the patches
   - `activation`: activation function used after the convolutional layers
@@ -45,7 +45,7 @@ Creates a ConvMixer model.
 # Arguments
 
   - `mode`: the mode of the model, either `:base`, `:small` or `:large`
-  - `inchannels`: number of channels in the input
+  - `inchannels`: The number of channels in the input. The default value is 3.
   - `activation`: activation function used after the convolutional layers
   - `nclasses`: number of classes in the output
 """
