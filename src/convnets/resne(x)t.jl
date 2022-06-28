@@ -8,18 +8,18 @@ function _drop_blocks(drop_block_prob = 0.0)
     ]
 end
 
-function downsample_conv(kernel_size, in_channels, out_channels; stride = 1, dilation = 1,
+function downsample_conv(kernel_size, inplanes, outplanes; stride = 1, dilation = 1,
                          first_dilation = nothing, norm_layer = BatchNorm)
     kernel_size = stride == 1 && dilation == 1 ? (1, 1) : kernel_size
     first_dilation = kernel_size[1] > 1 ?
                      (!isnothing(first_dilation) ? first_dilation : dilation) : 1
     pad = ((stride - 1) + dilation * (kernel_size[1] - 1)) ÷ 2
-    return Chain(Conv(kernel_size, in_channels => out_channels; stride, pad,
+    return Chain(Conv(kernel_size, inplanes => outplanes; stride, pad,
                       dilation = first_dilation, bias = false),
-                 norm_layer(out_channels))
+                 norm_layer(outplanes))
 end
 
-function downsample_avg(kernel_size, in_channels, out_channels; stride = 1, dilation = 1,
+function downsample_avg(kernel_size, inplanes, outplanes; stride = 1, dilation = 1,
                         first_dilation = nothing, norm_layer = BatchNorm)
     avg_stride = dilation == 1 ? stride : 1
     if stride == 1 && dilation == 1
@@ -29,8 +29,8 @@ function downsample_avg(kernel_size, in_channels, out_channels; stride = 1, dila
         pool = MeanPool((2, 2); stride = avg_stride, pad)
     end
     return Chain(pool,
-                 Conv((1, 1), in_channels => out_channels; bias = false),
-                 norm_layer(out_channels))
+                 Conv((1, 1), inplanes => outplanes; bias = false),
+                 norm_layer(outplanes))
 end
 
 function basicblock(inplanes, planes; stride = 1, downsample = identity, cardinality = 1,
@@ -78,122 +78,10 @@ function bottleneck(inplanes, planes; stride = 1, downsample = identity, cardina
 end
 expansion_factor(::typeof(bottleneck)) = 4
 
-# Makes the main stages of the ResNet model. This is an internal function and should not be 
-# used by end-users. `block_fn` is a function that returns a single block of the ResNet. 
-# See `basicblock` and `bottleneck` for examples. A block must define a function 
-# `expansion(::typeof(block))` that returns the expansion factor of the block.
-function _make_blocks(block_fn, channels, block_repeats, inplanes;
-                      reduce_first = 1, output_stride = 32, down_kernel_size = (1, 1),
-                      avg_down = false, drop_block_rate = 0.0, drop_path_rate = 0.0,
-                      kwargs...)
-    expansion = expansion_factor(block_fn)
-    kwarg_dict = Dict(kwargs...)
-    stages = []
-    net_block_idx = 1
-    net_stride = 4
-    dilation = prev_dilation = 1
-    for (stage_idx, (planes, num_blocks, drop_block)) in enumerate(zip(channels,
-                                                                       block_repeats,
-                                                                       _drop_blocks(drop_block_rate)))
-        # Stride calculations for each stage
-        stride = stage_idx == 1 ? 1 : 2
-        if net_stride >= output_stride
-            dilation *= stride
-            stride = 1
-        else
-            net_stride *= stride
-        end
-        # use average pooling for projection skip connection between stages/downsample.
-        downsample = identity
-        if stride != 1 || inplanes != planes * expansion
-            downsample_fn = avg_down ? downsample_avg : downsample_conv
-            downsample = downsample_fn(down_kernel_size, inplanes, planes * expansion;
-                                       stride, dilation, first_dilation = dilation,
-                                       norm_layer = kwarg_dict[:norm_layer])
-        end
-        # arguments to be passed into the block function
-        block_kwargs = Dict(:reduce_first => reduce_first, :dilation => dilation,
-                            :drop_block => drop_block, kwargs...)
-        blocks = []
-        for block_idx in 1:num_blocks
-            downsample = block_idx == 1 ? downsample : identity
-            stride = block_idx == 1 ? stride : 1
-            # stochastic depth linear decay rule
-            block_dpr = drop_path_rate * net_block_idx / (sum(block_repeats) - 1)
-            push!(blocks,
-                  block_fn(inplanes, planes; stride, downsample,
-                           first_dilation = prev_dilation,
-                           drop_path = DropPath(block_dpr), block_kwargs...))
-            prev_dilation = dilation
-            inplanes = planes * expansion
-            net_block_idx += 1
-        end
-        push!(stages, Chain(blocks...))
-    end
-    return Chain(stages...)
-end
-
-"""
-    resnet(block, layers; nclasses = 1000, inchannels = 3, output_stride = 32,
-           cardinality = 1, base_width = 64, stem_width = 64, stem_type = :default,
-           replace_stem_pool = false, reduce_first = 1, down_kernel_size = (1, 1),
-           avg_down = false, activation = relu, norm_layer = BatchNorm,
-           drop_rate = 0.0, drop_path_rate = 0.0, drop_block_rate = 0.0,
-           block_kwargs...)
-
-Creates the layers of a ResNe(X)t model. If you are an end-user, you should probably use
-[ResNet](@ref) instead and pass in the parameters you want to modify as optional parameters
-there.
-
-# Arguments:
-
-  - `block`: The block to use in the ResNet model. See [basicblock](@ref) and [bottleneck](@ref) for
-    example.
-
-  - `layers`: A list of integers representing the number of blocks in each stage.
-  - `nclasses`: The number of output classes. The default value is 1000.
-  - `inchannels`: The number of input channels to the model. The default value is 3.
-  - `output_stride`: The net stride of the model. Must be one of [8, 16, 32]. The default value is 32.
-  - `cardinality`: The number of convolution groups for the 3x3 convolution in the bottleneck block.
-    This is used for [ResNeXt](@ref)-like models. The default value is 1.
-  - `base_width`: The base width of each bottleneck block. It is the factor determining
-    the number of bottleneck channels: `planes * base_width / 64 * cardinality`.
-    The default value is 64.
-  - `stem_width`: The number of channels in the convolution in the stem. The default value is 64.
-  - `stem_type`: The type of the stem. Must be one of `[:default, :deep, :wide]`:
-    
-      + `:default` - a single 7x7 convolution layer with a width of `stem_width`
-      + `:deep` - three 3x3 convolution layers of widths `stem_width`, `stem_width`, `stem_width * 2`
-      + `:deep_tiered` - three 3x3 conv layers of widths `stem_width ÷ 4 * 3`, `stem_width`, `stem_width * 2`.
-        The default value is `:default`.
-  - `replace_stem_pool`: Whether to replace the pooling layer of the stem with a
-    convolution layer. The default value is false.
-  - `reduce_first`: Reduction factor for first convolution output width of residual blocks,
-    Default is 1 for all architectures except SE-Nets, where it is 2.
-  - `down_kernel_size`: The kernel size of the convolution in the downsample layer of the
-    skip connection. The default value is (1, 1) for all architectures except
-    SE-Nets, where it is (3, 3).
-  - `avg_down`: Use average pooling for projection skip connection between stages/downsample.
-  - `activation`: The activation function to use. The default value is `relu`.
-  - `norm_layer`: The normalization layer to use. The default value is `BatchNorm`.
-  - `drop_rate`: The rate to use for `Dropout`. The default value is 0.0.
-  - `drop_path_rate`: The rate to use for `DropPath`. The default value is 0.0.
-  - `drop_path_rate`: The rate to use for `(DropPath`)[@ref]`. The default value is 0.0.
-  - `drop_block_rate`: The rate to use for `(DropBlock)[@ref]`. The default value is 0.0.
-
-If you are an end-user trying to tweak the ResNet model, note that there is no guarantee that
-all combinations of parameters will work. In particular, tweaking `block_kwargs` is not
-advised unless you know what you are doing.
-"""
-function resnet(block, layers; nclasses = 1000, inchannels = 3, output_stride = 32,
-                cardinality = 1, base_width = 64, stem_width = 64, stem_type = :default,
-                replace_stem_pool = false, reduce_first = 1, down_kernel_size = (1, 1),
-                avg_down = false, activation = relu, norm_layer = BatchNorm,
-                drop_rate = 0.0, drop_path_rate = 0.0, drop_block_rate = 0.0,
-                block_kwargs...)
-    @assert output_stride in (8, 16, 32) "Invalid `output_stride`. Must be one of (8, 16, 32)"
+function resnet_stem(; stem_type = :default, inchannels = 3, replace_stem_pool = false,
+                     norm_layer = BatchNorm, activation = relu)
     @assert stem_type in [:default, :deep, :deep_tiered] "Stem type must be one of [:default, :deep, :deep_tiered]"
-    # Stem
+    # Main stem
     inplanes = stem_type == :deep ? stem_width * 2 : 64
     if stem_type == :deep
         stem_channels = (stem_width, stem_width)
@@ -219,17 +107,89 @@ function resnet(block, layers; nclasses = 1000, inchannels = 3, output_stride = 
     else
         stempool = MaxPool((3, 3); stride = 2, pad = 1)
     end
-    stem = Chain(conv1, bn1, stempool)
+    return Chain(conv1, bn1, stempool)
+end
+
+function downsample_block(downsample_fn, inplanes, planes, expansion; kernel_size = (1, 1),
+                          stride = 1, dilation = 1, first_dilation = dilation,
+                          norm_layer = BatchNorm)
+    if stride != 1 || inplanes != planes * expansion
+        downsample = downsample_fn(kernel_size, inplanes, planes * expansion;
+                                   stride, dilation, first_dilation,
+                                   norm_layer)
+    else
+        downsample = identity
+    end
+    return downsample
+end
+
+# Makes the main stages of the ResNet model. This is an internal function and should not be 
+# used by end-users. `block_fn` is a function that returns a single block of the ResNet. 
+# See `basicblock` and `bottleneck` for examples. A block must define a function 
+# `expansion(::typeof(block))` that returns the expansion factor of the block.
+function _make_blocks(block_fn, channels, block_repeats, inplanes; output_stride = 32,
+                      downsample_fn = downsample_conv, downsample_args::NamedTuple = (),
+                      drop_block_rate = 0.0, drop_path_rate = 0.0,
+                      block_args::NamedTuple = ())
+    @assert output_stride in (8, 16, 32) "Invalid `output_stride`. Must be one of (8, 16, 32)"
+    expansion = expansion_factor(block_fn)
+    stages = []
+    net_block_idx = 1
+    net_stride = 4
+    dilation = prev_dilation = 1
+    for (stage_idx, (planes, num_blocks, drop_block)) in enumerate(zip(channels,
+                                                                       block_repeats,
+                                                                       _drop_blocks(drop_block_rate)))
+        # Stride calculations for each stage
+        stride = stage_idx == 1 ? 1 : 2
+        if net_stride >= output_stride
+            dilation *= stride
+            stride = 1
+        else
+            net_stride *= stride
+        end
+        # Downsample block; either a (default) convolution-based block or a pooling-based block.
+        downsample = downsample_block(downsample_fn, inplanes, planes, expansion;
+                                      downsample_args...)
+        # Construct the blocks for each stage
+        blocks = []
+        for block_idx in 1:num_blocks
+            downsample = block_idx == 1 ? downsample : identity
+            stride = block_idx == 1 ? stride : 1
+            # stochastic depth linear decay rule
+            block_dpr = drop_path_rate * net_block_idx / (sum(block_repeats) - 1)
+            push!(blocks,
+                  block_fn(inplanes, planes; stride, downsample,
+                           first_dilation = prev_dilation,
+                           drop_path = DropPath(block_dpr), drop_block, block_args...))
+            prev_dilation = dilation
+            inplanes = planes * expansion
+            net_block_idx += 1
+        end
+        push!(stages, Chain(blocks...))
+    end
+    return Chain(stages...)
+end
+
+function resnet(block, layers; nclasses = 1000, inchannels = 3, output_stride = 32,
+                stem_fn = resnet_stem, stem_args::NamedTuple = (),
+                downsample_fn = downsample_conv, downsample_args::NamedTuple = (),
+                drop_rates::NamedTuple = (drop_rate = 0.0, drop_path_rate = 0.0,
+                                          drop_block_rate = 0.0),
+                block_args::NamedTuple = ())
+    # Stem
+    stem = stem_fn(; inchannels, stem_args...)
     # Feature Blocks
     channels = [64, 128, 256, 512]
-    stage_blocks = _make_blocks(block, channels, layers, inplanes; cardinality, base_width,
-                                output_stride, reduce_first, avg_down,
-                                down_kernel_size, activation, norm_layer,
-                                drop_block_rate, drop_path_rate, block_kwargs...)
+    stage_blocks = _make_blocks(block, channels, layers, inchannels;
+                                output_stride, downsample_fn, downsample_args,
+                                drop_block_rate = drop_rates.drop_block_rate,
+                                drop_path_rate = drop_rates.drop_path_rate,
+                                block_args)
     # Head (Pooling and Classifier)
     expansion = expansion_factor(block)
     num_features = 512 * expansion
-    classifier = Chain(GlobalMeanPool(), Dropout(drop_rate), MLUtils.flatten,
+    classifier = Chain(GlobalMeanPool(), Dropout(drop_rates.drop_rate), MLUtils.flatten,
                        Dense(num_features, nclasses))
     return Chain(Chain(stem, stage_blocks), classifier)
 end
@@ -239,59 +199,6 @@ const resnet_config = Dict(18 => (basicblock, [2, 2, 2, 2]),
                            50 => (bottleneck, [3, 4, 6, 3]),
                            101 => (bottleneck, [3, 4, 23, 3]),
                            152 => (bottleneck, [3, 8, 36, 3]))
-
-"""
-    ResNet(depth::Integer; pretrain = false, nclasses = 1000, kwargs...)
-
-Creates a ResNet model.
-((reference)[https://arxiv.org/abs/1512.03385])
-
-# Arguments:
-
-  - `depth`: The depth of the `ResNet` model. Must be one of `[18, 34, 50, 101, 152]`.
-  - `pretrain`: set to `true` to load the model with pre-trained weights for ImageNet.
-  - `nclasses`: The number of output classes. The default value is 1000.
-
-Apart from these, the model can also take any of the following optional arguments:
-
-  - `block`: The block to use in the ResNet model. See [basicblock](@ref) and [bottleneck](@ref) for
-    example.
-
-  - `layers`: A list of integers representing the number of blocks in each stage.
-  - `inchannels`: The number of input channels to the model. The default value is 3.
-  - `output_stride`: The net stride of the model. Must be one of [8, 16, 32]. The default value is 32.
-  - `cardinality`: The number of convolution groups for the 3x3 convolution in the bottleneck block.
-    This is used for [ResNeXt](@ref)-like models. The default value is 1.
-  - `base_width`: The base width of each bottleneck block. It is the factor determining
-    the number of bottleneck channels: `planes * base_width / 64 * cardinality`.
-    The default value is 64.
-  - `stem_width`: The number of channels in the convolution in the stem. The default value is 64.
-  - `stem_type`: The type of the stem. Must be one of `[:default, :deep, :wide]`:
-    
-      + `:default` - a single 7x7 convolution layer with a width of `stem_width`
-      + `:deep` - three 3x3 convolution layers of widths `stem_width`, `stem_width`, `stem_width * 2`
-      + `:deep_tiered` - three 3x3 conv layers of widths `stem_width ÷ 4 * 3`, `stem_width`, `stem_width * 2`.
-        The default value is `:default`.
-  - `replace_stem_pool`: Whether to replace the pooling layer of the stem with a
-    convolution layer. The default value is false.
-  - `reduce_first`: Reduction factor for first convolution output width of residual blocks,
-    Default is 1 for all architectures except SE-Nets, where it is 2.
-  - `down_kernel_size`: The kernel size of the convolution in the downsample layer of the
-    skip connection. The default value is (1, 1) for all architectures except
-    SE-Nets, where it is (3, 3).
-  - `avg_down`: Use average pooling for projection skip connection between stages/downsample.
-  - `activation`: The activation function to use. The default value is `relu`.
-  - `norm_layer`: The normalization layer to use. The default value is `BatchNorm`.
-  - `drop_rate`: The rate to use for `Dropout`. The default value is 0.0.
-  - `drop_path_rate`: The rate to use for `(DropPath`)[@ref]`. The default value is 0.0.
-  - `drop_block_rate`: The rate to use for `(DropBlock)[@ref]`. The default value is 0.0.
-
-See also [`resnet`](@ref) for more details.
-
-!!! warning
-    
-        Pretrained models are not supported for all parameter combinations of `ResNet`.
-"""
 struct ResNet
     layers::Any
 end
@@ -300,78 +207,8 @@ end
 function ResNet(depth::Integer; pretrain = false, nclasses = 1000, kwargs...)
     @assert depth in [18, 34, 50, 101, 152] "Invalid depth. Must be one of [18, 34, 50, 101, 152]"
     model = resnet(resnet_config[depth]...; nclasses, kwargs...)
-    pretrain && loadpretrain!(model, string("resnet", depth))
-    return model
-end
-
-"""
-    ResNeXt(depth::Integer; cardinality = 4, base_width = 32, pretrain = false, nclasses = 1000,
-            kwargs...)
-
-Creates a ResNeXt model.
-((reference)[https://arxiv.org/abs/1611.05431])
-
-# Arguments:
-
-  - `depth`: The depth of the `ResNeXt` model. Must be one of `[50, 101, 152]`.
-  - `cardinality`: The number of convolution groups for the 3x3 convolution in the bottleneck block.
-    of the `ResNeXt` mode. The default value is 4.
-  - `base_width`: The base width of each bottleneck block. It is the factor determining
-    the number of bottleneck channels. The default value is 32.
-  - `pretrain`: set to `true` to load the model with pre-trained weights for ImageNet.
-  - `nclasses`: The number of output classes. The default value is 1000.
-
-Apart from these, the model can also take any of the following optional arguments:
-
-  - `block`: The block to use in the ResNet model. See [basicblock](@ref) and [bottleneck](@ref) for
-    example.
-
-  - `layers`: A list of integers representing the number of blocks in each stage.
-  - `inchannels`: The number of input channels to the model. The default value is 3.
-  - `output_stride`: The net stride of the model. Must be one of [8, 16, 32]. The default value is 32.
-  - `cardinality`: The number of convolution groups for the 3x3 convolution in the bottleneck block.
-    This is used for [ResNeXt](@ref)-like models. The default value is 1.
-  - `base_width`: The base width of each bottleneck block. It is the factor determining
-    the number of bottleneck channels: `planes * base_width / 64 * cardinality`.
-    The default value is 64.
-  - `stem_width`: The number of channels in the convolution in the stem. The default value is 64.
-  - `stem_type`: The type of the stem. Must be one of `[:default, :deep, :wide]`:
-    
-      + `:default` - a single 7x7 convolution layer with a width of `stem_width`
-      + `:deep` - three 3x3 convolution layers of widths `stem_width`, `stem_width`, `stem_width * 2`
-      + `:deep_tiered` - three 3x3 conv layers of widths `stem_width ÷ 4 * 3`, `stem_width`, `stem_width * 2`.
-        The default value is `:default`.
-  - `replace_stem_pool`: Whether to replace the pooling layer of the stem with a
-    convolution layer. The default value is false.
-  - `reduce_first`: Reduction factor for first convolution output width of residual blocks,
-    Default is 1 for all architectures except SE-Nets, where it is 2.
-  - `down_kernel_size`: The kernel size of the convolution in the downsample layer of the
-    skip connection. The default value is (1, 1) for all architectures except
-    SE-Nets, where it is (3, 3).
-  - `avg_down`: Use average pooling for projection skip connection between stages/downsample.
-  - `activation`: The activation function to use. The default value is `relu`.
-  - `norm_layer`: The normalization layer to use. The default value is `BatchNorm`.
-  - `drop_rate`: The rate to use for `Dropout`. The default value is 0.0.
-  - `drop_path_rate`: The rate to use for `(DropPath`)[@ref]`. The default value is 0.0.
-  - `drop_block_rate`: The rate to use for `(DropBlock)[@ref]`. The default value is 0.0.
-
-See also [`resnet`](@ref) for more details.
-
-!!! warning
-    
-        Pretrained models are not currently supported for `ResNeXt`.
-"""
-struct ResNeXt
-    layers::Any
-end
-@functor ResNeXt
-
-function ResNeXt(depth::Integer; cardinality = 4, base_width = 32, pretrain = false,
-                 nclasses = 1000,
-                 kwargs...)
-    @assert depth in [50, 101, 152] "Invalid depth. Must be one of [50, 101, 152]"
-    model = resnet(resnet_config[depth]...; cardinality, base_width, nclasses, kwargs...)
-    pretrain &&
-        loadpretrain!(model, string("resnext", depth, "_", cardinality, "x", base_width))
+    if pretrain
+        loadpretrain!(model, string("resnet", depth))
+    end
     return model
 end
