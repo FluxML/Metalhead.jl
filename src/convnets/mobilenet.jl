@@ -28,7 +28,7 @@ Create a MobileNetv1 model ([reference](https://arxiv.org/abs/1704.04861v1)).
 function mobilenetv1(width_mult, config;
                      activation = relu,
                      inchannels = 3,
-					     fcsize = 1024,
+                     fcsize = 1024,
                      nclasses = 1000)
     layers = []
     for (dw, outch, stride, nrepeats) in config
