@@ -39,7 +39,7 @@ include("vit-based/vit.jl")
 include("pretrain.jl")
 
 export AlexNet, VGG, VGG11, VGG13, VGG16, VGG19,
-       ResNet, ResNet18, ResNet34, ResNet50, ResNet101, ResNet152, ResNeXt,
+       ResNet, ResNet18, ResNet34, ResNet50, ResNet101, ResNet152, # ResNeXt,
        DenseNet, DenseNet121, DenseNet161, DenseNet169, DenseNet201,
        GoogLeNet, Inception3, Inceptionv3, Inceptionv4, InceptionResNetv2, Xception,
        SqueezeNet, MobileNetv1, MobileNetv2, MobileNetv3, EfficientNet,
@@ -48,7 +48,7 @@ export AlexNet, VGG, VGG11, VGG13, VGG16, VGG19,
        ConvMixer, ConvNeXt
 
 # use Flux._big_show to pretty print large models
-for T in (:AlexNet, :VGG, :ResNeXt, :DenseNet, :ResNet,
+for T in (:AlexNet, :VGG, :DenseNet, :ResNet, # :ResNeXt, 
           :GoogLeNet, :Inceptionv3, :Inceptionv4, :InceptionResNetv2, :Xception,
           :SqueezeNet, :MobileNetv1, :MobileNetv2, :MobileNetv3,
           :MLPMixer, :ResMLP, :gMLP, :ViT, :ConvMixer, :ConvNeXt)

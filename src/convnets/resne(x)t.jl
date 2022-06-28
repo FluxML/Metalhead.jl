@@ -107,7 +107,7 @@ function resnet_stem(; stem_type = :default, inchannels = 3, replace_stem_pool =
     else
         stempool = MaxPool((3, 3); stride = 2, pad = 1)
     end
-    return Chain(conv1, bn1, stempool)
+    return inplanes, Chain(conv1, bn1, stempool)
 end
 
 function downsample_block(downsample_fn, inplanes, planes, expansion; kernel_size = (1, 1),
@@ -150,7 +150,7 @@ function _make_blocks(block_fn, channels, block_repeats, inplanes; output_stride
         end
         # Downsample block; either a (default) convolution-based block or a pooling-based block.
         downsample = downsample_block(downsample_fn, inplanes, planes, expansion;
-                                      downsample_args...)
+                                      stride, dilation, first_dilation = dilation, downsample_args...)
         # Construct the blocks for each stage
         blocks = []
         for block_idx in 1:num_blocks
@@ -172,16 +172,16 @@ function _make_blocks(block_fn, channels, block_repeats, inplanes; output_stride
 end
 
 function resnet(block, layers; nclasses = 1000, inchannels = 3, output_stride = 32,
-                stem_fn = resnet_stem, stem_args::NamedTuple = (),
-                downsample_fn = downsample_conv, downsample_args::NamedTuple = (),
+                stem_fn = resnet_stem, stem_args::NamedTuple = NamedTuple(),
+                downsample_fn = downsample_conv, downsample_args::NamedTuple = NamedTuple(),
                 drop_rates::NamedTuple = (drop_rate = 0.0, drop_path_rate = 0.0,
-                                          drop_block_rate = 0.0),
-                block_args::NamedTuple = ())
+                                          drop_block_rate = 0.5),
+                block_args::NamedTuple = NamedTuple())
     # Stem
-    stem = stem_fn(; inchannels, stem_args...)
+    inplanes, stem = stem_fn(; inchannels, stem_args...)
     # Feature Blocks
     channels = [64, 128, 256, 512]
-    stage_blocks = _make_blocks(block, channels, layers, inchannels;
+    stage_blocks = _make_blocks(block, channels, layers, inplanes;
                                 output_stride, downsample_fn, downsample_args,
                                 drop_block_rate = drop_rates.drop_block_rate,
                                 drop_path_rate = drop_rates.drop_path_rate,
