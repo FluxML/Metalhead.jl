@@ -1,12 +1,14 @@
 module Layers
 
 using Flux
+using CUDA
 using NNlib
 using NNlibCUDA
 using Functors
 using ChainRulesCore
 using Statistics
 using MLUtils
+using Random
 
 include("../utilities.jl")
 
