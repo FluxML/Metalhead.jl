@@ -21,7 +21,7 @@ Create a MobileNetv1 model ([reference](https://arxiv.org/abs/1704.04861v1)).
       + `s`: The stride of the convolutional kernel
       + `r`: The number of time this configuration block is repeated
   - `activate`: The activation function to use throughout the network
-  - `inchannels`: The number of input channels. The default value is 3.
+  - `inchannels`: The number of input channels.
   - `fcsize`: The intermediate fully-connected size between the convolution and final layers
   - `nclasses`: The number of output classes
 """
@@ -77,7 +77,7 @@ Set `pretrain` to `true` to load the pretrained weights for ImageNet.
   - `width_mult`: Controls the number of output feature maps in each block
     (with 1.0 being the default in the paper;
     this is usually a value between 0.1 and 1.4)
-  - `inchannels`: The number of input channels. The default value is 3.
+  - `inchannels`: The number of input channels.
   - `pretrain`: Whether to load the pre-trained weights for ImageNet
   - `nclasses`: The number of output classes
 
@@ -123,7 +123,7 @@ Create a MobileNetv2 model.
       + `n`: The number of times a block is repeated
       + `s`: The stride of the convolutional kernel
       + `a`: The activation function used in the bottleneck layer
-  - `inchannels`: The number of input channels. The default value is 3.
+  - `inchannels`: The number of input channels.
   - `max_width`: The maximum number of feature maps in any layer of the network
   - `nclasses`: The number of output classes
 """
@@ -181,7 +181,7 @@ Set `pretrain` to `true` to load the pretrained weights for ImageNet.
   - `width_mult`: Controls the number of output feature maps in each block
     (with 1.0 being the default in the paper;
     this is usually a value between 0.1 and 1.4)
-  - `inchannels`: The number of input channels. The default value is 3.
+  - `inchannels`: The number of input channels.
   - `pretrain`: Whether to load the pre-trained weights for ImageNet
   - `nclasses`: The number of output classes
 
@@ -226,7 +226,7 @@ Create a MobileNetv3 model.
       + `r::Integer` - The reduction factor (`>= 1` or `nothing` to skip) for squeeze and excite layers
       + `s::Integer` - The stride of the convolutional kernel
       + `a` - The activation function used in the bottleneck (typically `hardswish` or `relu`)
-  - `inchannels`: The number of input channels. The default value is 3.
+  - `inchannels`: The number of input channels.
   - `max_width`: The maximum number of feature maps in any layer of the network
   - `nclasses`: the number of output classes
 """
@@ -312,7 +312,7 @@ Set `pretrain = true` to load the model with pre-trained weights for ImageNet.
   - `width_mult`: Controls the number of output feature maps in each block
     (with 1.0 being the default in the paper;
     this is usually a value between 0.1 and 1.4)
-  - `inchannels`: The number of channels in the input. The default value is 3.
+  - `inchannels`: The number of channels in the input.
   - `pretrain`: whether to load the pre-trained weights for ImageNet
   - `nclasses`: the number of output classes
 

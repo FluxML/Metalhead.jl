@@ -92,7 +92,7 @@ Creates a ConvNeXt model.
 
 # Arguments:
 
-  - `inchannels`: The number of channels in the input. The default value is 3.
+  - `inchannels`: The number of channels in the input.
   - `drop_path_rate`: Stochastic depth rate.
   - `λ`: Init value for [LayerScale](https://arxiv.org/abs/2103.17239)
   - `nclasses`: number of output classes

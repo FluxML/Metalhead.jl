@@ -281,7 +281,7 @@ function inceptionv4_c()
 end
 
 """
-    inceptionv4(; inchannels = 3, drop_rate = 0.0, nclasses = 1000)
+    inceptionv4(; inchannels = 3, dropout_rate = 0.0, nclasses = 1000)
 
 Create an Inceptionv4 model.
 ([reference](https://arxiv.org/abs/1602.07261))
@@ -289,10 +289,10 @@ Create an Inceptionv4 model.
 # Arguments
 
   - `inchannels`: number of input channels.
-  - `drop_rate`: rate of dropout in classifier head.
+  - `dropout_rate`: rate of dropout in classifier head.
   - `nclasses`: the number of output classes.
 """
-function inceptionv4(; inchannels = 3, drop_rate = 0.0, nclasses = 1000)
+function inceptionv4(; inchannels = 3, dropout_rate = 0.0, nclasses = 1000)
     body = Chain(conv_bn((3, 3), inchannels, 32; stride = 2)...,
                  conv_bn((3, 3), 32, 32)...,
                  conv_bn((3, 3), 32, 64; pad = 1)...,
@@ -315,13 +315,13 @@ function inceptionv4(; inchannels = 3, drop_rate = 0.0, nclasses = 1000)
                  inceptionv4_c(),
                  inceptionv4_c(),
                  inceptionv4_c())
-    head = Chain(GlobalMeanPool(), MLUtils.flatten, Dropout(drop_rate),
+    head = Chain(GlobalMeanPool(), MLUtils.flatten, Dropout(dropout_rate),
                  Dense(1536, nclasses))
     return Chain(body, head)
 end
 
 """
-    Inceptionv4(; pretrain = false, inchannels = 3, drop_rate = 0.0, nclasses = 1000)
+    Inceptionv4(; pretrain = false, inchannels = 3, dropout_rate = 0.0, nclasses = 1000)
 
 Creates an Inceptionv4 model.
 ([reference](https://arxiv.org/abs/1602.07261))
@@ -330,7 +330,7 @@ Creates an Inceptionv4 model.
 
   - `pretrain`: set to `true` to load the pre-trained weights for ImageNet
   - `inchannels`: number of input channels.
-  - `drop_rate`: rate of dropout in classifier head.
+  - `dropout_rate`: rate of dropout in classifier head.
   - `nclasses`: the number of output classes.
 
 !!! warning
@@ -341,8 +341,9 @@ struct Inceptionv4
     layers::Any
 end
 
-function Inceptionv4(; pretrain = false, inchannels = 3, drop_rate = 0.0, nclasses = 1000)
-    layers = inceptionv4(; inchannels, drop_rate, nclasses)
+function Inceptionv4(; pretrain = false, inchannels = 3, dropout_rate = 0.0,
+                     nclasses = 1000)
+    layers = inceptionv4(; inchannels, dropout_rate, nclasses)
     if pretrain
         loadpretrain!(layers, "Inceptionv4")
     end
@@ -424,7 +425,7 @@ function block8(scale = 1.0f0; activation = identity)
 end
 
 """
-    inceptionresnetv2(; inchannels = 3, drop_rate =0.0, nclasses = 1000)
+    inceptionresnetv2(; inchannels = 3, dropout_rate =0.0, nclasses = 1000)
 
 Creates an InceptionResNetv2 model.
 ([reference](https://arxiv.org/abs/1602.07261))
@@ -432,10 +433,10 @@ Creates an InceptionResNetv2 model.
 # Arguments
 
   - `inchannels`: number of input channels.
-  - `drop_rate`: rate of dropout in classifier head.
+  - `dropout_rate`: rate of dropout in classifier head.
   - `nclasses`: the number of output classes.
 """
-function inceptionresnetv2(; inchannels = 3, drop_rate = 0.0, nclasses = 1000)
+function inceptionresnetv2(; inchannels = 3, dropout_rate = 0.0, nclasses = 1000)
     body = Chain(conv_bn((3, 3), inchannels, 32; stride = 2)...,
                  conv_bn((3, 3), 32, 32)...,
                  conv_bn((3, 3), 32, 64; pad = 1)...,
@@ -451,13 +452,13 @@ function inceptionresnetv2(; inchannels = 3, drop_rate = 0.0, nclasses = 1000)
                  [block8(0.20f0) for _ in 1:9]...,
                  block8(; activation = relu),
                  conv_bn((1, 1), 2080, 1536)...)
-    head = Chain(GlobalMeanPool(), MLUtils.flatten, Dropout(drop_rate),
+    head = Chain(GlobalMeanPool(), MLUtils.flatten, Dropout(dropout_rate),
                  Dense(1536, nclasses))
     return Chain(body, head)
 end
 
 """
-    InceptionResNetv2(; pretrain = false, inchannels = 3, drop_rate =0.0, nclasses = 1000)
+    InceptionResNetv2(; pretrain = false, inchannels = 3, dropout_rate =0.0, nclasses = 1000)
 
 Creates an InceptionResNetv2 model.
 ([reference](https://arxiv.org/abs/1602.07261))
@@ -466,7 +467,7 @@ Creates an InceptionResNetv2 model.
 
   - `pretrain`: set to `true` to load the pre-trained weights for ImageNet
   - `inchannels`: number of input channels.
-  - `drop_rate`: rate of dropout in classifier head.
+  - `dropout_rate`: rate of dropout in classifier head.
   - `nclasses`: the number of output classes.
 
 !!! warning
@@ -477,9 +478,9 @@ struct InceptionResNetv2
     layers::Any
 end
 
-function InceptionResNetv2(; pretrain = false, inchannels = 3, drop_rate = 0.0,
+function InceptionResNetv2(; pretrain = false, inchannels = 3, dropout_rate = 0.0,
                            nclasses = 1000)
-    layers = inceptionresnetv2(; inchannels, drop_rate, nclasses)
+    layers = inceptionresnetv2(; inchannels, dropout_rate, nclasses)
     if pretrain
         loadpretrain!(layers, "InceptionResNetv2")
     end
@@ -504,7 +505,7 @@ Create an Xception block.
 
 # Arguments
 
-  - `inchannels`: The number of channels in the input. The default value is 3.
+  - `inchannels`: The number of channels in the input.
   - `outchannels`: number of output channels.
   - `nrepeats`: number of repeats of depthwise separable convolution layers.
   - `stride`: stride by which to downsample the input.
@@ -541,7 +542,7 @@ function xception_block(inchannels, outchannels, nrepeats; stride = 1,
 end
 
 """
-    xception(; inchannels = 3, drop_rate =0.0, nclasses = 1000)
+    xception(; inchannels = 3, dropout_rate =0.0, nclasses = 1000)
 
 Creates an Xception model.
 ([reference](https://arxiv.org/abs/1610.02357))
@@ -549,10 +550,10 @@ Creates an Xception model.
 # Arguments
 
   - `inchannels`: number of input channels.
-  - `drop_rate`: rate of dropout in classifier head.
+  - `dropout_rate`: rate of dropout in classifier head.
   - `nclasses`: the number of output classes.
 """
-function xception(; inchannels = 3, drop_rate = 0.0, nclasses = 1000)
+function xception(; inchannels = 3, dropout_rate = 0.0, nclasses = 1000)
     body = Chain(conv_bn((3, 3), inchannels, 32; stride = 2, bias = false)...,
                  conv_bn((3, 3), 32, 64; bias = false)...,
                  xception_block(64, 128, 2; stride = 2, start_with_relu = false),
@@ -562,7 +563,7 @@ function xception(; inchannels = 3, drop_rate = 0.0, nclasses = 1000)
                  xception_block(728, 1024, 2; stride = 2, grow_at_start = false),
                  depthwise_sep_conv_bn((3, 3), 1024, 1536; pad = 1)...,
                  depthwise_sep_conv_bn((3, 3), 1536, 2048; pad = 1)...)
-    head = Chain(GlobalMeanPool(), MLUtils.flatten, Dropout(drop_rate),
+    head = Chain(GlobalMeanPool(), MLUtils.flatten, Dropout(dropout_rate),
                  Dense(2048, nclasses))
     return Chain(body, head)
 end
@@ -572,7 +573,7 @@ struct Xception
 end
 
 """
-    Xception(; pretrain = false, inchannels = 3, drop_rate =0.0, nclasses = 1000)
+    Xception(; pretrain = false, inchannels = 3, dropout_rate =0.0, nclasses = 1000)
 
 Creates an Xception model.
 ([reference](https://arxiv.org/abs/1610.02357))
@@ -581,15 +582,15 @@ Creates an Xception model.
 
   - `pretrain`: set to `true` to load the pre-trained weights for ImageNet.
   - `inchannels`: number of input channels.
-  - `drop_rate`: rate of dropout in classifier head.
+  - `dropout_rate`: rate of dropout in classifier head.
   - `nclasses`: the number of output classes.
 
 !!! warning
     
     `Xception` does not currently support pretrained weights.
 """
-function Xception(; pretrain = false, inchannels = 3, drop_rate = 0.0, nclasses = 1000)
-    layers = xception(; inchannels, drop_rate, nclasses)
+function Xception(; pretrain = false, inchannels = 3, dropout_rate = 0.0, nclasses = 1000)
+    layers = xception(; inchannels, dropout_rate, nclasses)
     if pretrain
         loadpretrain!(layers, "xception")
     end
