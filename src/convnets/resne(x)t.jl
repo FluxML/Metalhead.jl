@@ -1,13 +1,3 @@
-# returns `DropBlock`s for each block of the ResNet
-function _drop_blocks(drop_block_prob = 0.0)
-    return [
-        identity,
-        identity,
-        DropBlock(drop_block_prob, 5, 0.25),
-        DropBlock(drop_block_prob, 3, 1.00),
-    ]
-end
-
 function downsample_conv(kernel_size, inplanes, outplanes; stride = 1, dilation = 1,
                          first_dilation = nothing, norm_layer = BatchNorm)
     kernel_size = stride == 1 && dilation == 1 ? (1, 1) : kernel_size
@@ -80,12 +70,15 @@ expansion_factor(::typeof(bottleneck)) = 4
 
 function resnet_stem(; stem_type = :default, inchannels = 3, replace_stem_pool = false,
                      norm_layer = BatchNorm, activation = relu)
-    @assert stem_type in [:default, :deep, :deep_tiered] "Stem type must be one of [:default, :deep, :deep_tiered]"
+    @assert stem_type in [:default, :deep, :deep_tiered]
+    "Stem type must be one of [:default, :deep, :deep_tiered]"
     # Main stem
-    inplanes = stem_type == :deep ? stem_width * 2 : 64
-    if stem_type == :deep
-        stem_channels = (stem_width, stem_width)
-        if stem_type == :deep_tiered
+    deep_stem = stem_type == :deep || stem_type == :deep_tiered
+    inplanes = deep_stem ? stem_width * 2 : 64
+    if deep_stem
+        if stem_type == :deep
+            stem_channels = (stem_width, stem_width)
+        elseif stem_type == :deep_tiered
             stem_channels = (3 * (stem_width ÷ 4), stem_width)
         end
         conv1 = Chain(Conv((3, 3), inchannels => stem_channels[0]; stride = 2, pad = 1,
@@ -107,7 +100,7 @@ function resnet_stem(; stem_type = :default, inchannels = 3, replace_stem_pool =
     else
         stempool = MaxPool((3, 3); stride = 2, pad = 1)
     end
-    return inplanes, Chain(conv1, bn1, stempool)
+    return Chain(conv1, bn1, stempool), inplanes
 end
 
 function downsample_block(downsample_fn, inplanes, planes, expansion; kernel_size = (1, 1),
@@ -128,9 +121,8 @@ end
 # See `basicblock` and `bottleneck` for examples. A block must define a function 
 # `expansion(::typeof(block))` that returns the expansion factor of the block.
 function _make_blocks(block_fn, channels, block_repeats, inplanes; output_stride = 32,
-                      downsample_fn = downsample_conv, downsample_args::NamedTuple = (),
-                      drop_block_rate = 0.0, drop_path_rate = 0.0,
-                      block_args::NamedTuple = ())
+                      downsample_fn = downsample_conv,
+                      drop_rates::NamedTuple, block_args::NamedTuple)
     @assert output_stride in (8, 16, 32) "Invalid `output_stride`. Must be one of (8, 16, 32)"
     expansion = expansion_factor(block_fn)
     stages = []
@@ -139,7 +131,7 @@ function _make_blocks(block_fn, channels, block_repeats, inplanes; output_stride
     dilation = prev_dilation = 1
     for (stage_idx, (planes, num_blocks, drop_block)) in enumerate(zip(channels,
                                                                        block_repeats,
-                                                                       _drop_blocks(drop_block_rate)))
+                                                                       _drop_blocks(drop_rates.drop_block_rate)))
         # Stride calculations for each stage
         stride = stage_idx == 1 ? 1 : 2
         if net_stride >= output_stride
@@ -148,16 +140,16 @@ function _make_blocks(block_fn, channels, block_repeats, inplanes; output_stride
         else
             net_stride *= stride
         end
-        # Downsample block; either a (default) convolution-based block or a pooling-based block.
+        # Downsample block; either a (default) convolution-based block or a pooling-based block
         downsample = downsample_block(downsample_fn, inplanes, planes, expansion;
-                                      stride, dilation, first_dilation = dilation, downsample_args...)
+                                      stride, dilation, first_dilation = dilation)
         # Construct the blocks for each stage
         blocks = []
         for block_idx in 1:num_blocks
             downsample = block_idx == 1 ? downsample : identity
             stride = block_idx == 1 ? stride : 1
             # stochastic depth linear decay rule
-            block_dpr = drop_path_rate * net_block_idx / (sum(block_repeats) - 1)
+            block_dpr = drop_rates.drop_path_rate * net_block_idx / (sum(block_repeats) - 1)
             push!(blocks,
                   block_fn(inplanes, planes; stride, downsample,
                            first_dilation = prev_dilation,
@@ -171,21 +163,26 @@ function _make_blocks(block_fn, channels, block_repeats, inplanes; output_stride
     return Chain(stages...)
 end
 
+# returns `DropBlock`s for each block of the ResNet
+function _drop_blocks(drop_block_prob = 0.0)
+    return [
+        identity,
+        identity,
+        DropBlock(drop_block_prob, 5, 0.25),
+        DropBlock(drop_block_prob, 3, 1.00),
+    ]
+end
+
 function resnet(block, layers; nclasses = 1000, inchannels = 3, output_stride = 32,
-                stem_fn = resnet_stem, stem_args::NamedTuple = NamedTuple(),
-                downsample_fn = downsample_conv, downsample_args::NamedTuple = NamedTuple(),
+                stem = first(resnet_stem(; inchannels)), inplanes = 64,
+                downsample_fn = downsample_conv,
                 drop_rates::NamedTuple = (drop_rate = 0.0, drop_path_rate = 0.0,
-                                          drop_block_rate = 0.5),
+                                          drop_block_rate = 0.0),
                 block_args::NamedTuple = NamedTuple())
-    # Stem
-    inplanes, stem = stem_fn(; inchannels, stem_args...)
     # Feature Blocks
     channels = [64, 128, 256, 512]
     stage_blocks = _make_blocks(block, channels, layers, inplanes;
-                                output_stride, downsample_fn, downsample_args,
-                                drop_block_rate = drop_rates.drop_block_rate,
-                                drop_path_rate = drop_rates.drop_path_rate,
-                                block_args)
+                                output_stride, downsample_fn, drop_rates, block_args)
     # Head (Pooling and Classifier)
     expansion = expansion_factor(block)
     num_features = 512 * expansion

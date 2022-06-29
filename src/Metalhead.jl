@@ -7,7 +7,6 @@ using BSON
 using Artifacts, LazyArtifacts
 using Statistics
 using MLUtils
-using Random
 
 import Functors
 
