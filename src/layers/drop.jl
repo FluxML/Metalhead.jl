@@ -13,8 +13,8 @@ function dropblock(rng::AbstractRNG, x::AbstractArray{T, 4}, drop_block_prob, bl
     normalize_scale = convert(T, (length(block_mask) / sum(block_mask) .+ 1e-6))
     return x .* block_mask .* normalize_scale
 end
-dropout_mask(rng::CUDA.RNG, x::CuArray, p; kwargs...) = _dropout_mask(rng, x, p; kwargs...)
-function dropblock(rng, x::CuArray, p; kwargs...)
+dropoutblock(rng::CUDA.RNG, x::CuArray, p, args...) = dropblock(rng, x, p, args...)
+function dropblock(rng, x::CuArray, p, args...)
     throw(ArgumentError("x isa CuArray, but rng isa $(typeof(rng)). dropblock only support CUDA.RNG for CuArrays."))
 end
 

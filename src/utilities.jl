@@ -10,24 +10,6 @@ function _round_channels(channels, divisor, min_value = divisor)
 end
 
 """
-    addrelu(x, y)
-
-Convenience function for `(x, y) -> @. relu(x + y)`.
-Useful as the `connection` argument for [`resnet`](#).
-See also [`reluadd`](#).
-"""
-addrelu(x, y) = @. relu(x + y)
-
-"""
-    reluadd(x, y)
-
-Convenience function for `(x, y) -> @. relu(x) + relu(y)`.
-Useful as the `connection` argument for [`resnet`](#).
-See also [`addrelu`](#).
-"""
-reluadd(x, y) = @. relu(x) + relu(y)
-
-"""
     cat_channels(x, y, zs...)
 
 Concatenate `x` and `y` (and any `z`s) along the channel dimension (third dimension).
