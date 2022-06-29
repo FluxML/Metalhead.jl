@@ -17,14 +17,16 @@ include("mlp-linear.jl")
 include("normalise.jl")
 include("conv.jl")
 include("drop.jl")
+include("selayers.jl")
+include("classifier.jl")
 
 export MHAttention,
        PatchEmbedding, ViPosEmbedding, ClassTokens,
        mlp_block, gated_mlp_block,
-       LayerScale, DropPath,
+       LayerScale, DropPath, DropBlock,
        ChannelLayerNorm, prenorm,
        skip_identity, skip_projection,
        conv_bn, depthwise_sep_conv_bn,
-       invertedresidual, squeeze_excite,
-       DropBlock
+       squeeze_excite, effective_squeeze_excite,
+       invertedresidual, create_classifier
 end

@@ -145,27 +145,6 @@ end
 skip_identity(inplanes, outplanes, downsample) = skip_identity(inplanes, outplanes)
 
 """
-    squeeze_excite(channels, reduction = 4)
-
-Squeeze and excitation layer used by MobileNet variants
-([reference](https://arxiv.org/abs/1905.02244)).
-
-# Arguments
-
-  - `channels`: the number of input/output feature maps
-  - `reduction = 4`: the reduction factor for the number of hidden feature maps
-    (must be ≥ 1)
-"""
-function squeeze_excite(channels, reduction = 4)
-    @assert (reduction>=1) "`reduction` must be >= 1"
-    return SkipConnection(Chain(AdaptiveMeanPool((1, 1)),
-                                conv_bn((1, 1), channels, channels ÷ reduction, relu;
-                                        bias = false)...,
-                                conv_bn((1, 1), channels ÷ reduction, channels, hardσ)...),
-                          .*)
-end
-
-"""
     invertedresidual(kernel_size, inplanes, hidden_planes, outplanes, activation = relu;
                      stride, reduction = nothing)
 
@@ -190,7 +169,9 @@ function invertedresidual(kernel_size, inplanes, hidden_planes, outplanes,
     pad = @. (kernel_size - 1) ÷ 2
     conv1 = (inplanes == hidden_planes) ? identity :
             Chain(conv_bn((1, 1), inplanes, hidden_planes, activation; bias = false))
-    selayer = isnothing(reduction) ? identity : squeeze_excite(hidden_planes, reduction)
+    selayer = isnothing(reduction) ? identity :
+              squeeze_excite(hidden_planes; reduction, activation, gate_activation = hardσ,
+                             norm_layer = BatchNorm)
     invres = Chain(conv1,
                    conv_bn(kernel_size, hidden_planes, hidden_planes, activation;
                            bias = false, stride, pad = pad, groups = hidden_planes)...,

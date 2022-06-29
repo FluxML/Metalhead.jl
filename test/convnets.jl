@@ -47,9 +47,9 @@ GC.gc()
             ]
             @testset for layers in layer_list
                 drop_list = [
-                    (drop_rate = 0.1, drop_path_rate = 0.1, drop_block_rate = 0.1),
-                    (drop_rate = 0.5, drop_path_rate = 0.5, drop_block_rate = 0.5),
-                    (drop_rate = 0.8, drop_path_rate = 0.8, drop_block_rate = 0.8),
+                    (dropout_rate = 0.1, drop_path_rate = 0.1, drop_block_rate = 0.1),
+                    (dropout_rate = 0.5, drop_path_rate = 0.5, drop_block_rate = 0.5),
+                    (dropout_rate = 0.8, drop_path_rate = 0.8, drop_block_rate = 0.8),
                 ]
                 @testset for drop_rates in drop_list
                     m = Metalhead.resnet(block_fn, layers; drop_rates)

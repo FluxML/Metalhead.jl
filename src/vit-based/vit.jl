@@ -1,5 +1,5 @@
 """
-transformer_encoder(planes, depth, nheads; mlp_ratio = 4.0, drop_rate =0.)
+transformer_encoder(planes, depth, nheads; mlp_ratio = 4.0, dropout_rate =0.)
 
 Transformer as used in the base ViT architecture.
 ([reference](https://arxiv.org/abs/2010.11929)).
@@ -10,23 +10,23 @@ Transformer as used in the base ViT architecture.
   - `depth`: number of attention blocks
   - `nheads`: number of attention heads
   - `mlp_ratio`: ratio of MLP layers to the number of input channels
-  - `drop_rate`: dropout rate
+  - `dropout_rate`: dropout rate
 """
-function transformer_encoder(planes, depth, nheads; mlp_ratio = 4.0, drop_rate = 0.0)
+function transformer_encoder(planes, depth, nheads; mlp_ratio = 4.0, dropout_rate = 0.0)
     layers = [Chain(SkipConnection(prenorm(planes,
                                            MHAttention(planes, nheads;
-                                                       attn_drop_rate = drop_rate,
-                                                       proj_drop_rate = drop_rate)), +),
+                                                       attn_drop_rate = dropout_rate,
+                                                       proj_drop_rate = dropout_rate)), +),
                     SkipConnection(prenorm(planes,
                                            mlp_block(planes, floor(Int, mlp_ratio * planes);
-                                                     drop_rate)), +))
+                                                     dropout_rate)), +))
               for _ in 1:depth]
     return Chain(layers)
 end
 
 """
     vit(imsize::Dims{2} = (256, 256); inchannels = 3, patch_size::Dims{2} = (16, 16),
-        embedplanes = 768, depth = 6, nheads = 16, mlp_ratio = 4.0, drop_rate = 0.1,
+        embedplanes = 768, depth = 6, nheads = 16, mlp_ratio = 4.0, dropout_rate = 0.1,
         emb_drop_rate = 0.1, pool = :class, nclasses = 1000)
 
 Creates a Vision Transformer (ViT) model.
@@ -41,13 +41,13 @@ Creates a Vision Transformer (ViT) model.
   - `depth`: number of blocks in the transformer
   - `nheads`: number of attention heads in the transformer
   - `mlpplanes`: number of hidden channels in the MLP block in the transformer
-  - `drop_rate`: dropout rate
+  - `dropout_rate`: dropout rate
   - `emb_dropout`: dropout rate for the positional embedding layer
   - `pool`: pooling type, either :class or :mean
   - `nclasses`: number of classes in the output
 """
 function vit(imsize::Dims{2} = (256, 256); inchannels = 3, patch_size::Dims{2} = (16, 16),
-             embedplanes = 768, depth = 6, nheads = 16, mlp_ratio = 4.0, drop_rate = 0.1,
+             embedplanes = 768, depth = 6, nheads = 16, mlp_ratio = 4.0, dropout_rate = 0.1,
              emb_drop_rate = 0.1, pool = :class, nclasses = 1000)
     @assert pool in [:class, :mean]
     "Pool type must be either :class (class token) or :mean (mean pooling)"
@@ -57,7 +57,7 @@ function vit(imsize::Dims{2} = (256, 256); inchannels = 3, patch_size::Dims{2} =
                        ViPosEmbedding(embedplanes, npatches + 1),
                        Dropout(emb_drop_rate),
                        transformer_encoder(embedplanes, depth, nheads; mlp_ratio,
-                                           drop_rate),
+                                           dropout_rate),
                        (pool == :class) ? x -> x[:, 1, :] : seconddimmean),
                  Chain(LayerNorm(embedplanes), Dense(embedplanes, nclasses, tanh_fast)))
 end
