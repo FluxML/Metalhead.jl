@@ -2,8 +2,7 @@ module Layers
 
 using Flux
 using CUDA
-using NNlib
-using NNlibCUDA
+using NNlib, NNlibCUDA
 using Functors
 using ChainRulesCore
 using Statistics

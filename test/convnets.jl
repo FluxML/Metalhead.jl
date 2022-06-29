@@ -27,18 +27,39 @@ GC.safepoint()
 GC.gc()
 
 @testset "ResNet" begin
-    @testset "ResNet($sz)" for sz in [18, 34, 50, 101, 152]
-        m = ResNet(sz)
-        @test size(m(x_256)) == (1000, 1)
-        ## TODO: find a way to port pretrained models to the new ResNet API
+    # Tests for pretrained ResNets
+    ## TODO: find a way to port pretrained models to the new ResNet API
+    # @testset "ResNet($sz)" for sz in [18, 34, 50, 101, 152]
         # if (ResNet, sz) in PRETRAINED_MODELS
         #     @test acctest(ResNet(sz, pretrain = true))
         # else
         #     @test_throws ArgumentError ResNet(sz, pretrain = true)
         # end
-        @test gradtest(m, x_256)
-        GC.safepoint()
-        GC.gc()
+    # end
+
+    @testset "resnet" begin
+        @testset for block_fn in [Metalhead.basicblock, Metalhead.bottleneck]
+            layer_list = [
+                [2, 2, 2, 2],
+                [3, 4, 6, 3],
+                [3, 4, 23, 3],
+                [3, 8, 36, 3]
+            ]
+            @testset for layers in layer_list
+                drop_list = [
+                    (drop_rate = 0.1, drop_path_rate = 0.1, drop_block_rate = 0.1),
+                    (drop_rate = 0.5, drop_path_rate = 0.5, drop_block_rate = 0.5),
+                    (drop_rate = 0.8, drop_path_rate = 0.8, drop_block_rate = 0.8),
+                ]
+                @testset for drop_rates in drop_list
+                    m = Metalhead.resnet(block_fn, layers; drop_rates)
+                    @test size(m(x_224)) == (1000, 1)
+                    @test gradtest(m, x_224)
+                    GC.safepoint()
+                    GC.gc()
+                end
+            end
+        end
     end
 end
 
@@ -47,16 +68,20 @@ GC.gc()
 
 @testset "ResNeXt" begin
     @testset for depth in [50, 101, 152]
-        m = ResNeXt(depth)
-        @test size(m(x_224)) == (1000, 1)
-        if ResNeXt in PRETRAINED_MODELS
-            @test acctest(ResNeXt(depth, pretrain = true))
-        else
-            @test_throws ArgumentError ResNeXt(depth, pretrain = true)
+        @testset for cardinality in [32, 64]
+            @testset for base_width in [4, 8]
+                m = ResNeXt(depth; cardinality, base_width)
+                @test size(m(x_224)) == (1000, 1)
+                if string("resnext", depth, "_", cardinality, "x", base_width) in PRETRAINED_MODELS
+                    @test acctest(ResNeXt(depth, pretrain = true))
+                else
+                    @test_throws ArgumentError ResNeXt(depth, pretrain = true)
+                end
+                @test gradtest(m, x_224)
+                GC.safepoint()
+                GC.gc()
+            end
         end
-        @test gradtest(m, x_224)
-        GC.safepoint()
-        GC.gc()
     end
 end
 

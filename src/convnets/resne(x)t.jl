@@ -173,7 +173,7 @@ function _drop_blocks(drop_block_prob = 0.0)
     ]
 end
 
-function resnet(block, layers; nclasses = 1000, inchannels = 3, output_stride = 32,
+function resnet(block_fn, layers; nclasses = 1000, inchannels = 3, output_stride = 32,
                 stem = first(resnet_stem(; inchannels)), inplanes = 64,
                 downsample_fn = downsample_conv,
                 drop_rates::NamedTuple = (drop_rate = 0.0, drop_path_rate = 0.0,
@@ -181,10 +181,10 @@ function resnet(block, layers; nclasses = 1000, inchannels = 3, output_stride = 
                 block_args::NamedTuple = NamedTuple())
     # Feature Blocks
     channels = [64, 128, 256, 512]
-    stage_blocks = _make_blocks(block, channels, layers, inplanes;
+    stage_blocks = _make_blocks(block_fn, channels, layers, inplanes;
                                 output_stride, downsample_fn, drop_rates, block_args)
     # Head (Pooling and Classifier)
-    expansion = expansion_factor(block)
+    expansion = expansion_factor(block_fn)
     num_features = 512 * expansion
     classifier = Chain(GlobalMeanPool(), Dropout(drop_rates.drop_rate), MLUtils.flatten,
                        Dense(num_features, nclasses))
@@ -201,11 +201,27 @@ struct ResNet
 end
 @functor ResNet
 
-function ResNet(depth::Integer; pretrain = false, nclasses = 1000, kwargs...)
-    @assert depth in [18, 34, 50, 101, 152] "Invalid depth. Must be one of [18, 34, 50, 101, 152]"
-    model = resnet(resnet_config[depth]...; nclasses, kwargs...)
+function ResNet(depth::Integer; pretrain = false, nclasses = 1000)
+    @assert depth in [18, 34, 50, 101, 152]
+    "Invalid depth. Must be one of [18, 34, 50, 101, 152]"
+    model = resnet(resnet_config[depth]...; nclasses)
     if pretrain
         loadpretrain!(model, string("resnet", depth))
+    end
+    return model
+end
+
+struct ResNeXt
+    layers::Any
+end
+@functor ResNeXt
+
+function ResNeXt(depth::Integer; pretrain = false, cardinality = 32, base_width = 4, nclasses = 1000)
+    @assert depth in [50, 101, 152]
+    "Invalid depth. Must be one of [50, 101, 152]"
+    model = resnet(bottleneck, [3, 4, 6, 3]; nclasses, block_args = (; cardinality, base_width))
+    if pretrain
+        loadpretrain!(model, string("resnext", depth, "_", cardinality, "x", base_width))
     end
     return model
 end
