@@ -9,14 +9,14 @@ end
 
 function SelectAdaptivePool(output_size = (1, 1); pool_type = :mean, flatten = false)
     if pool_type == :mean
-        pool = AdaptiveAvgPool(output_size)
+        pool = AdaptiveMeanPool(output_size)
     elseif pool_type == :max
         pool = AdaptiveMaxPool(output_size)
     elseif pool_type == :meanmax
-        pool = AdaptiveAvgMaxPool(output_size)
+        pool = AdaptiveMeanMaxPool(output_size)
     elseif pool_type == :catmeanmax
-        pool = AdaptiveCatAvgMaxPool(output_size)
-    elseif pool_type = :identity
+        pool = AdaptiveCatMeanMaxPool(output_size)
+    elseif pool_type == :identity
         pool = identity
     else
         throw(AssertionError("Invalid pool type: $pool_type"))

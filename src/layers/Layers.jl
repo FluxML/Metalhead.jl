@@ -1,6 +1,7 @@
 module Layers
 
 using Flux
+using Flux: rng_from_array
 using CUDA
 using NNlib, NNlibCUDA
 using Functors
@@ -12,21 +13,32 @@ using Random
 include("../utilities.jl")
 
 include("attention.jl")
-include("embeddings.jl")
-include("mlp-linear.jl")
-include("normalise.jl")
-include("conv.jl")
-include("drop.jl")
-include("selayers.jl")
-include("classifier.jl")
+export MHAttention
 
-export MHAttention,
-       PatchEmbedding, ViPosEmbedding, ClassTokens,
-       mlp_block, gated_mlp_block,
-       LayerScale, DropPath, DropBlock,
-       ChannelLayerNorm, prenorm,
-       skip_identity, skip_projection,
-       conv_bn, depthwise_sep_conv_bn,
-       squeeze_excite, effective_squeeze_excite,
-       invertedresidual, create_classifier
+include("embeddings.jl")
+export PatchEmbedding, ViPosEmbedding, ClassTokens
+
+include("mlp-linear.jl")
+export mlp_block, gated_mlp_block, LayerScale
+
+include("normalise.jl")
+export prenorm, ChannelLayerNorm
+
+include("conv.jl")
+export conv_bn, depthwise_sep_conv_bn, invertedresidual
+skip_identity, skip_projection
+
+include("drop.jl")
+export DropPath, DropBlock
+
+include("selayers.jl")
+export squeeze_excite, effective_squeeze_excite
+
+include("classifier.jl")
+export create_classifier
+
+include("pool.jl")
+export AdaptiveMeanMaxPool, AdaptiveCatMeanMaxPool
+SelectAdaptivePool
+
 end
