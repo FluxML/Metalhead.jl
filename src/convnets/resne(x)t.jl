@@ -158,10 +158,14 @@ function _make_blocks(block_fn, channels, block_repeats, inplanes; output_stride
     net_block_idx = 1
     net_stride = 4
     dilation = prev_dilation = 1
-    dbr = haskey(drop_rates, :drop_block_rate) ? drop_rates.drop_block_rate : 0
+    # Stochastic depth linear decay rule (DropPath)
+    dp_rates = LinRange{Float32}(0.0, get(drop_rates, :drop_path_rate, 0),
+                                 sum(block_repeats))
     for (stage_idx, (planes, num_blocks, drop_block)) in enumerate(zip(channels,
                                                                        block_repeats,
-                                                                       _drop_blocks(dbr)))
+                                                                       _drop_blocks(get(drop_rates,
+                                                                                        :drop_block_rate,
+                                                                                        0))))
         # Stride calculations for each stage
         stride = stage_idx == 1 ? 1 : 2
         if net_stride >= output_stride
@@ -178,13 +182,11 @@ function _make_blocks(block_fn, channels, block_repeats, inplanes; output_stride
         for block_idx in 1:num_blocks
             downsample = block_idx == 1 ? downsample : identity
             stride = block_idx == 1 ? stride : 1
-            # stochastic depth linear decay rule
-            dpr = haskey(drop_rates, :drop_path_rate) ? drop_rates.drop_path_rate : 0
-            block_dpr = dpr * net_block_idx / (sum(block_repeats) - 1)
             push!(blocks,
                   block_fn(inplanes, planes; stride, downsample,
                            first_dilation = prev_dilation,
-                           drop_path = DropPath(block_dpr), drop_block, block_args...))
+                           drop_path = DropPath(dp_rates[block_idx]), drop_block,
+                           block_args...))
             prev_dilation = dilation
             inplanes = planes * expansion
             net_block_idx += 1
@@ -216,8 +218,7 @@ function resnet(block_fn, layers; nclasses = 1000, inchannels = 3, output_stride
     expansion = expansion_factor(block_fn)
     num_features = 512 * expansion
     global_pool, fc = create_classifier(num_features, nclasses; classifier_args...)
-    dr = haskey(drop_rates, :dropout_rate) ? drop_rates.dropout_rate : 0
-    classifier = Chain(global_pool, Dropout(dr), fc)
+    classifier = Chain(global_pool, Dropout(get(drop_rates, :dropout_rate, 0)), fc)
     return Chain(Chain(stem, stage_blocks), classifier)
 end
 

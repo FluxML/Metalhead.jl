@@ -1,4 +1,4 @@
-function create_classifier(inplanes, nclasses; pool_type = :avg, use_conv = false)
+function create_classifier(inplanes, nclasses; pool_type = :mean, use_conv = false)
     flatten_in_pool = !use_conv  # flatten when we use a Dense layer after pooling
     if pool_type == :identity
         @assert use_conv
