@@ -26,7 +26,8 @@ end
 function basicblock(inplanes, planes; stride = 1, downsample = identity, cardinality = 1,
                     base_width = 64, reduce_first = 1, dilation = 1,
                     first_dilation = nothing, activation = relu, norm_layer = BatchNorm,
-                    drop_block = identity, drop_path = identity)
+                    drop_block = identity, drop_path = identity,
+                    attn_fn = planes -> identity, attn_args::NamedTuple = NamedTuple())
     expansion = expansion_factor(basicblock)
     @assert cardinality==1 "`basicblock` only supports cardinality of 1"
     @assert base_width==64 "`basicblock` does not support changing base width"
@@ -40,8 +41,10 @@ function basicblock(inplanes, planes; stride = 1, downsample = identity, cardina
     conv_bn2 = Chain(Conv((3, 3), first_planes => outplanes; pad = dilation,
                           dilation = dilation, bias = false),
                      norm_layer(outplanes))
+    attn_layer = attn_fn(outplanes; attn_args...)
     return Chain(Parallel(+, downsample,
-                          Chain(conv_bn1, drop_block, activation, conv_bn2, drop_path)),
+                          Chain(conv_bn1, drop_block, activation, conv_bn2, attn_layer,
+                                drop_path)),
                  activation)
 end
 expansion_factor(::typeof(basicblock)) = 1
@@ -49,7 +52,8 @@ expansion_factor(::typeof(basicblock)) = 1
 function bottleneck(inplanes, planes; stride = 1, downsample = identity, cardinality = 1,
                     base_width = 64, reduce_first = 1, dilation = 1,
                     first_dilation = nothing, activation = relu, norm_layer = BatchNorm,
-                    drop_block = identity, drop_path = identity)
+                    drop_block = identity, drop_path = identity,
+                    attn_fn = planes -> identity, attn_args::NamedTuple = NamedTuple())
     expansion = expansion_factor(bottleneck)
     width = floor(Int, planes * (base_width / 64)) * cardinality
     first_planes = width ÷ reduce_first
@@ -61,9 +65,10 @@ function bottleneck(inplanes, planes; stride = 1, downsample = identity, cardina
                           dilation = first_dilation, groups = cardinality, bias = false),
                      norm_layer(width))
     conv_bn3 = Chain(Conv((1, 1), width => outplanes; bias = false), norm_layer(outplanes))
+    attn_layer = attn_fn(outplanes; attn_args...)
     return Chain(Parallel(+, downsample,
                           Chain(conv_bn1, conv_bn2, drop_block, activation, conv_bn3,
-                                drop_path)),
+                                attn_layer, drop_path)),
                  activation)
 end
 expansion_factor(::typeof(bottleneck)) = 4
@@ -233,10 +238,13 @@ struct ResNet
 end
 @functor ResNet
 
+(m::ResNet)(x) = m.layers(x)
+
 """
     ResNet(depth::Integer; pretrain = false, nclasses = 1000) 
 
 Creates a ResNet model with the specified depth.
+((reference)[https://arxiv.org/abs/1512.03385])
 
 # Arguments
 
@@ -253,11 +261,11 @@ Advanced users who want more configuration options will be better served by usin
 function ResNet(depth::Integer; pretrain = false, nclasses = 1000)
     @assert depth in [18, 34, 50, 101, 152]
     "Invalid depth. Must be one of [18, 34, 50, 101, 152]"
-    model = resnet(resnet_config[depth]...; nclasses)
+    layers = resnet(resnet_config[depth]...; nclasses)
     if pretrain
-        loadpretrain!(model, string("resnet", depth))
+        loadpretrain!(layers, string("resnet", depth))
     end
-    return model
+    return ResNet(layers)
 end
 
 struct ResNeXt
@@ -265,10 +273,13 @@ struct ResNeXt
 end
 @functor ResNeXt
 
+(m::ResNeXt)(x) = m.layers(x)
+
 """
     ResNeXt(depth::Integer; pretrain = false, cardinality = 32, base_width = 4, nclasses = 1000) 
 
 Creates a ResNeXt model with the specified depth, cardinality, and base width.
+((reference)[https://arxiv.org/abs/1611.05431])
 
 # Arguments
 
@@ -288,10 +299,73 @@ function ResNeXt(depth::Integer; pretrain = false, cardinality = 32, base_width 
                  nclasses = 1000)
     @assert depth in [50, 101, 152]
     "Invalid depth. Must be one of [50, 101, 152]"
-    model = resnet(resnet_config[depth]...; nclasses,
-                   block_args = (; cardinality, base_width))
+    layers = resnet(resnet_config[depth]...; nclasses,
+                    block_args = (; cardinality, base_width))
     if pretrain
-        loadpretrain!(model, string("resnext", depth, "_", cardinality, "x", base_width))
+        loadpretrain!(layers, string("resnext", depth, "_", cardinality, "x", base_width))
     end
-    return model
+    return ResNeXt(layers)
+end
+
+struct SEResNet
+    layers::Any
+end
+@functor SEResNet
+
+(m::SEResNet)(x) = m.layers(x)
+
+"""
+    SEResNet(depth::Integer; pretrain = false, nclasses = 1000)
+
+Creates a SEResNet model with the specified depth.
+((reference)[https://arxiv.org/pdf/1709.01507.pdf])
+
+# Arguments
+
+  - `depth`: one of `[18, 34, 50, 101, 152]`. The depth of the ResNet model.
+  - `pretrain`: set to `true` to load the model with pre-trained weights for ImageNet
+  - `nclasses`: the number of output classes
+"""
+function SEResNet(depth::Integer; pretrain = false, nclasses = 1000)
+    @assert depth in [18, 34, 50, 101, 152]
+    "Invalid depth. Must be one of [18, 34, 50, 101, 152]"
+    layers = resnet(resnet_config[depth]...; nclasses,
+                    block_args = (; attn_fn = squeeze_excite))
+    if pretrain
+        loadpretrain!(layers, string("seresnet", depth))
+    end
+    return SEResNet(layers)
+end
+
+struct SEResNeXt
+    layers::Any
+end
+@functor SEResNeXt
+
+(m::SEResNeXt)(x) = m.layers(x)
+
+"""
+    SEResNeXt(depth::Integer; pretrain = false, cardinality = 32, base_width = 4, nclasses = 1000)
+
+Creates a SEResNeXt model with the specified depth, cardinality, and base width.
+((reference)[https://arxiv.org/pdf/1709.01507.pdf])
+
+# Arguments
+
+  - `depth`: one of `[18, 34, 50, 101, 152]`. The depth of the ResNet model.
+  - `pretrain`: set to `true` to load the model with pre-trained weights for ImageNet
+  - `cardinality`: the number of groups to be used in the 3x3 convolution in each block.
+  - `base_width`: the number of feature maps in each group.
+  - `nclasses`: the number of output classes
+"""
+function SEResNeXt(depth::Integer; pretrain = false, cardinality = 32, base_width = 4,
+                   nclasses = 1000)
+    @assert depth in [50, 101, 152]
+    "Invalid depth. Must be one of [50, 101, 152]"
+    layers = resnet(resnet_config[depth]...; nclasses,
+                    block_args = (; cardinality, base_width, attn_fn = squeeze_excite))
+    if pretrain
+        loadpretrain!(layers, string("seresnext", depth, "_", cardinality, "x", base_width))
+    end
+    return SEResNeXt(layers)
 end

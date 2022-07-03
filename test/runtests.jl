@@ -15,6 +15,11 @@ const PRETRAINED_MODELS = [
     (ResNet, 152),
 ]
 
+function _gc()
+    GC.safepoint()
+    GC.gc()
+end
+
 function gradtest(model, input)
     y, pb = Zygote.pullback(() -> model(input), Flux.params(model))
     gs = pb(ones(Float32, size(y)))
