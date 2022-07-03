@@ -1,3 +1,11 @@
+# Generates the mask to be used for `DropBlock`
+@inline function _dropblock_mask(rng, x, gamma, clipped_block_size)
+    block_mask = Flux.f32(rand_like(rng, x) .< gamma)
+    return 1 .- maxpool(block_mask, (clipped_block_size, clipped_block_size);
+                   stride = 1, pad = clipped_block_size ÷ 2)
+end
+ChainRulesCore.@non_differentiable _dropblock_mask(rng, x, gamma, clipped_block_size)
+
 """
     dropblock([rng = rng_from_array(x)], x::AbstractArray{T, 4}, drop_block_prob, block_size,
               gamma_scale, active::Bool = true)
@@ -18,28 +26,25 @@ regions of size `block_size` in the input. Otherwise, it simply returns the inpu
 If you are an end-user, you do not want this function. Use [`DropBlock`](#) instead.
 """
 function dropblock(rng::AbstractRNG, x::AbstractArray{T, 4}, drop_block_prob, block_size,
-                   gamma_scale, active::Bool = true) where {T}
-    if !active
-        return x
-    end
+                   gamma_scale) where {T}
     H, W, _, _ = size(x)
     total_size = H * W
     clipped_block_size = min(block_size, min(H, W))
     gamma = gamma_scale * drop_block_prob * total_size / clipped_block_size^2 /
             ((W - block_size + 1) * (H - block_size + 1))
-    block_mask = rand_like(rng, x) .< gamma
-    block_mask = maxpool(block_mask, (clipped_block_size, clipped_block_size);
-                         stride = 1, pad = clipped_block_size ÷ 2)
-    block_mask = 1 .- block_mask
+    block_mask = dropblock_mask(rng, x, gamma, clipped_block_size)
     normalize_scale = convert(T, (length(block_mask) / sum(block_mask) .+ 1e-6))
     return x .* block_mask .* normalize_scale
 end
 
-dropblock(x, p, args...) = dropblock(rng_from_array(x), x, p, args...)
-dropblock(rng::CUDA.RNG, x::CuArray, p, args...) = dropblock(rng, x, p, args...)
-function dropblock(rng, x::CuArray, p, args...)
+## bs is `clipped_block_size`
+# Dispatch for GPU
+dropblock_mask(rng::CUDA.RNG, x::CuArray, gamma, bs) = _dropblock_mask(rng, x, gamma, bs)
+function dropblock_mask(rng, x::CuArray, gamma, bs)
     throw(ArgumentError("x isa CuArray, but rng isa $(typeof(rng)). dropblock only supports CUDA.RNG for CuArrays."))
 end
+# Dispatch for CPU
+dropblock_mask(rng, x, gamma, bs) = _dropblock_mask(rng, x, gamma, bs)
 
 mutable struct DropBlock{F, R <: AbstractRNG}
     drop_block_prob::F
@@ -52,7 +57,11 @@ end
 @functor DropBlock
 trainable(a::DropBlock) = (;)
 
-function _dropblock_checks(x::T) where {T}
+function _dropblock_checks(x::T, drop_block_prob, gamma_scale) where {T}
+    @assert 0 ≤ drop_block_prob ≤ 1
+    "drop_block_prob must be between 0 and 1, got $drop_block_prob"
+    @assert 0 ≤ gamma_scale ≤ 1
+    "gamma_scale must be between 0 and 1, got $gamma_scale"
     if !(T <: AbstractArray)
         throw(ArgumentError("x must be an `AbstractArray`"))
     end
@@ -60,10 +69,10 @@ function _dropblock_checks(x::T) where {T}
         throw(ArgumentError("x must have 4 dimensions (H, W, C, N) for `DropBlock`"))
     end
 end
-ChainRulesCore.@non_differentiable _dropblock_checks(x)
+ChainRulesCore.@non_differentiable _dropblock_checks(x, drop_block_prob, gamma_scale)
 
 function (m::DropBlock)(x)
-    _dropblock_checks(x)
+    _dropblock_checks(x, m.drop_block_prob, m.gamma_scale)
     if Flux._isactive(m)
         return dropblock(m.rng, x, m.drop_block_prob, m.block_size, m.gamma_scale)
     else
@@ -87,7 +96,7 @@ size `block_size` in the input. During inference, it simply returns the input `x
 
   - `drop_block_prob`: probability of dropping a block
   - `block_size`: size of the block to drop
-  - `gamma_scale`: multiplicative factor for `gamma` used. For the calculations,
+  - `gamma_scale`: multiplicative factor for `gamma` used. For the calculation of gamma,
     refer to [the paper](https://arxiv.org/abs/1810.12890).
   - `rng`: can be used to pass in a custom RNG instead of the default. Custom RNGs are only
     supported on the CPU.
@@ -97,10 +106,6 @@ function DropBlock(drop_block_prob = 0.1, block_size = 7, gamma_scale = 1.0,
     if drop_block_prob == 0.0
         return identity
     end
-    @assert 0 ≤ drop_block_prob ≤ 1
-    "drop_block_prob must be between 0 and 1, got $drop_block_prob"
-    @assert 0 ≤ gamma_scale ≤ 1
-    "gamma_scale must be between 0 and 1, got $gamma_scale"
     return DropBlock(drop_block_prob, block_size, gamma_scale, nothing, rng)
 end
 

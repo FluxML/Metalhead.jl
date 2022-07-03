@@ -288,7 +288,7 @@ function ResNeXt(depth::Integer; pretrain = false, cardinality = 32, base_width 
                  nclasses = 1000)
     @assert depth in [50, 101, 152]
     "Invalid depth. Must be one of [50, 101, 152]"
-    model = resnet(bottleneck, [3, 4, 6, 3]; nclasses,
+    model = resnet(resnet_config[depth]...; nclasses,
                    block_args = (; cardinality, base_width))
     if pretrain
         loadpretrain!(model, string("resnext", depth, "_", cardinality, "x", base_width))
