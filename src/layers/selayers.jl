@@ -14,7 +14,6 @@ Creates a squeeze-and-excitation layer used in MobileNets and SE-Nets.
   - `gate_activation`: The activation function for the gate layer
   - `norm_layer`: The normalization layer to be used after the convolution layers
   - `rd_planes`: The number of hidden feature maps in a squeeze and excite layer
-    Must be ≥ 1 or `nothing` for no squeeze and excite layer.
 """
 function squeeze_excite(inplanes; reduction = 16, rd_divisor = 8,
                         activation = relu, gate_activation = sigmoid,

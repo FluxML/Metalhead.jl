@@ -5,7 +5,7 @@
 Creates a feedforward block for the MLPMixer architecture.
 ([reference](https://arxiv.org/pdf/2105.01601))
 
-# Arguments:
+# Arguments
 
   - `planes`: the number of planes in the block
   - `npatches`: the number of patches of the input
@@ -55,8 +55,8 @@ Creates a model with the MLPMixer architecture.
     not specified.
 """
 function mlpmixer(block, imsize::Dims{2} = (224, 224); inchannels = 3,
-                  norm_layer = LayerNorm,
-                  patch_size::Dims{2} = (16, 16), embedplanes = 512, drop_path_rate = 0.0,
+                  norm_layer = LayerNorm, patch_size::Dims{2} = (16, 16),
+                  embedplanes = 512, drop_path_rate = 0.0,
                   depth = 12, nclasses = 1000, kwargs...)
     npatches = prod(imsize .÷ patch_size)
     dp_rates = LinRange{Float32}(0.0, drop_path_rate, depth)

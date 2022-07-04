@@ -3,7 +3,7 @@
 
 Multi-head self-attention layer.
 
-# Arguments:
+# Arguments
 
   - `nheads`: Number of heads
   - `qkv_layer`: layer to be used for getting the query, key and value
@@ -22,7 +22,7 @@ end
 
 Multi-head self-attention layer.
 
-# Arguments:
+# Arguments
 
   - `planes`: number of input channels
   - `nheads`: number of heads
