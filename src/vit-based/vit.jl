@@ -50,7 +50,7 @@ function vit(imsize::Dims{2} = (256, 256); inchannels = 3, patch_size::Dims{2} =
              embedplanes = 768, depth = 6, nheads = 16, mlp_ratio = 4.0, dropout_rate = 0.1,
              emb_drop_rate = 0.1, pool = :class, nclasses = 1000)
     @assert pool in [:class, :mean]
-    "Pool type must be either :class (class token) or :mean (mean pooling)"
+    "Pool type must be either `:class` (class token) or `:mean` (mean pooling)"
     npatches = prod(imsize .÷ patch_size)
     return Chain(Chain(PatchEmbedding(imsize; inchannels, patch_size, embedplanes),
                        ClassTokens(embedplanes),

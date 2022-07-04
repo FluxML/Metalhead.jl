@@ -25,8 +25,7 @@ include("normalise.jl")
 export prenorm, ChannelLayerNorm
 
 include("conv.jl")
-export conv_bn, depthwise_sep_conv_bn, invertedresidual
-skip_identity, skip_projection
+export conv_bn, depthwise_sep_conv_bn, invertedresidual, skip_identity, skip_projection
 
 include("drop.jl")
 export DropPath, DropBlock
@@ -38,7 +37,6 @@ include("classifier.jl")
 export create_classifier
 
 include("pool.jl")
-export AdaptiveMeanMaxPool, AdaptiveCatMeanMaxPool
-SelectAdaptivePool
+export AdaptiveMeanMaxPool, AdaptiveCatMeanMaxPool, SelectAdaptivePool
 
 end

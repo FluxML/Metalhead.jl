@@ -1,8 +1,7 @@
 """
     conv_bn(kernelsize, inplanes, outplanes, activation = relu;
-                 rev = false, preact = false, use_bn = true, stride = 1, pad = 0, dilation = 1,
-                 groups = 1, [bias, weight, init], initβ = Flux.zeros32, initγ = Flux.ones32,
-                 ϵ = 1.0f-5, momentum = 1.0f-1)
+            rev = false, preact = false, use_bn = true, stride = 1, pad = 0, dilation = 1,
+            groups = 1, [bias, weight, init])
 
 Create a convolution + batch normalization pair with activation.
 
@@ -22,13 +21,9 @@ Create a convolution + batch normalization pair with activation.
   - `dilation`: dilation of the convolution kernel
   - `groups`: groups for the convolution kernel
   - `bias`, `weight`, `init`: initialization for the convolution kernel (see [`Flux.Conv`](#))
-  - `initβ`, `initγ`: initialization for the batch norm (see [`Flux.BatchNorm`](#))
-  - `ϵ`, `momentum`: batch norm parameters (see [`Flux.BatchNorm`](#))
 """
 function conv_bn(kernelsize, inplanes, outplanes, activation = relu;
-                 rev = false, preact = false, use_bn = true,
-                 initβ = Flux.zeros32, initγ = Flux.ones32, ϵ = 1.0f-5, momentum = 1.0f-1,
-                 kwargs...)
+                 rev = false, preact = false, use_bn = true, kwargs...)
     if !use_bn
         (preact || rev) ? throw("preact only supported with `use_bn = true`") :
         return [Conv(kernelsize, inplanes => outplanes, activation; kwargs...)]
@@ -48,17 +43,14 @@ function conv_bn(kernelsize, inplanes, outplanes, activation = relu;
     push!(layers,
           Conv(kernelsize, Int(inplanes) => Int(outplanes), activations.conv; kwargs...))
     push!(layers,
-          BatchNorm(Int(bnplanes), activations.bn;
-                    initβ = initβ, initγ = initγ, ϵ = ϵ, momentum = momentum))
+          BatchNorm(Int(bnplanes), activations.bn))
     return rev ? reverse(layers) : layers
 end
 
 """
     depthwise_sep_conv_bn(kernelsize, inplanes, outplanes, activation = relu;
                                rev = false, use_bn = (true, true),
-                               stride = 1, pad = 0, dilation = 1, [bias, weight, init],
-                               initβ = Flux.zeros32, initγ = Flux.ones32,
-                               ϵ = 1.0f-5, momentum = 1.0f-1)
+                               stride = 1, pad = 0, dilation = 1, [bias, weight, init])
 
 Create a depthwise separable convolution chain as used in MobileNetv1.
 This is sequence of layers:
@@ -82,21 +74,13 @@ See Fig. 3 in [reference](https://arxiv.org/abs/1704.04861v1).
   - `pad`: padding of the first convolution kernel
   - `dilation`: dilation of the first convolution kernel
   - `bias`, `weight`, `init`: initialization for the convolution kernel (see [`Flux.Conv`](#))
-  - `initβ`, `initγ`: initialization for the batch norm (see [`Flux.BatchNorm`](#))
-  - `ϵ`, `momentum`: batch norm parameters (see [`Flux.BatchNorm`](#))
 """
 function depthwise_sep_conv_bn(kernelsize, inplanes, outplanes, activation = relu;
                                rev = false, use_bn = (true, true),
-                               initβ = Flux.zeros32, initγ = Flux.ones32,
-                               ϵ = 1.0f-5, momentum = 1.0f-1,
                                stride = 1, kwargs...)
     return vcat(conv_bn(kernelsize, inplanes, inplanes, activation;
-                        rev = rev, initβ = initβ, initγ = initγ,
-                        ϵ = ϵ, momentum = momentum, use_bn = use_bn[1],
-                        stride = stride, groups = Int(inplanes), kwargs...),
-                conv_bn((1, 1), inplanes, outplanes, activation;
-                        rev = rev, initβ = initβ, initγ = initγ, use_bn = use_bn[2],
-                        ϵ = ϵ, momentum = momentum))
+                        rev, use_bn = use_bn[1], stride, groups = Int(inplanes), kwargs...),
+                conv_bn((1, 1), inplanes, outplanes, activation; rev, use_bn = use_bn[2]))
 end
 
 """
@@ -105,10 +89,10 @@ end
 Create a skip projection
 ([reference](https://arxiv.org/abs/1512.03385v1)).
 
-# Arguments:
+# Arguments
 
-  - `inplanes`: the number of input feature maps
-  - `outplanes`: the number of output feature maps
+  - `inplanes`: number of input feature maps
+  - `outplanes`: number of output feature maps
   - `downsample`: set to `true` to downsample the input
 """
 function skip_projection(inplanes, outplanes, downsample = false)
@@ -124,7 +108,7 @@ end
 Create a identity projection
 ([reference](https://arxiv.org/abs/1512.03385v1)).
 
-# Arguments:
+# Arguments
 
   - `inplanes`: the number of input feature maps
   - `outplanes`: the number of output feature maps
@@ -153,15 +137,14 @@ Create a basic inverted residual block for MobileNet variants
 
 # Arguments
 
-  - `kernel_size`: The kernel size of the convolutional layers
-  - `inplanes`: The number of input feature maps
+  - `kernel_size`: kernel size of the convolutional layers
+  - `inplanes`: number of input feature maps
   - `hidden_planes`: The number of feature maps in the hidden layer
   - `outplanes`: The number of output feature maps
   - `activation`: The activation function for the first two convolution layer
   - `stride`: The stride of the convolutional kernel, has to be either 1 or 2
   - `reduction`: The reduction factor for the number of hidden feature maps
     in a squeeze and excite layer (see [`squeeze_excite`](#)).
-    Must be ≥ 1 or `nothing` for no squeeze and excite layer.
 """
 function invertedresidual(kernel_size, inplanes, hidden_planes, outplanes,
                           activation = relu; stride, reduction = nothing)
