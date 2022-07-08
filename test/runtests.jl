@@ -17,7 +17,7 @@ const PRETRAINED_MODELS = [
 
 function _gc()
     GC.safepoint()
-    GC.gc()
+    GC.gc(true)
 end
 
 function gradtest(model, input)
