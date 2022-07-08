@@ -58,7 +58,7 @@ function vit(imsize::Dims{2} = (256, 256); inchannels = 3, patch_size::Dims{2} =
                        Dropout(emb_drop_rate),
                        transformer_encoder(embedplanes, depth, nheads; mlp_ratio,
                                            dropout_rate),
-                       (pool == :class) ? x -> x[:, 1, :] : seconddimmean),
+                       (pool === :class) ? x -> x[:, 1, :] : seconddimmean),
                  Chain(LayerNorm(embedplanes), Dense(embedplanes, nclasses, tanh_fast)))
 end
 

@@ -34,6 +34,7 @@ include("convnets/resnets/core.jl")
 include("convnets/resnets/resnet.jl")
 include("convnets/resnets/resnext.jl")
 include("convnets/resnets/seresnet.jl")
+include("convnets/resnets/res2net.jl")
 
 # Other models
 include("other/mlpmixer.jl")
@@ -44,7 +45,8 @@ include("vit-based/vit.jl")
 include("pretrain.jl")
 
 export AlexNet, VGG, VGG11, VGG13, VGG16, VGG19,
-       ResNet, ResNet18, ResNet34, ResNet50, ResNet101, ResNet152, ResNeXt,
+       ResNet, ResNet18, ResNet34, ResNet50, ResNet101, ResNet152, ResNeXt, Res2Net,
+       Res2NeXt,
        DenseNet, DenseNet121, DenseNet161, DenseNet169, DenseNet201,
        GoogLeNet, Inception3, Inceptionv3, Inceptionv4, InceptionResNetv2, Xception,
        SqueezeNet, MobileNetv1, MobileNetv2, MobileNetv3, EfficientNet,
@@ -54,7 +56,8 @@ export AlexNet, VGG, VGG11, VGG13, VGG16, VGG19,
        ConvMixer, ConvNeXt
 
 # use Flux._big_show to pretty print large models
-for T in (:AlexNet, :VGG, :ResNet, :ResNeXt, :DenseNet, :SEResNet, :SEResNeXt,
+for T in (:AlexNet, :VGG, :ResNet, :ResNeXt, :DenseNet,
+          :SEResNet, :SEResNeXt, :Res2Net, :Res2NeXt,
           :GoogLeNet, :Inceptionv3, :Inceptionv4, :InceptionResNetv2, :Xception,
           :SqueezeNet, :MobileNetv1, :MobileNetv2, :MobileNetv3, :EfficientNet,
           :MLPMixer, :ResMLP, :gMLP, :ViT, :ConvMixer, :ConvNeXt)

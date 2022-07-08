@@ -4,7 +4,7 @@ seconddimmean(x) = dropdims(mean(x; dims = 2); dims = 2)
 # utility function for making sure that all layers have a channel size divisible by 8
 # used by MobileNet variants
 function _round_channels(channels, divisor, min_value = divisor)
-    new_channels = max(min_value, floor(Int, channels + divisor / 2) ÷ divisor * divisor)
+    new_channels = max(min_value, fld(channels + divisor, 2) ÷ divisor * divisor)
     # Make sure that round down does not go down by more than 10%
     return (new_channels < 0.9 * channels) ? new_channels + divisor : new_channels
 end
@@ -38,7 +38,9 @@ Concatenate `x` and `y` (and any `z`s) along the channel dimension (third dimens
 Equivalent to `cat(x, y, zs...; dims=3)`.
 Convenient reduction operator for use with `Parallel`.
 """
-cat_channels(xy...) = cat(xy...; dims = Val(3))
+cat_channels(xs...) = cat(xs...; dims = Val(3))
+cat_channels(x, y::Tuple) = cat_channels(x, y...)
+cat_channels(x::Tuple) = cat_channels(x...)
 
 """
     swapdims(perm)

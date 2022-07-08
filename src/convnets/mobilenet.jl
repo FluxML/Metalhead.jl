@@ -321,7 +321,7 @@ See also [`Metalhead.mobilenetv3`](#).
 function MobileNetv3(mode::Symbol = :small, width_mult::Number = 1; inchannels = 3,
                      pretrain = false, nclasses = 1000)
     @assert mode in [:large, :small] "`mode` has to be either :large or :small"
-    max_width = (mode == :large) ? 1280 : 1024
+    max_width = (mode === :large) ? 1280 : 1024
     layers = mobilenetv3(width_mult, mobilenetv3_configs[mode]; inchannels, max_width,
                          nclasses)
     if pretrain
