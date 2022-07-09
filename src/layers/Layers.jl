@@ -18,8 +18,8 @@ export MHAttention
 include("embeddings.jl")
 export PatchEmbedding, ViPosEmbedding, ClassTokens
 
-include("mlp-linear.jl")
-export mlp_block, gated_mlp_block, LayerScale
+include("mlp.jl")
+export mlp_block, gated_mlp_block, create_fc
 
 include("normalise.jl")
 export prenorm, ChannelLayerNorm
@@ -33,10 +33,10 @@ export DropPath, DropBlock
 include("selayers.jl")
 export squeeze_excite, effective_squeeze_excite
 
-include("classifier.jl")
-export create_classifier
+include("scale.jl")
+export LayerScale, inputscale
 
 include("pool.jl")
-export AdaptiveMeanMaxPool, AdaptiveCatMeanMaxPool, SelectAdaptivePool
+export AdaptiveMeanMaxPool
 
 end
