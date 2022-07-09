@@ -26,7 +26,12 @@ jobs:
         arch:
           - x64
         suite:
-          - '["AlexNext", "VGG"]'
+          - '["AlexNet", "VGG", "GoogLeNet", "SqueezeNet"]'
+          - '["EfficientNet", "MobileNet"]'
+          - '[r"ResNet$", r"ResNeXt$"]'
+          - '[r"Inception$", r"DenseNet$"]'
+          - '"ConvNeXt"'
+          - '"ConvMixer"'
     steps:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
