@@ -10,6 +10,28 @@ function _round_channels(channels, divisor, min_value = divisor)
 end
 
 """
+    addact(activation = relu, xs...)
+
+Convenience function for applying an activation function to the output after
+summing up the input arrays. Useful as the `connection` argument for the block
+function in [`resnet`](#).
+
+See also [`reluadd`](#).
+"""
+addact(activation = relu, xs...) = activation(sum(tuple(xs...)))
+
+"""
+    actadd(activation = relu, xs...)
+
+Convenience function for adding input arrays after applying an activation
+function to them. Useful as the `connection` argument for the block function in
+[`resnet`](#).
+
+See also [`addrelu`](#).
+"""
+actadd(activation = relu, xs...) = sum(activation.(tuple(xs...)))
+
+"""
     cat_channels(x, y, zs...)
 
 Concatenate `x` and `y` (and any `z`s) along the channel dimension (third dimension).
