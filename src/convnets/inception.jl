@@ -425,7 +425,7 @@ function block8(scale = 1.0f0; activation = identity)
 end
 
 """
-    inceptionresnetv2(; inchannels = 3, dropout_rate =0.0, nclasses = 1000)
+    inceptionresnetv2(; inchannels = 3, dropout_rate = 0.0, nclasses = 1000)
 
 Creates an InceptionResNetv2 model.
 ([reference](https://arxiv.org/abs/1602.07261))
@@ -458,7 +458,7 @@ function inceptionresnetv2(; inchannels = 3, dropout_rate = 0.0, nclasses = 1000
 end
 
 """
-    InceptionResNetv2(; pretrain = false, inchannels = 3, dropout_rate =0.0, nclasses = 1000)
+    InceptionResNetv2(; pretrain = false, inchannels = 3, dropout_rate = 0.0, nclasses = 1000)
 
 Creates an InceptionResNetv2 model.
 ([reference](https://arxiv.org/abs/1602.07261))
@@ -542,7 +542,7 @@ function xception_block(inchannels, outchannels, nrepeats; stride = 1,
 end
 
 """
-    xception(; inchannels = 3, dropout_rate =0.0, nclasses = 1000)
+    xception(; inchannels = 3, dropout_rate = 0.0, nclasses = 1000)
 
 Creates an Xception model.
 ([reference](https://arxiv.org/abs/1610.02357))
@@ -573,7 +573,7 @@ struct Xception
 end
 
 """
-    Xception(; pretrain = false, inchannels = 3, dropout_rate =0.0, nclasses = 1000)
+    Xception(; pretrain = false, inchannels = 3, dropout_rate = 0.0, nclasses = 1000)
 
 Creates an Xception model.
 ([reference](https://arxiv.org/abs/1610.02357))

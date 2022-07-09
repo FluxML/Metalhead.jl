@@ -1,21 +1,6 @@
 """
-    LayerScale(λ, planes::Integer)
-
-Creates a `Flux.Scale` layer that performs "`LayerScale`"
-([reference](https://arxiv.org/abs/2103.17239)).
-
-# Arguments
-
-  - `planes`: Size of channel dimension in the input.
-  - `λ`: initialisation value for the learnable diagonal matrix.
-"""
-function LayerScale(planes::Integer, λ)
-    return λ > 0 ? Flux.Scale(fill(Float32(λ), planes), false) : identity
-end
-
-"""
     mlp_block(inplanes::Integer, hidden_planes::Integer, outplanes::Integer = inplanes; 
-              dropout_rate =0., activation = gelu)
+              dropout_rate = 0., activation = gelu)
 
 Feedforward block used in many MLPMixer-like and vision-transformer models.
 
@@ -60,3 +45,19 @@ function gated_mlp_block(gate_layer, inplanes::Integer, hidden_planes::Integer,
                  Dropout(dropout_rate))
 end
 gated_mlp_block(::typeof(identity), args...; kwargs...) = mlp_block(args...; kwargs...)
+
+"""
+    create_fc(inplanes, nclasses; use_conv = false)
+
+Creates a classifier head to be used for models. Uses `SelectAdaptivePool` for the pooling layer.
+
+# Arguments
+
+  - `inplanes`: number of input feature maps
+  - `nclasses`: number of output classes
+  - `use_conv`: whether to use a 1x1 convolutional layer instead of a `Dense` layer.
+"""
+function create_fc(inplanes, nclasses; use_conv = false)
+    return use_conv ? Conv((1, 1), inplanes => nclasses; bias = true) :
+           Dense(inplanes => nclasses; bias = true)
+end

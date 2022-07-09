@@ -1,6 +1,6 @@
 """
     mixerblock(planes, npatches; mlp_ratio = (0.5, 4.0), mlp_layer = mlp_block, 
-               dropout_rate =0., drop_path_rate = 0., activation = gelu)
+               dropout_rate = 0., drop_path_rate = 0., activation = gelu)
 
 Creates a feedforward block for the MLPMixer architecture.
 ([reference](https://arxiv.org/pdf/2105.01601))
@@ -115,7 +115,7 @@ backbone(m::MLPMixer) = m.layers[1]
 classifier(m::MLPMixer) = m.layers[2]
 
 """
-    resmixerblock(planes, npatches; dropout_rate =0., drop_path_rate = 0., mlp_ratio = 4.0,
+    resmixerblock(planes, npatches; dropout_rate = 0., drop_path_rate = 0., mlp_ratio = 4.0,
                   activation = gelu, λ = 1e-4)
 
 Creates a block for the ResMixer architecture.

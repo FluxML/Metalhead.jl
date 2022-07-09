@@ -1,5 +1,5 @@
 """
-transformer_encoder(planes, depth, nheads; mlp_ratio = 4.0, dropout_rate =0.)
+transformer_encoder(planes, depth, nheads; mlp_ratio = 4.0, dropout_rate = 0.)
 
 Transformer as used in the base ViT architecture.
 ([reference](https://arxiv.org/abs/2010.11929)).

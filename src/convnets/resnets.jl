@@ -1,6 +1,5 @@
 # resnet.jl
-## It is recommended to check out the user's guide for more information
-## regarding the use of these functions.
+## It is recommended to check out the user guide for more information.
 
 ### ResNet blocks
 ## These functions return a block to be used inside of a ResNet model.
@@ -12,10 +11,9 @@
 ## expansion factor of each block and use this to construct the stages of the model.
 
 """
-    basicblock(inplanes, planes; stride = 1, downsample = identity, cardinality = 1,
-               base_width = 64, reduce_first = 1, dilation = 1,
-               first_dilation = nothing, activation = relu, norm_layer = BatchNorm,
-               drop_block = identity, drop_path = identity,
+    basicblock(inplanes, planes; stride = 1, downsample = identity, reduce_first = 1, 
+               dilation = 1, first_dilation = dilation, activation = relu, 
+               norm_layer = BatchNorm, drop_block = identity, drop_path = identity,
                attn_fn = planes -> identity, attn_args::NamedTuple = NamedTuple())
 
 Creates a basic ResNet block.
@@ -26,8 +24,6 @@ Creates a basic ResNet block.
   - `planes`: number of feature maps for the block
   - `stride`: the stride of the block
   - `downsample`: the downsampling function to use
-  - `cardinality`: redundant, kept for compatibility with `bottleneck`.
-  - `base_width`: redundant, kept for compatibility with `bottleneck`.
   - `reduce_first`: the reduction factor that the input feature maps are reduced by before the first
     convolution.
   - `dilation`: the dilation of the second convolution.
@@ -42,14 +38,11 @@ Creates a basic ResNet block.
   - `attn_args`: a NamedTuple that contains none, some or all of the arguments to be passed to the
     attention function.
 """
-function basicblock(inplanes, planes; stride = 1, downsample = identity, cardinality = 1,
-                    base_width = 64, reduce_first = 1, dilation = 1,
-                    first_dilation = dilation, activation = relu, norm_layer = BatchNorm,
-                    drop_block = identity, drop_path = identity,
+function basicblock(inplanes, planes; stride = 1, downsample = identity, reduce_first = 1,
+                    dilation = 1, first_dilation = dilation, activation = relu,
+                    norm_layer = BatchNorm, drop_block = identity, drop_path = identity,
                     attn_fn = planes -> identity, attn_args::NamedTuple = NamedTuple())
     expansion = expansion_factor(basicblock)
-    @assert cardinality==1 "`basicblock` only supports cardinality of 1"
-    @assert base_width==64 "`basicblock` does not support changing base width"
     first_planes = planes ÷ reduce_first
     outplanes = planes * expansion
     conv_bn1 = Chain(Conv((3, 3), inplanes => first_planes; stride, pad = first_dilation,
@@ -69,8 +62,8 @@ expansion_factor(::typeof(basicblock)) = 1
 
 """
     bottleneck(inplanes, planes; stride = 1, downsample = identity, cardinality = 1,
-               base_width = 64, reduce_first = 1, dilation = 1,
-               first_dilation = dilation, activation = relu, norm_layer = BatchNorm,
+               base_width = 64, reduce_first = 1, first_dilation = 1,
+               activation = relu, norm_layer = BatchNorm,
                drop_block = identity, drop_path = identity,
                attn_fn = planes -> identity, attn_args::NamedTuple = NamedTuple())
 
@@ -86,7 +79,6 @@ Creates a bottleneck ResNet block.
   - `base_width`: the number of output feature maps for each convolutional group.
   - `reduce_first`: the reduction factor that the input feature maps are reduced by before the first
     convolution.
-  - `dilation`: redundant, kept for compatibility with `basicblock`.
   - `first_dilation`: the dilation of the 3x3 convolution.
   - `activation`: the activation function to use.
   - `norm_layer`: the normalization layer to use.
@@ -99,8 +91,8 @@ Creates a bottleneck ResNet block.
     attention function.
 """
 function bottleneck(inplanes, planes; stride = 1, downsample = identity, cardinality = 1,
-                    base_width = 64, reduce_first = 1, dilation = 1,
-                    first_dilation = dilation, activation = relu, norm_layer = BatchNorm,
+                    base_width = 64, reduce_first = 1, first_dilation = 1,
+                    activation = relu, norm_layer = BatchNorm,
                     drop_block = identity, drop_path = identity,
                     attn_fn = planes -> identity, attn_args::NamedTuple = NamedTuple())
     expansion = expansion_factor(bottleneck)
@@ -263,12 +255,12 @@ function _make_blocks(block_fn, channels, block_repeats, inplanes; output_stride
     # Stochastic depth linear decay rule (DropPath)
     dp_rates = LinRange{Float32}(0.0, get(drop_rates, :drop_path_rate, 0),
                                  sum(block_repeats))
-    # Construct each stage
-    for (stage_idx, (planes, num_blocks, drop_block)) in enumerate(zip(channels,
-                                                                       block_repeats,
-                                                                       _drop_blocks(get(drop_rates,
-                                                                                        :drop_block_rate,
-                                                                                        0))))
+    # DropBlock rate
+    dbr = get(drop_rates, :drop_block_rate, 0)
+    ## Construct each stage
+    for (stage_idx, itr) in enumerate(zip(channels, block_repeats, _drop_blocks(dbr)))
+        # Number of planes in each stage, number of blocks in each stage, and the drop block rate
+        planes, num_blocks, drop_block = itr
         # Stride calculations for each stage
         stride = stage_idx == 1 ? 1 : 2
         if net_stride >= output_stride
@@ -280,7 +272,7 @@ function _make_blocks(block_fn, channels, block_repeats, inplanes; output_stride
         # Downsample block; either a (default) convolution-based block or a pooling-based block
         downsample = downsample_block(downsample_fn, inplanes, planes, expansion;
                                       stride, dilation)
-        # Construct the blocks for each stage
+        ## Construct the blocks for each stage
         blocks = []
         for block_idx in 1:num_blocks
             # Different behaviour for the first block of each stage
@@ -309,14 +301,16 @@ function _drop_blocks(drop_block_prob = 0.0)
 end
 
 """
-    resnet(block_type, layers; inchannels = 3, nclasses = 1000, output_stride = 32,
+    resnet(block_fn, layers; inchannels = 3, nclasses = 1000, output_stride = 32,
            stem = first(resnet_stem(; inchannels)), inplanes = 64,
            downsample_fn = downsample_conv, block_args::NamedTuple = NamedTuple(),
            drop_rates::NamedTuple = (dropout_rate = 0.0, drop_path_rate = 0.0,
                                      drop_block_rate = 0.0),
-           classifier_args::NamedTuple = NamedTuple())
+           classifier_args::NamedTuple = (pool_layer = AdaptiveMeanPool((1, 1)),
+                                          use_conv = false))
 
-This function creates the layers for many ResNet-like models.
+This function creates the layers for many ResNet-like models. See the user guide for more
+information.
 
 !!! note
     
@@ -350,16 +344,14 @@ This function creates the layers for many ResNet-like models.
   - `block_args`: A `NamedTuple` that may define none, some or all the arguments to be passed
     to the block function. For more information regarding valid arguments, see
     the documentation for the block functions ([`basicblock`](#), [`bottleneck`](#)).
-  - `drop_rates`: A `NamedTuple` that can may define none, some or all of the following:
+  - `drop_rates`: A `NamedTuple` that may define none, some or all of the following:
     
       + `dropout_rate`: The rate of dropout to be used in the classifier head.
       + `drop_path_rate`: Stochastic depth implemented using [`DropPath`](#).
       + `drop_block_rate`: `DropBlock` regularisation implemented using [`DropBlock`](#).
-  - `classifier_args`: A `NamedTuple` that may define none, some or all of the following:
+  - `classifier_args`: A `NamedTuple` that **must** specify the following arguments:
     
-      + `pool_type`: The type of pooling to use in the classifier head. Uses
-        [`SelectAdaptivePool`](#) to select the pooling function. See its
-        documentation for more information.
+      + `pool_layer`: The adaptive pooling layer to use in the classifier head.
       + `use_conv`: Whether to use a 1x1 convolutional layer in the classifier head instead of a
         `Dense` layer.
 """
@@ -368,15 +360,25 @@ function resnet(block_fn, layers; inchannels = 3, nclasses = 1000, output_stride
                 downsample_fn = downsample_conv, block_args::NamedTuple = NamedTuple(),
                 drop_rates::NamedTuple = (dropout_rate = 0.0, drop_path_rate = 0.0,
                                           drop_block_rate = 0.0),
-                classifier_args::NamedTuple = NamedTuple())
-    # Feature Blocks
+                classifier_args::NamedTuple = (pool_layer = AdaptiveMeanPool((1, 1)),
+                                               use_conv = false))
+    ## Feature Blocks
     channels = [64, 128, 256, 512]
     stage_blocks = _make_blocks(block_fn, channels, layers, inplanes;
                                 output_stride, downsample_fn, drop_rates, block_args)
-    # Head (Pooling and Classifier)
+    ## Classifier head
     expansion = expansion_factor(block_fn)
     num_features = 512 * expansion
-    global_pool, fc = create_classifier(num_features, nclasses; classifier_args...)
+    pool_layer, use_conv = classifier_args
+    # Pooling
+    if pool_layer === identity
+        @assert use_conv
+        "Pooling can only be disabled if classifier is also removed or a convolution-based classifier is used"
+    end
+    flatten_in_pool = !use_conv && pool_layer !== identity
+    global_pool = flatten_in_pool ? Chain(pool_layer, MLUtils.flatten) : pool_layer
+    # Fully-connected layer
+    fc = create_fc(num_features, nclasses; use_conv)
     classifier = Chain(global_pool, Dropout(get(drop_rates, :dropout_rate, 0)), fc)
     return Chain(Chain(stem, stage_blocks), classifier)
 end
