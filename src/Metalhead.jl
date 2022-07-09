@@ -22,13 +22,17 @@ include("convnets/alexnet.jl")
 include("convnets/vgg.jl")
 include("convnets/inception.jl")
 include("convnets/googlenet.jl")
-include("convnets/resnets.jl")
 include("convnets/densenet.jl")
 include("convnets/squeezenet.jl")
 include("convnets/mobilenet.jl")
 include("convnets/efficientnet.jl")
 include("convnets/convnext.jl")
 include("convnets/convmixer.jl")
+## ResNets
+include("convnets/resnets/core.jl")
+include("convnets/resnets/resnet.jl")
+include("convnets/resnets/resnext.jl")
+include("convnets/resnets/seresnet.jl")
 
 # Other models
 include("other/mlpmixer.jl")
