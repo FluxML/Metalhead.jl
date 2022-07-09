@@ -10,8 +10,9 @@
 ## expansion factor of each block and use this to construct the stages of the model.
 
 """
-    basicblock(inplanes, planes; stride = 1, downsample = identity, reduction_factor = 1, 
-               dilation = 1, first_dilation = dilation, activation = relu, 
+    basicblock(inplanes, planes; stride = 1, downsample = identity,
+               reduction_factor = 1, dilation = 1, first_dilation = dilation,
+               activation = relu, connection = addact\$activation,
                norm_layer = BatchNorm, drop_block = identity, drop_path = identity,
                attn_fn = planes -> identity, attn_args::NamedTuple = NamedTuple())
 
@@ -28,6 +29,9 @@ Creates a basic ResNet block.
   - `dilation`: the dilation of the second convolution.
   - `first_dilation`: the dilation of the first convolution.
   - `activation`: the activation function to use.
+  - `connection`: the function applied to the output of residual and skip paths in
+    a block. See [`addact`](#) and [`actadd`](#) for an example. Note that this uses
+    PartialFunctions.jl to pass in the activation function with the notation `addact\$activation`.
   - `norm_layer`: the normalization layer to use.
   - `drop_block`: the drop block layer. This is usually initialised in the `_make_blocks`
     function and passed in.
@@ -38,8 +42,8 @@ Creates a basic ResNet block.
     attention function.
 """
 function basicblock(inplanes, planes; stride = 1, downsample = identity,
-                    reduction_factor = 1,
-                    dilation = 1, first_dilation = dilation, activation = relu,
+                    reduction_factor = 1, dilation = 1, first_dilation = dilation,
+                    activation = relu, connection = addact$activation,
                     norm_layer = BatchNorm, drop_block = identity, drop_path = identity,
                     attn_fn = planes -> identity, attn_args::NamedTuple = NamedTuple())
     expansion = expansion_factor(basicblock)
@@ -53,18 +57,17 @@ function basicblock(inplanes, planes; stride = 1, downsample = identity,
                           dilation = dilation, bias = false),
                      norm_layer(outplanes))
     attn_layer = attn_fn(outplanes; attn_args...)
-    return Chain(Parallel(+, downsample,
-                          Chain(conv_bn1, drop_block, activation, conv_bn2, attn_layer,
-                                drop_path)),
-                 activation)
+    return Parallel(connection, downsample,
+                    Chain(conv_bn1, drop_block, activation, conv_bn2, attn_layer,
+                          drop_path))
 end
 expansion_factor(::typeof(basicblock)) = 1
 
 """
     bottleneck(inplanes, planes; stride = 1, downsample = identity, cardinality = 1,
                base_width = 64, reduction_factor = 1, first_dilation = 1,
-               activation = relu, norm_layer = BatchNorm,
-               drop_block = identity, drop_path = identity,
+               activation = relu, connection = addact\$activation,
+               norm_layer = BatchNorm, drop_block = identity, drop_path = identity,
                attn_fn = planes -> identity, attn_args::NamedTuple = NamedTuple())
 
 Creates a bottleneck ResNet block.
@@ -81,6 +84,9 @@ Creates a bottleneck ResNet block.
     convolution.
   - `first_dilation`: the dilation of the 3x3 convolution.
   - `activation`: the activation function to use.
+  - `connection`: the function applied to the output of residual and skip paths in
+    a block. See [`addact`](#) and [`actadd`](#) for an example. Note that this uses
+    PartialFunctions.jl to pass in the activation function with the notation `addact\$activation`.
   - `norm_layer`: the normalization layer to use.
   - `drop_block`: the drop block layer. This is usually initialised in the `_make_blocks`
     function and passed in.
@@ -92,8 +98,8 @@ Creates a bottleneck ResNet block.
 """
 function bottleneck(inplanes, planes; stride = 1, downsample = identity, cardinality = 1,
                     base_width = 64, reduction_factor = 1, first_dilation = 1,
-                    activation = relu, norm_layer = BatchNorm,
-                    drop_block = identity, drop_path = identity,
+                    activation = relu, connection = addact$activation,
+                    norm_layer = BatchNorm, drop_block = identity, drop_path = identity,
                     attn_fn = planes -> identity, attn_args::NamedTuple = NamedTuple())
     expansion = expansion_factor(bottleneck)
     width = floor(Int, planes * (base_width / 64)) * cardinality
@@ -106,10 +112,9 @@ function bottleneck(inplanes, planes; stride = 1, downsample = identity, cardina
                      norm_layer(width))
     conv_bn3 = Chain(Conv((1, 1), width => outplanes; bias = false), norm_layer(outplanes))
     attn_layer = attn_fn(outplanes; attn_args...)
-    return Chain(Parallel(+, downsample,
-                          Chain(conv_bn1, conv_bn2, drop_block, activation, conv_bn3,
-                                attn_layer, drop_path)),
-                 activation)
+    return Parallel(connection, downsample,
+                    Chain(conv_bn1, conv_bn2, drop_block, activation, conv_bn3,
+                          attn_layer, drop_path))
 end
 expansion_factor(::typeof(bottleneck)) = 4
 
@@ -209,6 +214,21 @@ function downsample_pool(kernel_size, inplanes, outplanes; stride = 1, dilation 
                  norm_layer(outplanes))
 end
 
+# Downsample layer which is an identity projection. Uses max pooling
+# when the output size is more than the input size.
+function downsample_identity(kernel_size, inplanes, outplanes; kwargs...)
+    if outplanes > inplanes
+        return Chain(MaxPool((1, 1); stride = 2),
+                     y -> cat_channels(y,
+                                       zeros(eltype(y),
+                                             size(y, 1),
+                                             size(y, 2),
+                                             outplanes - inplanes, size(y, 4))))
+    else
+        return identity
+    end
+end
+
 """
     downsample_block(downsample_fn, inplanes, planes, expansion; kernel_size = (1, 1),
                      stride = 1, dilation = 1, norm_layer = BatchNorm)
@@ -228,15 +248,38 @@ This function is almost never used directly or customised by the user.
   - `dilation`: The dilation of the convolutional layer.
   - `norm_layer`: The normalisation layer to be used.
 """
-function downsample_block(downsample_fn, inplanes, planes, expansion; kernel_size = (1, 1),
-                          stride = 1, dilation = 1, norm_layer = BatchNorm)
+function downsample_block(downsample_fns, inplanes, planes, expansion;
+                          kernel_size = (1, 1), stride = 1, dilation = 1,
+                          norm_layer = BatchNorm)
+    down_fn1, down_fn2 = downsample_fns
     if stride != 1 || inplanes != planes * expansion
-        downsample = downsample_fn(kernel_size, inplanes, planes * expansion;
-                                   stride, dilation, norm_layer)
+        downsample = down_fn2(kernel_size, inplanes, planes * expansion;
+                              stride, dilation, norm_layer)
     else
-        downsample = identity
+        downsample = down_fn1(kernel_size, inplanes, planes * expansion;
+                              stride, dilation, norm_layer)
     end
     return downsample
+end
+
+const shortcut_dict = Dict(:A => (downsample_identity, downsample_identity),
+                           :B => (downsample_conv, downsample_identity),
+                           :C => (downsample_conv, downsample_conv))
+
+function _make_downsample_fns(vec::Vector{T}) where {T}
+    if T <: Symbol
+        downs = []
+        for i in vec
+            @assert i in keys(shortcut_dict)
+            "The shortcut type must be one of $(sort(collect(keys(shortcut_dict))))"
+            push!(downs, shortcut_dict[i])
+        end
+        return downs
+    elseif T <: NTuple{2}
+        return vec
+    else
+        throw(ArgumentError("The shortcut list must be a `Vector` of `Symbol`s or `NTuple{2}`s"))
+    end
 end
 
 # Makes the main stages of the ResNet model. This is an internal function and should not be 
@@ -244,8 +287,8 @@ end
 # See `basicblock` and `bottleneck` for examples. A block must define a function 
 # `expansion(::typeof(block))` that returns the expansion factor of the block.
 function _make_blocks(block_fn, channels, block_repeats, inplanes; output_stride = 32,
-                      downsample_fn = downsample_conv,
-                      drop_rates::NamedTuple, block_args::NamedTuple)
+                      downsample_fns::Vector, drop_rates::NamedTuple,
+                      block_args::NamedTuple)
     @assert output_stride in (8, 16, 32) "Invalid `output_stride`. Must be one of (8, 16, 32)"
     expansion = expansion_factor(block_fn)
     stages = []
@@ -258,9 +301,10 @@ function _make_blocks(block_fn, channels, block_repeats, inplanes; output_stride
     # DropBlock rate
     dbr = get(drop_rates, :drop_block_rate, 0)
     ## Construct each stage
-    for (stage_idx, itr) in enumerate(zip(channels, block_repeats, _drop_blocks(dbr)))
+    for (stage_idx, itr) in enumerate(zip(channels, block_repeats, _drop_blocks(dbr),
+                                          downsample_fns))
         # Number of planes in each stage, number of blocks in each stage, and the drop block rate
-        planes, num_blocks, drop_block = itr
+        planes, num_blocks, drop_block, down_fns = itr
         # Stride calculations for each stage
         stride = stage_idx == 1 ? 1 : 2
         if net_stride >= output_stride
@@ -270,7 +314,7 @@ function _make_blocks(block_fn, channels, block_repeats, inplanes; output_stride
             net_stride *= stride
         end
         # Downsample block; either a (default) convolution-based block or a pooling-based block
-        downsample = downsample_block(downsample_fn, inplanes, planes, expansion;
+        downsample = downsample_block(down_fns, inplanes, planes, expansion;
                                       stride, dilation)
         ## Construct the blocks for each stage
         blocks = []
@@ -355,17 +399,19 @@ information.
       + `use_conv`: Whether to use a 1x1 convolutional layer in the classifier head instead of a
         `Dense` layer.
 """
-function resnet(block_fn, layers; inchannels = 3, nclasses = 1000, output_stride = 32,
+function resnet(block_fn, layers, downsample_list::Vector = [:A, :B, :B, :B];
+                inchannels = 3, nclasses = 1000, output_stride = 32,
                 stem = first(resnet_stem(; inchannels)), inplanes = 64,
-                downsample_fn = downsample_conv, block_args::NamedTuple = NamedTuple(),
+                block_args::NamedTuple = NamedTuple(),
                 drop_rates::NamedTuple = (dropout_rate = 0.0, drop_path_rate = 0.0,
                                           drop_block_rate = 0.0),
                 classifier_args::NamedTuple = (pool_layer = AdaptiveMeanPool((1, 1)),
                                                use_conv = false))
     ## Feature Blocks
     channels = [64, 128, 256, 512]
+    downsample_fns = _make_downsample_fns(downsample_list)
     stage_blocks = _make_blocks(block_fn, channels, layers, inplanes;
-                                output_stride, downsample_fn, drop_rates, block_args)
+                                output_stride, downsample_fns, drop_rates, block_args)
     ## Classifier head
     expansion = expansion_factor(block_fn)
     num_features = 512 * expansion
@@ -384,8 +430,8 @@ function resnet(block_fn, layers; inchannels = 3, nclasses = 1000, output_stride
 end
 
 # block-layer configurations for ResNet and ResNeXt models
-const resnet_config = Dict(18 => (basicblock, [2, 2, 2, 2]),
-                           34 => (basicblock, [3, 4, 6, 3]),
-                           50 => (bottleneck, [3, 4, 6, 3]),
-                           101 => (bottleneck, [3, 4, 23, 3]),
-                           152 => (bottleneck, [3, 8, 36, 3]))
+const resnet_config = Dict(18 => (basicblock, [2, 2, 2, 2], [:A, :B, :B, :B]),
+                           34 => (basicblock, [3, 4, 6, 3], [:A, :B, :B, :B]),
+                           50 => (bottleneck, [3, 4, 6, 3], [:B, :B, :B, :B]),
+                           101 => (bottleneck, [3, 4, 23, 3], [:B, :B, :B, :B]),
+                           152 => (bottleneck, [3, 8, 36, 3], [:B, :B, :B, :B]))

@@ -530,7 +530,7 @@ function xception_block(inchannels, outchannels, nrepeats; stride = 1,
             inc = inchannels
             outc = i == nrepeats ? outchannels : inchannels
         end
-        push!(layers, x -> relu.(x))
+        push!(layers, relu)
         append!(layers,
                 depthwise_sep_conv_bn((3, 3), inc, outc; pad = 1, bias = false,
                                       use_bn = (false, false)))
