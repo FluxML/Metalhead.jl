@@ -25,6 +25,8 @@ jobs:
           # - windows-latest
         arch:
           - x64
+        suite:
+          - '["AlexNext", "VGG"]'
     steps:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
@@ -42,9 +44,12 @@ jobs:
             ${{ runner.os }}-test-
             ${{ runner.os }}-
       - uses: julia-actions/julia-buildpkg@v1
-      - uses: julia-actions/julia-runtest@v1
-        with:
-          coverage: ${{ matrix.version == '1' && matrix.os == 'ubuntu-latest' }}
+      - name: "Run tests"
+        run: |
+          julia --project=./test -e 'using Pkg; Pkg.develop(path = ".")'
+          julia --code-coverage=user --color=yes --depwarn=yes --project=./test -e 'include("test/retest.jl"); retest(${{ matrix.suite }})'
+        continue-on-error: ${{ matrix.version == 'nightly' }}
+        shell: bash
       - uses: julia-actions/julia-processcoverage@v1
         if: matrix.version == '1' && matrix.os == 'ubuntu-latest'
       - uses: codecov/codecov-action@v2
