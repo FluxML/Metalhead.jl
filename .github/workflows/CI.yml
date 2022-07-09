@@ -28,8 +28,8 @@ jobs:
         suite:
           - '["AlexNet", "VGG", "GoogLeNet", "SqueezeNet"]'
           - '["EfficientNet", "MobileNet"]'
-          - '[r"ResNet$", r"ResNeXt$"]'
-          - '[r"Inception$", r"DenseNet$"]'
+          - '[r"/*/ResNet*", "ResNeXt"]'
+          - '["Inception", "DenseNet"]'
           - '"ConvNeXt"'
           - '"ConvMixer"'
     steps:

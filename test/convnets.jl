@@ -71,7 +71,7 @@ GC.safepoint()
 GC.gc()
 
 @testset "EfficientNet" begin
-    @testset "EfficientNet($name)" for name in [:b0, :b1, :b2, :b3, :b4] #, :b5, :b6, :b7, :b8]
+    @testset "EfficientNet($name)" for name in [:b0, :b1, :b2, :b3, :b4, :b5, :b6, :b7, :b8]
         # preferred image resolution scaling
         r = Metalhead.efficientnet_global_configs[name][1]
         x = rand(Float32, r, r, 3, 1)
@@ -236,7 +236,7 @@ GC.safepoint()
 GC.gc()
 
 @testset "ConvNeXt" verbose = true begin
-    @testset for mode in [:small, :base] #, :large # :tiny, #, :xlarge]
+    @testset for mode in [:small, :base, :large, :tiny, :xlarge]
         @testset for drop_path_rate in [0.0, 0.5]
             m = ConvNeXt(mode; drop_path_rate)
             @test size(m(x_224)) == (1000, 1)
@@ -251,7 +251,7 @@ GC.safepoint()
 GC.gc()
 
 @testset "ConvMixer" verbose = true begin
-    @testset for mode in [:small, :base] #, :large]
+    @testset for mode in [:small, :base, :large]
         m = ConvMixer(mode)
 
         @test size(m(x_224)) == (1000, 1)
