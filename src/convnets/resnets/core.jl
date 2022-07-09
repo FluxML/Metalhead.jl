@@ -1,4 +1,3 @@
-# resnet.jl
 ## It is recommended to check out the user guide for more information.
 
 ### ResNet blocks
@@ -11,7 +10,7 @@
 ## expansion factor of each block and use this to construct the stages of the model.
 
 """
-    basicblock(inplanes, planes; stride = 1, downsample = identity, reduce_first = 1, 
+    basicblock(inplanes, planes; stride = 1, downsample = identity, reduction_factor = 1, 
                dilation = 1, first_dilation = dilation, activation = relu, 
                norm_layer = BatchNorm, drop_block = identity, drop_path = identity,
                attn_fn = planes -> identity, attn_args::NamedTuple = NamedTuple())
@@ -24,7 +23,7 @@ Creates a basic ResNet block.
   - `planes`: number of feature maps for the block
   - `stride`: the stride of the block
   - `downsample`: the downsampling function to use
-  - `reduce_first`: the reduction factor that the input feature maps are reduced by before the first
+  - `reduction_factor`: the reduction factor that the input feature maps are reduced by before the first
     convolution.
   - `dilation`: the dilation of the second convolution.
   - `first_dilation`: the dilation of the first convolution.
@@ -38,12 +37,13 @@ Creates a basic ResNet block.
   - `attn_args`: a NamedTuple that contains none, some or all of the arguments to be passed to the
     attention function.
 """
-function basicblock(inplanes, planes; stride = 1, downsample = identity, reduce_first = 1,
+function basicblock(inplanes, planes; stride = 1, downsample = identity,
+                    reduction_factor = 1,
                     dilation = 1, first_dilation = dilation, activation = relu,
                     norm_layer = BatchNorm, drop_block = identity, drop_path = identity,
                     attn_fn = planes -> identity, attn_args::NamedTuple = NamedTuple())
     expansion = expansion_factor(basicblock)
-    first_planes = planes ÷ reduce_first
+    first_planes = planes ÷ reduction_factor
     outplanes = planes * expansion
     conv_bn1 = Chain(Conv((3, 3), inplanes => first_planes; stride, pad = first_dilation,
                           dilation = first_dilation, bias = false),
@@ -62,7 +62,7 @@ expansion_factor(::typeof(basicblock)) = 1
 
 """
     bottleneck(inplanes, planes; stride = 1, downsample = identity, cardinality = 1,
-               base_width = 64, reduce_first = 1, first_dilation = 1,
+               base_width = 64, reduction_factor = 1, first_dilation = 1,
                activation = relu, norm_layer = BatchNorm,
                drop_block = identity, drop_path = identity,
                attn_fn = planes -> identity, attn_args::NamedTuple = NamedTuple())
@@ -77,7 +77,7 @@ Creates a bottleneck ResNet block.
   - `downsample`: the downsampling function to use
   - `cardinality`: the number of groups in the convolution.
   - `base_width`: the number of output feature maps for each convolutional group.
-  - `reduce_first`: the reduction factor that the input feature maps are reduced by before the first
+  - `reduction_factor`: the reduction factor that the input feature maps are reduced by before the first
     convolution.
   - `first_dilation`: the dilation of the 3x3 convolution.
   - `activation`: the activation function to use.
@@ -91,13 +91,13 @@ Creates a bottleneck ResNet block.
     attention function.
 """
 function bottleneck(inplanes, planes; stride = 1, downsample = identity, cardinality = 1,
-                    base_width = 64, reduce_first = 1, first_dilation = 1,
+                    base_width = 64, reduction_factor = 1, first_dilation = 1,
                     activation = relu, norm_layer = BatchNorm,
                     drop_block = identity, drop_path = identity,
                     attn_fn = planes -> identity, attn_args::NamedTuple = NamedTuple())
     expansion = expansion_factor(bottleneck)
     width = floor(Int, planes * (base_width / 64)) * cardinality
-    first_planes = width ÷ reduce_first
+    first_planes = width ÷ reduction_factor
     outplanes = planes * expansion
     conv_bn1 = Chain(Conv((1, 1), inplanes => first_planes; bias = false),
                      norm_layer(first_planes, activation))
@@ -389,157 +389,3 @@ const resnet_config = Dict(18 => (basicblock, [2, 2, 2, 2]),
                            50 => (bottleneck, [3, 4, 6, 3]),
                            101 => (bottleneck, [3, 4, 23, 3]),
                            152 => (bottleneck, [3, 8, 36, 3]))
-struct ResNet
-    layers::Any
-end
-@functor ResNet
-
-(m::ResNet)(x) = m.layers(x)
-
-"""
-    ResNet(depth::Integer; pretrain = false, inchannels = 3, nclasses = 1000)
-
-Creates a ResNet model with the specified depth.
-((reference)[https://arxiv.org/abs/1512.03385])
-
-# Arguments
-
-  - `depth`: one of `[18, 34, 50, 101, 152]`. The depth of the ResNet model.
-  - `pretrain`: set to `true` to load the model with pre-trained weights for ImageNet
-  - `inchannels`: The number of input channels.
-  - `nclasses`: the number of output classes
-
-!!! warning
-    
-    `ResNet` does not currently support pretrained weights.
-
-Advanced users who want more configuration options will be better served by using [`resnet`](#).
-"""
-function ResNet(depth::Integer; pretrain = false, inchannels = 3, nclasses = 1000)
-    @assert depth in [18, 34, 50, 101, 152]
-    "Invalid depth. Must be one of [18, 34, 50, 101, 152]"
-    layers = resnet(resnet_config[depth]...; inchannels, nclasses)
-    if pretrain
-        loadpretrain!(layers, string("resnet", depth))
-    end
-    return ResNet(layers)
-end
-
-struct ResNeXt
-    layers::Any
-end
-@functor ResNeXt
-
-(m::ResNeXt)(x) = m.layers(x)
-
-"""
-    ResNeXt(depth::Integer; pretrain = false, cardinality = 32,
-            base_width = 4, inchannels = 3, nclasses = 1000)
-
-Creates a ResNeXt model with the specified depth, cardinality, and base width.
-((reference)[https://arxiv.org/abs/1611.05431])
-
-# Arguments
-
-  - `depth`: one of `[18, 34, 50, 101, 152]`. The depth of the ResNet model.
-  - `pretrain`: set to `true` to load the model with pre-trained weights for ImageNet
-  - `cardinality`: the number of groups to be used in the 3x3 convolution in each block.
-  - `base_width`: the number of feature maps in each group.
-  - `inchannels`: the number of input channels.
-  - `nclasses`: the number of output classes
-
-!!! warning
-    
-    `ResNeXt` does not currently support pretrained weights.
-
-Advanced users who want more configuration options will be better served by using [`resnet`](#).
-"""
-function ResNeXt(depth::Integer; pretrain = false, cardinality = 32,
-                 base_width = 4, inchannels = 3, nclasses = 1000)
-    @assert depth in [50, 101, 152]
-    "Invalid depth. Must be one of [50, 101, 152]"
-    layers = resnet(resnet_config[depth]...; inchannels, nclasses,
-                    block_args = (; cardinality, base_width))
-    if pretrain
-        loadpretrain!(layers, string("resnext", depth, "_", cardinality, "x", base_width))
-    end
-    return ResNeXt(layers)
-end
-
-struct SEResNet
-    layers::Any
-end
-@functor SEResNet
-
-(m::SEResNet)(x) = m.layers(x)
-
-"""
-    SEResNet(depth::Integer; pretrain = false, inchannels = 3, nclasses = 1000)
-
-Creates a SEResNet model with the specified depth.
-((reference)[https://arxiv.org/pdf/1709.01507.pdf])
-
-# Arguments
-
-  - `depth`: one of `[18, 34, 50, 101, 152]`. The depth of the ResNet model.
-  - `pretrain`: set to `true` to load the model with pre-trained weights for ImageNet
-  - `inchannels`: the number of input channels.
-  - `nclasses`: the number of output classes
-
-!!! warning
-    
-    `SEResNet` does not currently support pretrained weights.
-
-Advanced users who want more configuration options will be better served by using [`resnet`](#).
-"""
-function SEResNet(depth::Integer; pretrain = false, inchannels = 3, nclasses = 1000)
-    @assert depth in [18, 34, 50, 101, 152]
-    "Invalid depth. Must be one of [18, 34, 50, 101, 152]"
-    layers = resnet(resnet_config[depth]...; inchannels, nclasses,
-                    block_args = (; attn_fn = squeeze_excite))
-    if pretrain
-        loadpretrain!(layers, string("seresnet", depth))
-    end
-    return SEResNet(layers)
-end
-
-struct SEResNeXt
-    layers::Any
-end
-@functor SEResNeXt
-
-(m::SEResNeXt)(x) = m.layers(x)
-
-"""
-    SEResNeXt(depth::Integer; pretrain = false, cardinality = 32, base_width = 4,
-              inchannels = 3, nclasses = 1000)
-
-Creates a SEResNeXt model with the specified depth, cardinality, and base width.
-((reference)[https://arxiv.org/pdf/1709.01507.pdf])
-
-# Arguments
-
-  - `depth`: one of `[18, 34, 50, 101, 152]`. The depth of the ResNet model.
-  - `pretrain`: set to `true` to load the model with pre-trained weights for ImageNet
-  - `cardinality`: the number of groups to be used in the 3x3 convolution in each block.
-  - `base_width`: the number of feature maps in each group.
-  - `inchannels`: the number of input channels
-  - `nclasses`: the number of output classes
-
-!!! warning
-    
-    `SEResNeXt` does not currently support pretrained weights.
-
-Advanced users who want more configuration options will be better served by using [`resnet`](#).
-"""
-function SEResNeXt(depth::Integer; pretrain = false, cardinality = 32, base_width = 4,
-                   inchannels = 3, nclasses = 1000)
-    @assert depth in [50, 101, 152]
-    "Invalid depth. Must be one of [50, 101, 152]"
-    layers = resnet(resnet_config[depth]...; inchannels, nclasses,
-                    block_args = (; cardinality, base_width, attn_fn = squeeze_excite))
-    if pretrain
-        loadpretrain!(layers, string("seresnext", depth, "_", cardinality, "x", base_width))
-    end
-    return SEResNeXt(layers)
-end

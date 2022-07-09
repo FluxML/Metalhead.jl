@@ -62,7 +62,7 @@ end
             @testset for base_width in [4, 8]
                 m = ResNeXt(depth; cardinality, base_width)
                 @test size(m(x_224)) == (1000, 1)
-                if string("resnext", depth, "_", cardinality, "x", base_width) in PRETRAINED_MODELS
+                if (ResNeXt, depth, cardinality, base_width) in PRETRAINED_MODELS
                     @test acctest(ResNeXt(depth, pretrain = true))
                 else
                     @test_throws ArgumentError ResNeXt(depth, pretrain = true)
@@ -78,7 +78,7 @@ end
     @testset for depth in [18, 34, 50, 101, 152]
         m = SEResNet(depth)
         @test size(m(x_224)) == (1000, 1)
-        if string("seresnet", depth) in PRETRAINED_MODELS
+        if (SEResNet, depth) in PRETRAINED_MODELS
             @test acctest(SEResNet(depth, pretrain = true))
         else
             @test_throws ArgumentError SEResNet(depth, pretrain = true)
@@ -94,7 +94,7 @@ end
             @testset for base_width in [4, 8]
                 m = SEResNeXt(depth; cardinality, base_width)
                 @test size(m(x_224)) == (1000, 1)
-                if string("seresnext", depth, "_", cardinality, "x", base_width) in PRETRAINED_MODELS
+                if (SEResNeXt, depth, cardinality, base_width) in PRETRAINED_MODELS
                     @test acctest(SEResNeXt(depth, pretrain = true))
                 else
                     @test_throws ArgumentError SEResNeXt(depth, pretrain = true)
