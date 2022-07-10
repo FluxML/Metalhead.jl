@@ -399,7 +399,8 @@ information.
       + `use_conv`: Whether to use a 1x1 convolutional layer in the classifier head instead of a
         `Dense` layer.
 """
-function resnet(block_fn, layers, downsample_list::Vector = [:A, :B, :B, :B];
+function resnet(block_fn, layers,
+                downsample_list::Vector = collect(:B for _ in 1:length(layers));
                 inchannels = 3, nclasses = 1000, output_stride = 32,
                 stem = first(resnet_stem(; inchannels)), inplanes = 64,
                 block_args::NamedTuple = NamedTuple(),
@@ -408,7 +409,7 @@ function resnet(block_fn, layers, downsample_list::Vector = [:A, :B, :B, :B];
                 classifier_args::NamedTuple = (pool_layer = AdaptiveMeanPool((1, 1)),
                                                use_conv = false))
     ## Feature Blocks
-    channels = [64, 128, 256, 512]
+    channels = collect(64 * 2^i for i in range(0, length(layers)))
     downsample_fns = _make_downsample_fns(downsample_list)
     stage_blocks = _make_blocks(block_fn, channels, layers, inplanes;
                                 output_stride, downsample_fns, drop_rates, block_args)
@@ -429,9 +430,9 @@ function resnet(block_fn, layers, downsample_list::Vector = [:A, :B, :B, :B];
     return Chain(Chain(stem, stage_blocks), classifier)
 end
 
-# block-layer configurations for ResNet and ResNeXt models
-const resnet_config = Dict(18 => (basicblock, [2, 2, 2, 2], [:A, :B, :B, :B]),
-                           34 => (basicblock, [3, 4, 6, 3], [:A, :B, :B, :B]),
-                           50 => (bottleneck, [3, 4, 6, 3], [:B, :B, :B, :B]),
-                           101 => (bottleneck, [3, 4, 23, 3], [:B, :B, :B, :B]),
-                           152 => (bottleneck, [3, 8, 36, 3], [:B, :B, :B, :B]))
+# block-layer configurations for ResNet-like models
+const resnet_config = Dict(18 => (basicblock, [2, 2, 2, 2]),
+                           34 => (basicblock, [3, 4, 6, 3]),
+                           50 => (bottleneck, [3, 4, 6, 3]),
+                           101 => (bottleneck, [3, 4, 23, 3]),
+                           152 => (bottleneck, [3, 8, 36, 3]))
