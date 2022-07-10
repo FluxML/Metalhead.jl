@@ -130,15 +130,14 @@ on how to use this function.
   - `stem_type`: The type of stem to be built. One of `[:default, :deep, :deep_tiered]`.
     
       + `:default`: Builds a stem based on the default ResNet stem, which consists of a single
-        7x7 convolution with stride 2 and a normalisation layer followed by a 3x3
-        max pooling layer with stride 2.
-      + `:deep`: This borrows ideas from other papers (InceptionResNet-v2, for example) in using a
-        deeper stem with 3 successive 3x3 convolutions having normalisation layers
-        after each one. This is followed by a 3x3 max pooling layer with stride 2.
+        7x7 convolution with stride 2 and a normalisation layer followed by a 3x3 max pooling
+        layer with stride 2.
+      + `:deep`: This borrows ideas from other papers (InceptionResNet-v2, for example) in using
+        a deeper stem with 3 successive 3x3 convolutions having normalisation layers after each
+        one. This is followed by a 3x3 max pooling layer with stride 2.
       + `:deep_tiered`: A variant of the `:deep` stem that has a larger width in the second
-        convolution. This is an experimental variant from the `timm` library
-        in Python that shows peformance improvements over the `:deep` stem
-        in some cases.
+        convolution. This is an experimental variant from the `timm` library in Python that
+        shows peformance improvements over the `:deep` stem in some cases.
 
   - `inchannels`: The number of channels in the input.
   - `replace_stem_pool`: Whether to replace the default 3x3 max pooling layer with a
@@ -253,20 +252,27 @@ function downsample_block(downsample_fns, inplanes, planes, expansion;
                           norm_layer = BatchNorm)
     down_fn1, down_fn2 = downsample_fns
     if stride != 1 || inplanes != planes * expansion
-        downsample = down_fn2(kernel_size, inplanes, planes * expansion;
-                              stride, dilation, norm_layer)
+        return down_fn1(kernel_size, inplanes, planes * expansion;
+                        stride, dilation, norm_layer)
     else
-        downsample = down_fn1(kernel_size, inplanes, planes * expansion;
-                              stride, dilation, norm_layer)
+        return down_fn2(kernel_size, inplanes, planes * expansion;
+                        stride, dilation, norm_layer)
     end
-    return downsample
 end
 
+# Shortcut configurations for the ResNet models
 const shortcut_dict = Dict(:A => (downsample_identity, downsample_identity),
                            :B => (downsample_conv, downsample_identity),
-                           :C => (downsample_conv, downsample_conv))
+                           :C => (downsample_conv, downsample_conv),
+                           :D => (downsample_pool, downsample_identity))
 
-function _make_downsample_fns(vec::Vector{T}) where {T}
+# Makes the downsample `Vector`` with `NTuple{2}`s of functions when it is
+# specified as a `Vector` of `Symbol`s. This is used to make the downsample
+# `Vector` for the `_make_blocks` function. If the `eltype(::Vector)` is
+# already an `NTuple{2}` of functions, it is returned unchanged.
+function _make_downsample_fns(vec::Vector{T}, layers) where {T}
+    @assert length(vec) == length(layers)
+    "The length of the downsample `Vector` must match the number of stages"
     if T <: Symbol
         downs = []
         for i in vec
@@ -281,6 +287,13 @@ function _make_downsample_fns(vec::Vector{T}) where {T}
         throw(ArgumentError("The shortcut list must be a `Vector` of `Symbol`s or `NTuple{2}`s"))
     end
 end
+
+function _make_downsample_fns(sym::Symbol, layers)
+    @assert sym in keys(shortcut_dict)
+    "The shortcut type must be one of $(sort(collect(keys(shortcut_dict))))"
+    return collect(shortcut_dict[sym] for _ in 1:length(layers))
+end
+_make_downsample_fns(tup::NTuple{2}, layers) = collect(tup for _ in 1:length(layers))
 
 # Makes the main stages of the ResNet model. This is an internal function and should not be 
 # used by end-users. `block_fn` is a function that returns a single block of the ResNet. 
@@ -345,13 +358,14 @@ function _drop_blocks(drop_block_prob = 0.0)
 end
 
 """
-    resnet(block_fn, layers; inchannels = 3, nclasses = 1000, output_stride = 32,
-           stem = first(resnet_stem(; inchannels)), inplanes = 64,
-           downsample_fn = downsample_conv, block_args::NamedTuple = NamedTuple(),
-           drop_rates::NamedTuple = (dropout_rate = 0.0, drop_path_rate = 0.0,
-                                     drop_block_rate = 0.0),
-           classifier_args::NamedTuple = (pool_layer = AdaptiveMeanPool((1, 1)),
-                                          use_conv = false))
+    resnet(block_fn, layers, downsample_opt = :B;
+            inchannels = 3, nclasses = 1000, output_stride = 32,
+            stem = first(resnet_stem(; inchannels)), inplanes = 64,
+            block_args::NamedTuple = NamedTuple(),
+            drop_rates::NamedTuple = (dropout_rate = 0.0, drop_path_rate = 0.0,
+                                        drop_block_rate = 0.0),
+            classifier_args::NamedTuple = (pool_layer = AdaptiveMeanPool((1, 1)),
+                                            use_conv = false))
 
 This function creates the layers for many ResNet-like models. See the user guide for more
 information.
@@ -360,7 +374,7 @@ information.
     
     If you are an end-user trying to use ResNet-like models, you should consider [`ResNet`](#)
     and similar higher-level functions instead. This version is significantly more customisable
-    at the cost of being more complicated.
+    at the cost of being more significantly more complicated.
 
 # Arguments
 
@@ -371,6 +385,25 @@ information.
   - `layers`: A list of integers specifying the number of blocks in each stage. For example,
     `[3, 4, 6, 3]` would mean that the network would have 4 stages, with 3, 4, 6 and 3 blocks in
     each.
+  - `downsample_opt`: Downsampling options. This can be any one of the following:
+    
+      + A single `Symbol` specifying the downsample option to use for all stages. The default
+        is :B, which corresponds to a 1x1 convolution-based downsample for every stage except
+        the first, which uses an identity projection. The other options are `:A`, which uses
+        an identity projection for all stages, `:C`, which uses a convolution-based
+        downsample for all stages and `:D`, which uses a max-pooling-based downsample for every
+        stage except the first, which uses an identity projection. `:A`, `:B` and `:C` are
+        are described in the [paper](https://arxiv.org/abs/1512.03385), while `:D` is
+        described in the [Bag of Tricks](https://arxiv.org/abs/1812.01187) paper.
+      + A `Vector` of `Symbol`s specifying the downsample options to use for each stage. The
+        choices are the same as the single option above. The length of this `Vector` must be
+        the same as the length of `layers`.
+      + A `Vector` of `NTuple{2}`s specifying the downsample functions to use for each stage.
+        The functions have to be passed in directly here - see [`downsample_identity`](#),
+        [`downsample_conv`](#), and [`downsample_pool`](#). The first element of each tuple is
+        the downsample function to use for the first stage, and the second element is the
+        function to use for the rest of the stages. The length of this `Vector` must be the
+        same as the length of `layers`.
   - `nclasses`: The number of output classes.
   - `inchannels`: The number of input channels.
   - `output_stride`: The total stride of the network i.e. the amount by which the input is
@@ -381,10 +414,6 @@ information.
     function for creating a stem (see [`resnet_stem`](#)) but you can also create your
     own (although this is not usually necessary).
   - `inplanes`: The number of output channels from the stem.
-  - `downsample_type`: The type of downsampling to use. Either `:conv` or `:pool`. The former
-    uses a traditional convolution-based downsampling, while the latter is an
-    average-pooling-based downsampling that was suggested in the [Bag of Tricks](https://arxiv.org/abs/1812.01187)
-    paper.
   - `block_args`: A `NamedTuple` that may define none, some or all the arguments to be passed
     to the block function. For more information regarding valid arguments, see
     the documentation for the block functions ([`basicblock`](#), [`bottleneck`](#)).
@@ -395,12 +424,13 @@ information.
       + `drop_block_rate`: `DropBlock` regularisation implemented using [`DropBlock`](#).
   - `classifier_args`: A `NamedTuple` that **must** specify the following arguments:
     
-      + `pool_layer`: The adaptive pooling layer to use in the classifier head.
+      + `pool_layer`: The pooling layer to use in the classifier head. Pass this in with the
+        arguments to the layer defined. For example, if you want to use an adaptive mean pooling
+        layer, you would pass in `AdaptiveMeanPool((1, 1))`.
       + `use_conv`: Whether to use a 1x1 convolutional layer in the classifier head instead of a
         `Dense` layer.
 """
-function resnet(block_fn, layers,
-                downsample_list::Vector = collect(:B for _ in 1:length(layers));
+function resnet(block_fn, layers, downsample_opt = :B;
                 inchannels = 3, nclasses = 1000, output_stride = 32,
                 stem = first(resnet_stem(; inchannels)), inplanes = 64,
                 block_args::NamedTuple = NamedTuple(),
@@ -410,7 +440,7 @@ function resnet(block_fn, layers,
                                                use_conv = false))
     ## Feature Blocks
     channels = collect(64 * 2^i for i in range(0, length(layers)))
-    downsample_fns = _make_downsample_fns(downsample_list)
+    downsample_fns = _make_downsample_fns(downsample_opt, layers)
     stage_blocks = _make_blocks(block_fn, channels, layers, inplanes;
                                 output_stride, downsample_fns, drop_rates, block_args)
     ## Classifier head
