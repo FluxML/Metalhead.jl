@@ -6,7 +6,7 @@ Creates a SEResNet model with the specified depth.
 
 # Arguments
 
-  - `depth`: one of `[18, 34, 50, 101, 152]`. The depth of the ResNet model.
+  - `depth`: one of `[50, 101, 152]`. The depth of the ResNet model.
   - `pretrain`: set to `true` to load the model with pre-trained weights for ImageNet
   - `inchannels`: the number of input channels.
   - `nclasses`: the number of output classes
@@ -25,8 +25,8 @@ end
 (m::SEResNet)(x) = m.layers(x)
 
 function SEResNet(depth::Integer; pretrain = false, inchannels = 3, nclasses = 1000)
-    @assert depth in [18, 34, 50, 101, 152]
-    "Invalid depth. Must be one of [18, 34, 50, 101, 152]"
+    @assert depth in [50, 101, 152]
+    "Invalid depth. Must be one of [50, 101, 152]"
     layers = resnet(resnet_config[depth]...; inchannels, nclasses,
                     block_args = (; attn_fn = squeeze_excite))
     if pretrain
@@ -44,7 +44,7 @@ Creates a SEResNeXt model with the specified depth, cardinality, and base width.
 
 # Arguments
 
-  - `depth`: one of `[18, 34, 50, 101, 152]`. The depth of the ResNet model.
+  - `depth`: one of `[50, 101, 152]`. The depth of the ResNet model.
   - `pretrain`: set to `true` to load the model with pre-trained weights for ImageNet
   - `cardinality`: the number of groups to be used in the 3x3 convolution in each block.
   - `base_width`: the number of feature maps in each group.

@@ -75,7 +75,7 @@ end
 end
 
 @testset "SEResNet" begin
-    @testset for depth in [18, 34, 50, 101, 152]
+    @testset for depth in [50, 101, 152]
         m = SEResNet(depth)
         @test size(m(x_224)) == (1000, 1)
         if (SEResNet, depth) in PRETRAINED_MODELS
