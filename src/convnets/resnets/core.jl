@@ -24,14 +24,15 @@ Creates a basic ResNet block.
   - `planes`: number of feature maps for the block
   - `stride`: the stride of the block
   - `downsample`: the downsampling function to use
-  - `reduction_factor`: the reduction factor that the input feature maps are reduced by before the first
-    convolution.
+  - `reduction_factor`: the reduction factor that the input feature maps are reduced by before
+    the first convolution.
   - `dilation`: the dilation of the second convolution.
   - `first_dilation`: the dilation of the first convolution.
   - `activation`: the activation function to use.
   - `connection`: the function applied to the output of residual and skip paths in
     a block. See [`addact`](#) and [`actadd`](#) for an example. Note that this uses
-    PartialFunctions.jl to pass in the activation function with the notation `addact\$activation`.
+    [PartialFunctions.jl](https://github.com/archermarx/PartialFunctions.jl) to pass in the
+    activation function with the notation `addact\$activation`.
   - `norm_layer`: the normalization layer to use.
   - `drop_block`: the drop block layer. This is usually initialised in the `_make_blocks`
     function and passed in.
@@ -80,13 +81,14 @@ Creates a bottleneck ResNet block.
   - `downsample`: the downsampling function to use
   - `cardinality`: the number of groups in the convolution.
   - `base_width`: the number of output feature maps for each convolutional group.
-  - `reduction_factor`: the reduction factor that the input feature maps are reduced by before the first
-    convolution.
+  - `reduction_factor`: the reduction factor that the input feature maps are reduced by before
+    the first convolution.
   - `first_dilation`: the dilation of the 3x3 convolution.
   - `activation`: the activation function to use.
   - `connection`: the function applied to the output of residual and skip paths in
     a block. See [`addact`](#) and [`actadd`](#) for an example. Note that this uses
-    PartialFunctions.jl to pass in the activation function with the notation `addact\$activation`.
+    [PartialFunctions.jl](https://github.com/archermarx/PartialFunctions.jl) to pass in the
+    activation function with the notation `addact\$activation`.
   - `norm_layer`: the normalization layer to use.
   - `drop_block`: the drop block layer. This is usually initialised in the `_make_blocks`
     function and passed in.
@@ -238,7 +240,7 @@ This function is almost never used directly or customised by the user.
 # Arguments
 
   - `downsample_fn`: The function to use for downsampling in skip connections. Recommended usage
-    is passing in either `downsample_conv` or `downsample_pool`.
+    is passing in `downsample_conv`, `downsample_pool` or `downsample_identity`.
   - `inplanes`: The number of input feature maps.
   - `planes`: The number of output feature maps.
   - `expansion`: The expansion factor of the block.
@@ -422,6 +424,13 @@ information.
       + `dropout_rate`: The rate of dropout to be used in the classifier head.
       + `drop_path_rate`: Stochastic depth implemented using [`DropPath`](#).
       + `drop_block_rate`: `DropBlock` regularisation implemented using [`DropBlock`](#).
+
+!!! note
+    
+        `drop_path_rate` and `drop_block_rate` are not implemented for all choices of
+        `block_fn`. In particular, [`bottle2neck`](#) blocks (used for [`Res2Net`](#)) do not
+        support `drop_path_rate` or `drop_block_rate`.
+
   - `classifier_args`: A `NamedTuple` that **must** specify the following arguments:
     
       + `pool_layer`: The pooling layer to use in the classifier head. Pass this in with the
