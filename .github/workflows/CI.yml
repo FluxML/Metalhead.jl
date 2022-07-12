@@ -53,15 +53,33 @@ jobs:
             ${{ runner.os }}-test-
             ${{ runner.os }}-
       - uses: julia-actions/julia-buildpkg@v1
-      - name: "Run tests"
+      - name: "Setup environment"
         run: |
           julia --project=./test -e 'using Pkg; Pkg.develop(path = ".")'
+      - name: "Run tests + coverage"
+        if: matrix.version == '1' && matrix.os == 'ubuntu-latest'
+        run: |
           julia --code-coverage=user --color=yes --depwarn=yes --project=./test -e 'include("test/retest.jl"); retest(${{ matrix.suite }})'
+        shell: bash
+      - name: "Run tests only"
+        if: ${{ !(matrix.version == '1' && matrix.os == 'ubuntu-latest') }}
+        run: |
+          julia --color=yes --depwarn=yes --project=./test -e 'include("test/retest.jl"); retest(${{ matrix.suite }})'
         continue-on-error: ${{ matrix.version == 'nightly' }}
         shell: bash
+
+  coverage:
+    name: "Coverage"
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v2
+      - uses: julia-actions/setup-julia@v1
+        with:
+          version: '1'
+          arch: x64
+      - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-processcoverage@v1
-        if: matrix.version == '1' && matrix.os == 'ubuntu-latest'
       - uses: codecov/codecov-action@v2
-        if: matrix.version == '1' && matrix.os == 'ubuntu-latest'
         with:
           file: lcov.info
