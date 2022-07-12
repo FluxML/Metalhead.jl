@@ -38,3 +38,6 @@ function ResNeXt(depth::Integer; pretrain = false, cardinality = 32,
     end
     return ResNeXt(layers)
 end
+
+backbone(m::ResNeXt) = m.layers[1]
+classifier(m::ResNeXt) = m.layers[2]
