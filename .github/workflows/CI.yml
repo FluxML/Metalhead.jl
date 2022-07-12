@@ -26,10 +26,12 @@ jobs:
         arch:
           - x64
         suite:
-          - '["AlexNet", "VGG", "GoogLeNet", "SqueezeNet"]'
+          - '["AlexNet", "VGG"]'
+          - '["GoogLeNet", "SqueezeNet"]'
           - '["EfficientNet", "MobileNet"]'
           - '[r"/*/ResNet*", "ResNeXt"]'
-          - '["Inception", "DenseNet"]'
+          - '"Inception"'
+          - '"DenseNet"'
           - '"ConvNeXt"'
           - '"ConvMixer"'
           - '"ViT"'
