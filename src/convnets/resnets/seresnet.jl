@@ -35,6 +35,9 @@ function SEResNet(depth::Integer; pretrain = false, inchannels = 3, nclasses = 1
     return SEResNet(layers)
 end
 
+backbone(m::SEResNet) = m.layers[1]
+classifier(m::SEResNet) = m.layers[2]
+
 """
     SEResNeXt(depth::Integer; pretrain = false, cardinality = 32, base_width = 4,
               inchannels = 3, nclasses = 1000)
@@ -75,3 +78,6 @@ function SEResNeXt(depth::Integer; pretrain = false, cardinality = 32, base_widt
     end
     return SEResNeXt(layers)
 end
+
+backbone(m::SEResNeXt) = m.layers[1]
+classifier(m::SEResNeXt) = m.layers[2]

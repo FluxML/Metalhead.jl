@@ -39,3 +39,6 @@ function ResNet(depth::Integer; pretrain = false, inchannels = 3, nclasses = 100
     end
     return ResNet(layers)
 end
+
+backbone(m::ResNet) = m.layers[1]
+classifier(m::ResNet) = m.layers[2]
