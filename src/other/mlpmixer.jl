@@ -59,7 +59,7 @@ function mlpmixer(block, imsize::Dims{2} = (224, 224); inchannels = 3,
                   embedplanes = 512, drop_path_rate = 0.0,
                   depth = 12, nclasses = 1000, kwargs...)
     npatches = prod(imsize .÷ patch_size)
-    dp_rates = LinRange{Float32}(0.0, drop_path_rate, depth)
+    dp_rates = droppath_rates(drop_path_rate; depth)
     layers = Chain(PatchEmbedding(imsize; inchannels, patch_size, embedplanes),
                    Chain([block(embedplanes, npatches; drop_path_rate = dp_rates[i],
                                 kwargs...)

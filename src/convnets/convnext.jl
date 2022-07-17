@@ -51,7 +51,7 @@ function convnext(depths, planes; inchannels = 3, drop_path_rate = 0.0, λ = 1.0
         push!(downsample_layers, downsample_layer)
     end
     stages = []
-    dp_rates = LinRange{Float32}(0.0, drop_path_rate, sum(depths))
+    dp_rates = droppath_rates(drop_path_rate; depth = sum(depths))
     cur = 0
     for i in eachindex(depths)
         push!(stages, [convnextblock(planes[i], dp_rates[cur + j], λ) for j in 1:depths[i]])
