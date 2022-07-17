@@ -29,7 +29,7 @@ include("conv.jl")
 export conv_bn, depthwise_sep_conv_bn, invertedresidual, skip_identity, skip_projection
 
 include("drop.jl")
-export DropPath, DropBlock
+export DropBlock, DropPath, droppath_rates
 
 include("selayers.jl")
 export squeeze_excite, effective_squeeze_excite

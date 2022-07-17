@@ -79,8 +79,7 @@ const efficientnet_block_configs = [
 # w: width scaling
 # d: depth scaling
 # r: image resolution
-const efficientnet_global_configs = Dict(
-                                         # (r, (w, d))
+const efficientnet_global_configs = Dict(# (r, (w, d))
                                          :b0 => (224, (1.0, 1.0)),
                                          :b1 => (240, (1.0, 1.1)),
                                          :b2 => (260, (1.1, 1.2)),

@@ -146,3 +146,13 @@ equivalent to `identity`.
     on the CPU.
 """
 DropPath(p; rng = rng_from_array()) = 0 < p ≤ 1 ? Dropout(p; dims = 4, rng) : identity
+
+"""
+    droppath_rates(drop_path_rate::AbstractFloat = 0.0; depth)
+
+Returns the drop path rates for a given depth using the linear scaling rule
+((reference)[https://arxiv.org/abs/1603.09382])
+"""
+function droppath_rates(drop_path_rate::AbstractFloat = 0.0; depth)
+    return LinRange{Float32}(0.0, drop_path_rate, depth)
+end
