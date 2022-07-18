@@ -69,7 +69,7 @@ jobs:
         shell: bash
       - uses: actions/upload-artifact@v3
         with:
-          name: coverage-${{ matrix.suite }}
+          name: coverage-${{ hashFiles('**/*.cov') }}
           path: '**/*.cov'
         if: matrix.version == '1' && matrix.os == 'ubuntu-latest'
 
