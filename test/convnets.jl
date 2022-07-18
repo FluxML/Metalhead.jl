@@ -125,7 +125,7 @@ GC.gc()
         if Inceptionv4 in PRETRAINED_MODELS
             @test acctest(Inceptionv4(pretrain = true))
         else
-            @test_throws ArgumentError InceptionResNetv2(pretrain = true)
+            @test_throws ArgumentError Inceptionv4(pretrain = true)
         end
         @test gradtest(m, x_299)
     end
