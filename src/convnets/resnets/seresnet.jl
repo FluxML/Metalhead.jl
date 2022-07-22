@@ -27,7 +27,8 @@ end
 function SEResNet(depth::Integer; pretrain = false, inchannels = 3, nclasses = 1000)
     @assert depth in [50, 101, 152]
     "Invalid depth. Must be one of [50, 101, 152]"
-    layers = resnet(resnet_config[depth]...; inchannels, nclasses, attn_fn = _ -> squeeze_excite)
+    layers = resnet(resnet_config[depth]...; inchannels, nclasses,
+                    attn_fn = planes -> squeeze_excite(planes))
     if pretrain
         loadpretrain!(layers, string("SEResNet", depth))
     end
@@ -70,8 +71,8 @@ function SEResNeXt(depth::Integer; pretrain = false, cardinality = 32, base_widt
                    inchannels = 3, nclasses = 1000)
     @assert depth in [50, 101, 152]
     "Invalid depth. Must be one of [50, 101, 152]"
-    layers = resnet(resnet_config[depth]...; inchannels, nclasses, cardinality, base_width, 
-                    attn_fn = _ -> squeeze_excite)
+    layers = resnet(resnet_config[depth]...; inchannels, nclasses, cardinality, base_width,
+                    attn_fn = planes -> squeeze_excite(planes))
     if pretrain
         loadpretrain!(layers, string("SEResNeXt", depth, "_", cardinality, "x", base_width))
     end

@@ -61,3 +61,12 @@ function _maybe_big_show(io, model)
         show(io, model)
     end
 end
+
+"""
+    linear_scheduler(drop_path_rate = 0.0; start_value = 0.0, depth)
+
+Returns the dropout rates for a given depth using the linear scaling rule.
+"""
+function linear_scheduler(drop_rate = 0.0; depth, start_value = 0.0)
+    return LinRange{Float32}(start_value, drop_rate, depth)
+end

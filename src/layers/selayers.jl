@@ -19,13 +19,15 @@ function squeeze_excite(inplanes; reduction = 16, rd_divisor = 8,
                         activation = relu, gate_activation = sigmoid,
                         norm_layer = planes -> identity,
                         rd_planes = _round_channels(inplanes ÷ reduction, rd_divisor, 0))
-    return SkipConnection(Chain(AdaptiveMeanPool((1, 1)),
-                                Conv((1, 1), inplanes => rd_planes),
-                                norm_layer(rd_planes),
-                                activation,
-                                Conv((1, 1), rd_planes => inplanes),
-                                norm_layer(inplanes),
-                                gate_activation), .*)
+    layers = [AdaptiveMeanPool((1, 1)),
+        Conv((1, 1), inplanes => rd_planes),
+        norm_layer(rd_planes),
+        activation,
+        Conv((1, 1), rd_planes => inplanes),
+        norm_layer(inplanes),
+        gate_activation]
+    filter!(x -> x !== identity, layers)
+    return SkipConnection(Chain(layers...), .*)
 end
 
 """
