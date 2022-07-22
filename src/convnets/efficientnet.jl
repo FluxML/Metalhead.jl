@@ -29,8 +29,8 @@ function efficientnet(scalings, block_config;
     scaled(d) = dscale ≈ 1 ? d : ceil(Int64, dscale * d)
 
     out_channels = _round_channels(scalew(32), 8)
-    stem = conv_bn((3, 3), inchannels, out_channels, swish;
-                   bias = false, stride = 2, pad = SamePad())
+    stem = conv_norm((3, 3), inchannels, out_channels, swish;
+                     bias = false, stride = 2, pad = SamePad())
 
     blocks = []
     for (n, k, s, e, i, o) in block_config
@@ -50,8 +50,8 @@ function efficientnet(scalings, block_config;
     blocks = Chain(blocks...)
 
     head_out_channels = _round_channels(max_width, 8)
-    head = conv_bn((1, 1), out_channels, head_out_channels, swish;
-                   bias = false, pad = SamePad())
+    head = conv_norm((1, 1), out_channels, head_out_channels, swish;
+                     bias = false, pad = SamePad())
 
     top = Dense(head_out_channels, nclasses)
 

@@ -31,15 +31,16 @@ Creates a basic ResNet block.
   - `attn_fn`: the attention function to use. See [`squeeze_excite`](#) for an example.
 """
 function basicblock(inplanes, planes; stride = 1, reduction_factor = 1, activation = relu,
-                    norm_layer = BatchNorm, drop_block = identity, drop_path = identity,
+                    norm_layer = BatchNorm, prenorm = false,
+                    drop_block = identity, drop_path = identity,
                     attn_fn = planes -> identity)
     expansion = expansion_factor(basicblock)
     first_planes = planes ÷ reduction_factor
     outplanes = planes * expansion
-    conv_bn1 = [Conv((3, 3), inplanes => first_planes; stride, pad = 1, bias = false),
-        norm_layer(first_planes)]
-    conv_bn2 = [Conv((3, 3), first_planes => outplanes; pad = 1, bias = false),
-        norm_layer(outplanes)]
+    conv_bn1 = conv_norm((3, 3), inplanes => first_planes, identity; norm_layer, prenorm,
+                         stride, pad = 1, bias = false)
+    conv_bn2 = conv_norm((3, 3), first_planes => outplanes, identity; norm_layer, prenorm,
+                         pad = 1, bias = false)
     layers = [conv_bn1..., drop_block, activation, conv_bn2..., attn_fn(outplanes),
         drop_path]
     filter!(x -> x !== identity, layers)
@@ -79,21 +80,20 @@ Creates a bottleneck ResNet block.
   - `attn_fn`: the attention function to use. See [`squeeze_excite`](#) for an example.
 """
 function bottleneck(inplanes, planes; stride = 1, cardinality = 1, base_width = 64,
-                    reduction_factor = 1, activation = relu, norm_layer = BatchNorm,
+                    reduction_factor = 1, activation = relu,
+                    norm_layer = BatchNorm, prenorm = false,
                     drop_block = identity, drop_path = identity,
                     attn_fn = planes -> identity)
-    expansion = 4
+    expansion = expansion_factor(bottleneck)
     width = floor(Int, planes * (base_width / 64)) * cardinality
     first_planes = width ÷ reduction_factor
     outplanes = planes * expansion
-    conv_bn1 = [Conv((1, 1), inplanes => first_planes; bias = false),
-        norm_layer(first_planes, activation)]
-    conv_bn2 = [
-        Conv((3, 3), first_planes => width; stride, pad = 1,
-             groups = cardinality,
-             bias = false),
-        norm_layer(width)]
-    conv_bn3 = [Conv((1, 1), width => outplanes; bias = false), norm_layer(outplanes)]
+    conv_bn1 = conv_norm((1, 1), inplanes => first_planes, activation; norm_layer, prenorm,
+                         bias = false)
+    conv_bn2 = conv_norm((3, 3), first_planes => width, identity; norm_layer, prenorm,
+                         stride, pad = 1, groups = cardinality, bias = false)
+    conv_bn3 = conv_norm((1, 1), width => outplanes, identity; norm_layer, prenorm,
+                         bias = false)
     layers = [conv_bn1..., conv_bn2..., drop_block, activation, conv_bn3...,
         attn_fn(outplanes), drop_path]
     filter!(x -> x !== identity, layers)
@@ -103,18 +103,18 @@ expansion_factor(::typeof(bottleneck)) = 4
 
 # Downsample layer using convolutions.
 function downsample_conv(inplanes::Integer, outplanes::Integer; stride::Integer = 1,
-                         norm_layer = BatchNorm)
-    return Chain(Conv((1, 1), inplanes => outplanes; stride, pad = SamePad(), bias = false),
-                 norm_layer(outplanes))
+                         norm_layer = BatchNorm, prenorm = false)
+    return Chain(conv_norm((1, 1), inplanes => outplanes, identity; norm_layer, prenorm,
+                           pad = SamePad(), stride, bias = false)...)
 end
 
 # Downsample layer using max pooling
 function downsample_pool(inplanes::Integer, outplanes::Integer; stride::Integer = 1,
-                         norm_layer = BatchNorm)
+                         norm_layer = BatchNorm, prenorm = false)
     pool = (stride == 1) ? identity : MeanPool((2, 2); stride, pad = SamePad())
     return Chain(pool,
-                 Conv((1, 1), inplanes => outplanes; bias = false),
-                 norm_layer(outplanes))
+                 conv_norm((1, 1), inplanes => outplanes, identity; norm_layer, prenorm,
+                           bias = false)...)
 end
 
 # Downsample layer which is an identity projection. Uses max pooling
@@ -198,8 +198,9 @@ on how to use this function.
   - `norm_layer`: The normalisation layer used in the stem.
   - `activation`: The activation function used in the stem.
 """
-function resnet_stem(; stem_type::Symbol = :default, inchannels::Integer = 3,
-                     replace_pool::Bool = false, norm_layer = BatchNorm, activation = relu)
+function resnet_stem(stem_type::Symbol = :default; inchannels::Integer = 3,
+                     replace_pool::Bool = false, norm_layer = BatchNorm, prenorm = false,
+                     activation = relu)
     @assert stem_type in [:default, :deep, :deep_tiered]
     "Stem type must be one of [:default, :deep, :deep_tiered]"
     # Main stem
@@ -212,12 +213,10 @@ function resnet_stem(; stem_type::Symbol = :default, inchannels::Integer = 3,
         elseif stem_type == :deep_tiered
             stem_channels = (3 * (stem_width ÷ 4), stem_width)
         end
-        conv1 = Chain(Conv((3, 3), inchannels => stem_channels[1]; stride = 2, pad = 1,
-                           bias = false),
-                      norm_layer(stem_channels[1], activation),
-                      Conv((3, 3), stem_channels[1] => stem_channels[1]; pad = 1,
-                           bias = false),
-                      norm_layer(stem_channels[2], activation),
+        conv1 = Chain(conv_norm((3, 3), inchannels => stem_channels[1], activation;
+                                norm_layer, prenorm, stride = 2, pad = 1, bias = false)...,
+                      conv_norm((3, 3), stem_channels[1] => stem_channels[2], activation;
+                                norm_layer, pad = 1, bias = false)...,
                       Conv((3, 3), stem_channels[2] => inplanes; pad = 1, bias = false))
     else
         conv1 = Conv((7, 7), inchannels => inplanes; stride = 2, pad = 3, bias = false)
@@ -225,31 +224,34 @@ function resnet_stem(; stem_type::Symbol = :default, inchannels::Integer = 3,
     bn1 = norm_layer(inplanes, activation)
     # Stem pooling
     stempool = replace_pool ?
-               Chain(Conv((3, 3), inplanes => inplanes; stride = 2, pad = 1, bias = false),
-                     norm_layer(inplanes, activation)) :
+               Chain(conv_norm((3, 3), inplanes => inplanes, activation; norm_layer,
+                               prenorm,
+                               stride = 2, pad = 1, bias = false)...) :
                MaxPool((3, 3); stride = 2, pad = 1)
     return Chain(conv1, bn1, stempool), inplanes
 end
 
 function template_builder(::typeof(basicblock); reduction_factor = 1, activation = relu,
-                          norm_layer = BatchNorm, attn_fn = planes -> identity, kargs...)
+                          norm_layer = BatchNorm, prenorm = false,
+                          attn_fn = planes -> identity, kargs...)
     return (args...; kwargs...) -> basicblock(args...; kwargs..., reduction_factor,
-                                              activation, norm_layer, attn_fn)
+                                              activation, norm_layer, prenorm, attn_fn)
 end
 
 function template_builder(::typeof(bottleneck); cardinality = 1, base_width::Integer = 64,
-                          reduction_factor = 1, activation = relu, norm_layer = BatchNorm,
+                          reduction_factor = 1, activation = relu,
+                          norm_layer = BatchNorm, prenorm = false,
                           attn_fn = planes -> identity, kargs...)
     return (args...; kwargs...) -> bottleneck(args...; kwargs..., cardinality, base_width,
-                                              reduction_factor, activation, norm_layer,
-                                              attn_fn)
+                                              reduction_factor, activation,
+                                              norm_layer, prenorm, attn_fn)
 end
 
 function template_builder(downsample_fn::Union{typeof(downsample_conv),
                                                typeof(downsample_pool),
                                                typeof(downsample_identity)};
-                          norm_layer = BatchNorm)
-    return (args...; kwargs...) -> downsample_fn(args...; kwargs..., norm_layer)
+                          norm_layer = BatchNorm, prenorm = false)
+    return (args...; kwargs...) -> downsample_fn(args...; kwargs..., norm_layer, prenorm)
 end
 
 function configure_block(block_template, layers::Vector{Int}; expansion,
@@ -266,6 +268,7 @@ function configure_block(block_template, layers::Vector{Int}; expansion,
         downsample_fn = (stride != 1 || inplanes != planes * expansion) ?
                         downsample_fns[1] :
                         downsample_fns[2]
+        # DropBlock, DropPath both take in rates based on a linear scaling schedule
         schedule_idx = sum(layers[1:(stage_idx - 1)]) + block_idx
         drop_path = DropPath(pathschedule[schedule_idx])
         drop_block = DropBlock(blockschedule[schedule_idx])

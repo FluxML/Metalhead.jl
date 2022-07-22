@@ -16,7 +16,6 @@ struct ChannelLayerNorm{D, T}
     diag::D
     ϵ::T
 end
-
 @functor ChannelLayerNorm
 
 function ChannelLayerNorm(sz::Integer, λ = identity; ϵ = 1.0f-6)

@@ -1,35 +1,39 @@
 """
-    conv_bn(kernelsize, inplanes, outplanes, activation = relu;
-            rev = false, preact = false, use_bn = true, stride = 1, pad = 0, dilation = 1,
-            groups = 1, [bias, weight, init])
+    conv_norm(kernel_size, inplanes::Int, outplanes::Int, activation = relu;
+              norm_layer = BatchNorm, prenorm = false, preact = false, use_bn = true,
+              stride = 1, pad = 0, dilation = 1, groups = 1, [bias, weight, init])
 
 Create a convolution + batch normalization pair with activation.
 
 # Arguments
 
-  - `kernelsize`: size of the convolution kernel (tuple)
+  - `kernel_size`: size of the convolution kernel (tuple)
   - `inplanes`: number of input feature maps
   - `outplanes`: number of output feature maps
   - `activation`: the activation function for the final layer
-  - `rev`: set to `true` to place the batch norm before the convolution
+  - `norm_layer`: the normalization layer used
+  - `prenorm`: set to `true` to place the batch norm before the convolution
   - `preact`: set to `true` to place the activation function before the batch norm
-    (only compatible with `rev = false`)
+    (only compatible with `prenorm = false`)
   - `use_bn`: set to `false` to disable batch normalization
-    (only compatible with `rev = false` and `preact = false`)
+    (only compatible with `prenorm = false` and `preact = false`)
   - `stride`: stride of the convolution kernel
   - `pad`: padding of the convolution kernel
   - `dilation`: dilation of the convolution kernel
   - `groups`: groups for the convolution kernel
   - `bias`, `weight`, `init`: initialization for the convolution kernel (see [`Flux.Conv`](#))
 """
-function conv_bn(kernelsize, inplanes, outplanes, activation = relu;
-                 rev = false, preact = false, use_bn = true, kwargs...)
+function conv_norm(kernel_size, inplanes::Int, outplanes::Int, activation = relu;
+                   norm_layer = BatchNorm, prenorm = false, preact = false, use_bn = true,
+                   kwargs...)
     if !use_bn
-        (preact || rev) ? throw("preact only supported with `use_bn = true`") :
-        return [Conv(kernelsize, inplanes => outplanes, activation; kwargs...)]
+        if (preact || prenorm)
+            throw(ArgumentError("`preact` only supported with `use_bn = true`"))
+        else
+            return [Conv(kernel_size, inplanes => outplanes, activation; kwargs...)]
+        end
     end
-    layers = []
-    if rev
+    if prenorm
         activations = (conv = activation, bn = identity)
         bnplanes = inplanes
     else
@@ -37,50 +41,59 @@ function conv_bn(kernelsize, inplanes, outplanes, activation = relu;
         bnplanes = outplanes
     end
     if preact
-        rev ? throw(ArgumentError("preact and rev cannot be set at the same time")) :
-        activations = (conv = activation, bn = identity)
+        if prenorm
+            throw(ArgumentError("`preact` and `prenorm` cannot be set at the same time"))
+        else
+            activations = (conv = activation, bn = identity)
+        end
     end
-    push!(layers,
-          Conv(kernelsize, Int(inplanes) => Int(outplanes), activations.conv; kwargs...))
-    push!(layers,
-          BatchNorm(Int(bnplanes), activations.bn))
-    return rev ? reverse(layers) : layers
+    layers = [Conv(kernel_size, inplanes => outplanes, activations.conv; kwargs...),
+        norm_layer(bnplanes, activations.bn)]
+    return prenorm ? reverse(layers) : layers
+end
+
+function conv_norm(kernel_size, ch::Pair{<:Integer, <:Integer}, outplanes,
+                   activation = identity; kwargs...)
+    inplanes, outplanes = ch
+    return conv_norm(kernel_size, inplanes, outplanes, activation; kwargs...)
 end
 
 """
-    depthwise_sep_conv_bn(kernelsize, inplanes, outplanes, activation = relu;
-                               rev = false, use_bn = (true, true),
+    depthwise_sep_conv_bn(kernel_size, inplanes, outplanes, activation = relu;
+                               prenorm = false, use_bn = (true, true),
                                stride = 1, pad = 0, dilation = 1, [bias, weight, init])
 
 Create a depthwise separable convolution chain as used in MobileNetv1.
 This is sequence of layers:
 
-  - a `kernelsize` depthwise convolution from `inplanes => inplanes`
+  - a `kernel_size` depthwise convolution from `inplanes => inplanes`
   - a batch norm layer + `activation` (if `use_bn[1] == true`; otherwise `activation` is applied to the convolution output)
-  - a `kernelsize` convolution from `inplanes => outplanes`
+  - a `kernel_size` convolution from `inplanes => outplanes`
   - a batch norm layer + `activation` (if `use_bn[2] == true`; otherwise `activation` is applied to the convolution output)
 
 See Fig. 3 in [reference](https://arxiv.org/abs/1704.04861v1).
 
 # Arguments
 
-  - `kernelsize`: size of the convolution kernel (tuple)
+  - `kernel_size`: size of the convolution kernel (tuple)
   - `inplanes`: number of input feature maps
   - `outplanes`: number of output feature maps
   - `activation`: the activation function for the final layer
-  - `rev`: set to `true` to place the batch norm before the convolution
+  - `prenorm`: set to `true` to place the batch norm before the convolution
   - `use_bn`: a tuple of two booleans to specify whether to use batch normalization for the first and second convolution
   - `stride`: stride of the first convolution kernel
   - `pad`: padding of the first convolution kernel
   - `dilation`: dilation of the first convolution kernel
   - `bias`, `weight`, `init`: initialization for the convolution kernel (see [`Flux.Conv`](#))
 """
-function depthwise_sep_conv_bn(kernelsize, inplanes, outplanes, activation = relu;
-                               rev = false, use_bn = (true, true),
+function depthwise_sep_conv_bn(kernel_size, inplanes, outplanes, activation = relu;
+                               prenorm = false, use_bn = (true, true),
                                stride = 1, kwargs...)
-    return vcat(conv_bn(kernelsize, inplanes, inplanes, activation;
-                        rev, use_bn = use_bn[1], stride, groups = Int(inplanes), kwargs...),
-                conv_bn((1, 1), inplanes, outplanes, activation; rev, use_bn = use_bn[2]))
+    return vcat(conv_norm(kernel_size, inplanes, inplanes, activation;
+                          prenorm, use_bn = use_bn[1], stride, groups = inplanes,
+                          kwargs...),
+                conv_norm((1, 1), inplanes, outplanes, activation; prenorm,
+                          use_bn = use_bn[2]))
 end
 
 """
@@ -97,8 +110,8 @@ Create a skip projection
 """
 function skip_projection(inplanes, outplanes, downsample = false)
     return downsample ?
-           Chain(conv_bn((1, 1), inplanes, outplanes, identity; stride = 2, bias = false)) :
-           Chain(conv_bn((1, 1), inplanes, outplanes, identity; stride = 1, bias = false))
+           Chain(conv_norm((1, 1), inplanes, outplanes, identity; stride = 2, bias = false)) :
+           Chain(conv_norm((1, 1), inplanes, outplanes, identity; stride = 1, bias = false))
 end
 
 # array -> PaddedView(0, array, outplanes) for zero padding arrays
@@ -151,15 +164,15 @@ function invertedresidual(kernel_size, inplanes, hidden_planes, outplanes,
     @assert stride in [1, 2] "`stride` has to be 1 or 2"
     pad = @. (kernel_size - 1) ÷ 2
     conv1 = (inplanes == hidden_planes) ? identity :
-            Chain(conv_bn((1, 1), inplanes, hidden_planes, activation; bias = false))
+            Chain(conv_norm((1, 1), inplanes, hidden_planes, activation; bias = false))
     selayer = isnothing(reduction) ? identity :
               squeeze_excite(hidden_planes; reduction, activation, gate_activation = hardσ,
                              norm_layer = BatchNorm)
     invres = Chain(conv1,
-                   conv_bn(kernel_size, hidden_planes, hidden_planes, activation;
-                           bias = false, stride, pad = pad, groups = hidden_planes)...,
+                   conv_norm(kernel_size, hidden_planes, hidden_planes, activation;
+                             bias = false, stride, pad = pad, groups = hidden_planes)...,
                    selayer,
-                   conv_bn((1, 1), hidden_planes, outplanes, identity; bias = false)...)
+                   conv_norm((1, 1), hidden_planes, outplanes, identity; bias = false)...)
     return (stride == 1 && inplanes == outplanes) ? SkipConnection(invres, +) : invres
 end
 

@@ -37,8 +37,9 @@ function mobilenetv1(width_mult, config;
             layer = dw ?
                     depthwise_sep_conv_bn((3, 3), inchannels, outch, activation;
                                           stride = stride, pad = 1, bias = false) :
-                    conv_bn((3, 3), inchannels, outch, activation; stride = stride, pad = 1,
-                            bias = false)
+                    conv_norm((3, 3), inchannels, outch, activation; stride = stride,
+                              pad = 1,
+                              bias = false)
             append!(layers, layer)
             inchannels = outch
         end
@@ -131,7 +132,7 @@ function mobilenetv2(width_mult, configs; inchannels = 3, max_width = 1280, ncla
     # building first layer
     inplanes = _round_channels(32 * width_mult, width_mult == 0.1 ? 4 : 8)
     layers = []
-    append!(layers, conv_bn((3, 3), inchannels, inplanes; pad = 1, stride = 2))
+    append!(layers, conv_norm((3, 3), inchannels, inplanes; pad = 1, stride = 2))
     # building inverted residual blocks
     for (t, c, n, s, a) in configs
         outplanes = _round_channels(c * width_mult, width_mult == 0.1 ? 4 : 8)
@@ -147,7 +148,7 @@ function mobilenetv2(width_mult, configs; inchannels = 3, max_width = 1280, ncla
                 _round_channels(max_width * width_mult, width_mult == 0.1 ? 4 : 8) :
                 max_width
     return Chain(Chain(Chain(layers),
-                       conv_bn((1, 1), inplanes, outplanes, relu6; bias = false)...),
+                       conv_norm((1, 1), inplanes, outplanes, relu6; bias = false)...),
                  Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten,
                        Dense(outplanes, nclasses)))
 end
@@ -235,8 +236,8 @@ function mobilenetv3(width_mult, configs; inchannels = 3, max_width = 1024, ncla
     inplanes = _round_channels(16 * width_mult, 8)
     layers = []
     append!(layers,
-            conv_bn((3, 3), inchannels, inplanes, hardswish; pad = 1, stride = 2,
-                    bias = false))
+            conv_norm((3, 3), inchannels, inplanes, hardswish; pad = 1, stride = 2,
+                      bias = false))
     explanes = 0
     # building inverted residual blocks
     for (k, t, c, r, a, s) in configs
@@ -256,7 +257,7 @@ function mobilenetv3(width_mult, configs; inchannels = 3, max_width = 1024, ncla
                        Dropout(0.2),
                        Dense(output_channel, nclasses))
     return Chain(Chain(Chain(layers),
-                       conv_bn((1, 1), inplanes, explanes, hardswish; bias = false)...),
+                       conv_norm((1, 1), inplanes, explanes, hardswish; bias = false)...),
                  Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten, classifier))
 end
 
