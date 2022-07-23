@@ -1,5 +1,3 @@
-## It is recommended to check out the user guide for more information.
-
 """
     basicblock(inplanes, planes; stride = 1, downsample = identity,
                reduction_factor = 1, dilation = 1, first_dilation = dilation,
@@ -43,8 +41,7 @@ function basicblock(inplanes, planes; stride = 1, reduction_factor = 1, activati
                          pad = 1, bias = false)
     layers = [conv_bn1..., drop_block, activation, conv_bn2..., attn_fn(outplanes),
         drop_path]
-    filter!(x -> x !== identity, layers)
-    return Chain(layers...)
+    return Chain(filter!(!=(identity), layers)...)
 end
 expansion_factor(::typeof(basicblock)) = 1
 
@@ -96,8 +93,7 @@ function bottleneck(inplanes, planes; stride = 1, cardinality = 1, base_width = 
                          bias = false)
     layers = [conv_bn1..., conv_bn2..., drop_block, activation, conv_bn3...,
         attn_fn(outplanes), drop_path]
-    filter!(x -> x !== identity, layers)
-    return Chain(layers...)
+    return Chain(filter!(!=(identity), layers)...)
 end
 expansion_factor(::typeof(bottleneck)) = 4
 
@@ -263,11 +259,12 @@ function configure_block(block_template, layers::Vector{Int}; expansion,
     function get_layers(idxs::NTuple{2, Int})
         stage_idx, block_idx = idxs
         planes = 64 * 2^(stage_idx - 1)
+        # `get_stride` is a callback that the user can tweak to change the stride of the
+        # blocks. It defaults to the standard behaviour as in the paper.
         stride = get_stride(idxs)
         downsample_fns = downsample_templates[stage_idx]
         downsample_fn = (stride != 1 || inplanes != planes * expansion) ?
-                        downsample_fns[1] :
-                        downsample_fns[2]
+                        downsample_fns[1] : downsample_fns[2]
         # DropBlock, DropPath both take in rates based on a linear scaling schedule
         schedule_idx = sum(layers[1:(stage_idx - 1)]) + block_idx
         drop_path = DropPath(pathschedule[schedule_idx])
@@ -285,16 +282,9 @@ end
 # used by end-users. `block_fn` is a function that returns a single block of the ResNet. 
 # See `basicblock` and `bottleneck` for examples. A block must define a function 
 # `expansion(::typeof(block))` that returns the expansion factor of the block.
-function resnet_stages(block_fn, block_repeats::Vector{Int}, inplanes::Integer;
-                       downsample_vec::Vector, connection = addact,
-                       activation = relu, kwargs...)
+function resnet_stages(get_layers, block_repeats::Vector{Int}, inplanes::Integer;
+                       connection = addact, activation = relu, kwargs...)
     outplanes = 0
-    # Configure block template
-    block_template = template_builder(block_fn; kwargs...)
-    downsample_templates = map(x -> template_builder.(x), downsample_vec)
-    get_layers = configure_block(block_template, block_repeats; inplanes,
-                                 downsample_templates,
-                                 expansion = expansion_factor(block_fn), kwargs...)
     # Construct each stage
     stages = []
     for (stage_idx, (num_blocks)) in enumerate(block_repeats)
@@ -313,24 +303,21 @@ end
 function resnet(block_fn, layers::Vector{Int}, downsample_opt = :B;
                 inchannels::Integer = 3, nclasses::Integer = 1000,
                 stem = first(resnet_stem(; inchannels)), inplanes::Integer = 64,
+                pool_layer = AdaptiveMeanPool((1, 1)), use_conv = false, dropout_rate = 0.0,
                 kwargs...)
-    # Feature Blocks
+    # Configure downsample templates
     downsample_vec = _make_downsample_fns(downsample_opt, layers)
-    stage_blocks, num_features = resnet_stages(block_fn, layers, inplanes; downsample_vec,
-                                               kwargs...)
-    # Classifier head
-    pool_layer = get(kwargs, :pool_layer, AdaptiveMeanPool((1, 1)))
-    use_conv = get(kwargs, :use_conv, false)
-    # Pooling
-    if pool_layer === identity
-        @assert use_conv
-        "Pooling can only be disabled if classifier is also removed or a convolution-based classifier is used"
-    end
-    flatten_in_pool = !use_conv && pool_layer !== identity
-    global_pool = flatten_in_pool ? Chain(pool_layer, MLUtils.flatten) : pool_layer
-    # Fully-connected layer
-    fc = create_fc(num_features, nclasses; use_conv)
-    classifier = Chain(global_pool, Dropout(get(kwargs, :dropout_rate, 0)), fc)
+    downsample_templates = map(x -> template_builder.(x), downsample_vec)
+    # Configure block templates
+    block_template = template_builder(block_fn; kwargs...)
+    get_layers = configure_block(block_template, layers; inplanes,
+                                 downsample_templates,
+                                 expansion = expansion_factor(block_fn), kwargs...)
+    # Build stages of the ResNet
+    stage_blocks, num_features = resnet_stages(get_layers, layers, inplanes; kwargs...)
+    # Build the classifier head
+    classifier = create_classifier(num_features, nclasses; dropout_rate, pool_layer,
+                                   use_conv)
     return Chain(Chain(stem, stage_blocks), classifier)
 end
 

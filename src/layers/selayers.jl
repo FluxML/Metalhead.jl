@@ -26,8 +26,7 @@ function squeeze_excite(inplanes; reduction = 16, rd_divisor = 8,
         Conv((1, 1), rd_planes => inplanes),
         norm_layer(inplanes),
         gate_activation]
-    filter!(x -> x !== identity, layers)
-    return SkipConnection(Chain(layers...), .*)
+    return SkipConnection(Chain(filter!(!=(identity), layers)...), .*)
 end
 
 """

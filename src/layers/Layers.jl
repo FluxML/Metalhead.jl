@@ -20,7 +20,7 @@ include("embeddings.jl")
 export PatchEmbedding, ViPosEmbedding, ClassTokens
 
 include("mlp.jl")
-export mlp_block, gated_mlp_block, create_fc
+export mlp_block, gated_mlp_block, create_fc, create_classifier
 
 include("normalise.jl")
 export prenorm, ChannelLayerNorm
