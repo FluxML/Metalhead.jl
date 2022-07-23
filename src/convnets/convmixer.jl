@@ -28,13 +28,15 @@ function convmixer(planes, depth; inchannels = 3, kernel_size = (9, 9),
     return Chain(Chain(stem..., Chain(blocks)), head)
 end
 
-convmixer_config = Dict(:base => Dict(:planes => 1536, :depth => 20, :kernel_size => (9, 9),
-                                      :patch_size => (7, 7)),
-                        :small => Dict(:planes => 768, :depth => 32, :kernel_size => (7, 7),
-                                       :patch_size => (7, 7)),
-                        :large => Dict(:planes => 1024, :depth => 20,
+convmixer_configs = Dict(:base => Dict(:planes => 1536, :depth => 20,
                                        :kernel_size => (9, 9),
-                                       :patch_size => (7, 7)))
+                                       :patch_size => (7, 7)),
+                         :small => Dict(:planes => 768, :depth => 32,
+                                        :kernel_size => (7, 7),
+                                        :patch_size => (7, 7)),
+                         :large => Dict(:planes => 1024, :depth => 20,
+                                        :kernel_size => (9, 9),
+                                        :patch_size => (7, 7)))
 
 """
     ConvMixer(mode::Symbol = :base; inchannels = 3, activation = gelu, nclasses = 1000)
@@ -52,18 +54,18 @@ Creates a ConvMixer model.
 struct ConvMixer
     layers::Any
 end
+@functor ConvMixer
 
 function ConvMixer(mode::Symbol = :base; inchannels = 3, activation = gelu, nclasses = 1000)
-    planes = convmixer_config[mode][:planes]
-    depth = convmixer_config[mode][:depth]
-    kernel_size = convmixer_config[mode][:kernel_size]
-    patch_size = convmixer_config[mode][:patch_size]
+    _checkconfig(mode, keys(convmixer_configs))
+    planes = convmixer_configs[mode][:planes]
+    depth = convmixer_configs[mode][:depth]
+    kernel_size = convmixer_configs[mode][:kernel_size]
+    patch_size = convmixer_configs[mode][:patch_size]
     layers = convmixer(planes, depth; inchannels, kernel_size, patch_size, activation,
                        nclasses)
     return ConvMixer(layers)
 end
-
-@functor ConvMixer
 
 (m::ConvMixer)(x) = m.layers(x)
 

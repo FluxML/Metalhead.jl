@@ -66,20 +66,16 @@ function convnext(depths, planes; inchannels = 3, drop_path_rate = 0.0, λ = 1.0
 end
 
 # Configurations for ConvNeXt models
-convnext_configs = Dict(:tiny => Dict(:depths => [3, 3, 9, 3],
-                                      :planes => [96, 192, 384, 768]),
-                        :small => Dict(:depths => [3, 3, 27, 3],
-                                       :planes => [96, 192, 384, 768]),
-                        :base => Dict(:depths => [3, 3, 27, 3],
-                                      :planes => [128, 256, 512, 1024]),
-                        :large => Dict(:depths => [3, 3, 27, 3],
-                                       :planes => [192, 384, 768, 1536]),
-                        :xlarge => Dict(:depths => [3, 3, 27, 3],
-                                        :planes => [256, 512, 1024, 2048]))
+convnext_configs = Dict(:tiny => ([3, 3, 9, 3], [96, 192, 384, 768]),
+                        :small => ([3, 3, 27, 3], [96, 192, 384, 768]),
+                        :base => ([3, 3, 27, 3], [128, 256, 512, 1024]),
+                        :large => ([3, 3, 27, 3], [192, 384, 768, 1536]),
+                        :xlarge => ([3, 3, 27, 3], [256, 512, 1024, 2048]))
 
 struct ConvNeXt
     layers::Any
 end
+@functor ConvNeXt
 
 """
     ConvNeXt(mode::Symbol = :base; inchannels = 3, drop_path_rate = 0., λ = 1f-6, nclasses = 1000)
@@ -98,17 +94,12 @@ See also [`Metalhead.convnext`](#).
 """
 function ConvNeXt(mode::Symbol = :base; inchannels = 3, drop_path_rate = 0.0, λ = 1.0f-6,
                   nclasses = 1000)
-    @assert mode in keys(convnext_configs)
-    "`size` must be one of $(collect(keys(convnext_configs)))"
-    depths = convnext_configs[mode][:depths]
-    planes = convnext_configs[mode][:planes]
-    layers = convnext(depths, planes; inchannels, drop_path_rate, λ, nclasses)
+    _checkconfig(mode, keys(convnext_configs))
+    layers = convnext(convnext_configs[mode]...; inchannels, drop_path_rate, λ, nclasses)
     return ConvNeXt(layers)
 end
 
 (m::ConvNeXt)(x) = m.layers(x)
-
-@functor ConvNeXt
 
 backbone(m::ConvNeXt) = m.layers[1]
 classifier(m::ConvNeXt) = m.layers[2]
