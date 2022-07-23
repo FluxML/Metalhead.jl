@@ -18,7 +18,7 @@ function in [`resnet`](#).
 
 See also [`reluadd`](#).
 """
-addact(activation = relu, xs...) = activation(sum(tuple(xs...)))
+addact(activation = relu, xs...) = activation(sum(xs))
 
 """
     actadd(activation = relu, xs...)
@@ -29,7 +29,7 @@ function to them. Useful as the `connection` argument for the block function in
 
 See also [`addrelu`](#).
 """
-actadd(activation = relu, xs...) = sum(activation.(tuple(xs...)))
+actadd(activation = relu, xs...) = sum(activation.(x) for x in xs)
 
 """
     cat_channels(x, y, zs...)
@@ -68,5 +68,11 @@ end
 Returns the dropout rates for a given depth using the linear scaling rule.
 """
 function linear_scheduler(drop_rate = 0.0; depth, start_value = 0.0)
-    return LinRange{Float32}(start_value, drop_rate, depth)
+    return LinRange(start_value, drop_rate, depth)
+end
+
+# Utility function for depth and configuration checks in models
+function _checkconfig(config, configs)
+    @assert config in configs
+    return "Invalid configuration. Must be one of $(sort(collect(configs)))."
 end

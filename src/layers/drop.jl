@@ -1,6 +1,7 @@
 # Generates the mask to be used for `DropBlock`
 @inline function _dropblock_mask(rng, x, gamma, clipped_block_size)
-    block_mask = Flux.f32(rand_like(rng, x) .< gamma)
+    block_mask = rand_like(rng, x)
+    block_mask .= block_mask .< gamma
     return 1 .- maxpool(block_mask, (clipped_block_size, clipped_block_size);
                    stride = 1, pad = clipped_block_size ÷ 2)
 end
@@ -35,7 +36,7 @@ function dropblock(rng::AbstractRNG, x::AbstractArray{T, 4}, drop_block_prob, bl
     gamma = gamma_scale * drop_block_prob * total_size / clipped_block_size^2 /
             ((W - block_size + 1) * (H - block_size + 1))
     block_mask = dropblock_mask(rng, x, gamma, clipped_block_size)
-    normalize_scale = convert(T, (length(block_mask) / sum(block_mask) .+ 1e-6))
+    normalize_scale = length(block_mask) / sum(block_mask) .+ T(1e-6)
     return x .* block_mask .* normalize_scale
 end
 
@@ -55,21 +56,17 @@ mutable struct DropBlock{F, R <: AbstractRNG}
     active::Union{Bool, Nothing}
     rng::R
 end
-
 @functor DropBlock
 trainable(a::DropBlock) = (;)
 
-function _dropblock_checks(x::T, drop_block_prob, gamma_scale) where {T}
+function _dropblock_checks(x::AbstractArray{<:Any, 4}, drop_block_prob, gamma_scale)
     @assert 0 ≤ drop_block_prob ≤ 1
     "drop_block_prob must be between 0 and 1, got $drop_block_prob"
     @assert 0 ≤ gamma_scale ≤ 1
     "gamma_scale must be between 0 and 1, got $gamma_scale"
-    if !(T <: AbstractArray)
-        throw(ArgumentError("x must be an `AbstractArray`"))
-    end
-    if ndims(x) != 4
-        throw(ArgumentError("x must have 4 dimensions (H, W, C, N) for `DropBlock`"))
-    end
+end
+function _dropblock_checks(x, drop_block_prob, gamma_scale)
+    throw(ArgumentError("x must be an array with 4 dimensions (H, W, C, N) for DropBlock."))
 end
 ChainRulesCore.@non_differentiable _dropblock_checks(x, drop_block_prob, gamma_scale)
 

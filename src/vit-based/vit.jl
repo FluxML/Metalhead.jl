@@ -94,10 +94,11 @@ See also [`Metalhead.vit`](#).
 struct ViT
     layers::Any
 end
+@functor ViT
 
 function ViT(mode::Symbol = :base; imsize::Dims{2} = (256, 256), inchannels = 3,
              patch_size::Dims{2} = (16, 16), pool = :class, nclasses = 1000)
-    @assert mode in keys(vit_configs) "`mode` must be one of $(keys(vit_configs))"
+    _checkconfig(mode, keys(vit_configs))
     kwargs = vit_configs[mode]
     layers = vit(imsize; inchannels, patch_size, nclasses, pool, kwargs...)
     return ViT(layers)
@@ -107,5 +108,3 @@ end
 
 backbone(m::ViT) = m.layers[1]
 classifier(m::ViT) = m.layers[2]
-
-@functor ViT

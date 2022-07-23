@@ -21,26 +21,38 @@ using .Layers
 # CNN models
 include("convnets/alexnet.jl")
 include("convnets/vgg.jl")
-include("convnets/inception.jl")
-include("convnets/googlenet.jl")
-include("convnets/densenet.jl")
-include("convnets/squeezenet.jl")
-include("convnets/mobilenet.jl")
-include("convnets/efficientnet.jl")
-include("convnets/convnext.jl")
-include("convnets/convmixer.jl")
 ## ResNets
 include("convnets/resnets/core.jl")
 include("convnets/resnets/resnet.jl")
 include("convnets/resnets/resnext.jl")
 include("convnets/resnets/seresnet.jl")
+## Inceptions
+include("convnets/inception/googlenet.jl")
+include("convnets/inception/inceptionv3.jl")
+include("convnets/inception/inceptionv4.jl")
+include("convnets/inception/inceptionresnetv2.jl")
+include("convnets/inception/xception.jl")
+## MobileNets
+include("convnets/mobilenet/mobilenetv1.jl")
+include("convnets/mobilenet/mobilenetv2.jl")
+include("convnets/mobilenet/mobilenetv3.jl")
+## Others
+include("convnets/densenet.jl")
+include("convnets/squeezenet.jl")
+include("convnets/efficientnet.jl")
+include("convnets/convnext.jl")
+include("convnets/convmixer.jl")
 
-# Other models
-include("other/mlpmixer.jl")
+# Mixers
+include("mixers/core.jl")
+include("mixers/mlpmixer.jl")
+include("mixers/resmlp.jl")
+include("mixers/gmlp.jl")
 
-# ViT-based models
+# ViTs
 include("vit-based/vit.jl")
 
+# Load pretrained weights
 include("pretrain.jl")
 
 export AlexNet, VGG, VGG11, VGG13, VGG16, VGG19,

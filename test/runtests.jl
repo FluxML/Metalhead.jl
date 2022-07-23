@@ -61,9 +61,9 @@ end
 GC.safepoint()
 GC.gc()
 
-# Other tests
-@testset verbose = true "Other" begin
-    include("other.jl")
+# Mixer tests
+@testset verbose = true "Mixers" begin
+    include("mixers.jl")
 end
 
 GC.safepoint()
@@ -71,5 +71,5 @@ GC.gc()
 
 # ViT tests
 @testset verbose = true "ViTs" begin
-    include("vit-based.jl")
+    include("vits.jl")
 end

@@ -32,9 +32,8 @@ function basicblock(inplanes, planes; stride = 1, reduction_factor = 1, activati
                     norm_layer = BatchNorm, prenorm = false,
                     drop_block = identity, drop_path = identity,
                     attn_fn = planes -> identity)
-    expansion = expansion_factor(basicblock)
     first_planes = planes ÷ reduction_factor
-    outplanes = planes * expansion
+    outplanes = planes * expansion_factor(basicblock)
     conv_bn1 = conv_norm((3, 3), inplanes => first_planes, identity; norm_layer, prenorm,
                          stride, pad = 1, bias = false)
     conv_bn2 = conv_norm((3, 3), first_planes => outplanes, identity; norm_layer, prenorm,
@@ -81,10 +80,9 @@ function bottleneck(inplanes, planes; stride = 1, cardinality = 1, base_width = 
                     norm_layer = BatchNorm, prenorm = false,
                     drop_block = identity, drop_path = identity,
                     attn_fn = planes -> identity)
-    expansion = expansion_factor(bottleneck)
     width = floor(Int, planes * (base_width / 64)) * cardinality
     first_planes = width ÷ reduction_factor
-    outplanes = planes * expansion
+    outplanes = planes * expansion_factor(bottleneck)
     conv_bn1 = conv_norm((1, 1), inplanes => first_planes, activation; norm_layer, prenorm,
                          bias = false)
     conv_bn2 = conv_norm((3, 3), first_planes => width, identity; norm_layer, prenorm,
@@ -322,8 +320,8 @@ function resnet(block_fn, layers::Vector{Int}, downsample_opt = :B;
 end
 
 # block-layer configurations for ResNet-like models
-const resnet_config = Dict(18 => (basicblock, [2, 2, 2, 2]),
-                           34 => (basicblock, [3, 4, 6, 3]),
-                           50 => (bottleneck, [3, 4, 6, 3]),
-                           101 => (bottleneck, [3, 4, 23, 3]),
-                           152 => (bottleneck, [3, 8, 36, 3]))
+const resnet_configs = Dict(18 => (basicblock, [2, 2, 2, 2]),
+                            34 => (basicblock, [3, 4, 6, 3]),
+                            50 => (bottleneck, [3, 4, 6, 3]),
+                            101 => (bottleneck, [3, 4, 23, 3]),
+                            152 => (bottleneck, [3, 8, 36, 3]))

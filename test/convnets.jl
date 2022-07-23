@@ -46,7 +46,7 @@ end
                     (dropout_rate = 0.8, drop_path_rate = 0.8, drop_block_rate = 0.8),
                 ]
                 @testset for drop_rates in drop_list
-                    m = Metalhead.resnet(block_fn, layers; drop_rates)
+                    m = Metalhead.resnet(block_fn, layers; drop_rates...)
                     @test size(m(x_224)) == (1000, 1)
                     @test gradtest(m, x_224)
                     _gc()
@@ -75,7 +75,7 @@ end
 end
 
 @testset "SEResNet" begin
-    @testset for depth in [50, 101, 152]
+    @testset for depth in [18, 34, 50, 101, 152]
         m = SEResNet(depth)
         @test size(m(x_224)) == (1000, 1)
         if (SEResNet, depth) in PRETRAINED_MODELS
