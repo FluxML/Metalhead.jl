@@ -45,8 +45,8 @@ end
                     (dropout_rate = 0.5, drop_path_rate = 0.5, drop_block_rate = 0.5),
                     (dropout_rate = 0.8, drop_path_rate = 0.8, drop_block_rate = 0.8),
                 ]
-                @testset for drop_rates in drop_list
-                    m = Metalhead.resnet(block_fn, layers; drop_rates...)
+                @testset for dropout_rates in drop_list
+                    m = Metalhead.resnet(block_fn, layers; dropout_rates...)
                     @test size(m(x_224)) == (1000, 1)
                     @test gradtest(m, x_224)
                     _gc()

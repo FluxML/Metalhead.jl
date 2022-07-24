@@ -61,16 +61,12 @@ Creates a classifier head to be used for models.
   - `dropout_rate`: dropout rate used in the classifier head.
   - `use_conv`: whether to use a 1x1 convolutional layer instead of a `Dense` layer.
 """
-function create_classifier(inplanes, nclasses; pool_layer = AdaptiveMeanPool((1, 1)),
-                           dropout_rate = 0.0, use_conv = false)
-    # Pooling
-    if pool_layer === identity
-        @assert use_conv
-        "Pooling can only be disabled if classifier is also removed or a convolution-based classifier is used"
-    end
+function create_classifier(inplanes, nclasses; activation = identity, use_conv = false,
+                           pool_layer = AdaptiveMeanPool((1, 1)), dropout_rate = 0.0)
     flatten_in_pool = !use_conv && pool_layer !== identity
     global_pool = flatten_in_pool ? Chain(pool_layer, MLUtils.flatten) : pool_layer
     # Fully-connected layer
-    fc = use_conv ? Conv((1, 1), inplanes => nclasses) : Dense(inplanes => nclasses)
+    fc = use_conv ? Conv((1, 1), inplanes => nclasses, activation) :
+         Dense(inplanes => nclasses, activation)
     return Chain(global_pool, Dropout(dropout_rate), fc)
 end

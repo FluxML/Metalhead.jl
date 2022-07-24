@@ -1,5 +1,10 @@
-# Utility function for applying LayerNorm before a block
-prenorm(planes, fn) = Chain(LayerNorm(planes), fn)
+# Utility functions for applying residual norm layers before and after a block
+function residualprenorm(planes, fn; norm_layer = LayerNorm)
+    return SkipConnection(Chain(norm_layer(planes), fn), +)
+end
+function residualpostnorm(planes, fn; norm_layer = LayerNorm)
+    return SkipConnection(Chain(fn, norm_layer(planes)), +)
+end
 
 """
     ChannelLayerNorm(sz::Integer, λ = identity; ϵ = 1.0f-6)

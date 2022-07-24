@@ -1,33 +1,84 @@
-"""
-transformer_encoder(planes, depth, nheads; mlp_ratio = 4.0, dropout_rate = 0.)
+# Attention layer used in ViT
 
-Transformer as used in the base ViT architecture.
-([reference](https://arxiv.org/abs/2010.11929)).
+"""
+    MHAttention(planes::Integer, nheads::Integer = 8; qkv_bias::Bool = false, attn_dropout_rate = 0., proj_dropout_rate = 0.)
+
+Multi-head self-attention layer.
 
 # Arguments
 
   - `planes`: number of input channels
-  - `depth`: number of attention blocks
-  - `nheads`: number of attention heads
-  - `mlp_ratio`: ratio of MLP layers to the number of input channels
-  - `dropout_rate`: dropout rate
+  - `nheads`: number of heads
+  - `qkv_bias`: whether to use bias in the layer to get the query, key and value
+  - `attn_dropout_rate`: dropout rate after the self-attention layer
+  - `proj_dropout_rate`: dropout rate after the projection layer
 """
-function transformer_encoder(planes, depth, nheads; mlp_ratio = 4.0, dropout_rate = 0.0)
-    layers = [Chain(SkipConnection(prenorm(planes,
-                                           MHAttention(planes, nheads;
-                                                       attn_drop_rate = dropout_rate,
-                                                       proj_drop_rate = dropout_rate)), +),
-                    SkipConnection(prenorm(planes,
-                                           mlp_block(planes, floor(Int, mlp_ratio * planes);
-                                                     dropout_rate)), +))
-              for _ in 1:depth]
-    return Chain(layers)
+struct MHAttention{P, Q, R}
+    nheads::Int
+    qkv_layer::P
+    attn_drop::Q
+    projection::R
+end
+@functor MHAttention
+
+function MHAttention(planes::Integer, nheads::Integer = 8; qkv_bias::Bool = false,
+                     attn_dropout_rate = 0.0, proj_dropout_rate = 0.0)
+    @assert planes % nheads==0 "planes should be divisible by nheads"
+    qkv_layer = Dense(planes, planes * 3; bias = qkv_bias)
+    attn_drop = Dropout(attn_dropout_rate)
+    proj = Chain(Dense(planes, planes), Dropout(proj_dropout_rate))
+    return MHAttention(nheads, qkv_layer, attn_drop, proj)
+end
+
+function (m::MHAttention)(x::AbstractArray{T, 3}) where {T}
+    nfeatures, seq_len, batch_size = size(x)
+    x_reshaped = reshape(x, nfeatures, seq_len * batch_size)
+    qkv = m.qkv_layer(x_reshaped)
+    qkv_reshaped = reshape(qkv, nfeatures ÷ m.nheads, m.nheads, seq_len, 3 * batch_size)
+    query, key, value = chunk(qkv_reshaped, 3; dims = 4)
+    scale = convert(T, sqrt(size(query, 1) / m.nheads))
+    key_reshaped = reshape(permutedims(key, (2, 1, 3, 4)), m.nheads, nfeatures ÷ m.nheads,
+                           seq_len * batch_size)
+    query_reshaped = reshape(permutedims(query, (1, 2, 3, 4)), nfeatures ÷ m.nheads,
+                             m.nheads, seq_len * batch_size)
+    attention = m.attn_drop(softmax(batched_mul(query_reshaped, key_reshaped) .* scale))
+    value_reshaped = reshape(permutedims(value, (1, 2, 3, 4)), nfeatures ÷ m.nheads,
+                             m.nheads, seq_len * batch_size)
+    pre_projection = reshape(batched_mul(attention, value_reshaped),
+                             (nfeatures, seq_len, batch_size))
+    y = m.projection(reshape(pre_projection, size(pre_projection, 1), :))
+    return reshape(y, :, seq_len, batch_size)
+end
+
+# Block in the transformer in ViT
+
+function vitblock(planes, nheads; mlp_ratio = 4.0, qkv_bias = false,
+                  layerscale_init = 1.0f-5, norm_type = residualprenorm,
+                  dropout_rate = 0.0, attn_dropout_rate = 0.0,
+                  proj_dropout_rate = 0.0, drop_path_rate = 0.0,
+                  activation = gelu, norm_layer = LayerNorm)
+    @assert norm_type in (residualprenorm, residualpostnorm)
+    "`norm_type` should be either `residualprenorm` or `residualpostnorm`"
+    if norm_type == residualpostnorm
+        layerscale_init = 0.0f0
+        @info "Disabling LayerScale for `norm_type == postnorm`" maxlog=1
+    end
+    return Chain(norm_type(planes,
+                           Chain(MHAttention(planes, nheads; qkv_bias, attn_dropout_rate,
+                                             proj_dropout_rate),
+                                 LayerScale(planes, layerscale_init),
+                                 DropPath(drop_path_rate)); norm_layer),
+                 norm_type(planes,
+                           Chain(mlp_block(planes, Int(planes * mlp_ratio); dropout_rate,
+                                           activation),
+                                 LayerScale(planes, layerscale_init),
+                                 DropPath(drop_path_rate)); norm_layer))
 end
 
 """
     vit(imsize::Dims{2} = (256, 256); inchannels = 3, patch_size::Dims{2} = (16, 16),
         embedplanes = 768, depth = 6, nheads = 16, mlp_ratio = 4.0, dropout_rate = 0.1,
-        emb_drop_rate = 0.1, pool = :class, nclasses = 1000)
+        emb_dropout_rate = 0.1, pool = :class, nclasses = 1000)
 
 Creates a Vision Transformer (ViT) model.
 ([reference](https://arxiv.org/abs/2010.11929)).
@@ -46,20 +97,37 @@ Creates a Vision Transformer (ViT) model.
   - `pool`: pooling type, either :class or :mean
   - `nclasses`: number of classes in the output
 """
-function vit(imsize::Dims{2} = (256, 256); inchannels = 3, patch_size::Dims{2} = (16, 16),
-             embedplanes = 768, depth = 6, nheads = 16, mlp_ratio = 4.0, dropout_rate = 0.1,
-             emb_drop_rate = 0.1, pool = :class, nclasses = 1000)
+function vit(imsize::Dims{2} = (256, 256); patch_size::Dims{2} = (16, 16),
+             block_fn = vitblock, use_cls_token = true, pre_cls_token = true,
+             norm_type = residualprenorm, embedplanes = 768, depth = 12, nheads = 12,
+             mlp_ratio = 4.0, layerscale_init = 1.0f-5, activation = gelu,
+             norm_layer = LayerNorm, dropout_rate = 0.0, drop_path_rate = 0.0,
+             pool = :class, inchannels = 3, nclasses = 1000)
     @assert pool in [:class, :mean]
     "Pool type must be either `:class` (class token) or `:mean` (mean pooling)"
     npatches = prod(imsize .÷ patch_size)
+    emb_dropout_rate = attn_dropout_rate = proj_dropout_rate = dropout_rate
+    dp_rates = linear_scheduler(drop_path_rate; depth)
+    transformer = Chain([block_fn(embedplanes, nheads; mlp_ratio, qkv_bias = false,
+                                  layerscale_init, norm_type,
+                                  attn_dropout_rate, proj_dropout_rate,
+                                  drop_path_rate = dp_rates[i],
+                                  activation, norm_layer)
+                         for i in eachindex(dp_rates)]...)
+    pos_embed = []
+    embedlen = pre_cls_token ? npatches + 1 : npatches
+    push!(pos_embed, PositionalEmbedding(embedplanes, embedlen))
+    if use_cls_token
+        cls_token = ClassTokens(embedplanes)
+        pre_cls_token ? pushfirst!(pos_embed, cls_token) : push!(pos_embed, cls_token)
+    end
+    pool_layer = pool == :class ? x -> x[:, 1, :] : seconddimmean
+    fc = create_classifier(embedplanes, nclasses; activation = tanh, pool_layer,
+                           dropout_rate)
     return Chain(Chain(PatchEmbedding(imsize; inchannels, patch_size, embedplanes),
-                       ClassTokens(embedplanes),
-                       ViPosEmbedding(embedplanes, npatches + 1),
-                       Dropout(emb_drop_rate),
-                       transformer_encoder(embedplanes, depth, nheads; mlp_ratio,
-                                           dropout_rate),
-                       (pool == :class) ? x -> x[:, 1, :] : seconddimmean),
-                 Chain(LayerNorm(embedplanes), Dense(embedplanes, nclasses, tanh_fast)))
+                       Chain(pos_embed..., Dropout(emb_dropout_rate)),
+                       transformer,
+                       LayerNorm(embedplanes)), fc)
 end
 
 vit_configs = Dict(:tiny => (depth = 12, embedplanes = 192, nheads = 3),

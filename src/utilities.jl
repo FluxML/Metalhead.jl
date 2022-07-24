@@ -67,12 +67,12 @@ end
 
 Returns the dropout rates for a given depth using the linear scaling rule.
 """
-function linear_scheduler(drop_rate = 0.0; depth, start_value = 0.0)
-    return LinRange(start_value, drop_rate, depth)
+function linear_scheduler(dropout_rate = 0.0; depth, start_value = 0.0)
+    return LinRange(start_value, dropout_rate, depth)
 end
 
 # Utility function for depth and configuration checks in models
 function _checkconfig(config, configs)
     @assert config in configs
-    return "Invalid configuration. Must be one of $(sort(collect(configs)))."
+    return "Invalid model configuration. Must be one of $(sort(collect(configs)))."
 end

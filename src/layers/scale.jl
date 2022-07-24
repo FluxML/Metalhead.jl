@@ -19,6 +19,6 @@ Creates a `Flux.Scale` layer that performs "`LayerScale`"
   - `planes`: Size of channel dimension in the input.
   - `λ`: initialisation value for the learnable diagonal matrix.
 """
-function LayerScale(planes::Integer, λ)
+function LayerScale(planes::Integer, λ = 1.0f-5)
     return λ > 0 ? Flux.Scale(fill(Float32(λ), planes), false) : identity
 end

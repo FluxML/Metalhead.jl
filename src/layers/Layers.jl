@@ -13,17 +13,14 @@ using Random
 
 include("../utilities.jl")
 
-include("attention.jl")
-export MHAttention
-
 include("embeddings.jl")
-export PatchEmbedding, ViPosEmbedding, ClassTokens
+export PatchEmbedding, PositionalEmbedding, ClassTokens
 
 include("mlp.jl")
 export mlp_block, gated_mlp_block, create_fc, create_classifier
 
 include("normalise.jl")
-export prenorm, ChannelLayerNorm
+export residualprenorm, residualpostnorm, ChannelLayerNorm
 
 include("conv.jl")
 export conv_norm, depthwise_sep_conv_bn, invertedresidual, skip_identity, skip_projection
