@@ -10,22 +10,26 @@ function _round_channels(channels, divisor, min_value = divisor)
 end
 
 """
-    addrelu(x, y)
+    addact(activation = relu, xs...)
 
-Convenience function for `(x, y) -> @. relu(x + y)`.
-Useful as the `connection` argument for [`resnet`](#).
+Convenience function for applying an activation function to the output after
+summing up the input arrays. Useful as the `connection` argument for the block
+function in [`resnet`](#).
+
 See also [`reluadd`](#).
 """
-addrelu(x, y) = @. relu(x + y)
+addact(activation = relu, xs...) = activation(sum(tuple(xs...)))
 
 """
-    reluadd(x, y)
+    actadd(activation = relu, xs...)
 
-Convenience function for `(x, y) -> @. relu(x) + relu(y)`.
-Useful as the `connection` argument for [`resnet`](#).
+Convenience function for adding input arrays after applying an activation
+function to them. Useful as the `connection` argument for the block function in
+[`resnet`](#).
+
 See also [`addrelu`](#).
 """
-reluadd(x, y) = @. relu(x) + relu(y)
+actadd(activation = relu, xs...) = sum(activation.(tuple(xs...)))
 
 """
     cat_channels(x, y, zs...)
@@ -35,16 +39,6 @@ Equivalent to `cat(x, y, zs...; dims=3)`.
 Convenient reduction operator for use with `Parallel`.
 """
 cat_channels(xy...) = cat(xy...; dims = Val(3))
-
-"""
-    inputscale(λ; activation = identity)
-
-Scale the input by a scalar `λ` and applies an activation function to it.
-Equivalent to `activation.(λ .* x)`.
-"""
-inputscale(λ; activation = identity) = x -> _input_scale(x, λ, activation)
-_input_scale(x, λ, activation) = activation.(λ .* x)
-_input_scale(x, λ, ::typeof(identity)) = λ .* x
 
 """
     swapdims(perm)
@@ -66,4 +60,19 @@ function _maybe_big_show(io, model)
     else
         show(io, model)
     end
+end
+
+"""
+    linear_scheduler(drop_path_rate = 0.0; start_value = 0.0, depth)
+
+Returns the dropout rates for a given depth using the linear scaling rule.
+"""
+function linear_scheduler(dropout_rate = 0.0; depth, start_value = 0.0)
+    return LinRange(start_value, dropout_rate, depth)
+end
+
+# Utility function for depth and configuration checks in models
+function _checkconfig(config, configs)
+    @assert config in configs
+    return "Invalid model configuration. Must be one of $(sort(collect(configs)))."
 end

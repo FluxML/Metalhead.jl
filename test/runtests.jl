@@ -15,6 +15,11 @@ const PRETRAINED_MODELS = [
     (ResNet, 152),
 ]
 
+function _gc()
+    GC.safepoint()
+    GC.gc(true)
+end
+
 function gradtest(model, input)
     y, pb = Zygote.pullback(() -> model(input), Flux.params(model))
     gs = pb(ones(Float32, size(y)))
@@ -56,9 +61,9 @@ end
 GC.safepoint()
 GC.gc()
 
-# Other tests
-@testset verbose = true "Other" begin
-    include("other.jl")
+# Mixer tests
+@testset verbose = true "Mixers" begin
+    include("mixers.jl")
 end
 
 GC.safepoint()
@@ -66,5 +71,5 @@ GC.gc()
 
 # ViT tests
 @testset verbose = true "ViTs" begin
-    include("vit-based.jl")
+    include("vits.jl")
 end

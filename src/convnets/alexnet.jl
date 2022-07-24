@@ -24,7 +24,6 @@ function alexnet(; nclasses = 1000)
                          Dropout(0.5),
                          Dense(4096, 4096, relu),
                          Dense(4096, nclasses)))
-
     return layers
 end
 
@@ -46,14 +45,15 @@ See also [`alexnet`](#).
 struct AlexNet
     layers::Any
 end
+@functor AlexNet
 
 function AlexNet(; pretrain = false, nclasses = 1000)
     layers = alexnet(; nclasses = nclasses)
-    pretrain && loadpretrain!(layers, "AlexNet")
+    if pretrain
+        loadpretrain!(layers, "AlexNet")
+    end
     return AlexNet(layers)
 end
-
-@functor AlexNet
 
 (m::AlexNet)(x) = m.layers(x)
 
