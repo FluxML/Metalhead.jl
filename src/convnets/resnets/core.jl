@@ -15,12 +15,9 @@ Creates a basic ResNet block.
   - `downsample`: the downsampling function to use
   - `reduction_factor`: the reduction factor that the input feature maps are reduced by before the first
     convolution.
-  - `dilation`: the dilation of the second convolution.
-  - `first_dilation`: the dilation of the first convolution.
-  - `activation`: the activation function to use.
   - `connection`: the function applied to the output of residual and skip paths in
-    a block. See [`addact`](#) and [`actadd`](#) for an example. Note that this uses
-    PartialFunctions.jl to pass in the activation function with the notation `addact\$activation`.
+    a block. See [`addact`](#) and [`actadd`](#) for an example.
+  - `activation`: the activation function to use.
   - `norm_layer`: the normalization layer to use.
   - `drop_block`: the drop block layer. This is usually initialised in the `_make_blocks`
     function and passed in.
@@ -28,19 +25,25 @@ Creates a basic ResNet block.
     function and passed in.
   - `attn_fn`: the attention function to use. See [`squeeze_excite`](#) for an example.
 """
-function basicblock(inplanes, planes; stride = 1, reduction_factor = 1, activation = relu,
-                    norm_layer = BatchNorm, prenorm = false,
+function basicblock(inplanes::Integer, planes::Integer; downsample_fns,
+                    stride::Integer = 1, reduction_factor::Integer = 1,
+                    connection = addact, activation = relu,
+                    norm_layer = BatchNorm, prenorm::Bool = false,
                     drop_block = identity, drop_path = identity,
                     attn_fn = planes -> identity)
+    expansion = expansion_factor(basicblock)
     first_planes = planes ÷ reduction_factor
-    outplanes = planes * expansion_factor(basicblock)
+    outplanes = planes * expansion
     conv_bn1 = conv_norm((3, 3), inplanes => first_planes, identity; norm_layer, prenorm,
                          stride, pad = 1, bias = false)
     conv_bn2 = conv_norm((3, 3), first_planes => outplanes, identity; norm_layer, prenorm,
                          pad = 1, bias = false)
     layers = [conv_bn1..., drop_block, activation, conv_bn2..., attn_fn(outplanes),
         drop_path]
-    return Chain(filter!(!=(identity), layers)...)
+    downsample = downsample_block(downsample_fns, inplanes, planes, expansion;
+                                  stride, norm_layer, prenorm)
+    return Parallel(connection$activation, Chain(filter!(!=(identity), layers)...),
+                    downsample)
 end
 expansion_factor(::typeof(basicblock)) = 1
 
@@ -63,11 +66,9 @@ Creates a bottleneck ResNet block.
   - `base_width`: the number of output feature maps for each convolutional group.
   - `reduction_factor`: the reduction factor that the input feature maps are reduced by before the first
     convolution.
-  - `first_dilation`: the dilation of the 3x3 convolution.
   - `activation`: the activation function to use.
   - `connection`: the function applied to the output of residual and skip paths in
-    a block. See [`addact`](#) and [`actadd`](#) for an example. Note that this uses
-    PartialFunctions.jl to pass in the activation function with the notation `addact\$activation`.
+    a block. See [`addact`](#) and [`actadd`](#) for an example.
   - `norm_layer`: the normalization layer to use.
   - `drop_block`: the drop block layer. This is usually initialised in the `_make_blocks`
     function and passed in.
@@ -75,23 +76,28 @@ Creates a bottleneck ResNet block.
     function and passed in.
   - `attn_fn`: the attention function to use. See [`squeeze_excite`](#) for an example.
 """
-function bottleneck(inplanes, planes; stride = 1, cardinality = 1, base_width = 64,
-                    reduction_factor = 1, activation = relu,
-                    norm_layer = BatchNorm, prenorm = false,
+function bottleneck(inplanes::Integer, planes::Integer; downsample_fns, stride::Integer = 1,
+                    cardinality::Integer = 1, base_width::Integer = 64,
+                    reduction_factor::Integer = 1, connection = addact, activation = relu,
+                    norm_layer = BatchNorm, prenorm::Bool = false,
                     drop_block = identity, drop_path = identity,
                     attn_fn = planes -> identity)
+    expansion = expansion_factor(bottleneck)
     width = floor(Int, planes * (base_width / 64)) * cardinality
     first_planes = width ÷ reduction_factor
-    outplanes = planes * expansion_factor(bottleneck)
+    outplanes = planes * expansion
     conv_bn1 = conv_norm((1, 1), inplanes => first_planes, activation; norm_layer, prenorm,
                          bias = false)
     conv_bn2 = conv_norm((3, 3), first_planes => width, identity; norm_layer, prenorm,
                          stride, pad = 1, groups = cardinality, bias = false)
     conv_bn3 = conv_norm((1, 1), width => outplanes, identity; norm_layer, prenorm,
                          bias = false)
+    downsample = downsample_block(downsample_fns, inplanes, planes, expansion;
+                                  stride, norm_layer, prenorm)
     layers = [conv_bn1..., conv_bn2..., drop_block, activation, conv_bn3...,
         attn_fn(outplanes), drop_path]
-    return Chain(filter!(!=(identity), layers)...)
+    return Parallel(connection$activation, Chain(filter!(!=(identity), layers)...),
+                    downsample)
 end
 expansion_factor(::typeof(bottleneck)) = 4
 
@@ -126,6 +132,12 @@ function downsample_identity(inplanes::Integer, outplanes::Integer; kwargs...)
     end
 end
 
+function downsample_block(downsample_fns, inplanes, planes, expansion; stride, kwargs...)
+    down_fn = (stride != 1 || inplanes != planes * expansion) ? downsample_fns[1] :
+              downsample_fns[2]
+    return down_fn(inplanes, planes * expansion; stride, kwargs...)
+end
+
 # Shortcut configurations for the ResNet models
 const shortcut_dict = Dict(:A => (downsample_identity, downsample_identity),
                            :B => (downsample_conv, downsample_identity),
@@ -136,7 +148,7 @@ const shortcut_dict = Dict(:A => (downsample_identity, downsample_identity),
 # specified as a `Vector` of `Symbol`s. This is used to make the downsample
 # `Vector` for the `_make_blocks` function. If the `eltype(::Vector)` is
 # already an `NTuple{2}` of functions, it is returned unchanged.
-function _make_downsample_fns(vec::Vector{<:Symbol}, layers)
+function _make_downsample_fns(vec::Vector{<:Symbol}, block_repeats)
     downs = []
     for i in vec
         @assert i in keys(shortcut_dict)
@@ -145,19 +157,21 @@ function _make_downsample_fns(vec::Vector{<:Symbol}, layers)
     end
     return downs
 end
-function _make_downsample_fns(sym::Symbol, layers)
+function _make_downsample_fns(sym::Symbol, block_repeats)
     @assert sym in keys(shortcut_dict)
     "The shortcut type must be one of $(sort(collect(keys(shortcut_dict))))"
-    return collect(shortcut_dict[sym] for _ in 1:length(layers))
+    return collect(shortcut_dict[sym] for _ in 1:length(block_repeats))
 end
-_make_downsample_fns(vec::Vector{<:NTuple{2}}, layers) = vec
-_make_downsample_fns(tup::NTuple{2}, layers) = collect(tup for _ in 1:length(layers))
+_make_downsample_fns(vec::Vector{<:NTuple{2}}, block_repeats) = vec
+_make_downsample_fns(tup::NTuple{2}, block_repeats) = [tup for _ in 1:length(block_repeats)]
 
 # Stride for each block in the ResNet model
-get_stride(idxs::NTuple{2, Int}) = (idxs[1] == 1 || idxs[2] != 1) ? 1 : 2
+function get_stride(stage_idx::Integer, block_idx::Integer)
+    return (stage_idx == 1 || block_idx != 1) ? 1 : 2
+end
 
 # returns `DropBlock`s for each stage of the ResNet as in timm.
-# TODO - add experimental options for DropBlock as part of the API
+# TODO - add experimental options for DropBlock as part of the API (#188)
 function _drop_blocks(drop_block_rate::AbstractFloat)
     return [
         identity, identity,
@@ -187,8 +201,7 @@ on how to use this function.
         shows peformance improvements over the `:deep` stem in some cases.
 
   - `inchannels`: The number of channels in the input.
-  - `replace_pool`: Whether to replace the default 3x3 max pooling layer with a
-    3x3 convolution with stride 2 and a normalisation layer.
+  - `replace_pool`: Set to true to replace the max pooling layers with a 3x3 convolution + normalization with a stride of two.
   - `norm_layer`: The normalisation layer used in the stem.
   - `activation`: The activation function used in the stem.
 """
@@ -219,104 +232,86 @@ function resnet_stem(stem_type::Symbol = :default; inchannels::Integer = 3,
     # Stem pooling
     stempool = replace_pool ?
                Chain(conv_norm((3, 3), inplanes => inplanes, activation; norm_layer,
-                               prenorm,
-                               stride = 2, pad = 1, bias = false)...) :
+                               prenorm, stride = 2, pad = 1, bias = false)...) :
                MaxPool((3, 3); stride = 2, pad = 1)
     return Chain(conv1, bn1, stempool), inplanes
 end
 
-function template_builder(::typeof(basicblock); reduction_factor = 1, activation = relu,
-                          norm_layer = BatchNorm, prenorm = false,
-                          attn_fn = planes -> identity, kargs...)
-    return (args...; kwargs...) -> basicblock(args...; kwargs..., reduction_factor,
-                                              activation, norm_layer, prenorm, attn_fn)
-end
-
-function template_builder(::typeof(bottleneck); cardinality = 1, base_width::Integer = 64,
-                          reduction_factor = 1, activation = relu,
-                          norm_layer = BatchNorm, prenorm = false,
-                          attn_fn = planes -> identity, kargs...)
-    return (args...; kwargs...) -> bottleneck(args...; kwargs..., cardinality, base_width,
-                                              reduction_factor, activation,
-                                              norm_layer, prenorm, attn_fn)
-end
-
-function template_builder(downsample_fn::Union{typeof(downsample_conv),
-                                               typeof(downsample_pool),
-                                               typeof(downsample_identity)};
-                          norm_layer = BatchNorm, prenorm = false)
-    return (args...; kwargs...) -> downsample_fn(args...; kwargs..., norm_layer, prenorm)
-end
-
-function configure_block(block_template, layers::Vector{Int}; expansion,
-                         downsample_templates::Vector, inplanes::Integer = 64,
-                         drop_path_rate = 0.0, drop_block_rate = 0.0, kargs...)
-    pathschedule = linear_scheduler(drop_path_rate; depth = sum(layers))
-    blockschedule = linear_scheduler(drop_block_rate; depth = sum(layers))
-    # closure over `idxs`
-    function get_layers(idxs::NTuple{2, Int})
-        stage_idx, block_idx = idxs
-        planes = 64 * 2^(stage_idx - 1)
-        # `get_stride` is a callback that the user can tweak to change the stride of the
-        # blocks. It defaults to the standard behaviour as in the paper.
-        stride = get_stride(idxs)
-        downsample_fns = downsample_templates[stage_idx]
-        downsample_fn = (stride != 1 || inplanes != planes * expansion) ?
-                        downsample_fns[1] : downsample_fns[2]
-        # DropBlock, DropPath both take in rates based on a linear scaling schedule
-        schedule_idx = sum(layers[1:(stage_idx - 1)]) + block_idx
+function block_args(::typeof(basicblock), block_repeats;
+                    downsample_vec, reduction_factor = 1, activation = relu,
+                    norm_layer = BatchNorm, prenorm = false,
+                    drop_path_rate = 0.0, drop_block_rate = 0.0,
+                    attn_fn = planes -> identity)
+    pathschedule = linear_scheduler(drop_path_rate; depth = sum(block_repeats))
+    blockschedule = linear_scheduler(drop_block_rate; depth = sum(block_repeats))
+    function get_layers(stage_idx, block_idx)
+        stride = get_stride(stage_idx, block_idx)
+        downsample_fns = downsample_vec[stage_idx]
+        schedule_idx = sum(block_repeats[1:(stage_idx - 1)]) + block_idx
         drop_path = DropPath(pathschedule[schedule_idx])
         drop_block = DropBlock(blockschedule[schedule_idx])
-        block = block_template(inplanes, planes; stride, drop_path, drop_block)
-        downsample = downsample_fn(inplanes, planes * expansion; stride)
-        # inplanes increases by expansion after each block
-        inplanes = (planes * expansion)
-        return ((block, downsample), inplanes)
+        return (; downsample_fns, reduction_factor, stride, activation, norm_layer,
+                prenorm, drop_path, drop_block, attn_fn)
     end
-    return get_layers
+end
+
+function block_args(::typeof(bottleneck), block_repeats;
+                    downsample_vec, cardinality = 1, base_width = 64,
+                    reduction_factor = 1, activation = relu,
+                    norm_layer = BatchNorm, prenorm = false,
+                    drop_block_rate = 0.0, drop_path_rate = 0.0,
+                    attn_fn = planes -> identity)
+    pathschedule = linear_scheduler(drop_path_rate; depth = sum(block_repeats))
+    blockschedule = linear_scheduler(drop_block_rate; depth = sum(block_repeats))
+    function get_layers(stage_idx, block_idx)
+        stride = get_stride(stage_idx, block_idx)
+        downsample_fns = downsample_vec[stage_idx]
+        schedule_idx = sum(block_repeats[1:(stage_idx - 1)]) + block_idx
+        drop_path = DropPath(pathschedule[schedule_idx])
+        drop_block = DropBlock(blockschedule[schedule_idx])
+        return (; downsample_fns, reduction_factor, cardinality, base_width, stride,
+                activation, norm_layer, prenorm, drop_path, drop_block, attn_fn)
+    end
 end
 
 # Makes the main stages of the ResNet model. This is an internal function and should not be 
 # used by end-users. `block_fn` is a function that returns a single block of the ResNet. 
 # See `basicblock` and `bottleneck` for examples. A block must define a function 
 # `expansion(::typeof(block))` that returns the expansion factor of the block.
-function resnet_stages(get_layers, block_repeats::Vector{Int}, inplanes::Integer;
-                       connection = addact, activation = relu, kwargs...)
-    outplanes = 0
+function resnet_stages(block_fn, block_repeats::Vector{<:Integer}, inplanes::Integer;
+                       kwargs...)
     # Construct each stage
     stages = []
     for (stage_idx, (num_blocks)) in enumerate(block_repeats)
+        planes = 64 * 2^(stage_idx - 1)
+        get_kwargs = block_args(block_fn, block_repeats; kwargs...)
         # Construct the blocks for each stage
         blocks = []
         for block_idx in range(1, num_blocks)
-            layers, outplanes = get_layers((stage_idx, block_idx))
-            block = Parallel(connection$activation, layers...)
-            push!(blocks, block)
+            push!(blocks, block_fn(inplanes, planes; get_kwargs(stage_idx, block_idx)...))
+            inplanes = planes * expansion_factor(block_fn)
         end
         push!(stages, Chain(blocks...))
     end
-    return Chain(stages...), outplanes
+    return Chain(stages...)
 end
 
-function resnet(block_fn, layers::Vector{Int}, downsample_opt = :B;
-                inchannels::Integer = 3, nclasses::Integer = 1000,
+function resnet(block_fn, block_repeats::Vector{<:Integer}, downsample_opt = :B;
+                imsize::Dims{2} = (256, 256), inchannels::Integer = 3,
                 stem = first(resnet_stem(; inchannels)), inplanes::Integer = 64,
-                pool_layer = AdaptiveMeanPool((1, 1)), use_conv = false, dropout_rate = 0.0,
-                kwargs...)
+                pool_layer = AdaptiveMeanPool((1, 1)), dropout_rate = 0.0,
+                use_conv_classifier::Bool = false, nclasses::Integer = 1000, kwargs...)
     # Configure downsample templates
-    downsample_vec = _make_downsample_fns(downsample_opt, layers)
-    downsample_templates = map(x -> template_builder.(x), downsample_vec)
-    # Configure block templates
-    block_template = template_builder(block_fn; kwargs...)
-    get_layers = configure_block(block_template, layers; inplanes,
-                                 downsample_templates,
-                                 expansion = expansion_factor(block_fn), kwargs...)
+    downsample_vec = _make_downsample_fns(downsample_opt, block_repeats)
     # Build stages of the ResNet
-    stage_blocks, num_features = resnet_stages(get_layers, layers, inplanes; kwargs...)
+    stage_blocks = resnet_stages(block_fn, block_repeats, inplanes; downsample_vec,
+                                 kwargs...)
+    backbone = Chain(stem, stage_blocks)
     # Build the classifier head
-    classifier = create_classifier(num_features, nclasses; dropout_rate, pool_layer,
-                                   use_conv)
-    return Chain(Chain(stem, stage_blocks), classifier)
+    outfeatures = Flux.outputsize(backbone, (imsize..., inchannels); padbatch = true)
+    classifier = create_classifier(outfeatures[3], nclasses; dropout_rate, pool_layer,
+                                   use_conv = use_conv_classifier)
+    return Chain(backbone, classifier)
 end
 
 # block-layer configurations for ResNet-like models
