@@ -4,7 +4,6 @@
     mobilenetv1(width_mult, config;
                 activation = relu,
                 inchannels = 3,
-                fcsize = 1024,
                 nclasses = 1000)
 
 Create a MobileNetv1 model ([reference](https://arxiv.org/abs/1704.04861v1)).
@@ -22,13 +21,11 @@ Create a MobileNetv1 model ([reference](https://arxiv.org/abs/1704.04861v1)).
       + `r`: The number of time this configuration block is repeated
   - `activate`: The activation function to use throughout the network
   - `inchannels`: The number of input channels. The default value is 3.
-  - `fcsize`: The intermediate fully-connected size between the convolution and final layers
   - `nclasses`: The number of output classes
 """
 function mobilenetv1(width_mult, config;
                      activation = relu,
                      inchannels = 3,
-					     fcsize = 1024,
                      nclasses = 1000)
     layers = []
     for (dw, outch, stride, nrepeats) in config
@@ -47,8 +44,7 @@ function mobilenetv1(width_mult, config;
     return Chain(Chain(layers),
                  Chain(GlobalMeanPool(),
                        MLUtils.flatten,
-                       Dense(inchannels, fcsize, activation),
-                       Dense(fcsize, nclasses)))
+                       Dense(inchannels, nclasses)))
 end
 
 const mobilenetv1_configs = [
