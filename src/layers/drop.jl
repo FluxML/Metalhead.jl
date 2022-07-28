@@ -27,7 +27,7 @@ regions of size `block_size` in the input. Otherwise, it simply returns the inpu
 If you are an end-user, you do not want this function. Use [`DropBlock`](#) instead.
 """
 # TODO add experimental `DropBlock` options from timm such as gaussian noise and
-# more precise `DropBlock` to deal with edges (#188)
+# more precise `DropBlock` to deal with edges.
 function dropblock(rng::AbstractRNG, x::AbstractArray{T, 4}, drop_block_prob, block_size,
                    gamma_scale) where {T}
     H, W, _, _ = size(x)
@@ -63,7 +63,7 @@ function _dropblock_checks(x::AbstractArray{<:Any, 4}, drop_block_prob, gamma_sc
     @assert 0 ≤ drop_block_prob ≤ 1
     "drop_block_prob must be between 0 and 1, got $drop_block_prob"
     @assert 0 ≤ gamma_scale ≤ 1
-    return "gamma_scale must be between 0 and 1, got $gamma_scale"
+    "gamma_scale must be between 0 and 1, got $gamma_scale"
 end
 function _dropblock_checks(x, drop_block_prob, gamma_scale)
     throw(ArgumentError("x must be an array with 4 dimensions (H, W, C, N) for DropBlock."))
