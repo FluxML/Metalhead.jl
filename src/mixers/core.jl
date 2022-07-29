@@ -37,7 +37,7 @@ function mlpmixer(block, imsize::Dims{2} = (224, 224); inchannels = 3,
 end
 
 # Configurations for MLPMixer models
-mixer_configs = Dict(:small => Dict(:depth => 8, :planes => 512),
-                     :base => Dict(:depth => 12, :planes => 768),
-                     :large => Dict(:depth => 24, :planes => 1024),
-                     :huge => Dict(:depth => 32, :planes => 1280))
+const MIXER_CONFIGS = Dict(:small => Dict(:depth => 8, :planes => 512),
+                           :base => Dict(:depth => 12, :planes => 768),
+                           :large => Dict(:depth => 24, :planes => 1024),
+                           :huge => Dict(:depth => 32, :planes => 1280))

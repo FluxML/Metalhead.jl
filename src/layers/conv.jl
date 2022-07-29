@@ -1,6 +1,6 @@
 """
     conv_norm(kernel_size, inplanes::Int, outplanes::Int, activation = relu;
-              norm_layer = BatchNorm, revnorm = false, preact = false, use_bn = true,
+              norm_layer = BatchNorm, revnorm = false, preact = false, use_norm = true,
               stride = 1, pad = 0, dilation = 1, groups = 1, [bias, weight, init])
 
 Create a convolution + batch normalization pair with activation.
@@ -15,7 +15,7 @@ Create a convolution + batch normalization pair with activation.
   - `revnorm`: set to `true` to place the batch norm before the convolution
   - `preact`: set to `true` to place the activation function before the batch norm
     (only compatible with `revnorm = false`)
-  - `use_bn`: set to `false` to disable batch normalization
+  - `use_norm`: set to `false` to disable normalization
     (only compatible with `revnorm = false` and `preact = false`)
   - `stride`: stride of the convolution kernel
   - `pad`: padding of the convolution kernel
@@ -24,11 +24,11 @@ Create a convolution + batch normalization pair with activation.
   - `bias`, `weight`, `init`: initialization for the convolution kernel (see [`Flux.Conv`](#))
 """
 function conv_norm(kernel_size, inplanes::Int, outplanes::Int, activation = relu;
-                   norm_layer = BatchNorm, revnorm = false, preact = false, use_bn = true,
+                   norm_layer = BatchNorm, revnorm = false, preact = false, use_norm = true,
                    kwargs...)
-    if !use_bn
+    if !use_norm
         if (preact || revnorm)
-            throw(ArgumentError("`preact` only supported with `use_bn = true`"))
+            throw(ArgumentError("`preact` only supported with `use_norm = true`"))
         else
             return [Conv(kernel_size, inplanes => outplanes, activation; kwargs...)]
         end
@@ -59,17 +59,17 @@ function conv_norm(kernel_size, ch::Pair{<:Integer, <:Integer}, outplanes,
 end
 
 """
-    depthwise_sep_conv_bn(kernel_size, inplanes, outplanes, activation = relu;
-                               revnorm = false, use_bn = (true, true),
+    depthwise_sep_conv_norm(kernel_size, inplanes, outplanes, activation = relu;
+                               revnorm = false, use_norm = (true, true),
                                stride = 1, pad = 0, dilation = 1, [bias, weight, init])
 
 Create a depthwise separable convolution chain as used in MobileNetv1.
 This is sequence of layers:
 
   - a `kernel_size` depthwise convolution from `inplanes => inplanes`
-  - a batch norm layer + `activation` (if `use_bn[1] == true`; otherwise `activation` is applied to the convolution output)
+  - a batch norm layer + `activation` (if `use_norm[1] == true`; otherwise `activation` is applied to the convolution output)
   - a `kernel_size` convolution from `inplanes => outplanes`
-  - a batch norm layer + `activation` (if `use_bn[2] == true`; otherwise `activation` is applied to the convolution output)
+  - a batch norm layer + `activation` (if `use_norm[2] == true`; otherwise `activation` is applied to the convolution output)
 
 See Fig. 3 in [reference](https://arxiv.org/abs/1704.04861v1).
 
@@ -80,20 +80,20 @@ See Fig. 3 in [reference](https://arxiv.org/abs/1704.04861v1).
   - `outplanes`: number of output feature maps
   - `activation`: the activation function for the final layer
   - `revnorm`: set to `true` to place the batch norm before the convolution
-  - `use_bn`: a tuple of two booleans to specify whether to use normalization for the first and second convolution
+  - `use_norm`: a tuple of two booleans to specify whether to use normalization for the first and second convolution
   - `stride`: stride of the first convolution kernel
   - `pad`: padding of the first convolution kernel
   - `dilation`: dilation of the first convolution kernel
   - `bias`, `weight`, `init`: initialization for the convolution kernel (see [`Flux.Conv`](#))
 """
 function depthwise_sep_conv_norm(kernel_size, inplanes, outplanes, activation = relu;
-                                 norm_layer = BatchNorm, revnorm = false, use_norm = (true, true),
-                                 stride = 1, kwargs...)
+                                 norm_layer = BatchNorm, revnorm = false,
+                                 use_norm = (true, true), stride = 1, kwargs...)
     return vcat(conv_norm(kernel_size, inplanes, inplanes, activation;
-                          norm_layerm, revnorm, use_bn = use_bn[1], stride, groups = inplanes,
-                          kwargs...),
+                          norm_layer, revnorm, use_norm = use_norm[1], stride,
+                          groups = inplanes, kwargs...),
                 conv_norm((1, 1), inplanes, outplanes, activation; norm_layer, revnorm,
-                          use_bn = use_bn[2]))
+                          use_norm = use_norm[2]))
 end
 
 """

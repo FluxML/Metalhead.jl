@@ -59,7 +59,7 @@ end
 # e: expantion ratio
 # i: block input channels
 # o: block output channels
-const efficientnet_block_configs = [
+const EFFICIENTNET_BLOCK_CONFIGS = [
     # (n, k, s, e, i, o)
     (1, 3, 1, 1, 32, 16),
     (2, 3, 2, 6, 16, 24),
@@ -73,7 +73,7 @@ const efficientnet_block_configs = [
 # w: width scaling
 # d: depth scaling
 # r: image resolution
-const efficientnet_global_configs = Dict(:b0 => (224, (1.0, 1.0)),
+const EFFICIENTNET_GLOBAL_CONFIGS = Dict(:b0 => (224, (1.0, 1.0)),
                                          :b1 => (240, (1.0, 1.1)),
                                          :b2 => (260, (1.1, 1.2)),
                                          :b3 => (300, (1.2, 1.4)),
@@ -137,8 +137,8 @@ See also [`efficientnet`](#).
   - `pretrain`: set to `true` to load the pre-trained weights for ImageNet
 """
 function EfficientNet(name::Symbol; pretrain = false)
-    _checkconfig(name, keys(efficientnet_global_configs))
-    model = EfficientNet(efficientnet_global_configs[name][2], efficientnet_block_configs)
+    _checkconfig(name, keys(EFFICIENTNET_GLOBAL_CONFIGS))
+    model = EfficientNet(EFFICIENTNET_GLOBAL_CONFIGS[name][2], EFFICIENTNET_BLOCK_CONFIGS)
     pretrain && loadpretrain!(model, string("efficientnet-", name))
     return model
 end

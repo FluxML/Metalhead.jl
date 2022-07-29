@@ -62,15 +62,15 @@ function vit(imsize::Dims{2} = (256, 256); inchannels = 3, patch_size::Dims{2} =
                  Chain(LayerNorm(embedplanes), Dense(embedplanes, nclasses, tanh_fast)))
 end
 
-vit_configs = Dict(:tiny => (depth = 12, embedplanes = 192, nheads = 3),
-                   :small => (depth = 12, embedplanes = 384, nheads = 6),
-                   :base => (depth = 12, embedplanes = 768, nheads = 12),
-                   :large => (depth = 24, embedplanes = 1024, nheads = 16),
-                   :huge => (depth = 32, embedplanes = 1280, nheads = 16),
-                   :giant => (depth = 40, embedplanes = 1408, nheads = 16,
-                              mlp_ratio = 48 // 11),
-                   :gigantic => (depth = 48, embedplanes = 1664, nheads = 16,
-                                 mlp_ratio = 64 // 13))
+const VIT_CONFIGS = Dict(:tiny => (depth = 12, embedplanes = 192, nheads = 3),
+                         :small => (depth = 12, embedplanes = 384, nheads = 6),
+                         :base => (depth = 12, embedplanes = 768, nheads = 12),
+                         :large => (depth = 24, embedplanes = 1024, nheads = 16),
+                         :huge => (depth = 32, embedplanes = 1280, nheads = 16),
+                         :giant => (depth = 40, embedplanes = 1408, nheads = 16,
+                                    mlp_ratio = 48 // 11),
+                         :gigantic => (depth = 48, embedplanes = 1664, nheads = 16,
+                                       mlp_ratio = 64 // 13))
 
 """
     ViT(mode::Symbol = base; imsize::Dims{2} = (256, 256), inchannels = 3,
@@ -98,8 +98,8 @@ end
 
 function ViT(mode::Symbol = :base; imsize::Dims{2} = (256, 256), inchannels = 3,
              patch_size::Dims{2} = (16, 16), pool = :class, nclasses = 1000)
-    _checkconfig(mode, keys(vit_configs))
-    kwargs = vit_configs[mode]
+    _checkconfig(mode, keys(VIT_CONFIGS))
+    kwargs = VIT_CONFIGS[mode]
     layers = vit(imsize; inchannels, patch_size, nclasses, pool, kwargs...)
     return ViT(layers)
 end

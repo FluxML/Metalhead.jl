@@ -25,7 +25,7 @@ function basicblock(inplanes::Integer, planes::Integer; stride::Integer = 1,
                     drop_block = identity, drop_path = identity,
                     attn_fn = planes -> identity)
     first_planes = planes ÷ reduction_factor
-    outplanes = planes * expansion_factor(basicblock)
+    outplanes = planes
     conv_bn1 = conv_norm((3, 3), inplanes => first_planes, identity; norm_layer, revnorm,
                          stride, pad = 1, bias = false)
     conv_bn2 = conv_norm((3, 3), first_planes => outplanes, identity; norm_layer, revnorm,
@@ -67,7 +67,7 @@ function bottleneck(inplanes::Integer, planes::Integer; stride::Integer,
                     attn_fn = planes -> identity)
     width = floor(Int, planes * (base_width / 64)) * cardinality
     first_planes = width ÷ reduction_factor
-    outplanes = planes * expansion_factor(bottleneck)
+    outplanes = planes * 4
     conv_bn1 = conv_norm((1, 1), inplanes => first_planes, activation; norm_layer, revnorm,
                          bias = false)
     conv_bn2 = conv_norm((3, 3), first_planes => width, identity; norm_layer, revnorm,
@@ -215,7 +215,7 @@ function basicblock_builder(block_repeats::Vector{<:Integer}; inplanes::Integer 
         drop_block = DropBlock(blockschedule[schedule_idx])
         block = basicblock(inplanes, planes; stride, reduction_factor, activation,
                            norm_layer, revnorm, attn_fn, drop_path, drop_block)
-        downsample = downsample_fn(inplanes, planes * expansion; stride)
+        downsample = downsample_fn(inplanes, planes * expansion; stride, norm_layer, revnorm)
         # inplanes increases by expansion after each block
         inplanes = planes * expansion
         return block, downsample
@@ -248,7 +248,7 @@ function bottleneck_builder(block_repeats::Vector{<:Integer}; inplanes::Integer 
         block = bottleneck(inplanes, planes; stride, cardinality, base_width,
                            reduction_factor, activation, norm_layer, revnorm,
                            attn_fn, drop_path, drop_block)
-        downsample = downsample_fn(inplanes, planes * expansion; stride)
+        downsample = downsample_fn(inplanes, planes * expansion; stride, norm_layer, revnorm)
         # inplanes increases by expansion after each block
         inplanes = planes * expansion
         return block, downsample
@@ -256,10 +256,6 @@ function bottleneck_builder(block_repeats::Vector{<:Integer}; inplanes::Integer 
     return get_layers
 end
 
-# Makes the main stages of the ResNet model. This is an internal function and should not be 
-# used by end-users. `block_fn` is a function that returns a single block of the ResNet. 
-# See `basicblock` and `bottleneck` for examples. A block must define a function 
-# `expansion(::typeof(block))` that returns the expansion factor of the block.
 function resnet_stages(get_layers, block_repeats::Vector{<:Integer}, connection)
     # Construct each stage
     stages = []
@@ -316,15 +312,15 @@ function resnet(block_type::Symbol, block_repeats::Vector{<:Integer};
     end
     classifier_fn = nfeatures -> create_classifier(nfeatures, nclasses; dropout_rate,
                                                    pool_layer, use_conv)
-    return resnet((imsize..., inchannels), stem, connection$activation, get_layers,
-                  block_repeats, classifier_fn)
+    return resnet((imsize..., inchannels), stem, get_layers, block_repeats,
+                  connection$activation, classifier_fn)
 end
 function resnet(block_fn, block_repeats, downsample_opt::Symbol = :B; kwargs...)
     return resnet(block_fn, block_repeats, shortcut_dict[downsample_opt]; kwargs...)
 end
 
 # block-layer configurations for ResNet-like models
-const resnet_configs = Dict(18 => (:basicblock, [2, 2, 2, 2]),
+const RESNET_CONFIGS = Dict(18 => (:basicblock, [2, 2, 2, 2]),
                             34 => (:basicblock, [3, 4, 6, 3]),
                             50 => (:bottleneck, [3, 4, 6, 3]),
                             101 => (:bottleneck, [3, 4, 23, 3]),

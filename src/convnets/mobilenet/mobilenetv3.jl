@@ -53,7 +53,7 @@ function mobilenetv3(width_mult, configs; inchannels = 3, max_width = 1024, ncla
 end
 
 # Configurations for small and large mode for MobileNetv3
-mobilenetv3_configs = Dict(:small => [
+MOBILENETV3_CONFIGS = Dict(:small => [
                                # k, t, c, SE, a, s
                                (3, 1, 16, 4, relu, 2),
                                (3, 4.5, 24, nothing, relu, 2),
@@ -115,7 +115,7 @@ function MobileNetv3(mode::Symbol = :small, width_mult::Number = 1; inchannels =
                      pretrain = false, nclasses = 1000)
     @assert mode in [:large, :small] "`mode` has to be either :large or :small"
     max_width = (mode == :large) ? 1280 : 1024
-    layers = mobilenetv3(width_mult, mobilenetv3_configs[mode]; inchannels, max_width,
+    layers = mobilenetv3(width_mult, MOBILENETV3_CONFIGS[mode]; inchannels, max_width,
                          nclasses)
     if pretrain
         loadpretrain!(layers, string("MobileNetv3", mode))

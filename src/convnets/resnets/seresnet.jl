@@ -25,8 +25,8 @@ end
 (m::SEResNet)(x) = m.layers(x)
 
 function SEResNet(depth::Integer; pretrain = false, inchannels = 3, nclasses = 1000)
-    _checkconfig(depth, keys(resnet_configs))
-    layers = resnet(resnet_configs[depth]...; inchannels, nclasses,
+    _checkconfig(depth, keys(RESNET_CONFIGS))
+    layers = resnet(RESNET_CONFIGS[depth]...; inchannels, nclasses,
                     attn_fn = squeeze_excite)
     if pretrain
         loadpretrain!(layers, string("SEResNet", depth))
@@ -68,8 +68,8 @@ end
 
 function SEResNeXt(depth::Integer; pretrain = false, cardinality = 32, base_width = 4,
                    inchannels = 3, nclasses = 1000)
-    _checkconfig(depth, sort(collect(keys(resnet_configs)))[3:end])
-    layers = resnet(resnet_configs[depth]...; inchannels, nclasses, cardinality, base_width,
+    _checkconfig(depth, sort(collect(keys(RESNET_CONFIGS)))[3:end])
+    layers = resnet(RESNET_CONFIGS[depth]...; inchannels, nclasses, cardinality, base_width,
                     attn_fn = squeeze_excite)
     if pretrain
         loadpretrain!(layers, string("SEResNeXt", depth, "_", cardinality, "x", base_width))

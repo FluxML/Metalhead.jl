@@ -140,7 +140,7 @@ end
 backbone(m::DenseNet) = m.layers[1]
 classifier(m::DenseNet) = m.layers[2]
 
-const densenet_configs = Dict(121 => (6, 12, 24, 16),
+const DENSENET_CONFIGS = Dict(121 => (6, 12, 24, 16),
                               161 => (6, 12, 36, 24),
                               169 => (6, 12, 32, 32),
                               201 => (6, 12, 48, 32))
@@ -160,8 +160,8 @@ Set `pretrain = true` to load the model with pre-trained weights for ImageNet.
 See also [`Metalhead.densenet`](#).
 """
 function DenseNet(config::Integer = 121; pretrain = false, nclasses = 1000)
-    _checkconfig(config, keys(densenet_configs))
-    model = DenseNet(densenet_configs[config]; nclasses = nclasses)
+    _checkconfig(config, keys(DENSENET_CONFIGS))
+    model = DenseNet(DENSENET_CONFIGS[config]; nclasses = nclasses)
     if pretrain
         loadpretrain!(model, string("DenseNet", config))
     end

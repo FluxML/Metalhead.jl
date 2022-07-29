@@ -46,7 +46,7 @@ function mobilenetv2(width_mult, configs; inchannels = 3, max_width = 1280, ncla
 end
 
 # Layer configurations for MobileNetv2
-const mobilenetv2_configs = [
+const MOBILENETV2_CONFIGS = [
     #  t,   c, n, s,     a
     (1, 16, 1, 1, relu6),
     (6, 24, 2, 2, relu6),
@@ -83,7 +83,7 @@ See also [`Metalhead.mobilenetv2`](#).
 """
 function MobileNetv2(width_mult::Number = 1; inchannels = 3, pretrain = false,
                      nclasses = 1000)
-    layers = mobilenetv2(width_mult, mobilenetv2_configs; inchannels, nclasses)
+    layers = mobilenetv2(width_mult, MOBILENETV2_CONFIGS; inchannels, nclasses)
     pretrain && loadpretrain!(layers, string("MobileNetv2"))
     if pretrain
         loadpretrain!(layers, string("MobileNetv2"))

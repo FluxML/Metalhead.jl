@@ -31,7 +31,7 @@ function mobilenetv1(width_mult, config;
         for _ in 1:nrepeats
             layer = dw ?
                     depthwise_sep_conv_norm((3, 3), inchannels, outch, activation;
-                                          stride = stride, pad = 1, bias = false) :
+                                            stride = stride, pad = 1, bias = false) :
                     conv_norm((3, 3), inchannels, outch, activation; stride, pad = 1,
                               bias = false)
             append!(layers, layer)
@@ -45,7 +45,7 @@ function mobilenetv1(width_mult, config;
                        Dense(inchannels, nclasses)))
 end
 
-const mobilenetv1_configs = [
+const MOBILENETV1_CONFIGS = [
     # dw, c, s, r
     (false, 32, 2, 1),
     (true, 64, 1, 1),
@@ -84,7 +84,7 @@ end
 
 function MobileNetv1(width_mult::Number = 1; inchannels = 3, pretrain = false,
                      nclasses = 1000)
-    layers = mobilenetv1(width_mult, mobilenetv1_configs; inchannels, nclasses)
+    layers = mobilenetv1(width_mult, MOBILENETV1_CONFIGS; inchannels, nclasses)
     if pretrain
         loadpretrain!(layers, string("MobileNetv1"))
     end

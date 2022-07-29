@@ -55,9 +55,9 @@ See also [`Metalhead.mlpmixer`](#).
 """
 function MLPMixer(size::Symbol = :base; patch_size::Dims{2} = (16, 16),
                   imsize::Dims{2} = (224, 224), drop_path_rate = 0.0, nclasses = 1000)
-    _checkconfig(size, keys(mixer_configs))
-    depth = mixer_configs[size][:depth]
-    embedplanes = mixer_configs[size][:planes]
+    _checkconfig(size, keys(MIXER_CONFIGS))
+    depth = MIXER_CONFIGS[size][:depth]
+    embedplanes = MIXER_CONFIGS[size][:planes]
     layers = mlpmixer(mixerblock, imsize; patch_size, embedplanes, depth, drop_path_rate,
                       nclasses)
     return MLPMixer(layers)

@@ -99,12 +99,12 @@ function vgg(imsize; config, inchannels, batchnorm = false, nclasses, fcsize, dr
     return Chain(Chain(conv), class)
 end
 
-const vgg_conv_configs = Dict(:A => [(64, 1), (128, 1), (256, 2), (512, 2), (512, 2)],
+const VGG_CONV_CONFIGS = Dict(:A => [(64, 1), (128, 1), (256, 2), (512, 2), (512, 2)],
                               :B => [(64, 2), (128, 2), (256, 2), (512, 2), (512, 2)],
                               :D => [(64, 2), (128, 2), (256, 3), (512, 3), (512, 3)],
                               :E => [(64, 2), (128, 2), (256, 4), (512, 4), (512, 4)])
 
-const vgg_configs = Dict(11 => :A,
+const VGG_CONFIGS = Dict(11 => :A,
                          13 => :B,
                          16 => :D,
                          19 => :E)
@@ -153,8 +153,8 @@ See also [`VGG`](#).
   - `pretrain`: set to `true` to load pre-trained model weights for ImageNet
 """
 function VGG(depth::Integer = 16; pretrain = false, batchnorm = false, nclasses = 1000)
-    _checkconfig(depth, keys(vgg_configs))
-    model = VGG((224, 224); config = vgg_conv_configs[vgg_configs[depth]],
+    _checkconfig(depth, keys(VGG_CONFIGS))
+    model = VGG((224, 224); config = VGG_CONV_CONFIGS[VGG_CONFIGS[depth]],
                 inchannels = 3,
                 batchnorm = batchnorm,
                 nclasses = nclasses,

@@ -66,11 +66,11 @@ function convnext(depths, planes; inchannels = 3, drop_path_rate = 0.0, λ = 1.0
 end
 
 # Configurations for ConvNeXt models
-convnext_configs = Dict(:tiny => ([3, 3, 9, 3], [96, 192, 384, 768]),
-                        :small => ([3, 3, 27, 3], [96, 192, 384, 768]),
-                        :base => ([3, 3, 27, 3], [128, 256, 512, 1024]),
-                        :large => ([3, 3, 27, 3], [192, 384, 768, 1536]),
-                        :xlarge => ([3, 3, 27, 3], [256, 512, 1024, 2048]))
+const CONVNEXT_CONFIGS = Dict(:tiny => ([3, 3, 9, 3], [96, 192, 384, 768]),
+                              :small => ([3, 3, 27, 3], [96, 192, 384, 768]),
+                              :base => ([3, 3, 27, 3], [128, 256, 512, 1024]),
+                              :large => ([3, 3, 27, 3], [192, 384, 768, 1536]),
+                              :xlarge => ([3, 3, 27, 3], [256, 512, 1024, 2048]))
 
 struct ConvNeXt
     layers::Any
@@ -94,8 +94,8 @@ See also [`Metalhead.convnext`](#).
 """
 function ConvNeXt(mode::Symbol = :base; inchannels = 3, drop_path_rate = 0.0, λ = 1.0f-6,
                   nclasses = 1000)
-    _checkconfig(mode, keys(convnext_configs))
-    layers = convnext(convnext_configs[mode]...; inchannels, drop_path_rate, λ, nclasses)
+    _checkconfig(mode, keys(CONVNEXT_CONFIGS))
+    layers = convnext(CONVNEXT_CONFIGS[mode]...; inchannels, drop_path_rate, λ, nclasses)
     return ConvNeXt(layers)
 end
 

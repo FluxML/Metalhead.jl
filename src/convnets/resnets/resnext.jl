@@ -29,8 +29,8 @@ end
 
 function ResNeXt(depth::Integer; pretrain = false, cardinality = 32,
                  base_width = 4, inchannels = 3, nclasses = 1000)
-    _checkconfig(depth, sort(collect(keys(resnet_configs)))[3:end])
-    layers = resnet(resnet_configs[depth]...; inchannels, nclasses, cardinality, base_width)
+    _checkconfig(depth, sort(collect(keys(RESNET_CONFIGS)))[3:end])
+    layers = resnet(RESNET_CONFIGS[depth]...; inchannels, nclasses, cardinality, base_width)
     if pretrain
         loadpretrain!(layers, string("ResNeXt", depth, "_", cardinality, "x", base_width))
     end

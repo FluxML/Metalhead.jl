@@ -35,7 +35,7 @@ function xception_block(inchannels, outchannels, nrepeats; stride = 1,
         push!(layers, relu)
         append!(layers,
                 depthwise_sep_conv_norm((3, 3), inc, outc; pad = 1, bias = false,
-                                      use_bn = (false, false)))
+                                        use_norm = (false, false)))
         push!(layers, BatchNorm(outc))
     end
     layers = start_with_relu ? layers : layers[2:end]
