@@ -97,51 +97,6 @@ function depthwise_sep_conv_bn(kernel_size, inplanes, outplanes, activation = re
 end
 
 """
-    skip_projection(inplanes, outplanes, downsample = false)
-
-Create a skip projection
-([reference](https://arxiv.org/abs/1512.03385v1)).
-
-# Arguments
-
-  - `inplanes`: number of input feature maps
-  - `outplanes`: number of output feature maps
-  - `downsample`: set to `true` to downsample the input
-"""
-function skip_projection(inplanes, outplanes, downsample = false)
-    return downsample ?
-           Chain(conv_norm((1, 1), inplanes, outplanes, identity; stride = 2, bias = false)) :
-           Chain(conv_norm((1, 1), inplanes, outplanes, identity; stride = 1, bias = false))
-end
-
-# array -> PaddedView(0, array, outplanes) for zero padding arrays
-"""
-    skip_identity(inplanes, outplanes[, downsample])
-
-Create a identity projection
-([reference](https://arxiv.org/abs/1512.03385v1)).
-
-# Arguments
-
-  - `inplanes`: the number of input feature maps
-  - `outplanes`: the number of output feature maps
-  - `downsample`: this argument is ignored but it is needed for compatibility with [`resnet`](#).
-"""
-function skip_identity(inplanes, outplanes)
-    if outplanes > inplanes
-        return Chain(MaxPool((1, 1); stride = 2),
-                     y -> cat_channels(y,
-                                       zeros(eltype(y),
-                                             size(y, 1),
-                                             size(y, 2),
-                                             outplanes - inplanes, size(y, 4))))
-    else
-        return identity
-    end
-end
-skip_identity(inplanes, outplanes, downsample) = skip_identity(inplanes, outplanes)
-
-"""
     invertedresidual(kernel_size, inplanes, hidden_planes, outplanes, activation = relu;
                      stride, reduction = nothing)
 

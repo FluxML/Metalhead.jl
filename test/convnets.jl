@@ -32,7 +32,7 @@ end
     # end
 
     @testset "resnet" begin
-        @testset for block_fn in [Metalhead.basicblock, Metalhead.bottleneck]
+        @testset for block_fn in [:basicblock, :bottleneck]
             layer_list = [
                 [2, 2, 2, 2],
                 [3, 4, 6, 3],
