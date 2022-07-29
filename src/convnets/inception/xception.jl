@@ -34,7 +34,7 @@ function xception_block(inchannels, outchannels, nrepeats; stride = 1,
         end
         push!(layers, relu)
         append!(layers,
-                depthwise_sep_conv_bn((3, 3), inc, outc; pad = 1, bias = false,
+                depthwise_sep_conv_norm((3, 3), inc, outc; pad = 1, bias = false,
                                       use_bn = (false, false)))
         push!(layers, BatchNorm(outc))
     end
@@ -63,8 +63,8 @@ function xception(; inchannels = 3, dropout_rate = 0.0, nclasses = 1000)
                  xception_block(256, 728, 2; stride = 2),
                  [xception_block(728, 728, 3) for _ in 1:8]...,
                  xception_block(728, 1024, 2; stride = 2, grow_at_start = false),
-                 depthwise_sep_conv_bn((3, 3), 1024, 1536; pad = 1)...,
-                 depthwise_sep_conv_bn((3, 3), 1536, 2048; pad = 1)...)
+                 depthwise_sep_conv_norm((3, 3), 1024, 1536; pad = 1)...,
+                 depthwise_sep_conv_norm((3, 3), 1536, 2048; pad = 1)...)
     head = Chain(GlobalMeanPool(), MLUtils.flatten, Dropout(dropout_rate),
                  Dense(2048, nclasses))
     return Chain(body, head)

@@ -10,6 +10,7 @@ produce a single output. Note that this is equivalent to
   - `output_size`: The size of the output after pooling.
   - `connection`: The connection type to use.
 """
-function AdaptiveMeanMaxPool(output_size = (1, 1); connection = +)
+function AdaptiveMeanMaxPool(connection, output_size = (1, 1))
     return Parallel(connection, AdaptiveMeanPool(output_size), AdaptiveMaxPool(output_size))
 end
+AdaptiveMeanMaxPool(output_size::Tuple = (1, 1)) = AdaptiveMeanMaxPool(+, output_size)

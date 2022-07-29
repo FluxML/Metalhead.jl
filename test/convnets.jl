@@ -23,13 +23,15 @@ end
 @testset "ResNet" begin
     # Tests for pretrained ResNets
     ## TODO: find a way to port pretrained models to the new ResNet API
-    # @testset "ResNet($sz)" for sz in [18, 34, 50, 101, 152]
+    @testset "ResNet($sz)" for sz in [18, 34, 50, 101, 152]
+        m = ResNet(sz)
+        @test size(m(x_224)) == (1000, 1)
         # if (ResNet, sz) in PRETRAINED_MODELS
         #     @test acctest(ResNet(sz, pretrain = true))
         # else
         #     @test_throws ArgumentError ResNet(sz, pretrain = true)
         # end
-    # end
+    end
 
     @testset "resnet" begin
         @testset for block_fn in [:basicblock, :bottleneck]

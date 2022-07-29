@@ -26,7 +26,7 @@ include("normalise.jl")
 export prenorm, ChannelLayerNorm
 
 include("conv.jl")
-export conv_norm, depthwise_sep_conv_bn, invertedresidual
+export conv_norm, depthwise_sep_conv_norm, invertedresidual
 
 include("drop.jl")
 export DropBlock, DropPath, droppath_rates
