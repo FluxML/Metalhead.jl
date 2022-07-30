@@ -215,7 +215,8 @@ function basicblock_builder(block_repeats::Vector{<:Integer}; inplanes::Integer 
         drop_block = DropBlock(blockschedule[schedule_idx])
         block = basicblock(inplanes, planes; stride, reduction_factor, activation,
                            norm_layer, revnorm, attn_fn, drop_path, drop_block)
-        downsample = downsample_fn(inplanes, planes * expansion; stride, norm_layer, revnorm)
+        downsample = downsample_fn(inplanes, planes * expansion; stride, norm_layer,
+                                   revnorm)
         # inplanes increases by expansion after each block
         inplanes = planes * expansion
         return block, downsample
@@ -248,7 +249,8 @@ function bottleneck_builder(block_repeats::Vector{<:Integer}; inplanes::Integer 
         block = bottleneck(inplanes, planes; stride, cardinality, base_width,
                            reduction_factor, activation, norm_layer, revnorm,
                            attn_fn, drop_path, drop_block)
-        downsample = downsample_fn(inplanes, planes * expansion; stride, norm_layer, revnorm)
+        downsample = downsample_fn(inplanes, planes * expansion; stride, norm_layer,
+                                   revnorm)
         # inplanes increases by expansion after each block
         inplanes = planes * expansion
         return block, downsample
@@ -298,13 +300,15 @@ function resnet(block_type::Symbol, block_repeats::Vector{<:Integer};
         get_layers = basicblock_builder(block_repeats; inplanes, reduction_factor,
                                         activation, norm_layer, revnorm, attn_fn,
                                         drop_block_rate, drop_path_rate,
-                                        stride_fn = resnet_stride, planes_fn = resnet_planes,
+                                        stride_fn = resnet_stride,
+                                        planes_fn = resnet_planes,
                                         downsample_tuple = downsample_opt)
     elseif block_type == :bottleneck
         get_layers = bottleneck_builder(block_repeats; inplanes, cardinality, base_width,
                                         reduction_factor, activation, norm_layer,
                                         revnorm, attn_fn, drop_block_rate, drop_path_rate,
-                                        stride_fn = resnet_stride, planes_fn = resnet_planes,
+                                        stride_fn = resnet_stride,
+                                        planes_fn = resnet_planes,
                                         downsample_tuple = downsample_opt)
     else
         # TODO: write better message when we have link to dev docs for resnet

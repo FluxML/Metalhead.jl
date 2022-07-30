@@ -15,8 +15,8 @@ Transformer as used in the base ViT architecture.
 function transformer_encoder(planes, depth, nheads; mlp_ratio = 4.0, dropout_rate = 0.0)
     layers = [Chain(SkipConnection(prenorm(planes,
                                            MHAttention(planes, nheads;
-                                                       attn_drop_rate = dropout_rate,
-                                                       proj_drop_rate = dropout_rate)), +),
+                                                       attn_dropout_rate = dropout_rate,
+                                                       proj_dropout_rate = dropout_rate)), +),
                     SkipConnection(prenorm(planes,
                                            mlp_block(planes, floor(Int, mlp_ratio * planes);
                                                      dropout_rate)), +))
@@ -27,7 +27,7 @@ end
 """
     vit(imsize::Dims{2} = (256, 256); inchannels = 3, patch_size::Dims{2} = (16, 16),
         embedplanes = 768, depth = 6, nheads = 16, mlp_ratio = 4.0, dropout_rate = 0.1,
-        emb_drop_rate = 0.1, pool = :class, nclasses = 1000)
+        emb_dropout_rate = 0.1, pool = :class, nclasses = 1000)
 
 Creates a Vision Transformer (ViT) model.
 ([reference](https://arxiv.org/abs/2010.11929)).
@@ -48,14 +48,14 @@ Creates a Vision Transformer (ViT) model.
 """
 function vit(imsize::Dims{2} = (256, 256); inchannels = 3, patch_size::Dims{2} = (16, 16),
              embedplanes = 768, depth = 6, nheads = 16, mlp_ratio = 4.0, dropout_rate = 0.1,
-             emb_drop_rate = 0.1, pool = :class, nclasses = 1000)
+             emb_dropout_rate = 0.1, pool = :class, nclasses = 1000)
     @assert pool in [:class, :mean]
     "Pool type must be either `:class` (class token) or `:mean` (mean pooling)"
     npatches = prod(imsize .÷ patch_size)
     return Chain(Chain(PatchEmbedding(imsize; inchannels, patch_size, embedplanes),
                        ClassTokens(embedplanes),
                        ViPosEmbedding(embedplanes, npatches + 1),
-                       Dropout(emb_drop_rate),
+                       Dropout(emb_dropout_rate),
                        transformer_encoder(embedplanes, depth, nheads; mlp_ratio,
                                            dropout_rate),
                        (pool == :class) ? x -> x[:, 1, :] : seconddimmean),

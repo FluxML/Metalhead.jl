@@ -52,41 +52,40 @@ function mobilenetv3(width_mult, configs; inchannels = 3, max_width = 1024, ncla
                  Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten, classifier))
 end
 
-# Configurations for small and large mode for MobileNetv3
-MOBILENETV3_CONFIGS = Dict(:small => [
-                               # k, t, c, SE, a, s
-                               (3, 1, 16, 4, relu, 2),
-                               (3, 4.5, 24, nothing, relu, 2),
-                               (3, 3.67, 24, nothing, relu, 1),
-                               (5, 4, 40, 4, hardswish, 2),
-                               (5, 6, 40, 4, hardswish, 1),
-                               (5, 6, 40, 4, hardswish, 1),
-                               (5, 3, 48, 4, hardswish, 1),
-                               (5, 3, 48, 4, hardswish, 1),
-                               (5, 6, 96, 4, hardswish, 2),
-                               (5, 6, 96, 4, hardswish, 1),
-                               (5, 6, 96, 4, hardswish, 1),
-                           ],
-                           :large => [
-                               # k, t, c, SE, a, s
-                               (3, 1, 16, nothing, relu, 1),
-                               (3, 4, 24, nothing, relu, 2),
-                               (3, 3, 24, nothing, relu, 1),
-                               (5, 3, 40, 4, relu, 2),
-                               (5, 3, 40, 4, relu, 1),
-                               (5, 3, 40, 4, relu, 1),
-                               (3, 6, 80, nothing, hardswish, 2),
-                               (3, 2.5, 80, nothing, hardswish, 1),
-                               (3, 2.3, 80, nothing, hardswish, 1),
-                               (3, 2.3, 80, nothing, hardswish, 1),
-                               (3, 6, 112, 4, hardswish, 1),
-                               (3, 6, 112, 4, hardswish, 1),
-                               (5, 6, 160, 4, hardswish, 2),
-                               (5, 6, 160, 4, hardswish, 1),
-                               (5, 6, 160, 4, hardswish, 1),
-                           ])
+# Layer configurations for small and large models for MobileNetv3
+const MOBILENETV3_CONFIGS = Dict(:small => [
+                                     # k, t, c, SE, a, s
+                                     (3, 1, 16, 4, relu, 2),
+                                     (3, 4.5, 24, nothing, relu, 2),
+                                     (3, 3.67, 24, nothing, relu, 1),
+                                     (5, 4, 40, 4, hardswish, 2),
+                                     (5, 6, 40, 4, hardswish, 1),
+                                     (5, 6, 40, 4, hardswish, 1),
+                                     (5, 3, 48, 4, hardswish, 1),
+                                     (5, 3, 48, 4, hardswish, 1),
+                                     (5, 6, 96, 4, hardswish, 2),
+                                     (5, 6, 96, 4, hardswish, 1),
+                                     (5, 6, 96, 4, hardswish, 1),
+                                 ],
+                                 :large => [
+                                     # k, t, c, SE, a, s
+                                     (3, 1, 16, nothing, relu, 1),
+                                     (3, 4, 24, nothing, relu, 2),
+                                     (3, 3, 24, nothing, relu, 1),
+                                     (5, 3, 40, 4, relu, 2),
+                                     (5, 3, 40, 4, relu, 1),
+                                     (5, 3, 40, 4, relu, 1),
+                                     (3, 6, 80, nothing, hardswish, 2),
+                                     (3, 2.5, 80, nothing, hardswish, 1),
+                                     (3, 2.3, 80, nothing, hardswish, 1),
+                                     (3, 2.3, 80, nothing, hardswish, 1),
+                                     (3, 6, 112, 4, hardswish, 1),
+                                     (3, 6, 112, 4, hardswish, 1),
+                                     (5, 6, 160, 4, hardswish, 2),
+                                     (5, 6, 160, 4, hardswish, 1),
+                                     (5, 6, 160, 4, hardswish, 1),
+                                 ])
 
-# Model definition for MobileNetv3
 struct MobileNetv3
     layers::Any
 end

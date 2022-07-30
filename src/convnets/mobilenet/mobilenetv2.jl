@@ -47,7 +47,7 @@ end
 
 # Layer configurations for MobileNetv2
 const MOBILENETV2_CONFIGS = [
-    #  t,   c, n, s,     a
+    # t, c, n, s, a
     (1, 16, 1, 1, relu6),
     (6, 24, 2, 2, relu6),
     (6, 32, 3, 2, relu6),
@@ -57,7 +57,6 @@ const MOBILENETV2_CONFIGS = [
     (6, 320, 1, 1, relu6),
 ]
 
-# Model definition for MobileNetv2
 struct MobileNetv2
     layers::Any
 end

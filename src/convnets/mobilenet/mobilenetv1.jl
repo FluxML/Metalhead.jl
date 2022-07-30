@@ -45,6 +45,7 @@ function mobilenetv1(width_mult, config;
                        Dense(inchannels, nclasses)))
 end
 
+# Layer configurations for MobileNetv1
 const MOBILENETV1_CONFIGS = [
     # dw, c, s, r
     (false, 32, 2, 1),

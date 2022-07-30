@@ -69,6 +69,10 @@ function create_classifier(inplanes, nclasses; pool_layer = AdaptiveMeanPool((1,
         "Pooling can only be disabled if classifier is also removed or a convolution-based classifier is used"
     end
     flatten_in_pool = !use_conv && pool_layer !== identity
+    if use_conv
+        @assert pool_layer === identity
+        "`pool_layer` must be identity if `use_conv` is true"
+    end
     global_pool = flatten_in_pool ? Chain(pool_layer, MLUtils.flatten) : pool_layer
     # Fully-connected layer
     fc = use_conv ? Conv((1, 1), inplanes => nclasses) : Dense(inplanes => nclasses)
