@@ -16,7 +16,8 @@ function transformer_encoder(planes, depth, nheads; mlp_ratio = 4.0, dropout_rat
     layers = [Chain(SkipConnection(prenorm(planes,
                                            MHAttention(planes, nheads;
                                                        attn_dropout_rate = dropout_rate,
-                                                       proj_dropout_rate = dropout_rate)), +),
+                                                       proj_dropout_rate = dropout_rate)),
+                                   +),
                     SkipConnection(prenorm(planes,
                                            mlp_block(planes, floor(Int, mlp_ratio * planes);
                                                      dropout_rate)), +))

@@ -52,7 +52,8 @@ function conv_norm(kernel_size, inplanes::Int, outplanes::Int, activation = relu
     return revnorm ? reverse(layers) : layers
 end
 
-function conv_norm(kernel_size, ch::Pair{<:Integer, <:Integer}, activation = identity; kwargs...)
+function conv_norm(kernel_size, ch::Pair{<:Integer, <:Integer}, activation = identity;
+                   kwargs...)
     inplanes, outplanes = ch
     return conv_norm(kernel_size, inplanes, outplanes, activation; kwargs...)
 end
