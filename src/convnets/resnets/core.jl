@@ -132,7 +132,7 @@ end
 # end
 
 """
-    resnet_stem(; stem_type = :default, inchannels = 3, replace_stem_pool = false,
+    resnet_stem(; stem_type = :default, inchannels::Integer = 3, replace_stem_pool = false,
                   norm_layer = BatchNorm, activation = relu)
 
 Builds a stem to be used in a ResNet model. See the `stem` argument of [`resnet`](#) for details

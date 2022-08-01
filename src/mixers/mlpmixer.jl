@@ -1,6 +1,7 @@
 """
-    mixerblock(planes, npatches; mlp_ratio = (0.5, 4.0), mlp_layer = mlp_block, 
-               dropout_rate = 0., drop_path_rate = 0., activation = gelu)
+    mixerblock(planes::Integer, npatches::Integer; mlp_layer = mlp_block,
+               mlp_ratio = (0.5, 4.0), dropout_rate = 0.0, drop_path_rate = 0.0,
+               activation = gelu)
 
 Creates a feedforward block for the MLPMixer architecture.
 ([reference](https://arxiv.org/pdf/2105.01601))
@@ -16,9 +17,10 @@ Creates a feedforward block for the MLPMixer architecture.
   - `drop_path_rate`: Stochastic depth rate
   - `activation`: the activation function to use in the MLP blocks
 """
-function mixerblock(planes, npatches; mlp_ratio = (0.5, 4.0), mlp_layer = mlp_block,
-                    dropout_rate = 0.0, drop_path_rate = 0.0, activation = gelu)
-    tokenplanes, channelplanes = [Int(r * planes) for r in mlp_ratio]
+function mixerblock(planes::Integer, npatches::Integer; mlp_layer = mlp_block,
+                    mlp_ratio::NTuple{2, Number} = (0.5, 4.0), dropout_rate = 0.0,
+                    drop_path_rate = 0.0, activation = gelu)
+    tokenplanes, channelplanes = Int.(planes .* mlp_ratio)
     return Chain(SkipConnection(Chain(LayerNorm(planes),
                                       swapdims((2, 1, 3)),
                                       mlp_layer(npatches, tokenplanes; activation,
@@ -31,14 +33,9 @@ function mixerblock(planes, npatches; mlp_ratio = (0.5, 4.0), mlp_layer = mlp_bl
                                       DropPath(drop_path_rate)), +))
 end
 
-struct MLPMixer
-    layers::Any
-end
-@functor MLPMixer
-
 """
-    MLPMixer(size::Symbol = :base; patch_size::Dims{2} = (16, 16),
-             imsize::Dims{2} = (224, 224), drop_path_rate = 0., nclasses = 1000)
+MLPMixer(size::Symbol; patch_size::Dims{2} = (16, 16), imsize::Dims{2} = (224, 224),
+         inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Creates a model with the MLPMixer architecture.
 ([reference](https://arxiv.org/pdf/2105.01601)).
@@ -49,17 +46,22 @@ Creates a model with the MLPMixer architecture.
   - `patch_size`: the size of the patches
   - `imsize`: the size of the input image
   - `drop_path_rate`: Stochastic depth rate
+  - `inchannels`: the number of input channels
   - `nclasses`: number of output classes
 
 See also [`Metalhead.mlpmixer`](#).
 """
-function MLPMixer(size::Symbol = :base; patch_size::Dims{2} = (16, 16),
-                  imsize::Dims{2} = (224, 224), drop_path_rate = 0.0, nclasses = 1000)
+struct MLPMixer
+    layers::Any
+end
+@functor MLPMixer
+
+function MLPMixer(size::Symbol; imsize::Dims{2} = (224, 224), patch_size::Dims{2} = (16, 16),
+                  inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(size, keys(MIXER_CONFIGS))
     depth = MIXER_CONFIGS[size][:depth]
     embedplanes = MIXER_CONFIGS[size][:planes]
-    layers = mlpmixer(mixerblock, imsize; patch_size, embedplanes, depth, drop_path_rate,
-                      nclasses)
+    layers = mlpmixer(mixerblock, imsize; patch_size, embedplanes, depth, inchannels,nclasses)
     return MLPMixer(layers)
 end
 

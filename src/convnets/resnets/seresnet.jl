@@ -1,5 +1,5 @@
 """
-    SEResNet(depth::Integer; pretrain = false, inchannels = 3, nclasses = 1000)
+    SEResNet(depth::Integer; pretrain::Bool = false, inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Creates a SEResNet model with the specified depth.
 ((reference)[https://arxiv.org/pdf/1709.01507.pdf])
@@ -24,7 +24,8 @@ end
 
 (m::SEResNet)(x) = m.layers(x)
 
-function SEResNet(depth::Integer; pretrain = false, inchannels = 3, nclasses = 1000)
+function SEResNet(depth::Integer; pretrain::Bool = false, inchannels::Integer = 3,
+                  nclasses::Integer = 1000)
     _checkconfig(depth, keys(RESNET_CONFIGS))
     layers = resnet(RESNET_CONFIGS[depth]...; inchannels, nclasses,
                     attn_fn = squeeze_excite)
@@ -38,8 +39,8 @@ backbone(m::SEResNet) = m.layers[1]
 classifier(m::SEResNet) = m.layers[2]
 
 """
-    SEResNeXt(depth::Integer; pretrain = false, cardinality = 32, base_width = 4,
-              inchannels = 3, nclasses = 1000)
+    SEResNeXt(depth::Integer; pretrain::Bool = false, cardinality = 32, base_width = 4,
+              inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Creates a SEResNeXt model with the specified depth, cardinality, and base width.
 ((reference)[https://arxiv.org/pdf/1709.01507.pdf])
@@ -66,8 +67,8 @@ end
 
 (m::SEResNeXt)(x) = m.layers(x)
 
-function SEResNeXt(depth::Integer; pretrain = false, cardinality = 32, base_width = 4,
-                   inchannels = 3, nclasses = 1000)
+function SEResNeXt(depth::Integer; pretrain::Bool = false, cardinality = 32, base_width = 4,
+                   inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(depth, sort(collect(keys(RESNET_CONFIGS)))[3:end])
     layers = resnet(RESNET_CONFIGS[depth]...; inchannels, nclasses, cardinality, base_width,
                     attn_fn = squeeze_excite)

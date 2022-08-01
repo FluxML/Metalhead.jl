@@ -1,7 +1,7 @@
 _flatten_spatial(x) = permutedims(reshape(x, (:, size(x, 3), size(x, 4))), (2, 1, 3))
 
 """
-    PatchEmbedding(imsize::Dims{2} = (224, 224); inchannels = 3,
+    PatchEmbedding(imsize::Dims{2} = (224, 224); inchannels::Integer = 3,
                    patch_size::Dims{2} = (16, 16), embedplanes = 768,
                    norm_layer = planes -> identity, flatten = true)
 
@@ -19,8 +19,8 @@ patches.
   - `flatten`: set true to flatten the input spatial dimensions after the embedding
 """
 function PatchEmbedding(imsize::Dims{2} = (224, 224); inchannels::Integer = 3,
-                        patch_size::Dims{2} = (16, 16), embedplanes = 768,
-                        norm_layer = planes -> identity, flatten = true)
+                        patch_size::Dims{2} = (16, 16), embedplanes::Integer = 768,
+                        norm_layer = planes -> identity, flatten::Bool = true)
     im_height, im_width = imsize
     patch_height, patch_width = patch_size
 
@@ -33,13 +33,15 @@ function PatchEmbedding(imsize::Dims{2} = (224, 224); inchannels::Integer = 3,
 end
 
 """
-    ViPosEmbedding(embedsize::Integer, npatches::Integer; init = (dims::Dims{2}) -> rand(Float32, dims))
+    ViPosEmbedding(embedsize::Integer, npatches::Integer; 
+                   init = (dims::Dims{2}) -> rand(Float32, dims))
 
 Positional embedding layer used by many vision transformer-like models.
 """
 struct ViPosEmbedding{T}
     vectors::T
 end
+@functor ViPosEmbedding
 
 function ViPosEmbedding(embedsize::Integer, npatches::Integer;
                         init = (dims::Dims{2}) -> rand(Float32, dims))
@@ -48,22 +50,20 @@ end
 
 (p::ViPosEmbedding)(x) = x .+ p.vectors
 
-@functor ViPosEmbedding
-
 """
-    ClassTokens(dim; init = Flux.zeros32)
+    ClassTokens(planes::Integer; init = Flux.zeros32)
 
-Appends class tokens to an input with embedding dimension `dim` for use in many vision transformer models.
+Appends class tokens to an input with embedding dimension `planes` for use in many
+vision transformer models.
 """
 struct ClassTokens{T}
     token::T
 end
+@functor ClassTokens
 
-ClassTokens(dim::Integer; init = Flux.zeros32) = ClassTokens(init(dim, 1, 1))
+ClassTokens(planes::Integer; init = Flux.zeros32) = ClassTokens(init(planes, 1, 1))
 
 function (m::ClassTokens)(x::AbstractArray{T, 3}) where {T}
     tokens = m.token .* MLUtils.ones_like(x, T, (1, 1, size(x, 3)))
     return hcat(tokens, x)
 end
-
-@functor ClassTokens

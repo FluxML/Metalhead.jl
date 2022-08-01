@@ -12,7 +12,8 @@ Transformer as used in the base ViT architecture.
   - `mlp_ratio`: ratio of MLP layers to the number of input channels
   - `dropout_rate`: dropout rate
 """
-function transformer_encoder(planes, depth, nheads; mlp_ratio = 4.0, dropout_rate = 0.0)
+function transformer_encoder(planes::Integer, depth::Integer, nheads::Integer;
+                             mlp_ratio = 4.0, dropout_rate = 0.0)
     layers = [Chain(SkipConnection(prenorm(planes,
                                            MHAttention(planes, nheads;
                                                        attn_dropout_rate = dropout_rate,
@@ -26,9 +27,9 @@ function transformer_encoder(planes, depth, nheads; mlp_ratio = 4.0, dropout_rat
 end
 
 """
-    vit(imsize::Dims{2} = (256, 256); inchannels = 3, patch_size::Dims{2} = (16, 16),
+    vit(imsize::Dims{2} = (256, 256); inchannels::Integer = 3, patch_size::Dims{2} = (16, 16),
         embedplanes = 768, depth = 6, nheads = 16, mlp_ratio = 4.0, dropout_rate = 0.1,
-        emb_dropout_rate = 0.1, pool = :class, nclasses = 1000)
+        emb_dropout_rate = 0.1, pool = :class, nclasses::Integer = 1000)
 
 Creates a Vision Transformer (ViT) model.
 ([reference](https://arxiv.org/abs/2010.11929)).
@@ -47,9 +48,10 @@ Creates a Vision Transformer (ViT) model.
   - `pool`: pooling type, either :class or :mean
   - `nclasses`: number of classes in the output
 """
-function vit(imsize::Dims{2} = (256, 256); inchannels = 3, patch_size::Dims{2} = (16, 16),
-             embedplanes = 768, depth = 6, nheads = 16, mlp_ratio = 4.0, dropout_rate = 0.1,
-             emb_dropout_rate = 0.1, pool = :class, nclasses = 1000)
+function vit(imsize::Dims{2} = (256, 256); inchannels::Integer = 3,
+             patch_size::Dims{2} = (16, 16), embedplanes::Integer = 768,
+             depth::Integer = 6, nheads::Integer = 16, mlp_ratio = 4.0, dropout_rate = 0.1,
+             emb_dropout_rate = 0.1, pool::Symbol = :class, nclasses::Integer = 1000)
     @assert pool in [:class, :mean]
     "Pool type must be either `:class` (class token) or `:mean` (mean pooling)"
     npatches = prod(imsize .÷ patch_size)
@@ -74,8 +76,8 @@ const VIT_CONFIGS = Dict(:tiny => (depth = 12, embedplanes = 192, nheads = 3),
                                        mlp_ratio = 64 // 13))
 
 """
-    ViT(mode::Symbol = base; imsize::Dims{2} = (256, 256), inchannels = 3,
-        patch_size::Dims{2} = (16, 16), pool = :class, nclasses = 1000)
+    ViT(mode::Symbol = base; imsize::Dims{2} = (256, 256), inchannels::Integer = 3,
+        patch_size::Dims{2} = (16, 16), pool = :class, nclasses::Integer = 1000)
 
 Creates a Vision Transformer (ViT) model.
 ([reference](https://arxiv.org/abs/2010.11929)).
@@ -97,11 +99,11 @@ struct ViT
 end
 @functor ViT
 
-function ViT(mode::Symbol = :base; imsize::Dims{2} = (256, 256), inchannels = 3,
-             patch_size::Dims{2} = (16, 16), pool = :class, nclasses = 1000)
+function ViT(mode::Symbol = :base; imsize::Dims{2} = (256, 256), patch_size::Dims{2} = (16, 16),
+             inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(mode, keys(VIT_CONFIGS))
     kwargs = VIT_CONFIGS[mode]
-    layers = vit(imsize; inchannels, patch_size, nclasses, pool, kwargs...)
+    layers = vit(imsize; inchannels, patch_size, nclasses, kwargs...)
     return ViT(layers)
 end
 

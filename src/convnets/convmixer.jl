@@ -1,6 +1,7 @@
 """
-    convmixer(planes, depth; inchannels = 3, kernel_size = (9, 9), patch_size::Dims{2} = 7,
-              activation = gelu, nclasses = 1000)
+    convmixer(planes::Integer, depth::Integer; kernel_size = (9, 9),
+              patch_size::Dims{2} = (7, 7), activation = gelu,
+              inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Creates a ConvMixer model.
 ([reference](https://arxiv.org/abs/2201.09792))
@@ -9,14 +10,15 @@ Creates a ConvMixer model.
 
   - `planes`: number of planes in the output of each block
   - `depth`: number of layers
-  - `inchannels`: The number of channels in the input.
   - `kernel_size`: kernel size of the convolutional layers
   - `patch_size`: size of the patches
   - `activation`: activation function used after the convolutional layers
+  - `inchannels`: The number of channels in the input.
   - `nclasses`: number of classes in the output
 """
-function convmixer(planes, depth; inchannels = 3, kernel_size = (9, 9),
-                   patch_size::Dims{2} = (7, 7), activation = gelu, nclasses = 1000)
+function convmixer(planes::Integer, depth::Integer; kernel_size = (9, 9),
+                   patch_size::Dims{2} = (7, 7), activation = gelu,
+                   inchannels::Integer = 3, nclasses::Integer = 1000)
     stem = conv_norm(patch_size, inchannels, planes, activation; preact = true,
                      stride = patch_size[1])
     blocks = [Chain(SkipConnection(Chain(conv_norm(kernel_size, planes, planes, activation;
@@ -39,7 +41,7 @@ const CONVMIXER_CONFIGS = Dict(:base => Dict(:planes => 1536, :depth => 20,
                                               :patch_size => (7, 7)))
 
 """
-    ConvMixer(mode::Symbol = :base; inchannels = 3, activation = gelu, nclasses = 1000)
+    ConvMixer(mode::Symbol; inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Creates a ConvMixer model.
 ([reference](https://arxiv.org/abs/2201.09792))
@@ -48,7 +50,6 @@ Creates a ConvMixer model.
 
   - `mode`: the mode of the model, either `:base`, `:small` or `:large`
   - `inchannels`: The number of channels in the input.
-  - `activation`: activation function used after the convolutional layers
   - `nclasses`: number of classes in the output
 """
 struct ConvMixer
@@ -56,14 +57,13 @@ struct ConvMixer
 end
 @functor ConvMixer
 
-function ConvMixer(mode::Symbol = :base; inchannels = 3, activation = gelu, nclasses = 1000)
+function ConvMixer(mode::Symbol; inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(mode, keys(CONVMIXER_CONFIGS))
     planes = CONVMIXER_CONFIGS[mode][:planes]
     depth = CONVMIXER_CONFIGS[mode][:depth]
     kernel_size = CONVMIXER_CONFIGS[mode][:kernel_size]
     patch_size = CONVMIXER_CONFIGS[mode][:patch_size]
-    layers = convmixer(planes, depth; inchannels, kernel_size, patch_size, activation,
-                       nclasses)
+    layers = convmixer(planes, depth; inchannels, kernel_size, patch_size, nclasses)
     return ConvMixer(layers)
 end
 

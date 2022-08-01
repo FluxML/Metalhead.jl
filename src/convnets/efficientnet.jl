@@ -1,6 +1,6 @@
 """
-    efficientnet(scalings, block_configs;
-                 inchannels = 3, nclasses = 1000, max_width = 1280)
+    efficientnet(scalings, block_configs; max_width::Integer = 1280,
+                 inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Create an EfficientNet model ([reference](https://arxiv.org/abs/1905.11946v5)).
 
@@ -22,8 +22,8 @@ Create an EfficientNet model ([reference](https://arxiv.org/abs/1905.11946v5)).
   - `max_width`: maximum number of output channels before the fully connected
     classification blocks
 """
-function efficientnet(scalings, block_configs;
-                      inchannels = 3, nclasses = 1000, max_width = 1280)
+function efficientnet(scalings, block_configs; max_width::Integer = 1280,
+                      inchannels::Integer = 3, nclasses::Integer = 1000)
     wscale, dscale = scalings
     scalew(w) = wscale ≈ 1 ? w : ceil(Int64, wscale * w)
     scaled(d) = dscale ≈ 1 ? d : ceil(Int64, dscale * d)
@@ -36,12 +36,11 @@ function efficientnet(scalings, block_configs;
         out_channels = _round_channels(scalew(o), 8)
         repeats = scaled(n)
         push!(blocks,
-              invertedresidual((k, k), in_channels, in_channels * e, out_channels, swish;
+              invertedresidual((k, k), in_channels, out_channels, swish; expansion = e,
                                stride = s, reduction = 4))
         for _ in 1:(repeats - 1)
             push!(blocks,
-                  invertedresidual((k, k), out_channels, out_channels * e, out_channels,
-                                   swish;
+                  invertedresidual((k, k), out_channels, out_channels, swish; expansion = e,
                                    stride = 1, reduction = 4))
         end
     end
@@ -74,6 +73,7 @@ const EFFICIENTNET_BLOCK_CONFIGS = [
 # w: width scaling
 # d: depth scaling
 # r: image resolution
+# Data is organised as (r, (w, d))
 const EFFICIENTNET_GLOBAL_CONFIGS = Dict(:b0 => (224, (1.0, 1.0)),
                                          :b1 => (240, (1.0, 1.1)),
                                          :b2 => (260, (1.1, 1.2)),
@@ -84,14 +84,9 @@ const EFFICIENTNET_GLOBAL_CONFIGS = Dict(:b0 => (224, (1.0, 1.0)),
                                          :b7 => (600, (2.0, 3.1)),
                                          :b8 => (672, (2.2, 3.6)))
 
-struct EfficientNet
-    layers::Any
-end
-@functor EfficientNet
-
 """
-    EfficientNet(scalings, block_configs;
-                 inchannels = 3, nclasses = 1000, max_width = 1280)
+    EfficientNet(scalings, block_configs; max_width::Integer = 1280,
+                 inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Create an EfficientNet model ([reference](https://arxiv.org/abs/1905.11946v5)).
 See also [`efficientnet`](#).
@@ -114,8 +109,13 @@ See also [`efficientnet`](#).
   - `max_width`: maximum number of output channels before the fully connected
     classification blocks
 """
-function EfficientNet(scalings, block_configs;
-                      inchannels = 3, nclasses = 1000, max_width = 1280)
+struct EfficientNet
+    layers::Any
+end
+@functor EfficientNet
+
+function EfficientNet(scalings, block_configs; max_width::Integer = 1280,
+                      inchannels::Integer = 3, nclasses::Integer = 1000)
     layers = efficientnet(scalings, block_configs; inchannels, nclasses, max_width)
     return EfficientNet(layers)
 end
@@ -126,7 +126,7 @@ backbone(m::EfficientNet) = m.layers[1]
 classifier(m::EfficientNet) = m.layers[2]
 
 """
-    EfficientNet(name::Symbol; pretrain = false)
+    EfficientNet(name::Symbol; pretrain::Bool = false)
 
 Create an EfficientNet model ([reference](https://arxiv.org/abs/1905.11946v5)).
 See also [`efficientnet`](#).
@@ -137,7 +137,7 @@ See also [`efficientnet`](#).
     (can be `:b0`, `:b1`, `:b2`, `:b3`, `:b4`, `:b5`, `:b6`, `:b7`, `:b8`)
   - `pretrain`: set to `true` to load the pre-trained weights for ImageNet
 """
-function EfficientNet(name::Symbol; pretrain = false)
+function EfficientNet(name::Symbol; pretrain::Bool = false)
     _checkconfig(name, keys(EFFICIENTNET_GLOBAL_CONFIGS))
     model = EfficientNet(EFFICIENTNET_GLOBAL_CONFIGS[name][2], EFFICIENTNET_BLOCK_CONFIGS)
     pretrain && loadpretrain!(model, string("efficientnet-", name))

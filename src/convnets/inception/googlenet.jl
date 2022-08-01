@@ -27,7 +27,7 @@ function _inceptionblock(inplanes, out_1x1, red_3x3, out_3x3, red_5x5, out_5x5, 
 end
 
 """
-    googlenet(; nclasses = 1000)
+    googlenet(; nclasses::Integer = 1000)
 
 Create an Inception-v1 model (commonly referred to as GoogLeNet)
 ([reference](https://arxiv.org/abs/1409.4842v1)).
@@ -36,7 +36,7 @@ Create an Inception-v1 model (commonly referred to as GoogLeNet)
 
   - `nclasses`: the number of output classes
 """
-function googlenet(; nclasses = 1000)
+function googlenet(; nclasses::Integer = 1000)
     layers = Chain(Chain(Conv((7, 7), 3 => 64; stride = 2, pad = 3),
                          MaxPool((3, 3); stride = 2, pad = 1),
                          Conv((1, 1), 64 => 64),
@@ -61,7 +61,7 @@ function googlenet(; nclasses = 1000)
 end
 
 """
-    GoogLeNet(; pretrain = false,  nclasses = 1000)
+    GoogLeNet(; pretrain::Bool = false, nclasses::Integer = 1000)
 
 Create an Inception-v1 model (commonly referred to as `GoogLeNet`)
 ([reference](https://arxiv.org/abs/1409.4842v1)).
@@ -82,7 +82,7 @@ struct GoogLeNet
 end
 @functor GoogLeNet
 
-function GoogLeNet(; pretrain = false, nclasses = 1000)
+function GoogLeNet(; pretrain::Bool = false, nclasses::Integer = 1000)
     layers = googlenet(; nclasses = nclasses)
     if pretrain
         loadpretrain!(layers, "GoogLeNet")

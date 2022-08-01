@@ -10,7 +10,7 @@ Create a Densenet bottleneck layer
   - `outplanes`: number of output feature maps on bottleneck branch
     (and scaling factor for inner feature maps; see ref)
 """
-function dense_bottleneck(inplanes, outplanes)
+function dense_bottleneck(inplanes::Integer, outplanes::Integer)
     inner_channels = 4 * outplanes
     return SkipConnection(Chain(conv_norm((1, 1), inplanes, inner_channels; bias = false,
                                           revnorm = true)...,
@@ -30,7 +30,7 @@ Create a DenseNet transition sequence
   - `inplanes`: number of input feature maps
   - `outplanes`: number of output feature maps
 """
-function transition(inplanes, outplanes)
+function transition(inplanes::Integer, outplanes::Integer)
     return Chain(conv_norm((1, 1), inplanes, outplanes; bias = false, revnorm = true)...,
                  MeanPool((2, 2)))
 end
@@ -48,14 +48,14 @@ the number of output feature maps by `growth_rates` with each block
   - `growth_rates`: the growth (additive) rates of output feature maps
     after each block (a vector of `k`s from the ref)
 """
-function dense_block(inplanes, growth_rates)
+function dense_block(inplanes::Integer, growth_rates)
     return [dense_bottleneck(i, o)
             for (i, o) in zip(inplanes .+ cumsum([0, growth_rates[1:(end - 1)]...]),
                               growth_rates)]
 end
 
 """
-    densenet(inplanes, growth_rates; reduction = 0.5, nclasses = 1000)
+    densenet(inplanes, growth_rates; reduction = 0.5, nclasses::Integer = 1000)
 
 Create a DenseNet model
 ([reference](https://arxiv.org/abs/1608.06993)).
@@ -68,9 +68,11 @@ Create a DenseNet model
   - `reduction`: the factor by which the number of feature maps is scaled across each transition
   - `nclasses`: the number of output classes
 """
-function densenet(inplanes, growth_rates; reduction = 0.5, nclasses = 1000)
+function densenet(inplanes::Integer, growth_rates; reduction = 0.5, inchannels::Integer = 3,
+                  nclasses::Integer = 1000)
     layers = []
-    append!(layers, conv_norm((7, 7), 3, inplanes; stride = 2, pad = (3, 3), bias = false))
+    append!(layers,
+            conv_norm((7, 7), inchannels, inplanes; stride = 2, pad = (3, 3), bias = false))
     push!(layers, MaxPool((3, 3); stride = 2, pad = (1, 1)))
     outplanes = 0
     for (i, rates) in enumerate(growth_rates)
@@ -88,7 +90,7 @@ function densenet(inplanes, growth_rates; reduction = 0.5, nclasses = 1000)
 end
 
 """
-    densenet(nblocks; growth_rate = 32, reduction = 0.5, nclasses = 1000)
+    densenet(nblocks; growth_rate = 32, reduction = 0.5, nclasses::Integer = 1000)
 
 Create a DenseNet model
 ([reference](https://arxiv.org/abs/1608.06993)).
@@ -100,15 +102,15 @@ Create a DenseNet model
   - `reduction`: the factor by which the number of feature maps is scaled across each transition
   - `nclasses`: the number of output classes
 """
-function densenet(nblocks::NTuple{N, <:Integer}; growth_rate = 32, reduction = 0.5,
-                  nclasses = 1000) where {N}
+function densenet(nblocks::Vector{<:Integer}; growth_rate::Integer = 32, reduction = 0.5,
+                  inchannels::Integer = 3, nclasses::Integer = 1000)
     return densenet(2 * growth_rate, [fill(growth_rate, n) for n in nblocks];
-                    reduction = reduction, nclasses = nclasses)
+                    reduction, inchannels, nclasses)
 end
 
 """
-    DenseNet(nblocks::NTuple{N, <:Integer};
-             growth_rate = 32, reduction = 0.5, nclasses = 1000)
+    DenseNet(nblocks::Vector{<:Integer}; growth_rate::Integer = 32, reduction = 0.5,
+             inchannels = 3, nclasses::Integer = 1000)
 
 Create a DenseNet model
 ([reference](https://arxiv.org/abs/1608.06993)).
@@ -124,29 +126,26 @@ See also [`densenet`](#).
 struct DenseNet
     layers::Any
 end
+@functor DenseNet
 
-function DenseNet(nblocks::NTuple{N, <:Integer};
-                  growth_rate = 32, reduction = 0.5, nclasses = 1000) where {N}
-    layers = densenet(nblocks; growth_rate = growth_rate,
-                      reduction = reduction,
-                      nclasses = nclasses)
+function DenseNet(nblocks::Vector{<:Integer}; growth_rate::Integer = 32, reduction = 0.5,
+                  inchannels = 3, nclasses::Integer = 1000)
+    layers = densenet(nblocks; growth_rate, reduction, inchannels, nclasses)
     return DenseNet(layers)
 end
-
-@functor DenseNet
 
 (m::DenseNet)(x) = m.layers(x)
 
 backbone(m::DenseNet) = m.layers[1]
 classifier(m::DenseNet) = m.layers[2]
 
-const DENSENET_CONFIGS = Dict(121 => (6, 12, 24, 16),
-                              161 => (6, 12, 36, 24),
-                              169 => (6, 12, 32, 32),
-                              201 => (6, 12, 48, 32))
+const DENSENET_CONFIGS = Dict(121 => [6, 12, 24, 16],
+                              161 => [6, 12, 36, 24],
+                              169 => [6, 12, 32, 32],
+                              201 => [6, 12, 48, 32])
 
 """
-    DenseNet(config::Integer = 121; pretrain = false, nclasses = 1000)
+    DenseNet(config::Integer = 121; pretrain::Bool = false, nclasses::Integer = 1000)
     DenseNet(transition_configs::NTuple{N,Integer})
 
 Create a DenseNet model with specified configuration. Currently supported values are (121, 161, 169, 201)
@@ -159,7 +158,7 @@ Set `pretrain = true` to load the model with pre-trained weights for ImageNet.
 
 See also [`Metalhead.densenet`](#).
 """
-function DenseNet(config::Integer = 121; pretrain = false, nclasses = 1000)
+function DenseNet(config::Integer = 121; pretrain::Bool = false, nclasses::Integer = 1000)
     _checkconfig(config, keys(DENSENET_CONFIGS))
     model = DenseNet(DENSENET_CONFIGS[config]; nclasses = nclasses)
     if pretrain

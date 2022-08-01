@@ -64,7 +64,7 @@ function block8(scale = 1.0f0; activation = identity)
 end
 
 """
-    inceptionresnetv2(; inchannels = 3, dropout_rate = 0.0, nclasses = 1000)
+    inceptionresnetv2(; inchannels::Integer = 3, dropout_rate = 0.0, nclasses::Integer = 1000)
 
 Creates an InceptionResNetv2 model.
 ([reference](https://arxiv.org/abs/1602.07261))
@@ -75,7 +75,8 @@ Creates an InceptionResNetv2 model.
   - `dropout_rate`: rate of dropout in classifier head.
   - `nclasses`: the number of output classes.
 """
-function inceptionresnetv2(; inchannels = 3, dropout_rate = 0.0, nclasses = 1000)
+function inceptionresnetv2(; inchannels::Integer = 3, dropout_rate = 0.0,
+                           nclasses::Integer = 1000)
     body = Chain(conv_norm((3, 3), inchannels, 32; stride = 2)...,
                  conv_norm((3, 3), 32, 32)...,
                  conv_norm((3, 3), 32, 64; pad = 1)...,
@@ -97,7 +98,7 @@ function inceptionresnetv2(; inchannels = 3, dropout_rate = 0.0, nclasses = 1000
 end
 
 """
-    InceptionResNetv2(; pretrain = false, inchannels = 3, dropout_rate = 0.0, nclasses = 1000)
+    InceptionResNetv2(; pretrain::Bool = false, inchannels::Integer = 3, dropout_rate = 0.0, nclasses::Integer = 1000)
 
 Creates an InceptionResNetv2 model.
 ([reference](https://arxiv.org/abs/1602.07261))
@@ -118,8 +119,9 @@ struct InceptionResNetv2
 end
 @functor InceptionResNetv2
 
-function InceptionResNetv2(; pretrain = false, inchannels = 3, dropout_rate = 0.0,
-                           nclasses = 1000)
+function InceptionResNetv2(; pretrain::Bool = false, inchannels::Integer = 3,
+                           dropout_rate = 0.0,
+                           nclasses::Integer = 1000)
     layers = inceptionresnetv2(; inchannels, dropout_rate, nclasses)
     if pretrain
         loadpretrain!(layers, "InceptionResNetv2")

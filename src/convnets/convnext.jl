@@ -1,5 +1,5 @@
 """
-    convnextblock(planes, drop_path_rate = 0., λ = 1f-6)
+    convnextblock(planes::Integer, drop_path_rate = 0.0, layerscale_init = 1.0f-6)
 
 Creates a single block of ConvNeXt.
 ([reference](https://arxiv.org/abs/2201.03545))
@@ -8,21 +8,23 @@ Creates a single block of ConvNeXt.
 
   - `planes`: number of input channels.
   - `drop_path_rate`: Stochastic depth rate.
-  - `λ`: Initial value for [`LayerScale`](#)
+  - `layerscale_init`: Initial value for [`LayerScale`](#)
 """
-function convnextblock(planes, drop_path_rate = 0.0, λ = 1.0f-6)
+function convnextblock(planes::Integer, drop_path_rate = 0.0, layerscale_init = 1.0f-6)
     layers = SkipConnection(Chain(DepthwiseConv((7, 7), planes => planes; pad = 3),
                                   swapdims((3, 1, 2, 4)),
                                   LayerNorm(planes; ϵ = 1.0f-6),
                                   mlp_block(planes, 4 * planes),
-                                  LayerScale(planes, λ),
+                                  LayerScale(planes, layerscale_init),
                                   swapdims((2, 3, 1, 4)),
                                   DropPath(drop_path_rate)), +)
     return layers
 end
 
 """
-    convnext(depths, planes; inchannels = 3, drop_path_rate = 0., λ = 1f-6, nclasses = 1000)
+    convnext(depths::Vector{<:Integer}, planes::Vector{<:Integer};
+             drop_path_rate = 0.0, layerscale_init = 1.0f-6, inchannels::Integer = 3,
+             nclasses::Integer = 1000)
 
 Creates the layers for a ConvNeXt model.
 ([reference](https://arxiv.org/abs/2201.03545))
@@ -33,12 +35,13 @@ Creates the layers for a ConvNeXt model.
   - `depths`: list with configuration for depth of each block
   - `planes`: list with configuration for number of output channels in each block
   - `drop_path_rate`: Stochastic depth rate.
-  - `λ`: Initial value for [`LayerScale`](#)
+  - `layerscale_init`: Initial value for [`LayerScale`](#)
     ([reference](https://arxiv.org/abs/2103.17239))
   - `nclasses`: number of output classes
 """
-function convnext(depths, planes; inchannels = 3, drop_path_rate = 0.0, λ = 1.0f-6,
-                  nclasses = 1000)
+function convnext(depths::Vector{<:Integer}, planes::Vector{<:Integer};
+                  drop_path_rate = 0.0, layerscale_init = 1.0f-6, inchannels::Integer = 3,
+                  nclasses::Integer = 1000)
     @assert length(depths) == length(planes)
     "`planes` should have exactly one value for each block"
     downsample_layers = []
@@ -54,7 +57,9 @@ function convnext(depths, planes; inchannels = 3, drop_path_rate = 0.0, λ = 1.0
     dp_rates = linear_scheduler(drop_path_rate; depth = sum(depths))
     cur = 0
     for i in eachindex(depths)
-        push!(stages, [convnextblock(planes[i], dp_rates[cur + j], λ) for j in 1:depths[i]])
+        push!(stages,
+              [convnextblock(planes[i], dp_rates[cur + j], layerscale_init)
+               for j in 1:depths[i]])
         cur += depths[i]
     end
     backbone = collect(Iterators.flatten(Iterators.flatten(zip(downsample_layers, stages))))
@@ -72,13 +77,8 @@ const CONVNEXT_CONFIGS = Dict(:tiny => ([3, 3, 9, 3], [96, 192, 384, 768]),
                               :large => ([3, 3, 27, 3], [192, 384, 768, 1536]),
                               :xlarge => ([3, 3, 27, 3], [256, 512, 1024, 2048]))
 
-struct ConvNeXt
-    layers::Any
-end
-@functor ConvNeXt
-
 """
-    ConvNeXt(mode::Symbol = :base; inchannels = 3, drop_path_rate = 0., λ = 1f-6, nclasses = 1000)
+    ConvNeXt(mode::Symbol; inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Creates a ConvNeXt model.
 ([reference](https://arxiv.org/abs/2201.03545))
@@ -86,16 +86,18 @@ Creates a ConvNeXt model.
 # Arguments
 
   - `inchannels`: The number of channels in the input.
-  - `drop_path_rate`: Stochastic depth rate.
-  - `λ`: Init value for [LayerScale](https://arxiv.org/abs/2103.17239)
   - `nclasses`: number of output classes
 
 See also [`Metalhead.convnext`](#).
 """
-function ConvNeXt(mode::Symbol = :base; inchannels = 3, drop_path_rate = 0.0, λ = 1.0f-6,
-                  nclasses = 1000)
+struct ConvNeXt
+    layers::Any
+end
+@functor ConvNeXt
+
+function ConvNeXt(mode::Symbol; inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(mode, keys(CONVNEXT_CONFIGS))
-    layers = convnext(CONVNEXT_CONFIGS[mode]...; inchannels, drop_path_rate, λ, nclasses)
+    layers = convnext(CONVNEXT_CONFIGS[mode]...; inchannels, nclasses)
     return ConvNeXt(layers)
 end
 
