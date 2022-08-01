@@ -114,16 +114,17 @@ Create a basic inverted residual block for MobileNet variants
   - `reduction`: The reduction factor for the number of hidden feature maps
     in a squeeze and excite layer (see [`squeeze_excite`](#)).
 """
-function invertedresidual(kernel_size, inplanes, hidden_planes, outplanes,
-                          activation = relu; stride, reduction = nothing)
+function invertedresidual(kernel_size, inplanes::Integer, hidden_planes::Integer,
+                          outplanes::Integer, activation = relu; stride::Integer,
+                          reduction::Union{Nothing, Integer} = nothing)
     @assert stride in [1, 2] "`stride` has to be 1 or 2"
     pad = @. (kernel_size - 1) ÷ 2
-    conv1 = (inplanes == hidden_planes) ? identity :
-            Chain(conv_norm((1, 1), inplanes, hidden_planes, activation; bias = false))
+    conv1 = (inplanes == hidden_planes) ? (identity,) :
+            conv_norm((1, 1), inplanes, hidden_planes, activation; bias = false)
     selayer = isnothing(reduction) ? identity :
               squeeze_excite(hidden_planes; reduction, activation, gate_activation = hardσ,
                              norm_layer = BatchNorm)
-    invres = Chain(conv1,
+    invres = Chain(conv1...,
                    conv_norm(kernel_size, hidden_planes, hidden_planes, activation;
                              bias = false, stride, pad = pad, groups = hidden_planes)...,
                    selayer,
@@ -131,6 +132,10 @@ function invertedresidual(kernel_size, inplanes, hidden_planes, outplanes,
     return (stride == 1 && inplanes == outplanes) ? SkipConnection(invres, +) : invres
 end
 
-function invertedresidual(kernel_size::Integer, args...; kwargs...)
-    return invertedresidual((kernel_size, kernel_size), args...; kwargs...)
+function invertedresidual(kernel_size, inplanes::Integer, outplanes::Integer,
+                          activation = relu; stride::Integer, expansion,
+                          reduction::Union{Nothing, Integer} = nothing)
+    hidden_planes = Int(inplanes * expansion)
+    return invertedresidual(kernel_size, inplanes, hidden_planes, outplanes, activation;
+                            stride, reduction)
 end

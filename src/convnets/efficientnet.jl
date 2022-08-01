@@ -36,11 +36,12 @@ function efficientnet(scalings, block_configs;
         out_channels = _round_channels(scalew(o), 8)
         repeats = scaled(n)
         push!(blocks,
-              invertedresidual(k, in_channels, in_channels * e, out_channels, swish;
+              invertedresidual((k, k), in_channels, in_channels * e, out_channels, swish;
                                stride = s, reduction = 4))
         for _ in 1:(repeats - 1)
             push!(blocks,
-                  invertedresidual(k, out_channels, out_channels * e, out_channels, swish;
+                  invertedresidual((k, k), out_channels, out_channels * e, out_channels,
+                                   swish;
                                    stride = 1, reduction = 4))
         end
     end
