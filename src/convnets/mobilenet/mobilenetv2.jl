@@ -30,7 +30,7 @@ function mobilenetv2(width_mult, configs; inchannels = 3, max_width = 1280, ncla
         outplanes = _round_channels(c * width_mult, width_mult == 0.1 ? 4 : 8)
         for i in 1:n
             push!(layers,
-                  invertedresidual(3, inplanes, inplanes * t, outplanes, a;
+                  invertedresidual((3, 3), inplanes, inplanes * t, outplanes, a;
                                    stride = i == 1 ? s : 1))
             inplanes = outplanes
         end
