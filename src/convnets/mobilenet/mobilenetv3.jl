@@ -1,5 +1,7 @@
 """
-    mobilenetv3(width_mult, configs; inchannels = 3, max_width = 1024, nclasses = 1000)
+    mobilenetv3(width_mult::Number, configs::Vector{<:Tuple};
+                max_width::Integer = 1024, inchannels::Integer = 3,
+                nclasses::Integer = 1000)
 
 Create a MobileNetv3 model.
 ([reference](https://arxiv.org/abs/1905.02244)).
@@ -22,7 +24,9 @@ Create a MobileNetv3 model.
   - `max_width`: The maximum number of feature maps in any layer of the network
   - `nclasses`: the number of output classes
 """
-function mobilenetv3(width_mult, configs; inchannels = 3, max_width = 1024, nclasses = 1000)
+function mobilenetv3(width_mult::Number, configs::Vector{<:Tuple};
+                     max_width::Integer = 1024, inchannels::Integer = 3,
+                     nclasses::Integer = 1000)
     # building first layer
     inplanes = _round_channels(16 * width_mult, 8)
     layers = []
@@ -86,13 +90,9 @@ const MOBILENETV3_CONFIGS = Dict(:small => [
                                      (5, 6, 160, 4, hardswish, 1),
                                  ])
 
-struct MobileNetv3
-    layers::Any
-end
-@functor MobileNetv3
-
 """
-    MobileNetv3(mode::Symbol = :small, width_mult::Number = 1; inchannels = 3, pretrain = false, nclasses = 1000)
+    MobileNetv3(mode::Symbol = :small, width_mult::Number = 1; pretrain::Bool = false,
+                inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Create a MobileNetv3 model with the specified configuration.
 ([reference](https://arxiv.org/abs/1905.02244)).
@@ -104,15 +104,20 @@ Set `pretrain = true` to load the model with pre-trained weights for ImageNet.
   - `width_mult`: Controls the number of output feature maps in each block
     (with 1.0 being the default in the paper;
     this is usually a value between 0.1 and 1.4)
-  - `inchannels`: The number of channels in the input.
   - `pretrain`: whether to load the pre-trained weights for ImageNet
+  - `inchannels`: The number of channels in the input.
   - `nclasses`: the number of output classes
 
 See also [`Metalhead.mobilenetv3`](#).
 """
-function MobileNetv3(mode::Symbol = :small, width_mult::Number = 1; inchannels = 3,
-                     pretrain = false, nclasses = 1000)
-    @assert mode in [:large, :small] "`mode` has to be either :large or :small"
+struct MobileNetv3
+    layers::Any
+end
+@functor MobileNetv3
+
+function MobileNetv3(mode::Symbol = :small, width_mult::Number = 1; pretrain::Bool = false,
+                     inchannels::Integer = 3, nclasses::Integer = 1000)
+    _checkconfig(mode, [:small, :large])
     max_width = (mode == :large) ? 1280 : 1024
     layers = mobilenetv3(width_mult, MOBILENETV3_CONFIGS[mode]; inchannels, max_width,
                          nclasses)

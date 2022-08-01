@@ -15,9 +15,9 @@ Creates a squeeze-and-excitation layer used in MobileNets and SE-Nets.
   - `norm_layer`: The normalization layer to be used after the convolution layers
   - `rd_planes`: The number of hidden feature maps in a squeeze and excite layer
 """
-function squeeze_excite(inplanes; reduction = 16, rd_divisor = 8,
-                        activation = relu, gate_activation = sigmoid,
-                        norm_layer = planes -> identity,
+function squeeze_excite(inplanes::Integer; reduction::Integer = 16,
+                        rd_divisor::Integer = 8, activation = relu,
+                        gate_activation = sigmoid, norm_layer = planes -> identity,
                         rd_planes = _round_channels(inplanes ÷ reduction, rd_divisor, 0))
     layers = [AdaptiveMeanPool((1, 1)),
         Conv((1, 1), inplanes => rd_planes),
@@ -40,7 +40,7 @@ Effective squeeze-and-excitation layer.
   - `inplanes`: The number of input feature maps
   - `gate_activation`: The activation function for the gate layer
 """
-function effective_squeeze_excite(inplanes; gate_activation = sigmoid, kwargs...)
+function effective_squeeze_excite(inplanes::Integer; gate_activation = sigmoid)
     return SkipConnection(Chain(AdaptiveMeanPool((1, 1)),
                                 Conv((1, 1), inplanes, inplanes),
                                 gate_activation), .*)

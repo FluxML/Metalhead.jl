@@ -1,5 +1,6 @@
 # Generates the mask to be used for `DropBlock`
-@inline function _dropblock_mask(rng, x, gamma, clipped_block_size)
+@inline function _dropblock_mask(rng, x::AbstractArray{T, 4}, gamma,
+                                 clipped_block_size::Integer) where {T}
     block_mask = rand_like(rng, x)
     block_mask .= block_mask .< gamma
     return 1 .- maxpool(block_mask, (clipped_block_size, clipped_block_size);
@@ -28,8 +29,8 @@ If you are an end-user, you do not want this function. Use [`DropBlock`](#) inst
 """
 # TODO add experimental `DropBlock` options from timm such as gaussian noise and
 # more precise `DropBlock` to deal with edges (#188)
-function dropblock(rng::AbstractRNG, x::AbstractArray{T, 4}, drop_block_prob, block_size,
-                   gamma_scale) where {T}
+function dropblock(rng::AbstractRNG, x::AbstractArray{T, 4}, drop_block_prob,
+                   block_size::Integer, gamma_scale) where {T}
     H, W, _, _ = size(x)
     total_size = H * W
     clipped_block_size = min(block_size, min(H, W))
@@ -100,7 +101,7 @@ size `block_size` in the input. During inference, it simply returns the input `x
   - `rng`: can be used to pass in a custom RNG instead of the default. Custom RNGs are only
     supported on the CPU.
 """
-function DropBlock(drop_block_prob = 0.1, block_size = 7, gamma_scale = 1.0,
+function DropBlock(drop_block_prob = 0.1, block_size::Integer = 7, gamma_scale = 1.0,
                    rng = rng_from_array())
     if drop_block_prob == 0.0
         return identity

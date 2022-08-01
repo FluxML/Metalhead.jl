@@ -9,7 +9,7 @@ _input_scale(λ, activation, x) = activation.(λ .* x)
 _input_scale(λ, ::typeof(identity), x) = λ .* x
 
 """
-    LayerScale(λ, planes::Integer)
+    LayerScale(planes::Integer, λ)
 
 Creates a `Flux.Scale` layer that performs "`LayerScale`"
 ([reference](https://arxiv.org/abs/2103.17239)).

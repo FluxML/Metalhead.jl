@@ -82,7 +82,7 @@ function inceptionv4_c()
 end
 
 """
-    inceptionv4(; inchannels = 3, dropout_rate = 0.0, nclasses = 1000)
+    inceptionv4(; inchannels::Integer = 3, dropout_rate = 0.0, nclasses::Integer = 1000)
 
 Create an Inceptionv4 model.
 ([reference](https://arxiv.org/abs/1602.07261))
@@ -93,7 +93,8 @@ Create an Inceptionv4 model.
   - `dropout_rate`: rate of dropout in classifier head.
   - `nclasses`: the number of output classes.
 """
-function inceptionv4(; inchannels = 3, dropout_rate = 0.0, nclasses = 1000)
+function inceptionv4(; dropout_rate = 0.0, inchannels::Integer = 3,
+                     nclasses::Integer = 1000)
     body = Chain(conv_norm((3, 3), inchannels, 32; stride = 2)...,
                  conv_norm((3, 3), 32, 32)...,
                  conv_norm((3, 3), 32, 64; pad = 1)...,
@@ -122,7 +123,7 @@ function inceptionv4(; inchannels = 3, dropout_rate = 0.0, nclasses = 1000)
 end
 
 """
-    Inceptionv4(; pretrain = false, inchannels = 3, dropout_rate = 0.0, nclasses = 1000)
+    Inceptionv4(; pretrain::Bool = false, inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Creates an Inceptionv4 model.
 ([reference](https://arxiv.org/abs/1602.07261))
@@ -131,7 +132,6 @@ Creates an Inceptionv4 model.
 
   - `pretrain`: set to `true` to load the pre-trained weights for ImageNet
   - `inchannels`: number of input channels.
-  - `dropout_rate`: rate of dropout in classifier head.
   - `nclasses`: the number of output classes.
 
 !!! warning
@@ -143,9 +143,9 @@ struct Inceptionv4
 end
 @functor Inceptionv4
 
-function Inceptionv4(; pretrain = false, inchannels = 3, dropout_rate = 0.0,
-                     nclasses = 1000)
-    layers = inceptionv4(; inchannels, dropout_rate, nclasses)
+function Inceptionv4(; pretrain::Bool = false, inchannels::Integer = 3,
+                     nclasses::Integer = 1000)
+    layers = inceptionv4(; inchannels, nclasses)
     if pretrain
         loadpretrain!(layers, "Inceptionv4")
     end

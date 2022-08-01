@@ -1,5 +1,5 @@
 """
-    alexnet(; nclasses = 1000)
+    alexnet(; nclasses::Integer = 1000)
 
 Create an AlexNet model
 ([reference](https://papers.nips.cc/paper/2012/file/c399862d3b9d6b76c8436e924a68c45b-Paper.pdf)).
@@ -8,8 +8,8 @@ Create an AlexNet model
 
   - `nclasses`: the number of output classes
 """
-function alexnet(; nclasses = 1000)
-    layers = Chain(Chain(Conv((11, 11), 3 => 64, relu; stride = (4, 4), pad = (2, 2)),
+function alexnet(; inchannels::Integer = 3, nclasses::Integer = 1000)
+    layers = Chain(Chain(Conv((11, 11), inchannels => 64, relu; stride = (4, 4), pad = (2, 2)),
                          MaxPool((3, 3); stride = (2, 2)),
                          Conv((5, 5), 64 => 192, relu; pad = (2, 2)),
                          MaxPool((3, 3); stride = (2, 2)),
@@ -28,7 +28,7 @@ function alexnet(; nclasses = 1000)
 end
 
 """
-    AlexNet(; pretrain = false, nclasses = 1000)
+    AlexNet(; pretrain::Bool = false, nclasses::Integer = 1000)
 
 Create a `AlexNet`.
 See also [`alexnet`](#).
@@ -47,8 +47,8 @@ struct AlexNet
 end
 @functor AlexNet
 
-function AlexNet(; pretrain = false, nclasses = 1000)
-    layers = alexnet(; nclasses = nclasses)
+function AlexNet(; pretrain::Bool = false, inchannels::Integer = 3, nclasses::Integer = 1000)
+    layers = alexnet(; inchannels, nclasses)
     if pretrain
         loadpretrain!(layers, "AlexNet")
     end

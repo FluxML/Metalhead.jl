@@ -42,9 +42,9 @@ function (m::SpatialGatingUnit)(x)
 end
 
 """
-    spatial_gating_block(planes, npatches; mlp_ratio = 4.0, mlp_layer = gated_mlp_block,
-                         norm_layer = LayerNorm, dropout_rate = 0.0, drop_path_rate = 0.0,
-                         activation = gelu)
+    spatial_gating_block(planes::Integer, npatches::Integer; mlp_ratio = 4.0,
+                         norm_layer = LayerNorm, mlp_layer = gated_mlp_block,
+                         dropout_rate = 0.0, drop_path_rate = 0.0, activation = gelu)
 
 Creates a feedforward block based on the gMLP model architecture described in the paper.
 ([reference](https://arxiv.org/abs/2105.08050))
@@ -60,10 +60,9 @@ Creates a feedforward block based on the gMLP model architecture described in th
   - `drop_path_rate`: Stochastic depth rate
   - `activation`: the activation function to use in the MLP blocks
 """
-function spatial_gating_block(planes, npatches; mlp_ratio = 4.0, norm_layer = LayerNorm,
-                              mlp_layer = gated_mlp_block, dropout_rate = 0.0,
-                              drop_path_rate = 0.0,
-                              activation = gelu)
+function spatial_gating_block(planes::Integer, npatches::Integer; mlp_ratio = 4.0,
+                              norm_layer = LayerNorm, mlp_layer = gated_mlp_block,
+                              dropout_rate = 0.0, drop_path_rate = 0.0, activation = gelu)
     channelplanes = Int(mlp_ratio * planes)
     sgu = inplanes -> SpatialGatingUnit(inplanes, npatches; norm_layer)
     return SkipConnection(Chain(norm_layer(planes),
@@ -72,14 +71,9 @@ function spatial_gating_block(planes, npatches; mlp_ratio = 4.0, norm_layer = La
                                 DropPath(drop_path_rate)), +)
 end
 
-struct gMLP
-    layers::Any
-end
-@functor gMLP
-
 """
-    gMLP(size::Symbol = :base; patch_size::Dims{2} = (16, 16),
-         imsize::Dims{2} = (224, 224), drop_path_rate = 0., nclasses = 1000)
+    gMLP(size::Symbol; patch_size::Dims{2} = (16, 16), imsize::Dims{2} = (224, 224),
+         inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Creates a model with the gMLP architecture.
 ([reference](https://arxiv.org/abs/2105.08050)).
@@ -89,18 +83,23 @@ Creates a model with the gMLP architecture.
   - `size`: the size of the model - one of `small`, `base`, `large` or `huge`
   - `patch_size`: the size of the patches
   - `imsize`: the size of the input image
-  - `drop_path_rate`: Stochastic depth rate
+  - `inchannels`: the number of input channels
   - `nclasses`: number of output classes
 
 See also [`Metalhead.mlpmixer`](#).
 """
-function gMLP(size::Symbol = :base; patch_size::Dims{2} = (16, 16),
-              imsize::Dims{2} = (224, 224), drop_path_rate = 0.0, nclasses = 1000)
+struct gMLP
+    layers::Any
+end
+@functor gMLP
+
+function gMLP(size::Symbol; imsize::Dims{2} = (224, 224), patch_size::Dims{2} = (16, 16),
+              inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(size, keys(MIXER_CONFIGS))
     depth = MIXER_CONFIGS[size][:depth]
     embedplanes = MIXER_CONFIGS[size][:planes]
-    layers = mlpmixer(spatial_gating_block, imsize; mlp_layer = gated_mlp_block,
-                      patch_size, embedplanes, drop_path_rate, depth, nclasses)
+    layers = mlpmixer(spatial_gating_block, imsize; mlp_layer = gated_mlp_block, patch_size,
+                      embedplanes, depth, inchannels, nclasses)
     return gMLP(layers)
 end
 

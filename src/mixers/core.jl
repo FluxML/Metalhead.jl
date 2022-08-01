@@ -1,7 +1,7 @@
 """
-    mlpmixer(block, imsize::Dims{2} = (224, 224); inchannels = 3, norm_layer = LayerNorm,
+    mlpmixer(block, imsize::Dims{2} = (224, 224); inchannels::Integer = 3, norm_layer = LayerNorm,
              patch_size::Dims{2} = (16, 16), embedplanes = 512, drop_path_rate = 0.,
-             depth = 12, nclasses = 1000, kwargs...)
+             depth = 12, nclasses::Integer = 1000, kwargs...)
 
 Creates a model with the MLPMixer architecture.
 ([reference](https://arxiv.org/pdf/2105.01601)).
@@ -21,10 +21,9 @@ Creates a model with the MLPMixer architecture.
   - `kwargs`: additional arguments (if any) to pass to the mixer block. Will use the defaults if
     not specified.
 """
-function mlpmixer(block, imsize::Dims{2} = (224, 224); inchannels = 3,
-                  norm_layer = LayerNorm, patch_size::Dims{2} = (16, 16),
-                  embedplanes = 512, drop_path_rate = 0.0,
-                  depth = 12, nclasses = 1000, kwargs...)
+function mlpmixer(block, imsize::Dims{2} = (224, 224); norm_layer = LayerNorm,
+                  patch_size::Dims{2} = (16, 16), embedplanes = 512, drop_path_rate = 0.0,
+                  depth = 12, inchannels::Integer = 3, nclasses::Integer = 1000, kwargs...)
     npatches = prod(imsize .÷ patch_size)
     dp_rates = linear_scheduler(drop_path_rate; depth)
     layers = Chain(PatchEmbedding(imsize; inchannels, patch_size, embedplanes),

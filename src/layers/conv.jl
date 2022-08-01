@@ -23,9 +23,9 @@ Create a convolution + batch normalization pair with activation.
   - `groups`: groups for the convolution kernel
   - `bias`, `weight`, `init`: initialization for the convolution kernel (see [`Flux.Conv`](#))
 """
-function conv_norm(kernel_size, inplanes::Int, outplanes::Int, activation = relu;
-                   norm_layer = BatchNorm, revnorm = false, preact = false, use_norm = true,
-                   kwargs...)
+function conv_norm(kernel_size, inplanes::Integer, outplanes::Integer, activation = relu;
+                   norm_layer = BatchNorm, revnorm::Bool = false, preact::Bool = false,
+                   use_norm::Bool = true, kwargs...)
     if !use_norm
         if (preact || revnorm)
             throw(ArgumentError("`preact` only supported with `use_norm = true`"))
@@ -60,8 +60,8 @@ end
 
 """
     depthwise_sep_conv_norm(kernel_size, inplanes, outplanes, activation = relu;
-                               revnorm = false, use_norm = (true, true),
-                               stride = 1, pad = 0, dilation = 1, [bias, weight, init])
+                            revnorm = false, use_norm = (true, true),
+                            stride = 1, pad = 0, dilation = 1, [bias, weight, init])
 
 Create a depthwise separable convolution chain as used in MobileNetv1.
 This is sequence of layers:
@@ -86,9 +86,11 @@ See Fig. 3 in [reference](https://arxiv.org/abs/1704.04861v1).
   - `dilation`: dilation of the first convolution kernel
   - `bias`, `weight`, `init`: initialization for the convolution kernel (see [`Flux.Conv`](#))
 """
-function depthwise_sep_conv_norm(kernel_size, inplanes, outplanes, activation = relu;
-                                 norm_layer = BatchNorm, revnorm = false,
-                                 use_norm = (true, true), stride = 1, kwargs...)
+function depthwise_sep_conv_norm(kernel_size, inplanes::Integer, outplanes::Integer,
+                                 activation = relu; norm_layer = BatchNorm,
+                                 revnorm::Bool = false,
+                                 use_norm::NTuple{2, Bool} = (true, true),
+                                 stride::Integer = 1, kwargs...)
     return vcat(conv_norm(kernel_size, inplanes, inplanes, activation;
                           norm_layer, revnorm, use_norm = use_norm[1], stride,
                           groups = inplanes, kwargs...),

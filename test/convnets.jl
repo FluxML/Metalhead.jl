@@ -263,15 +263,12 @@ end
     end
 end
 
-
 @testset "ConvNeXt" verbose = true begin
     @testset for mode in [:small, :base, :large, :tiny, :xlarge]
-        @testset for drop_path_rate in [0.0, 0.5]
-            m = ConvNeXt(mode; drop_path_rate)
-            @test size(m(x_224)) == (1000, 1)
-            @test gradtest(m, x_224)
-            _gc()
-        end
+        m = ConvNeXt(mode)
+        @test size(m(x_224)) == (1000, 1)
+        @test gradtest(m, x_224)
+        _gc()
     end
 end
 
