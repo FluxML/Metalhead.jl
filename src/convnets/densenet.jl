@@ -105,44 +105,13 @@ function densenet(nblocks::Vector{<:Integer}; growth_rate::Integer = 32, reducti
                     reduction, inchannels, nclasses)
 end
 
-"""
-    DenseNet(nblocks::Vector{<:Integer}; growth_rate::Integer = 32, reduction = 0.5,
-             inchannels = 3, nclasses::Integer = 1000)
-
-Create a DenseNet model
-([reference](https://arxiv.org/abs/1608.06993)).
-See also [`densenet`](#).
-
-# Arguments
-
-  - `nblocks`: number of dense blocks between transitions
-  - `growth_rate`: the output feature map growth rate of dense blocks (i.e. `k` in the paper)
-  - `reduction`: the factor by which the number of feature maps is scaled across each transition
-  - `nclasses`: the number of output classes
-"""
-struct DenseNet
-    layers::Any
-end
-@functor DenseNet
-
-function DenseNet(nblocks::Vector{<:Integer}; growth_rate::Integer = 32, reduction = 0.5,
-                  inchannels = 3, nclasses::Integer = 1000)
-    layers = densenet(nblocks; growth_rate, reduction, inchannels, nclasses)
-    return DenseNet(layers)
-end
-
-(m::DenseNet)(x) = m.layers(x)
-
-backbone(m::DenseNet) = m.layers[1]
-classifier(m::DenseNet) = m.layers[2]
-
 const DENSENET_CONFIGS = Dict(121 => [6, 12, 24, 16],
                               161 => [6, 12, 36, 24],
                               169 => [6, 12, 32, 32],
                               201 => [6, 12, 48, 32])
 
 """
-    DenseNet(config::Integer = 121; pretrain::Bool = false, nclasses::Integer = 1000)
+    DenseNet(config::Integer; pretrain::Bool = false, nclasses::Integer = 1000)
     DenseNet(transition_configs::NTuple{N,Integer})
 
 Create a DenseNet model with specified configuration. Currently supported values are (121, 161, 169, 201)
@@ -155,11 +124,22 @@ Set `pretrain = true` to load the model with pre-trained weights for ImageNet.
 
 See also [`Metalhead.densenet`](#).
 """
-function DenseNet(config::Integer = 121; pretrain::Bool = false, nclasses::Integer = 1000)
+struct DenseNet
+    layers::Any
+end
+@functor DenseNet
+
+function DenseNet(config::Integer; pretrain::Bool = false, growth_rate::Integer = 32,
+                  reduction = 0.5, inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(config, keys(DENSENET_CONFIGS))
-    model = DenseNet(DENSENET_CONFIGS[config]; nclasses = nclasses)
+    model = densenet(DENSENET_CONFIGS[config]; growth_rate, reduction, inchannels, nclasses)
     if pretrain
         loadpretrain!(model, string("DenseNet", config))
     end
     return model
 end
+
+(m::DenseNet)(x) = m.layers(x)
+
+backbone(m::DenseNet) = m.layers[1]
+classifier(m::DenseNet) = m.layers[2]
