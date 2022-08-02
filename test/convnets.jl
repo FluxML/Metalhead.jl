@@ -63,6 +63,11 @@ end
             @test size(m(x_224)) == (1000, 1)
             @test gradtest(m, x_224)
             _gc()
+            if (WideResNet, sz) in PRETRAINED_MODELS
+                @test acctest(ResNet(sz, pretrain = true))
+            else
+                @test_throws ArgumentError WideResNet(sz, pretrain = true)
+            end
         end
     end
 end

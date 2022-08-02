@@ -51,7 +51,7 @@ Creates a bottleneck residual block (see [reference](https://arxiv.org/abs/1512.
   - `stride`: the stride of the block
   - `cardinality`: the number of groups in the convolution.
   - `base_width`: the number of output feature maps for each convolutional group.
-  - `reduction_factor`: the reduction factor that the input feature maps are reduced by before the first
+  - `reduction_factor`: the factor by which the input feature maps are reduced before the first
     convolution.
   - `activation`: the activation function to use.
   - `norm_layer`: the normalization layer to use.
@@ -190,7 +190,10 @@ function resnet_stem(stem_type::Symbol = :default; inchannels::Integer = 3,
     return Chain(conv1, bn1, stempool)
 end
 
-resnet_planes(stage_idx::Integer) = 64 * 2^(stage_idx - 1)
+function resnet_planes(block_repeats::Vector{<:Integer})
+    return Iterators.flatten((64 * 2^(stage_idx - 1) for _ in 1:stages)
+                             for (stage_idx, stages) in enumerate(block_repeats))
+end
 
 function basicblock_builder(block_repeats::Vector{<:Integer}; inplanes::Integer = 64,
                             reduction_factor::Integer = 1, expansion::Integer = 1,
@@ -201,24 +204,25 @@ function basicblock_builder(block_repeats::Vector{<:Integer}; inplanes::Integer 
                             downsample_tuple = (downsample_conv, downsample_identity))
     pathschedule = linear_scheduler(drop_path_rate; depth = sum(block_repeats))
     blockschedule = linear_scheduler(drop_block_rate; depth = sum(block_repeats))
+    planes_vec = collect(planes_fn(block_repeats))
     # closure over `idxs`
     function get_layers(stage_idx::Integer, block_idx::Integer)
-        planes = planes_fn(stage_idx)
+        # DropBlock, DropPath both take in rates based on a linear scaling schedule
+        # This is also needed for block `inplanes` and `planes` calculations
+        schedule_idx = sum(block_repeats[1:(stage_idx - 1)]) + block_idx
+        planes = planes_vec[schedule_idx]
+        inplanes = schedule_idx == 1 ? inplanes : planes_vec[schedule_idx - 1] * expansion
         # `resnet_stride` is a callback that the user can tweak to change the stride of the
         # blocks. It defaults to the standard behaviour as in the paper
         stride = stride_fn(stage_idx, block_idx)
         downsample_fn = (stride != 1 || inplanes != planes * expansion) ?
                         downsample_tuple[1] : downsample_tuple[2]
-        # DropBlock, DropPath both take in rates based on a linear scaling schedule
-        schedule_idx = sum(block_repeats[1:(stage_idx - 1)]) + block_idx
         drop_path = DropPath(pathschedule[schedule_idx])
         drop_block = DropBlock(blockschedule[schedule_idx])
         block = basicblock(inplanes, planes; stride, reduction_factor, activation,
                            norm_layer, revnorm, attn_fn, drop_path, drop_block)
         downsample = downsample_fn(inplanes, planes * expansion; stride, norm_layer,
                                    revnorm)
-        # inplanes increases by expansion after each block
-        inplanes = planes * expansion
         return block, downsample
     end
     return get_layers
@@ -234,9 +238,14 @@ function bottleneck_builder(block_repeats::Vector{<:Integer}; inplanes::Integer 
                             downsample_tuple = (downsample_conv, downsample_identity))
     pathschedule = linear_scheduler(drop_path_rate; depth = sum(block_repeats))
     blockschedule = linear_scheduler(drop_block_rate; depth = sum(block_repeats))
+    planes_vec = collect(planes_fn(block_repeats))
     # closure over `idxs`
     function get_layers(stage_idx::Integer, block_idx::Integer)
-        planes = planes_fn(stage_idx)
+        # DropBlock, DropPath both take in rates based on a linear scaling schedule
+        # This is also needed for block `inplanes` and `planes` calculations
+        schedule_idx = sum(block_repeats[1:(stage_idx - 1)]) + block_idx
+        planes = planes_vec[schedule_idx]
+        inplanes = schedule_idx == 1 ? inplanes : planes_vec[schedule_idx - 1] * expansion
         # `resnet_stride` is a callback that the user can tweak to change the stride of the
         # blocks. It defaults to the standard behaviour as in the paper
         stride = stride_fn(stage_idx, block_idx)
@@ -251,8 +260,6 @@ function bottleneck_builder(block_repeats::Vector{<:Integer}; inplanes::Integer 
                            attn_fn, drop_path, drop_block)
         downsample = downsample_fn(inplanes, planes * expansion; stride, norm_layer,
                                    revnorm)
-        # inplanes increases by expansion after each block
-        inplanes = planes * expansion
         return block, downsample
     end
     return get_layers
