@@ -8,10 +8,10 @@ _flatten_spatial(x) = permutedims(reshape(x, (:, size(x, 3), size(x, 4))), (2, 1
 Patch embedding layer used by many vision transformer-like models to split the input image into
 patches.
 
-# Arguments:
+# Arguments
 
   - `imsize`: the size of the input image
-  - `inchannels`: the number of channels in the input. The default value is 3.
+  - `inchannels`: the number of channels in the input.
   - `patch_size`: the size of the patches
   - `embedplanes`: the number of channels in the embedding
   - `norm_layer`: the normalization layer - by default the identity function but otherwise takes a

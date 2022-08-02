@@ -12,10 +12,10 @@ Create a Densenet bottleneck layer
 """
 function dense_bottleneck(inplanes, outplanes)
     inner_channels = 4 * outplanes
-    return SkipConnection(Chain(conv_bn((1, 1), inplanes, inner_channels; bias = false,
-                                        rev = true)...,
-                                conv_bn((3, 3), inner_channels, outplanes; pad = 1,
-                                        bias = false, rev = true)...),
+    return SkipConnection(Chain(conv_norm((1, 1), inplanes, inner_channels; bias = false,
+                                          revnorm = true)...,
+                                conv_norm((3, 3), inner_channels, outplanes; pad = 1,
+                                          bias = false, revnorm = true)...),
                           cat_channels)
 end
 
@@ -31,7 +31,7 @@ Create a DenseNet transition sequence
   - `outplanes`: number of output feature maps
 """
 function transition(inplanes, outplanes)
-    return Chain(conv_bn((1, 1), inplanes, outplanes; bias = false, rev = true)...,
+    return Chain(conv_norm((1, 1), inplanes, outplanes; bias = false, revnorm = true)...,
                  MeanPool((2, 2)))
 end
 
@@ -70,7 +70,7 @@ Create a DenseNet model
 """
 function densenet(inplanes, growth_rates; reduction = 0.5, nclasses = 1000)
     layers = []
-    append!(layers, conv_bn((7, 7), 3, inplanes; stride = 2, pad = (3, 3), bias = false))
+    append!(layers, conv_norm((7, 7), 3, inplanes; stride = 2, pad = (3, 3), bias = false))
     push!(layers, MaxPool((3, 3); stride = 2, pad = (1, 1)))
     outplanes = 0
     for (i, rates) in enumerate(growth_rates)
@@ -100,7 +100,8 @@ Create a DenseNet model
   - `reduction`: the factor by which the number of feature maps is scaled across each transition
   - `nclasses`: the number of output classes
 """
-function densenet(nblocks; growth_rate = 32, reduction = 0.5, nclasses = 1000)
+function densenet(nblocks::NTuple{N, <:Integer}; growth_rate = 32, reduction = 0.5,
+                  nclasses = 1000) where {N}
     return densenet(2 * growth_rate, [fill(growth_rate, n) for n in nblocks];
                     reduction = reduction, nclasses = nclasses)
 end
@@ -139,14 +140,14 @@ end
 backbone(m::DenseNet) = m.layers[1]
 classifier(m::DenseNet) = m.layers[2]
 
-const densenet_config = Dict(121 => (6, 12, 24, 16),
-                             161 => (6, 12, 36, 24),
-                             169 => (6, 12, 32, 32),
-                             201 => (6, 12, 48, 32))
+const DENSENET_CONFIGS = Dict(121 => (6, 12, 24, 16),
+                              161 => (6, 12, 36, 24),
+                              169 => (6, 12, 32, 32),
+                              201 => (6, 12, 48, 32))
 
 """
     DenseNet(config::Integer = 121; pretrain = false, nclasses = 1000)
-    DenseNet(transition_config::NTuple{N,Integer})
+    DenseNet(transition_configs::NTuple{N,Integer})
 
 Create a DenseNet model with specified configuration. Currently supported values are (121, 161, 169, 201)
 ([reference](https://arxiv.org/abs/1608.06993)).
@@ -159,8 +160,10 @@ Set `pretrain = true` to load the model with pre-trained weights for ImageNet.
 See also [`Metalhead.densenet`](#).
 """
 function DenseNet(config::Integer = 121; pretrain = false, nclasses = 1000)
-    @assert config in keys(densenet_config) "`config` must be one out of $(sort(collect(keys(densenet_config))))."
-    model = DenseNet(densenet_config[config]; nclasses = nclasses)
-    pretrain && loadpretrain!(model, string("DenseNet", config))
+    _checkconfig(config, keys(DENSENET_CONFIGS))
+    model = DenseNet(DENSENET_CONFIGS[config]; nclasses = nclasses)
+    if pretrain
+        loadpretrain!(model, string("DenseNet", config))
+    end
     return model
 end

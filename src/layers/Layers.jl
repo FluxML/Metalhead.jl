@@ -1,26 +1,43 @@
 module Layers
 
 using Flux
-using Flux: outputsize, Zygote
+using Flux: rng_from_array
+using CUDA
+using NNlib, NNlibCUDA
 using Functors
+using ChainRulesCore
 using Statistics
 using MLUtils
+using PartialFunctions
+using Random
 
 include("../utilities.jl")
 
 include("attention.jl")
-include("embeddings.jl")
-include("mlp.jl")
-include("normalise.jl")
-include("conv.jl")
-include("others.jl")
+export MHAttention
 
-export MHAttention,
-       PatchEmbedding, ViPosEmbedding, ClassTokens,
-       mlp_block, gated_mlp_block,
-       LayerScale, DropPath,
-       ChannelLayerNorm, prenorm,
-       skip_identity, skip_projection,
-       conv_bn, depthwise_sep_conv_bn,
-       invertedresidual, squeeze_excite
+include("conv.jl")
+export conv_norm, depthwise_sep_conv_norm, invertedresidual
+
+include("drop.jl")
+export DropBlock, DropPath
+
+include("embeddings.jl")
+export PatchEmbedding, ViPosEmbedding, ClassTokens
+
+include("mlp.jl")
+export mlp_block, gated_mlp_block, create_fc, create_classifier
+
+include("normalise.jl")
+export prenorm, ChannelLayerNorm
+
+include("pool.jl")
+export AdaptiveMeanMaxPool
+
+include("scale.jl")
+export LayerScale, inputscale
+
+include("selayers.jl")
+export squeeze_excite, effective_squeeze_excite
+
 end

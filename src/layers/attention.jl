@@ -1,14 +1,15 @@
 """
-    MHAttention(nheads::Integer, qkv_layer, attn_drop, projection)
+    MHAttention(planes::Integer, nheads::Integer = 8; qkv_bias::Bool = false, attn_dropout_rate = 0., proj_dropout_rate = 0.)
 
 Multi-head self-attention layer.
 
-# Arguments:
+# Arguments
 
-  - `nheads`: Number of heads
-  - `qkv_layer`: layer to be used for getting the query, key and value
-  - `attn_drop`: dropout rate after the self-attention layer
-  - `projection`: projection layer to be used after self-attention
+  - `planes`: number of input channels
+  - `nheads`: number of heads
+  - `qkv_bias`: whether to use bias in the layer to get the query, key and value
+  - `attn_dropout_rate`: dropout rate after the self-attention layer
+  - `proj_dropout_rate`: dropout rate after the projection layer
 """
 struct MHAttention{P, Q, R}
     nheads::Int
@@ -16,30 +17,16 @@ struct MHAttention{P, Q, R}
     attn_drop::Q
     projection::R
 end
+@functor MHAttention
 
-"""
-    MHAttention(planes::Integer, nheads::Integer = 8; qkv_bias::Bool = false, attn_drop = 0., proj_drop = 0.)
-
-Multi-head self-attention layer.
-
-# Arguments:
-
-  - `planes`: number of input channels
-  - `nheads`: number of heads
-  - `qkv_bias`: whether to use bias in the layer to get the query, key and value
-  - `attn_drop`: dropout rate after the self-attention layer
-  - `proj_drop`: dropout rate after the projection layer
-"""
 function MHAttention(planes::Integer, nheads::Integer = 8; qkv_bias::Bool = false,
-                     attn_drop = 0.0, proj_drop = 0.0)
+                     attn_dropout_rate = 0.0, proj_dropout_rate = 0.0)
     @assert planes % nheads==0 "planes should be divisible by nheads"
     qkv_layer = Dense(planes, planes * 3; bias = qkv_bias)
-    attn_drop = Dropout(attn_drop)
-    proj = Chain(Dense(planes, planes), Dropout(proj_drop))
+    attn_drop = Dropout(attn_dropout_rate)
+    proj = Chain(Dense(planes, planes), Dropout(proj_dropout_rate))
     return MHAttention(nheads, qkv_layer, attn_drop, proj)
 end
-
-@functor MHAttention
 
 function (m::MHAttention)(x::AbstractArray{T, 3}) where {T}
     nfeatures, seq_len, batch_size = size(x)

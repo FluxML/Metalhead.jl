@@ -27,16 +27,15 @@ jobs:
           - x64
         suite:
           - '["AlexNet", "VGG"]'
-          - '["GoogLeNet", "SqueezeNet"]'
-          - '["EfficientNet", "MobileNet"]'
-          - '[r"/*/ResNet*", "ResNeXt"]'
-          - 'r"/*/Inception/Inceptionv*"'
-          - '["InceptionResNetv2", "Xception"]'
+          - '["GoogLeNet", "SqueezeNet", "MobileNet"]'
+          - '["EfficientNet"]'
+          - 'r"/*/ResNet*"'
+          - '[r"ResNeXt", r"SEResNet"]'
+          - '"Inception"'
           - '"DenseNet"'
-          - '"ConvNeXt"'
-          - '"ConvMixer"'
-          - '"ViT"'
-          - '"Other"'
+          - '["ConvNeXt", "ConvMixer"]'
+          - 'r"ViTs"'
+          - 'r"Mixers"'
     steps:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1

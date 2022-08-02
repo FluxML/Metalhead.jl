@@ -15,6 +15,11 @@ const PRETRAINED_MODELS = [
     (ResNet, 152),
 ]
 
+function _gc()
+    GC.safepoint()
+    GC.gc(true)
+end
+
 function gradtest(model, input)
     y, pb = Zygote.pullback(() -> model(input), Flux.params(model))
     gs = pb(ones(Float32, size(y)))
@@ -24,8 +29,8 @@ function gradtest(model, input)
 end
 
 function normalize_imagenet(data)
-    cmean = reshape(Float32[0.485, 0.456, 0.406],(1,1,3,1))
-    cstd = reshape(Float32[0.229, 0.224, 0.225],(1,1,3,1))
+    cmean = reshape(Float32[0.485, 0.456, 0.406], (1, 1, 3, 1))
+    cstd = reshape(Float32[0.229, 0.224, 0.225], (1, 1, 3, 1))
     return (data .- cmean) ./ cstd
 end
 
@@ -33,7 +38,7 @@ end
 const TEST_PATH = download("https://cdn.pixabay.com/photo/2015/05/07/11/02/guitar-756326_960_720.jpg")
 const TEST_IMG = imresize(Images.load(TEST_PATH), (224, 224))
 # CHW -> WHC
-const TEST_X = permutedims(convert(Array{Float32}, channelview(TEST_IMG)), (3,2,1)) |> normalize_imagenet
+const TEST_X = permutedims(convert(Array{Float32}, channelview(TEST_IMG)), (3, 2, 1)) |> normalize_imagenet
 
 # image net labels
 const TEST_LBLS = readlines(download("https://raw.githubusercontent.com/pytorch/hub/master/imagenet_classes.txt"))
@@ -53,18 +58,12 @@ x_256 = rand(Float32, 256, 256, 3, 1)
     include("convnets.jl")
 end
 
-GC.safepoint()
-GC.gc()
-
-# Other tests
-@testset verbose = true "Other" begin
-    include("other.jl")
+# Mixer tests
+@testset verbose = true "Mixers" begin
+    include("mixers.jl")
 end
-
-GC.safepoint()
-GC.gc()
 
 # ViT tests
 @testset verbose = true "ViTs" begin
-    include("vit-based.jl")
+    include("vits.jl")
 end

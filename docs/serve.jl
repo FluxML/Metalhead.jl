@@ -1,6 +1,6 @@
 using Pkg
 
-Pkg.develop(path = "..")
+Pkg.develop(; path = "..")
 
 using Revise
 using Publish

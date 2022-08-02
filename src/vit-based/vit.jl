@@ -1,5 +1,5 @@
 """
-transformer_encoder(planes, depth, nheads; mlp_ratio = 4.0, dropout = 0.)
+transformer_encoder(planes, depth, nheads; mlp_ratio = 4.0, dropout_rate = 0.)
 
 Transformer as used in the base ViT architecture.
 ([reference](https://arxiv.org/abs/2010.11929)).
@@ -10,23 +10,25 @@ Transformer as used in the base ViT architecture.
   - `depth`: number of attention blocks
   - `nheads`: number of attention heads
   - `mlp_ratio`: ratio of MLP layers to the number of input channels
-  - `dropout`: dropout rate
+  - `dropout_rate`: dropout rate
 """
-function transformer_encoder(planes, depth, nheads; mlp_ratio = 4.0, dropout = 0.0)
+function transformer_encoder(planes, depth, nheads; mlp_ratio = 4.0, dropout_rate = 0.0)
     layers = [Chain(SkipConnection(prenorm(planes,
-                                           MHAttention(planes, nheads; attn_drop = dropout,
-                                                       proj_drop = dropout)), +),
+                                           MHAttention(planes, nheads;
+                                                       attn_dropout_rate = dropout_rate,
+                                                       proj_dropout_rate = dropout_rate)),
+                                   +),
                     SkipConnection(prenorm(planes,
                                            mlp_block(planes, floor(Int, mlp_ratio * planes);
-                                                     dropout)), +))
+                                                     dropout_rate)), +))
               for _ in 1:depth]
     return Chain(layers)
 end
 
 """
     vit(imsize::Dims{2} = (256, 256); inchannels = 3, patch_size::Dims{2} = (16, 16),
-        embedplanes = 768, depth = 6, nheads = 16, mlp_ratio = 4.0, dropout = 0.1,
-        emb_dropout = 0.1, pool = :class, nclasses = 1000)
+        embedplanes = 768, depth = 6, nheads = 16, mlp_ratio = 4.0, dropout_rate = 0.1,
+        emb_dropout_rate = 0.1, pool = :class, nclasses = 1000)
 
 Creates a Vision Transformer (ViT) model.
 ([reference](https://arxiv.org/abs/2010.11929)).
@@ -40,35 +42,36 @@ Creates a Vision Transformer (ViT) model.
   - `depth`: number of blocks in the transformer
   - `nheads`: number of attention heads in the transformer
   - `mlpplanes`: number of hidden channels in the MLP block in the transformer
-  - `dropout`: dropout rate
+  - `dropout_rate`: dropout rate
   - `emb_dropout`: dropout rate for the positional embedding layer
   - `pool`: pooling type, either :class or :mean
   - `nclasses`: number of classes in the output
 """
 function vit(imsize::Dims{2} = (256, 256); inchannels = 3, patch_size::Dims{2} = (16, 16),
-             embedplanes = 768, depth = 6, nheads = 16, mlp_ratio = 4.0, dropout = 0.1,
-             emb_dropout = 0.1, pool = :class, nclasses = 1000)
+             embedplanes = 768, depth = 6, nheads = 16, mlp_ratio = 4.0, dropout_rate = 0.1,
+             emb_dropout_rate = 0.1, pool = :class, nclasses = 1000)
     @assert pool in [:class, :mean]
-    "Pool type must be either :class (class token) or :mean (mean pooling)"
+    "Pool type must be either `:class` (class token) or `:mean` (mean pooling)"
     npatches = prod(imsize .÷ patch_size)
     return Chain(Chain(PatchEmbedding(imsize; inchannels, patch_size, embedplanes),
                        ClassTokens(embedplanes),
                        ViPosEmbedding(embedplanes, npatches + 1),
-                       Dropout(emb_dropout),
-                       transformer_encoder(embedplanes, depth, nheads; mlp_ratio, dropout),
+                       Dropout(emb_dropout_rate),
+                       transformer_encoder(embedplanes, depth, nheads; mlp_ratio,
+                                           dropout_rate),
                        (pool == :class) ? x -> x[:, 1, :] : seconddimmean),
                  Chain(LayerNorm(embedplanes), Dense(embedplanes, nclasses, tanh_fast)))
 end
 
-vit_configs = Dict(:tiny => (depth = 12, embedplanes = 192, nheads = 3),
-                   :small => (depth = 12, embedplanes = 384, nheads = 6),
-                   :base => (depth = 12, embedplanes = 768, nheads = 12),
-                   :large => (depth = 24, embedplanes = 1024, nheads = 16),
-                   :huge => (depth = 32, embedplanes = 1280, nheads = 16),
-                   :giant => (depth = 40, embedplanes = 1408, nheads = 16,
-                              mlp_ratio = 48 // 11),
-                   :gigantic => (depth = 48, embedplanes = 1664, nheads = 16,
-                                 mlp_ratio = 64 // 13))
+const VIT_CONFIGS = Dict(:tiny => (depth = 12, embedplanes = 192, nheads = 3),
+                         :small => (depth = 12, embedplanes = 384, nheads = 6),
+                         :base => (depth = 12, embedplanes = 768, nheads = 12),
+                         :large => (depth = 24, embedplanes = 1024, nheads = 16),
+                         :huge => (depth = 32, embedplanes = 1280, nheads = 16),
+                         :giant => (depth = 40, embedplanes = 1408, nheads = 16,
+                                    mlp_ratio = 48 // 11),
+                         :gigantic => (depth = 48, embedplanes = 1664, nheads = 16,
+                                       mlp_ratio = 64 // 13))
 
 """
     ViT(mode::Symbol = base; imsize::Dims{2} = (256, 256), inchannels = 3,
@@ -92,13 +95,13 @@ See also [`Metalhead.vit`](#).
 struct ViT
     layers::Any
 end
+@functor ViT
 
 function ViT(mode::Symbol = :base; imsize::Dims{2} = (256, 256), inchannels = 3,
              patch_size::Dims{2} = (16, 16), pool = :class, nclasses = 1000)
-    @assert mode in keys(vit_configs) "`mode` must be one of $(keys(vit_configs))"
-    kwargs = vit_configs[mode]
+    _checkconfig(mode, keys(VIT_CONFIGS))
+    kwargs = VIT_CONFIGS[mode]
     layers = vit(imsize; inchannels, patch_size, nclasses, pool, kwargs...)
-
     return ViT(layers)
 end
 
@@ -106,5 +109,3 @@ end
 
 backbone(m::ViT) = m.layers[1]
 classifier(m::ViT) = m.layers[2]
-
-@functor ViT
