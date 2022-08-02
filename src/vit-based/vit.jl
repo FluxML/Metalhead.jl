@@ -99,7 +99,8 @@ struct ViT
 end
 @functor ViT
 
-function ViT(mode::Symbol = :base; imsize::Dims{2} = (256, 256), patch_size::Dims{2} = (16, 16),
+function ViT(mode::Symbol = :base; imsize::Dims{2} = (256, 256),
+             patch_size::Dims{2} = (16, 16),
              inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(mode, keys(VIT_CONFIGS))
     kwargs = VIT_CONFIGS[mode]

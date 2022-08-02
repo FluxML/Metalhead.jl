@@ -83,10 +83,7 @@ function densenet(inplanes::Integer, growth_rates; reduction = 0.5, inchannels::
         inplanes = floor(Int, outplanes * reduction)
     end
     push!(layers, BatchNorm(outplanes, relu))
-    return Chain(Chain(layers),
-                 Chain(AdaptiveMeanPool((1, 1)),
-                       MLUtils.flatten,
-                       Dense(outplanes, nclasses)))
+    return Chain(Chain(layers...), create_classifier(outplanes, nclasses))
 end
 
 """

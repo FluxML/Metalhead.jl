@@ -26,8 +26,7 @@ function convmixer(planes::Integer, depth::Integer; kernel_size = (9, 9),
                                                    pad = SamePad())), +),
                     conv_norm((1, 1), planes, planes, activation; preact = true)...)
               for _ in 1:depth]
-    head = Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten, Dense(planes, nclasses))
-    return Chain(Chain(stem..., Chain(blocks)), head)
+    return Chain(Chain(stem..., Chain(blocks)), create_classifier(planes, nclasses))
 end
 
 const CONVMIXER_CONFIGS = Dict(:base => Dict(:planes => 1536, :depth => 20,

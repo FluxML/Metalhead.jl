@@ -29,10 +29,9 @@ function mlpmixer(block, imsize::Dims{2} = (224, 224); norm_layer = LayerNorm,
     layers = Chain(PatchEmbedding(imsize; inchannels, patch_size, embedplanes),
                    Chain([block(embedplanes, npatches; drop_path_rate = dp_rates[i],
                                 kwargs...)
-                          for i in 1:depth]))
-    classification_head = Chain(norm_layer(embedplanes), seconddimmean,
-                                Dense(embedplanes, nclasses))
-    return Chain(layers, classification_head)
+                          for i in 1:depth]...))
+    classifier = Chain(norm_layer(embedplanes), seconddimmean, Dense(embedplanes, nclasses))
+    return Chain(layers, classifier)
 end
 
 # Configurations for MLPMixer models

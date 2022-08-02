@@ -63,11 +63,10 @@ function convnext(depths::Vector{<:Integer}, planes::Vector{<:Integer};
         cur += depths[i]
     end
     backbone = collect(Iterators.flatten(Iterators.flatten(zip(downsample_layers, stages))))
-    head = Chain(GlobalMeanPool(),
-                 MLUtils.flatten,
-                 LayerNorm(planes[end]),
-                 Dense(planes[end], nclasses))
-    return Chain(Chain(backbone), head)
+    classifier = Chain(GlobalMeanPool(), MLUtils.flatten,
+                       LayerNorm(planes[end]),
+                       Dense(planes[end], nclasses))
+    return Chain(Chain(backbone...), classifier)
 end
 
 # Configurations for ConvNeXt models

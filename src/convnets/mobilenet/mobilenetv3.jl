@@ -44,16 +44,16 @@ function mobilenetv3(width_mult::Number, configs::Vector{<:Tuple};
                                stride = s, reduction = r))
         inplanes = outplanes
     end
-    # building last several layers
+    # building last layers
     output_channel = max_width
     output_channel = width_mult > 1.0 ? _round_channels(output_channel * width_mult, 8) :
                      output_channel
-    classifier = Chain(Dense(explanes, output_channel, hardswish),
+    append!(layers, conv_norm((1, 1), inplanes, explanes, hardswish; bias = false))
+    classifier = Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten,
+                       Dense(explanes, output_channel, hardswish),
                        Dropout(0.2),
                        Dense(output_channel, nclasses))
-    return Chain(Chain(Chain(layers),
-                       conv_norm((1, 1), inplanes, explanes, hardswish; bias = false)...),
-                 Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten, classifier))
+    return Chain(Chain(layers...), classifier)
 end
 
 # Layer configurations for small and large models for MobileNetv3
@@ -91,7 +91,7 @@ const MOBILENETV3_CONFIGS = Dict(:small => [
                                  ])
 
 """
-    MobileNetv3(mode::Symbol = :small, width_mult::Number = 1; pretrain::Bool = false,
+    MobileNetv3(mode::Symbol; width_mult::Number = 1, pretrain::Bool = false,
                 inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Create a MobileNetv3 model with the specified configuration.
@@ -115,7 +115,7 @@ struct MobileNetv3
 end
 @functor MobileNetv3
 
-function MobileNetv3(mode::Symbol = :small, width_mult::Number = 1; pretrain::Bool = false,
+function MobileNetv3(mode::Symbol; width_mult::Number = 1, pretrain::Bool = false,
                      inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(mode, [:small, :large])
     max_width = (mode == :large) ? 1280 : 1024

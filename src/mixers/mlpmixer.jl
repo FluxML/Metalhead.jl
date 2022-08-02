@@ -35,7 +35,7 @@ end
 
 """
 MLPMixer(size::Symbol; patch_size::Dims{2} = (16, 16), imsize::Dims{2} = (224, 224),
-         inchannels::Integer = 3, nclasses::Integer = 1000)
+inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Creates a model with the MLPMixer architecture.
 ([reference](https://arxiv.org/pdf/2105.01601)).
@@ -56,12 +56,14 @@ struct MLPMixer
 end
 @functor MLPMixer
 
-function MLPMixer(size::Symbol; imsize::Dims{2} = (224, 224), patch_size::Dims{2} = (16, 16),
+function MLPMixer(size::Symbol; imsize::Dims{2} = (224, 224),
+                  patch_size::Dims{2} = (16, 16),
                   inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(size, keys(MIXER_CONFIGS))
     depth = MIXER_CONFIGS[size][:depth]
     embedplanes = MIXER_CONFIGS[size][:planes]
-    layers = mlpmixer(mixerblock, imsize; patch_size, embedplanes, depth, inchannels,nclasses)
+    layers = mlpmixer(mixerblock, imsize; patch_size, embedplanes, depth, inchannels,
+                      nclasses)
     return MLPMixer(layers)
 end
 

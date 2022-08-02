@@ -25,13 +25,14 @@ Create a MobileNetv2 model.
 function mobilenetv2(width_mult::Number, configs::Vector{<:Tuple};
                      max_width::Integer = 1280, inchannels::Integer = 3,
                      nclasses::Integer = 1000)
+    divisor = width_mult == 0.1 ? 4 : 8
     # building first layer
-    inplanes = _round_channels(32 * width_mult, width_mult == 0.1 ? 4 : 8)
+    inplanes = _round_channels(32 * width_mult, divisor)
     layers = []
     append!(layers, conv_norm((3, 3), inchannels, inplanes; pad = 1, stride = 2))
     # building inverted residual blocks
     for (t, c, n, s, a) in configs
-        outplanes = _round_channels(c * width_mult, width_mult == 0.1 ? 4 : 8)
+        outplanes = _round_channels(c * width_mult, divisor)
         for i in 1:n
             push!(layers,
                   invertedresidual((3, 3), inplanes, outplanes, a; expansion = t,
@@ -39,14 +40,11 @@ function mobilenetv2(width_mult::Number, configs::Vector{<:Tuple};
             inplanes = outplanes
         end
     end
-    # building last several layers
-    outplanes = (width_mult > 1) ?
-                _round_channels(max_width * width_mult, width_mult == 0.1 ? 4 : 8) :
+    # building last layers
+    outplanes = width_mult > 1 ? _round_channels(max_width * width_mult, divisor) :
                 max_width
-    return Chain(Chain(Chain(layers),
-                       conv_norm((1, 1), inplanes, outplanes, relu6; bias = false)...),
-                 Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten,
-                       Dense(outplanes, nclasses)))
+    append!(layers, conv_norm((1, 1), inplanes, outplanes, relu6; bias = false))
+    return Chain(Chain(layers...), create_classifier(outplanes, nclasses))
 end
 
 # Layer configurations for MobileNetv2

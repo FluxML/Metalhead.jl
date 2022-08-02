@@ -77,24 +77,23 @@ Creates an InceptionResNetv2 model.
 """
 function inceptionresnetv2(; inchannels::Integer = 3, dropout_rate = 0.0,
                            nclasses::Integer = 1000)
-    body = Chain(conv_norm((3, 3), inchannels, 32; stride = 2)...,
-                 conv_norm((3, 3), 32, 32)...,
-                 conv_norm((3, 3), 32, 64; pad = 1)...,
-                 MaxPool((3, 3); stride = 2),
-                 conv_norm((3, 3), 64, 80)...,
-                 conv_norm((3, 3), 80, 192)...,
-                 MaxPool((3, 3); stride = 2),
-                 mixed_5b(),
-                 [block35(0.17f0) for _ in 1:10]...,
-                 mixed_6a(),
-                 [block17(0.10f0) for _ in 1:20]...,
-                 mixed_7a(),
-                 [block8(0.20f0) for _ in 1:9]...,
-                 block8(; activation = relu),
-                 conv_norm((1, 1), 2080, 1536)...)
-    head = Chain(GlobalMeanPool(), MLUtils.flatten, Dropout(dropout_rate),
-                 Dense(1536, nclasses))
-    return Chain(body, head)
+    backbone = Chain(conv_norm((3, 3), inchannels, 32; stride = 2)...,
+                     conv_norm((3, 3), 32, 32)...,
+                     conv_norm((3, 3), 32, 64; pad = 1)...,
+                     MaxPool((3, 3); stride = 2),
+                     conv_norm((3, 3), 64, 80)...,
+                     conv_norm((3, 3), 80, 192)...,
+                     MaxPool((3, 3); stride = 2),
+                     mixed_5b(),
+                     [block35(0.17f0) for _ in 1:10]...,
+                     mixed_6a(),
+                     [block17(0.10f0) for _ in 1:20]...,
+                     mixed_7a(),
+                     [block8(0.20f0) for _ in 1:9]...,
+                     block8(; activation = relu),
+                     conv_norm((1, 1), 2080, 1536)...)
+    classifier = create_classifier(1536, nclasses; dropout_rate)
+    return Chain(backbone, classifier)
 end
 
 """

@@ -99,7 +99,7 @@ function vgg(imsize::Dims{2}; config, batchnorm::Bool = false, fcsize::Integer =
     conv = vgg_convolutional_layers(config, batchnorm, inchannels)
     imsize = outputsize(conv, (imsize..., inchannels); padbatch = true)[1:3]
     class = vgg_classifier_layers(imsize, nclasses, fcsize, dropout_rate)
-    return Chain(Chain(conv), class)
+    return Chain(Chain(conv...), class)
 end
 
 const VGG_CONV_CONFIGS = Dict(:A => [(64, 1), (128, 1), (256, 2), (512, 2), (512, 2)],

@@ -34,11 +34,7 @@ function mobilenetv1(width_mult::Number, config::Vector{<:Tuple}; activation = r
             inchannels = outch
         end
     end
-
-    return Chain(Chain(layers),
-                 Chain(GlobalMeanPool(),
-                       MLUtils.flatten,
-                       Dense(inchannels, nclasses)))
+    return Chain(Chain(layers...), create_classifier(inchannels, nclasses))
 end
 
 # Layer configurations for MobileNetv1

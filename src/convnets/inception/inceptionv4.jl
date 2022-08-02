@@ -95,31 +95,30 @@ Create an Inceptionv4 model.
 """
 function inceptionv4(; dropout_rate = 0.0, inchannels::Integer = 3,
                      nclasses::Integer = 1000)
-    body = Chain(conv_norm((3, 3), inchannels, 32; stride = 2)...,
-                 conv_norm((3, 3), 32, 32)...,
-                 conv_norm((3, 3), 32, 64; pad = 1)...,
-                 mixed_3a(),
-                 mixed_4a(),
-                 mixed_5a(),
-                 inceptionv4_a(),
-                 inceptionv4_a(),
-                 inceptionv4_a(),
-                 inceptionv4_a(),
-                 reduction_a(),  # mixed_6a
-                 inceptionv4_b(),
-                 inceptionv4_b(),
-                 inceptionv4_b(),
-                 inceptionv4_b(),
-                 inceptionv4_b(),
-                 inceptionv4_b(),
-                 inceptionv4_b(),
-                 reduction_b(),  # mixed_7a
-                 inceptionv4_c(),
-                 inceptionv4_c(),
-                 inceptionv4_c())
-    head = Chain(GlobalMeanPool(), MLUtils.flatten, Dropout(dropout_rate),
-                 Dense(1536, nclasses))
-    return Chain(body, head)
+    backbone = Chain(conv_norm((3, 3), inchannels, 32; stride = 2)...,
+                     conv_norm((3, 3), 32, 32)...,
+                     conv_norm((3, 3), 32, 64; pad = 1)...,
+                     mixed_3a(),
+                     mixed_4a(),
+                     mixed_5a(),
+                     inceptionv4_a(),
+                     inceptionv4_a(),
+                     inceptionv4_a(),
+                     inceptionv4_a(),
+                     reduction_a(),  # mixed_6a
+                     inceptionv4_b(),
+                     inceptionv4_b(),
+                     inceptionv4_b(),
+                     inceptionv4_b(),
+                     inceptionv4_b(),
+                     inceptionv4_b(),
+                     inceptionv4_b(),
+                     reduction_b(),  # mixed_7a
+                     inceptionv4_c(),
+                     inceptionv4_c(),
+                     inceptionv4_c())
+    classifier = create_classifier(1536, nclasses; dropout_rate)
+    return Chain(backbone, classifier)
 end
 
 """
