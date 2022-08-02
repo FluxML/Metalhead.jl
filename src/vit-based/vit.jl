@@ -1,5 +1,5 @@
 """
-transformer_encoder(planes, depth, nheads; mlp_ratio = 4.0, dropout_rate = 0.)
+    transformer_encoder(planes, depth, nheads; mlp_ratio = 4.0, dropout_rate = 0.)
 
 Transformer as used in the base ViT architecture.
 ([reference](https://arxiv.org/abs/2010.11929)).
@@ -99,12 +99,10 @@ struct ViT
 end
 @functor ViT
 
-function ViT(mode::Symbol = :base; imsize::Dims{2} = (256, 256),
-             patch_size::Dims{2} = (16, 16),
+function ViT(mode::Symbol; imsize::Dims{2} = (256, 256), patch_size::Dims{2} = (16, 16),
              inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(mode, keys(VIT_CONFIGS))
-    kwargs = VIT_CONFIGS[mode]
-    layers = vit(imsize; inchannels, patch_size, nclasses, kwargs...)
+    layers = vit(imsize; inchannels, patch_size, nclasses, VIT_CONFIGS[mode]...)
     return ViT(layers)
 end
 

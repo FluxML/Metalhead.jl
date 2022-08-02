@@ -47,7 +47,7 @@ end
 gated_mlp_block(::typeof(identity), args...; kwargs...) = mlp_block(args...; kwargs...)
 
 """
-    create_classifier(inplanes::Integer, nclasses::Integer, activation = relu;
+    create_classifier(inplanes::Integer, nclasses::Integer, activation = identity;
                       pool_layer = AdaptiveMeanPool((1, 1)),
                       dropout_rate = 0.0, use_conv::Bool = false)
 
@@ -64,7 +64,7 @@ Creates a classifier head to be used for models.
   - `use_conv`: whether to use a 1x1 convolutional layer instead of a `Dense` layer.
 """
 function create_classifier(inplanes::Integer, nclasses::Integer, activation = identity;
-                           use_conv::Bool = falsepool_layer = AdaptiveMeanPool((1, 1)),
+                           use_conv::Bool = false, pool_layer = AdaptiveMeanPool((1, 1)),
                            dropout_rate = nothing)
     # Pooling
     flatten_in_pool = !use_conv && pool_layer !== identity

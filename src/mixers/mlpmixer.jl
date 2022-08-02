@@ -34,8 +34,8 @@ function mixerblock(planes::Integer, npatches::Integer; mlp_layer = mlp_block,
 end
 
 """
-MLPMixer(size::Symbol; patch_size::Dims{2} = (16, 16), imsize::Dims{2} = (224, 224),
-inchannels::Integer = 3, nclasses::Integer = 1000)
+    MLPMixer(size::Symbol; patch_size::Dims{2} = (16, 16), imsize::Dims{2} = (224, 224),
+             inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Creates a model with the MLPMixer architecture.
 ([reference](https://arxiv.org/pdf/2105.01601)).
