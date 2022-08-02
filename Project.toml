@@ -23,6 +23,7 @@ Flux = "0.13"
 Functors = "0.2"
 MLUtils = "0.2.6"
 NNlib = "0.7.34, 0.8"
+NNlibCUDA = "0.2"
 julia = "1.6"
 
 [publish]
