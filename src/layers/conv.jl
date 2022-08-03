@@ -16,7 +16,7 @@ Create a convolution + batch normalization pair with activation.
   - `outplanes`: number of output feature maps
   - `activation`: the activation function for the final layer
   - `norm_layer`: the normalization layer used
-  - `revnorm`: set to `true` to place the batch norm before the convolution
+  - `revnorm`: set to `true` to place the normalisation layer before the convolution
   - `preact`: set to `true` to place the activation function before the batch norm
     (only compatible with `revnorm = false`)
   - `use_norm`: set to `false` to disable normalization
