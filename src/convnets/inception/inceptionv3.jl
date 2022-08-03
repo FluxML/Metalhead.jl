@@ -127,7 +127,7 @@ function inceptionv3_e(inplanes)
 end
 
 """
-    inceptionv3(; nclasses = 1000)
+    inceptionv3(; inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Create an Inception-v3 model ([reference](https://arxiv.org/abs/1512.00567v3)).
 
@@ -135,34 +135,30 @@ Create an Inception-v3 model ([reference](https://arxiv.org/abs/1512.00567v3)).
 
   - `nclasses`: the number of output classes
 """
-function inceptionv3(; nclasses = 1000)
-    layer = Chain(Chain(conv_norm((3, 3), 3, 32; stride = 2)...,
-                        conv_norm((3, 3), 32, 32)...,
-                        conv_norm((3, 3), 32, 64; pad = 1)...,
-                        MaxPool((3, 3); stride = 2),
-                        conv_norm((1, 1), 64, 80)...,
-                        conv_norm((3, 3), 80, 192)...,
-                        MaxPool((3, 3); stride = 2),
-                        inceptionv3_a(192, 32),
-                        inceptionv3_a(256, 64),
-                        inceptionv3_a(288, 64),
-                        inceptionv3_b(288),
-                        inceptionv3_c(768, 128),
-                        inceptionv3_c(768, 160),
-                        inceptionv3_c(768, 160),
-                        inceptionv3_c(768, 192),
-                        inceptionv3_d(768),
-                        inceptionv3_e(1280),
-                        inceptionv3_e(2048)),
-                  Chain(AdaptiveMeanPool((1, 1)),
-                        Dropout(0.2),
-                        MLUtils.flatten,
-                        Dense(2048, nclasses)))
-    return layer
+function inceptionv3(; inchannels::Integer = 3, nclasses::Integer = 1000)
+    backbone = Chain(conv_norm((3, 3), inchannels, 32; stride = 2)...,
+                     conv_norm((3, 3), 32, 32)...,
+                     conv_norm((3, 3), 32, 64; pad = 1)...,
+                     MaxPool((3, 3); stride = 2),
+                     conv_norm((1, 1), 64, 80)...,
+                     conv_norm((3, 3), 80, 192)...,
+                     MaxPool((3, 3); stride = 2),
+                     inceptionv3_a(192, 32),
+                     inceptionv3_a(256, 64),
+                     inceptionv3_a(288, 64),
+                     inceptionv3_b(288),
+                     inceptionv3_c(768, 128),
+                     inceptionv3_c(768, 160),
+                     inceptionv3_c(768, 160),
+                     inceptionv3_c(768, 192),
+                     inceptionv3_d(768),
+                     inceptionv3_e(1280),
+                     inceptionv3_e(2048))
+    return Chain(backbone, create_classifier(2048, nclasses; dropout_rate = 0.2))
 end
 
 """
-    Inceptionv3(; pretrain = false, nclasses = 1000)
+    Inceptionv3(; pretrain::Bool = false, inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Create an Inception-v3 model ([reference](https://arxiv.org/abs/1512.00567v3)).
 See also [`inceptionv3`](#).
@@ -170,6 +166,7 @@ See also [`inceptionv3`](#).
 # Arguments
 
   - `pretrain`: set to `true` to load the pre-trained weights for ImageNet
+  - `inchannels`: number of input channels
   - `nclasses`: the number of output classes
 
 !!! warning
@@ -180,8 +177,9 @@ struct Inceptionv3
     layers::Any
 end
 
-function Inceptionv3(; pretrain = false, nclasses = 1000)
-    layers = inceptionv3(; nclasses = nclasses)
+function Inceptionv3(; pretrain::Bool = false, inchannels::Integer = 3,
+                     nclasses::Integer = 1000)
+    layers = inceptionv3(; inchannels, nclasses)
     if pretrain
         loadpretrain!(layers, "Inceptionv3")
     end

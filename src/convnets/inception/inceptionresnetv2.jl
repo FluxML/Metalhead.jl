@@ -64,7 +64,7 @@ function block8(scale = 1.0f0; activation = identity)
 end
 
 """
-    inceptionresnetv2(; inchannels = 3, dropout_rate = 0.0, nclasses = 1000)
+    inceptionresnetv2(; inchannels::Integer = 3, dropout_rate = 0.0, nclasses::Integer = 1000)
 
 Creates an InceptionResNetv2 model.
 ([reference](https://arxiv.org/abs/1602.07261))
@@ -75,29 +75,28 @@ Creates an InceptionResNetv2 model.
   - `dropout_rate`: rate of dropout in classifier head.
   - `nclasses`: the number of output classes.
 """
-function inceptionresnetv2(; inchannels = 3, dropout_rate = 0.0, nclasses = 1000)
-    body = Chain(conv_norm((3, 3), inchannels, 32; stride = 2)...,
-                 conv_norm((3, 3), 32, 32)...,
-                 conv_norm((3, 3), 32, 64; pad = 1)...,
-                 MaxPool((3, 3); stride = 2),
-                 conv_norm((3, 3), 64, 80)...,
-                 conv_norm((3, 3), 80, 192)...,
-                 MaxPool((3, 3); stride = 2),
-                 mixed_5b(),
-                 [block35(0.17f0) for _ in 1:10]...,
-                 mixed_6a(),
-                 [block17(0.10f0) for _ in 1:20]...,
-                 mixed_7a(),
-                 [block8(0.20f0) for _ in 1:9]...,
-                 block8(; activation = relu),
-                 conv_norm((1, 1), 2080, 1536)...)
-    head = Chain(GlobalMeanPool(), MLUtils.flatten, Dropout(dropout_rate),
-                 Dense(1536, nclasses))
-    return Chain(body, head)
+function inceptionresnetv2(; inchannels::Integer = 3, dropout_rate = 0.0,
+                           nclasses::Integer = 1000)
+    backbone = Chain(conv_norm((3, 3), inchannels, 32; stride = 2)...,
+                     conv_norm((3, 3), 32, 32)...,
+                     conv_norm((3, 3), 32, 64; pad = 1)...,
+                     MaxPool((3, 3); stride = 2),
+                     conv_norm((3, 3), 64, 80)...,
+                     conv_norm((3, 3), 80, 192)...,
+                     MaxPool((3, 3); stride = 2),
+                     mixed_5b(),
+                     [block35(0.17f0) for _ in 1:10]...,
+                     mixed_6a(),
+                     [block17(0.10f0) for _ in 1:20]...,
+                     mixed_7a(),
+                     [block8(0.20f0) for _ in 1:9]...,
+                     block8(; activation = relu),
+                     conv_norm((1, 1), 2080, 1536)...)
+    return Chain(backbone, create_classifier(1536, nclasses; dropout_rate))
 end
 
 """
-    InceptionResNetv2(; pretrain = false, inchannels = 3, dropout_rate = 0.0, nclasses = 1000)
+    InceptionResNetv2(; pretrain::Bool = false, inchannels::Integer = 3, dropout_rate = 0.0, nclasses::Integer = 1000)
 
 Creates an InceptionResNetv2 model.
 ([reference](https://arxiv.org/abs/1602.07261))
@@ -118,8 +117,9 @@ struct InceptionResNetv2
 end
 @functor InceptionResNetv2
 
-function InceptionResNetv2(; pretrain = false, inchannels = 3, dropout_rate = 0.0,
-                           nclasses = 1000)
+function InceptionResNetv2(; pretrain::Bool = false, inchannels::Integer = 3,
+                           dropout_rate = 0.0,
+                           nclasses::Integer = 1000)
     layers = inceptionresnetv2(; inchannels, dropout_rate, nclasses)
     if pretrain
         loadpretrain!(layers, "InceptionResNetv2")

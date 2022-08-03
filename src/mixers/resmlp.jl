@@ -1,6 +1,6 @@
 """
     resmixerblock(planes, npatches; dropout_rate = 0., drop_path_rate = 0., mlp_ratio = 4.0,
-                  activation = gelu, λ = 1e-4)
+                  activation = gelu, layerscale_init = 1e-4)
 
 Creates a block for the ResMixer architecture.
 ([reference](https://arxiv.org/abs/2105.03404)).
@@ -15,54 +15,52 @@ Creates a block for the ResMixer architecture.
   - `dropout_rate`: the dropout rate to use in the MLP blocks
   - `drop_path_rate`: Stochastic depth rate
   - `activation`: the activation function to use in the MLP blocks
-  - `λ`: initialisation constant for the LayerScale
+  - `layerscale_init`: initialisation constant for the LayerScale
 """
-function resmixerblock(planes, npatches; mlp_ratio = 4.0, mlp_layer = mlp_block,
-                       dropout_rate = 0.0, drop_path_rate = 0.0, activation = gelu,
-                       λ = 1e-4)
+function resmixerblock(planes::Integer, npatches::Integer; mlp_layer = mlp_block,
+                       mlp_ratio = 4.0, layerscale_init = 1e-4, dropout_rate = 0.0,
+                       drop_path_rate = 0.0, activation = gelu)
     return Chain(SkipConnection(Chain(Flux.Scale(planes),
                                       swapdims((2, 1, 3)),
                                       Dense(npatches, npatches),
                                       swapdims((2, 1, 3)),
-                                      LayerScale(planes, λ),
+                                      LayerScale(planes, layerscale_init),
                                       DropPath(drop_path_rate)), +),
                  SkipConnection(Chain(Flux.Scale(planes),
-                                      mlp_layer(planes, Int(mlp_ratio * planes);
-                                                dropout_rate,
-                                                activation),
-                                      LayerScale(planes, λ),
+                                      mlp_layer(planes, floor(Int, mlp_ratio * planes);
+                                                dropout_rate, activation),
+                                      LayerScale(planes, layerscale_init),
                                       DropPath(drop_path_rate)), +))
 end
 
-struct ResMLP
-    layers::Any
-end
-@functor ResMLP
-
 """
-    ResMLP(size::Symbol = :base; patch_size::Dims{2} = (16, 16), imsize::Dims{2} = (224, 224),
-           drop_path_rate = 0., nclasses = 1000)
+    ResMLP(config::Symbol; patch_size::Dims{2} = (16, 16), imsize::Dims{2} = (224, 224),
+           inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Creates a model with the ResMLP architecture.
 ([reference](https://arxiv.org/abs/2105.03404)).
 
 # Arguments
 
-  - `size`: the size of the model - one of `small`, `base`, `large` or `huge`
+  - `config`: the size of the model - one of `small`, `base`, `large` or `huge`
   - `patch_size`: the size of the patches
   - `imsize`: the size of the input image
-  - `drop_path_rate`: Stochastic depth rate
+  - `inchannels`: the number of input channels
   - `nclasses`: number of output classes
 
 See also [`Metalhead.mlpmixer`](#).
 """
-function ResMLP(size::Symbol = :base; patch_size::Dims{2} = (16, 16),
-                imsize::Dims{2} = (224, 224), drop_path_rate = 0.0, nclasses = 1000)
-    _checkconfig(size, keys(MIXER_CONFIGS))
-    depth = MIXER_CONFIGS[size][:depth]
-    embedplanes = MIXER_CONFIGS[size][:planes]
-    layers = mlpmixer(resmixerblock, imsize; mlp_ratio = 4.0, patch_size, embedplanes,
-                      drop_path_rate, depth, nclasses)
+struct ResMLP
+    layers::Any
+end
+@functor ResMLP
+
+function ResMLP(config::Symbol; imsize::Dims{2} = (224, 224),
+                patch_size::Dims{2} = (16, 16),
+                inchannels::Integer = 3, nclasses::Integer = 1000)
+    _checkconfig(config, keys(MIXER_CONFIGS))
+    layers = mlpmixer(resmixerblock, imsize; mlp_ratio = 4.0, patch_size,
+                      MIXER_CONFIGS[config]..., inchannels, nclasses)
     return ResMLP(layers)
 end
 

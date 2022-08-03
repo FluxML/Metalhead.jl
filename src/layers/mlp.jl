@@ -47,8 +47,9 @@ end
 gated_mlp_block(::typeof(identity), args...; kwargs...) = mlp_block(args...; kwargs...)
 
 """
-    create_classifier(inplanes, nclasses; pool_layer = AdaptiveMeanPool((1, 1)),
-                      dropout_rate = 0.0, use_conv = false)
+    create_classifier(inplanes::Integer, nclasses::Integer, activation = identity;
+                      pool_layer = AdaptiveMeanPool((1, 1)),
+                      dropout_rate = 0.0, use_conv::Bool = false)
 
 Creates a classifier head to be used for models.
 
@@ -56,25 +57,25 @@ Creates a classifier head to be used for models.
 
   - `inplanes`: number of input feature maps
   - `nclasses`: number of output classes
+  - `activation`: activation function to use
   - `pool_layer`: pooling layer to use. This is passed in with the layer instantiated with
     any arguments that are needed i.e. as `AdaptiveMeanPool((1, 1))`, for example.
   - `dropout_rate`: dropout rate used in the classifier head.
   - `use_conv`: whether to use a 1x1 convolutional layer instead of a `Dense` layer.
 """
-function create_classifier(inplanes, nclasses; pool_layer = AdaptiveMeanPool((1, 1)),
-                           dropout_rate = 0.0, use_conv = false)
+function create_classifier(inplanes::Integer, nclasses::Integer, activation = identity;
+                           use_conv::Bool = false, pool_layer = AdaptiveMeanPool((1, 1)),
+                           dropout_rate = nothing)
     # Pooling
-    if pool_layer === identity
-        @assert use_conv
-        "Pooling can only be disabled if classifier is also removed or a convolution-based classifier is used"
-    end
     flatten_in_pool = !use_conv && pool_layer !== identity
     if use_conv
         @assert pool_layer === identity
         "`pool_layer` must be identity if `use_conv` is true"
     end
-    global_pool = flatten_in_pool ? Chain(pool_layer, MLUtils.flatten) : pool_layer
+    global_pool = flatten_in_pool ? [pool_layer, MLUtils.flatten] : [pool_layer]
     # Fully-connected layer
-    fc = use_conv ? Conv((1, 1), inplanes => nclasses) : Dense(inplanes => nclasses)
-    return Chain(global_pool, Dropout(dropout_rate), fc)
+    fc = use_conv ? Conv((1, 1), inplanes => nclasses, activation) :
+         Dense(inplanes => nclasses, activation)
+    drop = isnothing(dropout_rate) ? [] : [Dropout(dropout_rate)]
+    return Chain(global_pool..., drop..., fc)
 end

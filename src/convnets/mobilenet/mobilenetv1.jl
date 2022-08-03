@@ -1,8 +1,6 @@
 """
-    mobilenetv1(width_mult, config;
-                activation = relu,
-                inchannels = 3,
-                nclasses = 1000)
+    mobilenetv1(width_mult::Real, config::AbstractVector{<:Tuple}; activation = relu,
+                inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Create a MobileNetv1 model ([reference](https://arxiv.org/abs/1704.04861v1)).
 
@@ -21,13 +19,11 @@ Create a MobileNetv1 model ([reference](https://arxiv.org/abs/1704.04861v1)).
   - `inchannels`: The number of input channels. The default value is 3.
   - `nclasses`: The number of output classes
 """
-function mobilenetv1(width_mult, config;
-                     activation = relu,
-                     inchannels = 3,
-                     nclasses = 1000)
+function mobilenetv1(width_mult::Real, config::AbstractVector{<:Tuple}; activation = relu,
+                     inchannels::Integer = 3, nclasses::Integer = 1000)
     layers = []
     for (dw, outch, stride, nrepeats) in config
-        outch = Int(outch * width_mult)
+        outch = floor(Int, outch * width_mult)
         for _ in 1:nrepeats
             layer = dw ?
                     depthwise_sep_conv_norm((3, 3), inchannels, outch, activation;
@@ -38,11 +34,7 @@ function mobilenetv1(width_mult, config;
             inchannels = outch
         end
     end
-
-    return Chain(Chain(layers),
-                 Chain(GlobalMeanPool(),
-                       MLUtils.flatten,
-                       Dense(inchannels, nclasses)))
+    return Chain(Chain(layers...), create_classifier(inchannels, nclasses))
 end
 
 # Layer configurations for MobileNetv1
@@ -61,7 +53,8 @@ const MOBILENETV1_CONFIGS = [
 ]
 
 """
-    MobileNetv1(width_mult = 1; inchannels = 3, pretrain = false, nclasses = 1000)
+    MobileNetv1(width_mult = 1; inchannels::Integer = 3, pretrain::Bool = false,
+                nclasses::Integer = 1000)
 
 Create a MobileNetv1 model with the baseline configuration
 ([reference](https://arxiv.org/abs/1704.04861v1)).
@@ -83,8 +76,8 @@ struct MobileNetv1
 end
 @functor MobileNetv1
 
-function MobileNetv1(width_mult::Number = 1; inchannels = 3, pretrain = false,
-                     nclasses = 1000)
+function MobileNetv1(width_mult::Real = 1; pretrain::Bool = false,
+                     inchannels::Integer = 3, nclasses::Integer = 1000)
     layers = mobilenetv1(width_mult, MOBILENETV1_CONFIGS; inchannels, nclasses)
     if pretrain
         loadpretrain!(layers, string("MobileNetv1"))

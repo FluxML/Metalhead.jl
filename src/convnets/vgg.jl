@@ -11,7 +11,7 @@ A VGG block of convolution layers
   - `depth`: number of convolution/convolution + batch norm layers
   - `batchnorm`: set to `true` to include batch normalization after each convolution
 """
-function vgg_block(ifilters, ofilters, depth, batchnorm)
+function vgg_block(ifilters::Integer, ofilters::Integer, depth::Integer, batchnorm::Bool)
     k = (3, 3)
     p = (1, 1)
     layers = []
@@ -40,7 +40,8 @@ Create VGG convolution layers
   - `batchnorm`: set to `true` to include batch normalization after each convolution
   - `inchannels`: number of input channels
 """
-function vgg_convolutional_layers(config, batchnorm, inchannels)
+function vgg_convolutional_layers(config::AbstractVector{<:Tuple}, batchnorm::Bool,
+                                  inchannels::Integer)
     layers = []
     ifilters = inchannels
     for c in config
@@ -65,9 +66,10 @@ Create VGG classifier (fully connected) layers
   - `fcsize`: input and output size of the intermediate fully connected layer
   - `dropout_rate`: the dropout level between each fully connected layer
 """
-function vgg_classifier_layers(imsize, nclasses, fcsize, dropout_rate)
+function vgg_classifier_layers(imsize::NTuple{3, <:Integer}, nclasses::Integer,
+                               fcsize::Integer, dropout_rate)
     return Chain(MLUtils.flatten,
-                 Dense(Int(prod(imsize)), fcsize, relu),
+                 Dense(prod(imsize), fcsize, relu),
                  Dropout(dropout_rate),
                  Dense(fcsize, fcsize, relu),
                  Dropout(dropout_rate),
@@ -92,11 +94,12 @@ Create a VGG model
     (see [`Metalhead.vgg_classifier_layers`](#))
   - `dropout_rate`: dropout level between fully connected layers
 """
-function vgg(imsize; config, inchannels, batchnorm = false, nclasses, fcsize, dropout_rate)
+function vgg(imsize::Dims{2}; config, batchnorm::Bool = false, fcsize::Integer = 4096,
+             dropout_rate = 0.0, inchannels::Integer = 3, nclasses::Integer = 1000)
     conv = vgg_convolutional_layers(config, batchnorm, inchannels)
     imsize = outputsize(conv, (imsize..., inchannels); padbatch = true)[1:3]
     class = vgg_classifier_layers(imsize, nclasses, fcsize, dropout_rate)
-    return Chain(Chain(conv), class)
+    return Chain(Chain(conv...), class)
 end
 
 const VGG_CONV_CONFIGS = Dict(:A => [(64, 1), (128, 1), (256, 2), (512, 2), (512, 2)],
@@ -104,14 +107,7 @@ const VGG_CONV_CONFIGS = Dict(:A => [(64, 1), (128, 1), (256, 2), (512, 2), (512
                               :D => [(64, 2), (128, 2), (256, 3), (512, 3), (512, 3)],
                               :E => [(64, 2), (128, 2), (256, 4), (512, 4), (512, 4)])
 
-const VGG_CONFIGS = Dict(11 => :A,
-                         13 => :B,
-                         16 => :D,
-                         19 => :E)
-
-struct VGG
-    layers::Any
-end
+const VGG_CONFIGS = Dict(11 => :A, 13 => :B, 16 => :D, 19 => :E)
 
 """
     VGG(imsize::Dims{2}; config, inchannels, batchnorm = false, nclasses, fcsize, dropout_rate)
@@ -120,21 +116,25 @@ Construct a VGG model with the specified input image size. Typically, the image 
 
 ## Keyword Arguments:
 
-  - `config` : VGG convolutional block configuration. It is defined as a vector of tuples `(output_channels, num_convolutions)` for each block
-  - `inchannels`::Integer : number of input channels
-  - `batchnorm`::Bool : set to `true` to use batch normalization after each convolution
-  - `nclasses`::Integer : number of output classes
+  - `config` : VGG convolutional block configuration. It is defined as a vector of tuples
+    `(output_channels, num_convolutions)` for each block
+  - `inchannels`: number of input channels
+  - `batchnorm`: set to `true` to use batch normalization after each convolution
+  - `nclasses`: number of output classes
   - `fcsize`: intermediate fully connected layer size
     (see [`Metalhead.vgg_classifier_layers`](#))
   - `dropout_rate`: dropout level between fully connected layers
 """
-function VGG(imsize::Dims{2}; config, inchannels, batchnorm = false, nclasses, fcsize,
-             dropout_rate)
-    layers = vgg(imsize; config, inchannels, batchnorm, nclasses, fcsize, dropout_rate)
+struct VGG
+    layers::Any
+end
+@functor VGG
+
+function VGG(imsize::Dims{2}; config, batchnorm::Bool = false, dropout_rate = 0.5,
+             inchannels::Integer = 3, nclasses::Integer = 1000)
+    layers = vgg(imsize; config, inchannels, batchnorm, nclasses, dropout_rate)
     return VGG(layers)
 end
-
-@functor VGG
 
 (m::VGG)(x) = m.layers(x)
 
@@ -142,24 +142,27 @@ backbone(m::VGG) = m.layers[1]
 classifier(m::VGG) = m.layers[2]
 
 """
-    VGG(depth::Integer = 16; pretrain = false, batchnorm = false)
+    VGG(depth::Integer; pretrain::Bool = false, batchnorm::Bool = false,
+        inchannels::Integer = 3, nclasses::Integer = 1000)
 
-Create a VGG style model with specified `depth`. Available values include (11, 13, 16, 19).
+Create a VGG style model with specified `depth`.
 ([reference](https://arxiv.org/abs/1409.1556v6)).
-See also [`VGG`](#).
 
 # Arguments
 
+  - `depth`: the depth of the VGG model. Must be one of [11, 13, 16, 19].
   - `pretrain`: set to `true` to load pre-trained model weights for ImageNet
+  - `batchnorm`: set to `true` to use batch normalization after each convolution
+  - `inchannels`: number of input channels
+  - `nclasses`: number of output classes
+
+See also [`vgg`](#).
 """
-function VGG(depth::Integer = 16; pretrain = false, batchnorm = false, nclasses = 1000)
+function VGG(depth::Integer; pretrain::Bool = false, batchnorm::Bool = false,
+             inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(depth, keys(VGG_CONFIGS))
-    model = VGG((224, 224); config = VGG_CONV_CONFIGS[VGG_CONFIGS[depth]],
-                inchannels = 3,
-                batchnorm = batchnorm,
-                nclasses = nclasses,
-                fcsize = 4096,
-                dropout_rate = 0.5)
+    model = VGG((224, 224); config = VGG_CONV_CONFIGS[VGG_CONFIGS[depth]], batchnorm,
+                inchannels, nclasses)
     if pretrain && !batchnorm
         loadpretrain!(model, string("vgg", depth))
     elseif pretrain

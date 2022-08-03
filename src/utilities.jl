@@ -67,7 +67,7 @@ end
 
 Returns the dropout rates for a given depth using the linear scaling rule.
 """
-function linear_scheduler(drop_rate = 0.0; depth, start_value = 0.0)
+function linear_scheduler(drop_rate = 0.0; depth::Integer, start_value = 0.0)
     return LinRange(start_value, drop_rate, depth)
 end
 

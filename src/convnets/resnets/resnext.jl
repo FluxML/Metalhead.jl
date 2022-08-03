@@ -1,6 +1,6 @@
 """
-    ResNeXt(depth::Integer; pretrain = false, cardinality = 32,
-            base_width = 4, inchannels = 3, nclasses = 1000)
+    ResNeXt(depth::Integer; pretrain::Bool = false, cardinality = 32,
+            base_width = 4, inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Creates a ResNeXt model with the specified depth, cardinality, and base width.
 ((reference)[https://arxiv.org/abs/1611.05431])
@@ -27,8 +27,8 @@ end
 
 (m::ResNeXt)(x) = m.layers(x)
 
-function ResNeXt(depth::Integer; pretrain = false, cardinality = 32,
-                 base_width = 4, inchannels = 3, nclasses = 1000)
+function ResNeXt(depth::Integer; pretrain::Bool = false, cardinality = 32,
+                 base_width = 4, inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(depth, sort(collect(keys(RESNET_CONFIGS)))[3:end])
     layers = resnet(RESNET_CONFIGS[depth]...; inchannels, nclasses, cardinality, base_width)
     if pretrain

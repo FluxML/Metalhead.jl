@@ -1,6 +1,7 @@
 """
-    xception_block(inchannels, outchannels, nrepeats; stride = 1, start_with_relu = true, 
-                        grow_at_start = true)
+    xception_block(inchannels::Integer, outchannels::Integer, nrepeats::Integer;
+                   stride::Integer = 1, start_with_relu::Bool = true,
+                   grow_at_start::Bool = true)
 
 Create an Xception block.
 ([reference](https://arxiv.org/abs/1610.02357))
@@ -14,9 +15,9 @@ Create an Xception block.
   - `start_with_relu`: if true, start the block with a ReLU activation.
   - `grow_at_start`: if true, increase the number of channels at the first convolution.
 """
-function xception_block(inchannels, outchannels, nrepeats; stride = 1,
-                        start_with_relu = true,
-                        grow_at_start = true)
+function xception_block(inchannels::Integer, outchannels::Integer, nrepeats::Integer;
+                        stride::Integer = 1, start_with_relu::Bool = true,
+                        grow_at_start::Bool = true)
     if outchannels != inchannels || stride != 1
         skip = conv_norm((1, 1), inchannels, outchannels, identity; stride = stride,
                          bias = false)
@@ -44,39 +45,33 @@ function xception_block(inchannels, outchannels, nrepeats; stride = 1,
 end
 
 """
-    xception(; inchannels = 3, dropout_rate = 0.0, nclasses = 1000)
+    xception(; dropout_rate = 0.0, inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Creates an Xception model.
 ([reference](https://arxiv.org/abs/1610.02357))
 
 # Arguments
 
-  - `inchannels`: number of input channels.
   - `dropout_rate`: rate of dropout in classifier head.
+  - `inchannels`: number of input channels.
   - `nclasses`: the number of output classes.
 """
-function xception(; inchannels = 3, dropout_rate = 0.0, nclasses = 1000)
-    body = Chain(conv_norm((3, 3), inchannels, 32; stride = 2, bias = false)...,
-                 conv_norm((3, 3), 32, 64; bias = false)...,
-                 xception_block(64, 128, 2; stride = 2, start_with_relu = false),
-                 xception_block(128, 256, 2; stride = 2),
-                 xception_block(256, 728, 2; stride = 2),
-                 [xception_block(728, 728, 3) for _ in 1:8]...,
-                 xception_block(728, 1024, 2; stride = 2, grow_at_start = false),
-                 depthwise_sep_conv_norm((3, 3), 1024, 1536; pad = 1)...,
-                 depthwise_sep_conv_norm((3, 3), 1536, 2048; pad = 1)...)
-    head = Chain(GlobalMeanPool(), MLUtils.flatten, Dropout(dropout_rate),
-                 Dense(2048, nclasses))
-    return Chain(body, head)
+function xception(; dropout_rate = 0.0, inchannels::Integer = 3, nclasses::Integer = 1000)
+    backbone = Chain(conv_norm((3, 3), inchannels, 32; stride = 2, bias = false)...,
+                     conv_norm((3, 3), 32, 64; bias = false)...,
+                     xception_block(64, 128, 2; stride = 2, start_with_relu = false),
+                     xception_block(128, 256, 2; stride = 2),
+                     xception_block(256, 728, 2; stride = 2),
+                     [xception_block(728, 728, 3) for _ in 1:8]...,
+                     xception_block(728, 1024, 2; stride = 2, grow_at_start = false),
+                     depthwise_sep_conv_norm((3, 3), 1024, 1536; pad = 1)...,
+                     depthwise_sep_conv_norm((3, 3), 1536, 2048; pad = 1)...)
+    classifier = create_classifier(2048, nclasses; dropout_rate)
+    return Chain(backbone, classifier)
 end
-
-struct Xception
-    layers::Any
-end
-@functor Xception
 
 """
-    Xception(; pretrain = false, inchannels = 3, dropout_rate = 0.0, nclasses = 1000)
+    Xception(; pretrain::Bool = false, inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Creates an Xception model.
 ([reference](https://arxiv.org/abs/1610.02357))
@@ -85,15 +80,20 @@ Creates an Xception model.
 
   - `pretrain`: set to `true` to load the pre-trained weights for ImageNet.
   - `inchannels`: number of input channels.
-  - `dropout_rate`: rate of dropout in classifier head.
   - `nclasses`: the number of output classes.
 
 !!! warning
     
     `Xception` does not currently support pretrained weights.
 """
-function Xception(; pretrain = false, inchannels = 3, dropout_rate = 0.0, nclasses = 1000)
-    layers = xception(; inchannels, dropout_rate, nclasses)
+struct Xception
+    layers::Any
+end
+@functor Xception
+
+function Xception(; pretrain::Bool = false, inchannels::Integer = 3,
+                  nclasses::Integer = 1000)
+    layers = xception(; inchannels, nclasses)
     if pretrain
         loadpretrain!(layers, "xception")
     end

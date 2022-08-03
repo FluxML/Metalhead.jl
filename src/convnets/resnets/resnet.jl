@@ -1,5 +1,5 @@
 """
-    ResNet(depth::Integer; pretrain = false, inchannels = 3, nclasses = 1000)
+    ResNet(depth::Integer; pretrain::Bool = false, inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Creates a ResNet model with the specified depth.
 ((reference)[https://arxiv.org/abs/1512.03385])
@@ -22,7 +22,8 @@ struct ResNet
 end
 @functor ResNet
 
-function ResNet(depth::Integer; pretrain = false, inchannels = 3, nclasses = 1000)
+function ResNet(depth::Integer; pretrain::Bool = false, inchannels::Integer = 3,
+                nclasses::Integer = 1000)
     _checkconfig(depth, keys(RESNET_CONFIGS))
     layers = resnet(RESNET_CONFIGS[depth]...; inchannels, nclasses)
     if pretrain
@@ -37,7 +38,7 @@ backbone(m::ResNet) = m.layers[1]
 classifier(m::ResNet) = m.layers[2]
 
 """
-    WideResNet(depth::Integer; pretrain = false, inchannels = 3, nclasses = 1000)
+    WideResNet(depth::Integer; pretrain::Bool = false, inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Creates a Wide ResNet model with the specified depth. The model is the same as ResNet
 except for the bottleneck number of channels which is twice larger in every block.
@@ -62,7 +63,8 @@ struct WideResNet
 end
 @functor WideResNet
 
-function WideResNet(depth::Integer; pretrain = false, inchannels = 3, nclasses = 1000)
+function WideResNet(depth::Integer; pretrain::Bool = false, inchannels::Integer = 3,
+                    nclasses::Integer = 1000)
     _checkconfig(depth, [50, 101])
     layers = resnet(RESNET_CONFIGS[depth]...; base_width = 128, inchannels, nclasses)
     if pretrain

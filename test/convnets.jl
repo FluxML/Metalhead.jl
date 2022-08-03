@@ -123,16 +123,16 @@ end
 end
 
 @testset "EfficientNet" begin
-    @testset "EfficientNet($name)" for name in [:b0, :b1, :b2, :b3, :b4, :b5] #:b6, :b7, :b8]
+    @testset "EfficientNet($config)" for config in [:b0, :b1, :b2, :b3, :b4, :b5] #:b6, :b7, :b8]
         # preferred image resolution scaling
-        r = Metalhead.EFFICIENTNET_GLOBAL_CONFIGS[name][1]
+        r = Metalhead.EFFICIENTNET_GLOBAL_CONFIGS[config][1]
         x = rand(Float32, r, r, 3, 1)
-        m = EfficientNet(name)
+        m = EfficientNet(config)
         @test size(m(x)) == (1000, 1)
-        if (EfficientNet, name) in PRETRAINED_MODELS
-            @test acctest(EfficientNet(name, pretrain = true))
+        if (EfficientNet, config) in PRETRAINED_MODELS
+            @test acctest(EfficientNet(config, pretrain = true))
         else
-            @test_throws ArgumentError EfficientNet(name, pretrain = true)
+            @test_throws ArgumentError EfficientNet(config, pretrain = true)
         end
         @test gradtest(m, x)
         _gc()
@@ -249,13 +249,13 @@ end
     end
     _gc()
     @testset "MobileNetv3" verbose = true begin
-        @testset for mode in [:small, :large]
-            m = MobileNetv3(mode)
+        @testset for config in [:small, :large]
+            m = MobileNetv3(config)
             @test size(m(x_224)) == (1000, 1)
-            if (MobileNetv3, mode) in PRETRAINED_MODELS
-                @test acctest(MobileNetv3(mode; pretrain = true))
+            if (MobileNetv3, config) in PRETRAINED_MODELS
+                @test acctest(MobileNetv3(config; pretrain = true))
             else
-                @test_throws ArgumentError MobileNetv3(mode; pretrain = true)
+                @test_throws ArgumentError MobileNetv3(config; pretrain = true)
             end
             @test gradtest(m, x_224)
             _gc()
@@ -263,21 +263,18 @@ end
     end
 end
 
-
 @testset "ConvNeXt" verbose = true begin
-    @testset for mode in [:small, :base, :large, :tiny, :xlarge]
-        @testset for drop_path_rate in [0.0, 0.5]
-            m = ConvNeXt(mode; drop_path_rate)
-            @test size(m(x_224)) == (1000, 1)
-            @test gradtest(m, x_224)
-            _gc()
-        end
+    @testset for config in [:small, :base, :large, :tiny, :xlarge]
+        m = ConvNeXt(config)
+        @test size(m(x_224)) == (1000, 1)
+        @test gradtest(m, x_224)
+        _gc()
     end
 end
 
 @testset "ConvMixer" verbose = true begin
-    @testset for mode in [:small, :base, :large]
-        m = ConvMixer(mode)
+    @testset for config in [:small, :base, :large]
+        m = ConvMixer(config)
         @test size(m(x_224)) == (1000, 1)
         @test gradtest(m, x_224)
         _gc()

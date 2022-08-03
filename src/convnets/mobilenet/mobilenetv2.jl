@@ -1,5 +1,7 @@
 """
-    mobilenetv2(width_mult, configs; inchannels = 3, max_width = 1280, nclasses = 1000)
+    mobilenetv2(width_mult::Real, configs::AbstractVector{<:Tuple};
+                max_width::Integer = 1280, inchannels::Integer = 3,
+                nclasses::Integer = 1000)
 
 Create a MobileNetv2 model.
 ([reference](https://arxiv.org/abs/1801.04381)).
@@ -20,29 +22,29 @@ Create a MobileNetv2 model.
   - `max_width`: The maximum number of feature maps in any layer of the network
   - `nclasses`: The number of output classes
 """
-function mobilenetv2(width_mult, configs; inchannels = 3, max_width = 1280, nclasses = 1000)
+function mobilenetv2(width_mult::Real, configs::AbstractVector{<:Tuple};
+                     max_width::Integer = 1280, inchannels::Integer = 3,
+                     nclasses::Integer = 1000)
+    divisor = width_mult == 0.1 ? 4 : 8
     # building first layer
-    inplanes = _round_channels(32 * width_mult, width_mult == 0.1 ? 4 : 8)
+    inplanes = _round_channels(32 * width_mult, divisor)
     layers = []
     append!(layers, conv_norm((3, 3), inchannels, inplanes; pad = 1, stride = 2))
     # building inverted residual blocks
     for (t, c, n, s, a) in configs
-        outplanes = _round_channels(c * width_mult, width_mult == 0.1 ? 4 : 8)
+        outplanes = _round_channels(c * width_mult, divisor)
         for i in 1:n
             push!(layers,
-                  invertedresidual(3, inplanes, inplanes * t, outplanes, a;
+                  invertedresidual((3, 3), inplanes, outplanes, a; expansion = t,
                                    stride = i == 1 ? s : 1))
             inplanes = outplanes
         end
     end
-    # building last several layers
-    outplanes = (width_mult > 1) ?
-                _round_channels(max_width * width_mult, width_mult == 0.1 ? 4 : 8) :
+    # building last layers
+    outplanes = width_mult > 1 ? _round_channels(max_width * width_mult, divisor) :
                 max_width
-    return Chain(Chain(Chain(layers),
-                       conv_norm((1, 1), inplanes, outplanes, relu6; bias = false)...),
-                 Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten,
-                       Dense(outplanes, nclasses)))
+    append!(layers, conv_norm((1, 1), inplanes, outplanes, relu6; bias = false))
+    return Chain(Chain(layers...), create_classifier(outplanes, nclasses))
 end
 
 # Layer configurations for MobileNetv2
@@ -57,13 +59,9 @@ const MOBILENETV2_CONFIGS = [
     (6, 320, 1, 1, relu6),
 ]
 
-struct MobileNetv2
-    layers::Any
-end
-@functor MobileNetv2
-
 """
-    MobileNetv2(width_mult = 1.0; inchannels = 3, pretrain = false, nclasses = 1000)
+    MobileNetv2(width_mult = 1.0; inchannels::Integer = 3, pretrain::Bool = false,
+                nclasses::Integer = 1000)
 
 Create a MobileNetv2 model with the specified configuration.
 ([reference](https://arxiv.org/abs/1801.04381)).
@@ -74,16 +72,20 @@ Set `pretrain` to `true` to load the pretrained weights for ImageNet.
   - `width_mult`: Controls the number of output feature maps in each block
     (with 1.0 being the default in the paper;
     this is usually a value between 0.1 and 1.4)
-  - `inchannels`: The number of input channels.
   - `pretrain`: Whether to load the pre-trained weights for ImageNet
+  - `inchannels`: The number of input channels.
   - `nclasses`: The number of output classes
 
 See also [`Metalhead.mobilenetv2`](#).
 """
-function MobileNetv2(width_mult::Number = 1; inchannels = 3, pretrain = false,
-                     nclasses = 1000)
+struct MobileNetv2
+    layers::Any
+end
+@functor MobileNetv2
+
+function MobileNetv2(width_mult::Real = 1; pretrain::Bool = false,
+                     inchannels::Integer = 3, nclasses::Integer = 1000)
     layers = mobilenetv2(width_mult, MOBILENETV2_CONFIGS; inchannels, nclasses)
-    pretrain && loadpretrain!(layers, string("MobileNetv2"))
     if pretrain
         loadpretrain!(layers, string("MobileNetv2"))
     end

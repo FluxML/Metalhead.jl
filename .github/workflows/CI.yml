@@ -34,8 +34,8 @@ jobs:
           - '"Inception"'
           - '"DenseNet"'
           - '["ConvNeXt", "ConvMixer"]'
-          - 'r"ViTs"'
           - 'r"Mixers"'
+          - 'r"ViTs"'
     steps:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1

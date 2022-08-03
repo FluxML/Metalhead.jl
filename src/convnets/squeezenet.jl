@@ -1,5 +1,6 @@
 """
-    fire(inplanes, squeeze_planes, expand1x1_planes, expand3x3_planes)
+    fire(inplanes::Integer, squeeze_planes::Integer, expand1x1_planes::Integer,
+         expand3x3_planes::Integer)
 
 Create a fire module
 ([reference](https://arxiv.org/abs/1602.07360v4)).
@@ -11,7 +12,8 @@ Create a fire module
   - `expand1x1_planes`: number of output feature maps for the 1x1 expansion convolution
   - `expand3x3_planes`: number of output feature maps for the 3x3 expansion convolution
 """
-function fire(inplanes, squeeze_planes, expand1x1_planes, expand3x3_planes)
+function fire(inplanes::Integer, squeeze_planes::Integer, expand1x1_planes::Integer,
+              expand3x3_planes::Integer)
     branch_1 = Conv((1, 1), inplanes => squeeze_planes, relu)
     branch_2 = Conv((1, 1), squeeze_planes => expand1x1_planes, relu)
     branch_3 = Conv((3, 3), squeeze_planes => expand3x3_planes, relu; pad = 1)
@@ -19,36 +21,46 @@ function fire(inplanes, squeeze_planes, expand1x1_planes, expand3x3_planes)
 end
 
 """
-    squeezenet()
+    squeezenet(; inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Create a SqueezeNet
 ([reference](https://arxiv.org/abs/1602.07360v4)).
+
+# Arguments
+
+  - `inchannels`: number of input channels.
+  - `nclasses`: the number of output classes.
 """
-function squeezenet()
-    return Chain(Chain(Conv((3, 3), 3 => 64, relu; stride = 2),
-                       MaxPool((3, 3); stride = 2),
-                       fire(64, 16, 64, 64),
-                       fire(128, 16, 64, 64),
-                       MaxPool((3, 3); stride = 2),
-                       fire(128, 32, 128, 128),
-                       fire(256, 32, 128, 128),
-                       MaxPool((3, 3); stride = 2),
-                       fire(256, 48, 192, 192),
-                       fire(384, 48, 192, 192),
-                       fire(384, 64, 256, 256),
-                       fire(512, 64, 256, 256),
-                       Dropout(0.5),
-                       Conv((1, 1), 512 => 1000, relu)),
-                 AdaptiveMeanPool((1, 1)),
-                 MLUtils.flatten)
+function squeezenet(; inchannels::Integer = 3, nclasses::Integer = 1000)
+    backbone = Chain(Conv((3, 3), inchannels => 64, relu; stride = 2),
+                     MaxPool((3, 3); stride = 2),
+                     fire(64, 16, 64, 64),
+                     fire(128, 16, 64, 64),
+                     MaxPool((3, 3); stride = 2),
+                     fire(128, 32, 128, 128),
+                     fire(256, 32, 128, 128),
+                     MaxPool((3, 3); stride = 2),
+                     fire(256, 48, 192, 192),
+                     fire(384, 48, 192, 192),
+                     fire(384, 64, 256, 256),
+                     fire(512, 64, 256, 256))
+    classifier = Chain(Dropout(0.5), Conv((1, 1), 512 => nclasses, relu),
+                       AdaptiveMeanPool((1, 1)), MLUtils.flatten)
+    return Chain(backbone, classifier)
 end
 
 """
-    SqueezeNet(; pretrain = false)
+    SqueezeNet(; pretrain::Bool = false, inchannels::Integer = 3,
+           nclasses::Integer = 1000)
 
 Create a SqueezeNet
 ([reference](https://arxiv.org/abs/1602.07360v4)).
-Set `pretrain=true` to load the model with pre-trained weights for ImageNet.
+
+# Arguments
+
+  - `pretrain`: set to `true` to load the pre-trained weights for ImageNet
+  - `inchannels`: number of input channels.
+  - `nclasses`: the number of output classes.
 
 !!! warning
     
@@ -61,8 +73,9 @@ struct SqueezeNet
 end
 @functor SqueezeNet
 
-function SqueezeNet(; pretrain = false)
-    layers = squeezenet()
+function SqueezeNet(; pretrain::Bool = false, inchannels::Integer = 3,
+                    nclasses::Integer = 1000)
+    layers = squeezenet(; inchannels, nclasses)
     if pretrain
         loadpretrain!(layers, "SqueezeNet")
     end

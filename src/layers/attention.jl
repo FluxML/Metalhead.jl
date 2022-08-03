@@ -1,5 +1,6 @@
 """
-    MHAttention(planes::Integer, nheads::Integer = 8; qkv_bias::Bool = false, attn_dropout_rate = 0., proj_dropout_rate = 0.)
+    MHAttention(planes::Integer, nheads::Integer = 8; qkv_bias::Bool = false, 
+                attn_dropout_rate = 0., proj_dropout_rate = 0.)
 
 Multi-head self-attention layer.
 
