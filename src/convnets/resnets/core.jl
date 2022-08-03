@@ -116,7 +116,7 @@ function downsample_identity(inplanes::Integer, outplanes::Integer; kwargs...)
 end
 
 # Shortcut configurations for the ResNet models
-const shortcut_dict = Dict(:A => (downsample_identity, downsample_identity),
+const SHORTCUT_DICT = Dict(:A => (downsample_identity, downsample_identity),
                            :B => (downsample_conv, downsample_identity),
                            :C => (downsample_conv, downsample_conv),
                            :D => (downsample_pool, downsample_identity))
@@ -342,7 +342,7 @@ function resnet(block_type::Symbol, block_repeats::AbstractVector{<:Integer},
                   connection$activation, classifier_fn)
 end
 function resnet(block_fn, block_repeats, downsample_opt::Symbol = :B; kwargs...)
-    return resnet(block_fn, block_repeats, shortcut_dict[downsample_opt]; kwargs...)
+    return resnet(block_fn, block_repeats, SHORTCUT_DICT[downsample_opt]; kwargs...)
 end
 
 # block-layer configurations for ResNet-like models

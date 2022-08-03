@@ -22,32 +22,32 @@ Creates a bottleneck block as described in the Res2Net paper.
 """
 function bottle2neck(inplanes::Integer, planes::Integer; stride::Integer = 1,
                      cardinality::Integer = 1, base_width::Integer = 26,
-                     scale::Integer = 4, activation = relu, norm_layer = BatchNorm,
-                     revnorm::Bool = false, attn_fn = planes -> identity)
+                     scale::Integer = 4, activation = relu, is_first::Bool = false,
+                     norm_layer = BatchNorm, revnorm::Bool = false,
+                     attn_fn = planes -> identity)
     width = fld(planes * base_width, 64) * cardinality
     outplanes = planes * 4
-    is_first = stride > 1
     pool = is_first && scale > 1 ? MeanPool((3, 3); stride, pad = 1) : identity
     conv_bns = [Chain(conv_norm((3, 3), width => width, activation; norm_layer, stride,
                                 pad = 1, groups = cardinality, bias = false)...)
-                for _ in 1:(max(1, scale - 1))]
+                for _ in 1:max(1, scale - 1)]
     reslayer = is_first ? Parallel(cat_channels, pool, conv_bns...) :
-               Parallel(cat_channels, identity, PairwiseFusion(+, conv_bns...))
+               Parallel(cat_channels, identity, Chain(PairwiseFusion(+, conv_bns...)))
     tuplify(x) = is_first ? tuple(x...) : tuple(x[1], tuple(x[2:end]...))
-    return Chain(conv_norm((1, 1), inplanes => width * scale, activation;
-                           norm_layer, revnorm, bias = false)...,
-                 chunk$(; size = width, dims = 3),
-                 tuplify, reslayer,
-                 conv_norm((1, 1), width * scale => outplanes, activation;
-                           norm_layer, revnorm, bias = false)...,
-                 attn_fn(outplanes))
+    layers = [conv_norm((1, 1), inplanes => width * scale, activation;
+                        norm_layer, revnorm, bias = false)...,
+              chunk$(; size = width, dims = 3), tuplify, reslayer,
+              conv_norm((1, 1), width * scale => outplanes, activation;
+                        norm_layer, revnorm, bias = false)...,
+              attn_fn(outplanes)]
+    return Chain(filter(!=(identity), layers)...)
 end
 
 function bottle2neck_builder(block_repeats::AbstractVector{<:Integer};
                              inplanes::Integer = 64, cardinality::Integer = 1,
                              base_width::Integer = 26, scale::Integer = 4,
                              expansion::Integer = 4, norm_layer = BatchNorm,
-                             revnorm::Bool = false, activation = relu, 
+                             revnorm::Bool = false, activation = relu,
                              attn_fn = planes -> identity,
                              stride_fn = resnet_stride, planes_fn = resnet_planes,
                              downsample_tuple = (downsample_conv, downsample_identity))
@@ -63,8 +63,9 @@ function bottle2neck_builder(block_repeats::AbstractVector{<:Integer};
         stride = stride_fn(stage_idx, block_idx)
         downsample_fn = (stride != 1 || inplanes != planes * expansion) ?
                         downsample_tuple[1] : downsample_tuple[2]
+        is_first = (stride > 1 || downsample_fn != downsample_tuple[2]) ? true : false
         block = bottle2neck(inplanes, planes; stride, cardinality, base_width, scale,
-                            activation, norm_layer, revnorm, attn_fn)
+                            activation, is_first, norm_layer, revnorm, attn_fn)
         downsample = downsample_fn(inplanes, planes * expansion; stride, norm_layer,
                                    revnorm)
         return block, downsample
@@ -92,18 +93,24 @@ Creates a Res2Net model with the specified depth, scale, and base width.
 struct Res2Net
     layers::Any
 end
+@functor Res2Net
 
 function Res2Net(depth::Integer; pretrain::Bool = false, scale::Integer = 4,
                  base_width::Integer = 26, inchannels::Integer = 3,
                  nclasses::Integer = 1000)
     _checkconfig(depth, sort(collect(keys(RESNET_CONFIGS)))[3:end])
-    layers = resnet(:bottle2neck, RESNET_CONFIGS[depth][2], :C; base_width, scale,
+    layers = resnet(:bottle2neck, RESNET_CONFIGS[depth][2]; base_width, scale,
                     inchannels, nclasses)
     if pretrain
         loadpretrain!(layers, string("Res2Net", depth, "_", base_width, "x", scale))
     end
-    return ResNet(layers)
+    return Res2Net(layers)
 end
+
+(m::Res2Net)(x) = m.layers(x)
+
+backbone(m::Res2Net) = m.layers[1]
+classifier(m::Res2Net) = m.layers[2]
 
 """
     Res2NeXt(depth::Integer; pretrain::Bool = false, scale::Integer = 4,
@@ -126,17 +133,23 @@ Creates a Res2NeXt model with the specified depth, scale, base width and cardina
 struct Res2NeXt
     layers::Any
 end
+@functor Res2NeXt
 
 function Res2NeXt(depth::Integer; pretrain::Bool = false, scale::Integer = 4,
                   base_width::Integer = 4, cardinality::Integer = 8,
                   inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(depth, sort(collect(keys(RESNET_CONFIGS)))[3:end])
-    layers = resnet(:bottle2neck, RESNET_CONFIGS[depth][2], :C; base_width, scale,
+    layers = resnet(:bottle2neck, RESNET_CONFIGS[depth][2]; base_width, scale,
                     cardinality, inchannels, nclasses)
     if pretrain
         loadpretrain!(layers,
                       string("Res2NeXt", depth, "_", base_width, "x", cardinality,
                              "x", scale))
     end
-    return ResNet(layers)
+    return Res2NeXt(layers)
 end
+
+(m::Res2NeXt)(x) = m.layers(x)
+
+backbone(m::Res2NeXt) = m.layers[1]
+classifier(m::Res2NeXt) = m.layers[2]

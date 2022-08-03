@@ -125,10 +125,10 @@ end
     @testset for (base_width, scale) in [(26, 4), (48, 2), (14, 8), (26, 6), (26, 8)]
         m = Res2Net(50; base_width, scale)
         @test size(m(x_224)) == (1000, 1)
-        if (Res2Net, depth, cardinality, base_width) in PRETRAINED_MODELS
-            @test acctest(Res2Net(depth, pretrain = true))
+        if (Res2Net, depth, base_width, scale) in PRETRAINED_MODELS
+            @test acctest(Res2Net(50; base_width, scale, pretrain = true))
         else
-            @test_throws ArgumentError Res2Net(depth, pretrain = true)
+            @test_throws ArgumentError Res2Net(50; base_width, scale, pretrain = true)
         end
         @test gradtest(m, x_224)
         _gc()
@@ -136,10 +136,10 @@ end
     @testset for (base_width, scale) in [(26, 4)]
         m = Res2Net(101; base_width, scale)
         @test size(m(x_224)) == (1000, 1)
-        if (Res2Net, depth, cardinality, base_width) in PRETRAINED_MODELS
-            @test acctest(Res2Net(depth, pretrain = true))
+        if (Res2Net, depth, base_width, scale) in PRETRAINED_MODELS
+            @test acctest(Res2Net(101; base_width, scale, pretrain = true))
         else
-            @test_throws ArgumentError Res2Net(depth, pretrain = true)
+            @test_throws ArgumentError Res2Net(101; base_width, scale, pretrain = true)
         end
         @test gradtest(m, x_224)
         _gc()
