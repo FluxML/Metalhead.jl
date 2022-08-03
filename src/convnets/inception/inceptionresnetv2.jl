@@ -92,8 +92,7 @@ function inceptionresnetv2(; inchannels::Integer = 3, dropout_rate = 0.0,
                      [block8(0.20f0) for _ in 1:9]...,
                      block8(; activation = relu),
                      conv_norm((1, 1), 2080, 1536)...)
-    classifier = create_classifier(1536, nclasses; dropout_rate)
-    return Chain(backbone, classifier)
+    return Chain(backbone, create_classifier(1536, nclasses; dropout_rate))
 end
 
 """

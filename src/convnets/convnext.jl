@@ -22,7 +22,7 @@ function convnextblock(planes::Integer, drop_path_rate = 0.0, layerscale_init = 
 end
 
 """
-    convnext(depths::Vector{<:Integer}, planes::Vector{<:Integer};
+    convnext(depths::AbstractVector{<:Integer}, planes::AbstractVector{<:Integer};
              drop_path_rate = 0.0, layerscale_init = 1.0f-6, inchannels::Integer = 3,
              nclasses::Integer = 1000)
 
@@ -31,27 +31,27 @@ Creates the layers for a ConvNeXt model.
 
 # Arguments
 
-  - `inchannels`: number of input channels.
   - `depths`: list with configuration for depth of each block
   - `planes`: list with configuration for number of output channels in each block
   - `drop_path_rate`: Stochastic depth rate.
   - `layerscale_init`: Initial value for [`LayerScale`](#)
     ([reference](https://arxiv.org/abs/2103.17239))
+  - `inchannels`: number of input channels.
   - `nclasses`: number of output classes
 """
-function convnext(depths::Vector{<:Integer}, planes::Vector{<:Integer};
+function convnext(depths::AbstractVector{<:Integer}, planes::AbstractVector{<:Integer};
                   drop_path_rate = 0.0, layerscale_init = 1.0f-6, inchannels::Integer = 3,
                   nclasses::Integer = 1000)
     @assert length(depths) == length(planes)
     "`planes` should have exactly one value for each block"
     downsample_layers = []
-    stem = Chain(Conv((4, 4), inchannels => planes[1]; stride = 4),
-                 ChannelLayerNorm(planes[1]))
-    push!(downsample_layers, stem)
+    push!(downsample_layers,
+          Chain(conv_norm((4, 4), inchannels => planes[1]; stride = 4,
+                          norm_layer = ChannelLayerNorm)...))
     for m in 1:(length(depths) - 1)
-        downsample_layer = Chain(ChannelLayerNorm(planes[m]),
-                                 Conv((2, 2), planes[m] => planes[m + 1]; stride = 2))
-        push!(downsample_layers, downsample_layer)
+        push!(downsample_layers,
+              Chain(conv_norm((2, 2), planes[m] => planes[m + 1]; stride = 2,
+                              norm_layer = ChannelLayerNorm, revnorm = true)...))
     end
     stages = []
     dp_rates = linear_scheduler(drop_path_rate; depth = sum(depths))
@@ -64,8 +64,7 @@ function convnext(depths::Vector{<:Integer}, planes::Vector{<:Integer};
     end
     backbone = collect(Iterators.flatten(Iterators.flatten(zip(downsample_layers, stages))))
     classifier = Chain(GlobalMeanPool(), MLUtils.flatten,
-                       LayerNorm(planes[end]),
-                       Dense(planes[end], nclasses))
+                       LayerNorm(planes[end]), Dense(planes[end], nclasses))
     return Chain(Chain(backbone...), classifier)
 end
 
@@ -77,13 +76,14 @@ const CONVNEXT_CONFIGS = Dict(:tiny => ([3, 3, 9, 3], [96, 192, 384, 768]),
                               :xlarge => ([3, 3, 27, 3], [256, 512, 1024, 2048]))
 
 """
-    ConvNeXt(mode::Symbol; inchannels::Integer = 3, nclasses::Integer = 1000)
+    ConvNeXt(config::Symbol; inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Creates a ConvNeXt model.
 ([reference](https://arxiv.org/abs/2201.03545))
 
 # Arguments
 
+  - `config`: The size of the model, one of `tiny`, `small`, `base`, `large` or `xlarge`.
   - `inchannels`: The number of channels in the input.
   - `nclasses`: number of output classes
 
@@ -94,9 +94,9 @@ struct ConvNeXt
 end
 @functor ConvNeXt
 
-function ConvNeXt(mode::Symbol; inchannels::Integer = 3, nclasses::Integer = 1000)
-    _checkconfig(mode, keys(CONVNEXT_CONFIGS))
-    layers = convnext(CONVNEXT_CONFIGS[mode]...; inchannels, nclasses)
+function ConvNeXt(config::Symbol; inchannels::Integer = 3, nclasses::Integer = 1000)
+    _checkconfig(config, keys(CONVNEXT_CONFIGS))
+    layers = convnext(CONVNEXT_CONFIGS[config]...; inchannels, nclasses)
     return ConvNeXt(layers)
 end
 

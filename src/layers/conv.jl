@@ -1,7 +1,11 @@
 """
-    conv_norm(kernel_size, inplanes::Int, outplanes::Int, activation = relu;
-              norm_layer = BatchNorm, revnorm = false, preact = false, use_norm = true,
-              stride = 1, pad = 0, dilation = 1, groups = 1, [bias, weight, init])
+    conv_norm(kernel_size, inplanes::Integer, outplanes::Integer, activation = relu;
+              norm_layer = BatchNorm, revnorm::Bool = false, preact::Bool = false,
+              use_norm::Bool = true, stride::Integer = 1, pad::Integer = 0,
+              dilation::Integer = 1, groups::Integer = 1, [bias, weight, init])
+
+    conv_norm(kernel_size, inplanes => outplanes, activation = identity;
+              kwargs...)
 
 Create a convolution + batch normalization pair with activation.
 
@@ -59,17 +63,21 @@ function conv_norm(kernel_size, ch::Pair{<:Integer, <:Integer}, activation = ide
 end
 
 """
-    depthwise_sep_conv_norm(kernel_size, inplanes, outplanes, activation = relu;
-                            revnorm = false, use_norm = (true, true),
-                            stride = 1, pad = 0, dilation = 1, [bias, weight, init])
+    depthwise_sep_conv_norm(kernel_size, inplanes::Integer, outplanes::Integer,
+                            activation = relu; norm_layer = BatchNorm,
+                            revnorm::Bool = false, stride::Integer = 1,
+                            use_norm::NTuple{2, Bool} = (true, true),
+                            pad::Integer = 0, dilation::Integer = 1, [bias, weight, init])
 
 Create a depthwise separable convolution chain as used in MobileNetv1.
 This is sequence of layers:
 
   - a `kernel_size` depthwise convolution from `inplanes => inplanes`
-  - a batch norm layer + `activation` (if `use_norm[1] == true`; otherwise `activation` is applied to the convolution output)
+  - a (batch) normalisation layer + `activation` (if `use_norm[1] == true`; otherwise
+    `activation` is applied to the convolution output)
   - a `kernel_size` convolution from `inplanes => outplanes`
-  - a batch norm layer + `activation` (if `use_norm[2] == true`; otherwise `activation` is applied to the convolution output)
+  - a (batch) normalisation layer + `activation` (if `use_norm[2] == true`; otherwise
+    `activation` is applied to the convolution output)
 
 See Fig. 3 in [reference](https://arxiv.org/abs/1704.04861v1).
 
@@ -80,7 +88,8 @@ See Fig. 3 in [reference](https://arxiv.org/abs/1704.04861v1).
   - `outplanes`: number of output feature maps
   - `activation`: the activation function for the final layer
   - `revnorm`: set to `true` to place the batch norm before the convolution
-  - `use_norm`: a tuple of two booleans to specify whether to use normalization for the first and second convolution
+  - `use_norm`: a tuple of two booleans to specify whether to use normalization for the first and
+    second convolution
   - `stride`: stride of the first convolution kernel
   - `pad`: padding of the first convolution kernel
   - `dilation`: dilation of the first convolution kernel
@@ -88,9 +97,8 @@ See Fig. 3 in [reference](https://arxiv.org/abs/1704.04861v1).
 """
 function depthwise_sep_conv_norm(kernel_size, inplanes::Integer, outplanes::Integer,
                                  activation = relu; norm_layer = BatchNorm,
-                                 revnorm::Bool = false,
-                                 use_norm::NTuple{2, Bool} = (true, true),
-                                 stride::Integer = 1, kwargs...)
+                                 revnorm::Bool = false, stride::Integer = 1,
+                                 use_norm::NTuple{2, Bool} = (true, true), kwargs...)
     return vcat(conv_norm(kernel_size, inplanes, inplanes, activation;
                           norm_layer, revnorm, use_norm = use_norm[1], stride,
                           groups = inplanes, kwargs...),
@@ -135,9 +143,9 @@ function invertedresidual(kernel_size, inplanes::Integer, hidden_planes::Integer
 end
 
 function invertedresidual(kernel_size, inplanes::Integer, outplanes::Integer,
-                          activation = relu; stride::Integer, expansion,
+                          activation = relu; stride::Integer, expansion::Real,
                           reduction::Union{Nothing, Integer} = nothing)
-    hidden_planes = Int(inplanes * expansion)
+    hidden_planes = floor(Int, inplanes * expansion)
     return invertedresidual(kernel_size, inplanes, hidden_planes, outplanes, activation;
                             stride, reduction)
 end

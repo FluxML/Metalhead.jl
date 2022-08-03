@@ -1,5 +1,5 @@
 """
-    mobilenetv3(width_mult::Number, configs::Vector{<:Tuple};
+    mobilenetv3(width_mult::Real, configs::AbstractVector{<:Tuple};
                 max_width::Integer = 1024, inchannels::Integer = 3,
                 nclasses::Integer = 1000)
 
@@ -24,7 +24,7 @@ Create a MobileNetv3 model.
   - `max_width`: The maximum number of feature maps in any layer of the network
   - `nclasses`: the number of output classes
 """
-function mobilenetv3(width_mult::Number, configs::Vector{<:Tuple};
+function mobilenetv3(width_mult::Real, configs::AbstractVector{<:Tuple};
                      max_width::Integer = 1024, inchannels::Integer = 3,
                      nclasses::Integer = 1000)
     # building first layer
@@ -91,7 +91,7 @@ const MOBILENETV3_CONFIGS = Dict(:small => [
                                  ])
 
 """
-    MobileNetv3(mode::Symbol; width_mult::Number = 1, pretrain::Bool = false,
+    MobileNetv3(config::Symbol; width_mult::Real = 1, pretrain::Bool = false,
                 inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Create a MobileNetv3 model with the specified configuration.
@@ -100,7 +100,7 @@ Set `pretrain = true` to load the model with pre-trained weights for ImageNet.
 
 # Arguments
 
-  - `mode`: :small or :large for the size of the model (see paper).
+  - `config`: :small or :large for the size of the model (see paper).
   - `width_mult`: Controls the number of output feature maps in each block
     (with 1.0 being the default in the paper;
     this is usually a value between 0.1 and 1.4)
@@ -115,14 +115,14 @@ struct MobileNetv3
 end
 @functor MobileNetv3
 
-function MobileNetv3(mode::Symbol; width_mult::Number = 1, pretrain::Bool = false,
+function MobileNetv3(config::Symbol; width_mult::Real = 1, pretrain::Bool = false,
                      inchannels::Integer = 3, nclasses::Integer = 1000)
-    _checkconfig(mode, [:small, :large])
-    max_width = (mode == :large) ? 1280 : 1024
-    layers = mobilenetv3(width_mult, MOBILENETV3_CONFIGS[mode]; inchannels, max_width,
+    _checkconfig(config, [:small, :large])
+    max_width = (config == :large) ? 1280 : 1024
+    layers = mobilenetv3(width_mult, MOBILENETV3_CONFIGS[config]; max_width, inchannels,
                          nclasses)
     if pretrain
-        loadpretrain!(layers, string("MobileNetv3", mode))
+        loadpretrain!(layers, string("MobileNetv3", config))
     end
     return MobileNetv3(layers)
 end

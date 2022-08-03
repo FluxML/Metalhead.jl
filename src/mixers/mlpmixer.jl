@@ -20,7 +20,7 @@ Creates a feedforward block for the MLPMixer architecture.
 function mixerblock(planes::Integer, npatches::Integer; mlp_layer = mlp_block,
                     mlp_ratio::NTuple{2, Number} = (0.5, 4.0), dropout_rate = 0.0,
                     drop_path_rate = 0.0, activation = gelu)
-    tokenplanes, channelplanes = Int.(planes .* mlp_ratio)
+    tokenplanes, channelplanes = floor.(Int, planes .* mlp_ratio)
     return Chain(SkipConnection(Chain(LayerNorm(planes),
                                       swapdims((2, 1, 3)),
                                       mlp_layer(npatches, tokenplanes; activation,
@@ -34,7 +34,7 @@ function mixerblock(planes::Integer, npatches::Integer; mlp_layer = mlp_block,
 end
 
 """
-    MLPMixer(size::Symbol; patch_size::Dims{2} = (16, 16), imsize::Dims{2} = (224, 224),
+    MLPMixer(config::Symbol; patch_size::Dims{2} = (16, 16), imsize::Dims{2} = (224, 224),
              inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Creates a model with the MLPMixer architecture.
@@ -42,7 +42,7 @@ Creates a model with the MLPMixer architecture.
 
 # Arguments
 
-  - `size`: the size of the model - one of `small`, `base`, `large` or `huge`
+  - `config`: the size of the model - one of `small`, `base`, `large` or `huge`
   - `patch_size`: the size of the patches
   - `imsize`: the size of the input image
   - `drop_path_rate`: Stochastic depth rate
@@ -56,13 +56,10 @@ struct MLPMixer
 end
 @functor MLPMixer
 
-function MLPMixer(size::Symbol; imsize::Dims{2} = (224, 224),
-                  patch_size::Dims{2} = (16, 16),
+function MLPMixer(config::Symbol; imsize::Dims{2} = (224, 224), patch_size::Dims{2} = (16, 16),
                   inchannels::Integer = 3, nclasses::Integer = 1000)
-    _checkconfig(size, keys(MIXER_CONFIGS))
-    depth = MIXER_CONFIGS[size][:depth]
-    embedplanes = MIXER_CONFIGS[size][:planes]
-    layers = mlpmixer(mixerblock, imsize; patch_size, embedplanes, depth, inchannels,
+    _checkconfig(config, keys(MIXER_CONFIGS))
+    layers = mlpmixer(mixerblock, imsize; patch_size, MIXER_CONFIGS[config]..., inchannels,
                       nclasses)
     return MLPMixer(layers)
 end

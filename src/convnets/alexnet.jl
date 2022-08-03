@@ -1,11 +1,12 @@
 """
-    alexnet(; nclasses::Integer = 1000)
+    alexnet(; inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Create an AlexNet model
 ([reference](https://papers.nips.cc/paper/2012/file/c399862d3b9d6b76c8436e924a68c45b-Paper.pdf)).
 
 # Arguments
 
+  - `inchannels`: The number of input channels.
   - `nclasses`: the number of output classes
 """
 function alexnet(; inchannels::Integer = 3, nclasses::Integer = 1000)
@@ -27,19 +28,23 @@ function alexnet(; inchannels::Integer = 3, nclasses::Integer = 1000)
 end
 
 """
-    AlexNet(; pretrain::Bool = false, nclasses::Integer = 1000)
+    AlexNet(; pretrain::Bool = false, inchannels::Integer = 3,
+            nclasses::Integer = 1000)
 
 Create a `AlexNet`.
-See also [`alexnet`](#).
+([reference](https://papers.nips.cc/paper/2012/file/c399862d3b9d6b76c8436e924a68c45b-Paper.pdf)).
+
+# Arguments
+
+  - `pretrain`: set to `true` to load pre-trained weights for ImageNet
+  - `inchannels`: The number of input channels.
+  - `nclasses`: the number of output classes
 
 !!! warning
     
     `AlexNet` does not currently support pretrained weights.
 
-# Arguments
-
-  - `pretrain`: set to `true` to load pre-trained weights for ImageNet
-  - `nclasses`: the number of output classes
+See also [`alexnet`](#).
 """
 struct AlexNet
     layers::Any

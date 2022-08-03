@@ -65,7 +65,7 @@ function bottleneck(inplanes::Integer, planes::Integer; stride::Integer,
                     norm_layer = BatchNorm, revnorm::Bool = false,
                     drop_block = identity, drop_path = identity,
                     attn_fn = planes -> identity)
-    width = floor(Int, planes * (base_width / 64)) * cardinality
+    width = fld(planes * base_width, 64) * cardinality
     first_planes = width ÷ reduction_factor
     outplanes = planes * 4
     conv_bn1 = conv_norm((1, 1), inplanes => first_planes, activation; norm_layer, revnorm,
@@ -190,15 +190,16 @@ function resnet_stem(stem_type::Symbol = :default; inchannels::Integer = 3,
     return Chain(conv1, bn1, stempool)
 end
 
-function resnet_planes(block_repeats::Vector{<:Integer})
+function resnet_planes(block_repeats::AbstractVector{<:Integer})
     return Iterators.flatten((64 * 2^(stage_idx - 1) for _ in 1:stages)
                              for (stage_idx, stages) in enumerate(block_repeats))
 end
 
-function basicblock_builder(block_repeats::Vector{<:Integer}; inplanes::Integer = 64,
-                            reduction_factor::Integer = 1, expansion::Integer = 1,
-                            norm_layer = BatchNorm, revnorm::Bool = false,
-                            activation = relu, attn_fn = planes -> identity,
+function basicblock_builder(block_repeats::AbstractVector{<:Integer};
+                            inplanes::Integer = 64, reduction_factor::Integer = 1,
+                            expansion::Integer = 1, norm_layer = BatchNorm,
+                            revnorm::Bool = false, activation = relu,
+                            attn_fn = planes -> identity,
                             drop_block_rate = 0.0, drop_path_rate = 0.0,
                             stride_fn = resnet_stride, planes_fn = resnet_planes,
                             downsample_tuple = (downsample_conv, downsample_identity))
@@ -228,11 +229,12 @@ function basicblock_builder(block_repeats::Vector{<:Integer}; inplanes::Integer 
     return get_layers
 end
 
-function bottleneck_builder(block_repeats::Vector{<:Integer}; inplanes::Integer = 64,
-                            cardinality::Integer = 1, base_width::Integer = 64,
-                            reduction_factor::Integer = 1, expansion::Integer = 4,
-                            norm_layer = BatchNorm, revnorm::Bool = false,
-                            activation = relu, attn_fn = planes -> identity,
+function bottleneck_builder(block_repeats::AbstractVector{<:Integer};
+                            inplanes::Integer = 64, cardinality::Integer = 1,
+                            base_width::Integer = 64, reduction_factor::Integer = 1,
+                            expansion::Integer = 4, norm_layer = BatchNorm,
+                            revnorm::Bool = false, activation = relu,
+                            attn_fn = planes -> identity,
                             drop_block_rate = 0.0, drop_path_rate = 0.0,
                             stride_fn = resnet_stride, planes_fn = resnet_planes,
                             downsample_tuple = (downsample_conv, downsample_identity))
@@ -265,7 +267,7 @@ function bottleneck_builder(block_repeats::Vector{<:Integer}; inplanes::Integer 
     return get_layers
 end
 
-function resnet_stages(get_layers, block_repeats::Vector{<:Integer}, connection)
+function resnet_stages(get_layers, block_repeats::AbstractVector{<:Integer}, connection)
     # Construct each stage
     stages = []
     for (stage_idx, num_blocks) in enumerate(block_repeats)
@@ -277,7 +279,8 @@ function resnet_stages(get_layers, block_repeats::Vector{<:Integer}, connection)
     return Chain(stages...)
 end
 
-function resnet(img_dims, stem, get_layers, block_repeats::Vector{<:Integer}, connection,
+function resnet(img_dims, stem, get_layers, block_repeats::AbstractVector{<:Integer},
+                connection,
                 classifier_fn)
     # Build stages of the ResNet
     stage_blocks = resnet_stages(get_layers, block_repeats, connection)
@@ -288,7 +291,7 @@ function resnet(img_dims, stem, get_layers, block_repeats::Vector{<:Integer}, co
     return Chain(backbone, classifier)
 end
 
-function resnet(block_type::Symbol, block_repeats::Vector{<:Integer};
+function resnet(block_type::Symbol, block_repeats::AbstractVector{<:Integer};
                 downsample_opt::NTuple{2, Any} = (downsample_conv, downsample_identity),
                 cardinality::Integer = 1, base_width::Integer = 64, inplanes::Integer = 64,
                 reduction_factor::Integer = 1, imsize::Dims{2} = (256, 256),

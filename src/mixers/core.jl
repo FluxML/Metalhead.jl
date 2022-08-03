@@ -1,7 +1,7 @@
 """
     mlpmixer(block, imsize::Dims{2} = (224, 224); inchannels::Integer = 3, norm_layer = LayerNorm,
              patch_size::Dims{2} = (16, 16), embedplanes = 512, drop_path_rate = 0.,
-             depth = 12, nclasses::Integer = 1000, kwargs...)
+             depth::Integer = 12, nclasses::Integer = 1000, kwargs...)
 
 Creates a model with the MLPMixer architecture.
 ([reference](https://arxiv.org/pdf/2105.01601)).
@@ -23,7 +23,8 @@ Creates a model with the MLPMixer architecture.
 """
 function mlpmixer(block, imsize::Dims{2} = (224, 224); norm_layer = LayerNorm,
                   patch_size::Dims{2} = (16, 16), embedplanes = 512, drop_path_rate = 0.0,
-                  depth = 12, inchannels::Integer = 3, nclasses::Integer = 1000, kwargs...)
+                  depth::Integer = 12, inchannels::Integer = 3, nclasses::Integer = 1000,
+                  kwargs...)
     npatches = prod(imsize .÷ patch_size)
     dp_rates = linear_scheduler(drop_path_rate; depth)
     layers = Chain(PatchEmbedding(imsize; inchannels, patch_size, embedplanes),
@@ -35,7 +36,7 @@ function mlpmixer(block, imsize::Dims{2} = (224, 224); norm_layer = LayerNorm,
 end
 
 # Configurations for MLPMixer models
-const MIXER_CONFIGS = Dict(:small => Dict(:depth => 8, :planes => 512),
-                           :base => Dict(:depth => 12, :planes => 768),
-                           :large => Dict(:depth => 24, :planes => 1024),
-                           :huge => Dict(:depth => 32, :planes => 1280))
+const MIXER_CONFIGS = Dict(:small => (depth = 8, embedplanes = 512),
+                           :base => (depth = 12, embedplanes = 768),
+                           :large => (depth = 24, embedplanes = 1024),
+                           :huge => (depth = 32, embedplanes = 1280))

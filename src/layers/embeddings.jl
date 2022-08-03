@@ -23,10 +23,8 @@ function PatchEmbedding(imsize::Dims{2} = (224, 224); inchannels::Integer = 3,
                         norm_layer = planes -> identity, flatten::Bool = true)
     im_height, im_width = imsize
     patch_height, patch_width = patch_size
-
     @assert (im_height % patch_height == 0) && (im_width % patch_width == 0)
     "Image dimensions must be divisible by the patch size."
-
     return Chain(Conv(patch_size, inchannels => embedplanes; stride = patch_size),
                  flatten ? _flatten_spatial : identity,
                  norm_layer(embedplanes))

@@ -1,5 +1,5 @@
 """
-    mobilenetv1(width_mult::Number, config::Vector{<:Tuple}; activation = relu,
+    mobilenetv1(width_mult::Real, config::AbstractVector{<:Tuple}; activation = relu,
                 inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Create a MobileNetv1 model ([reference](https://arxiv.org/abs/1704.04861v1)).
@@ -19,11 +19,11 @@ Create a MobileNetv1 model ([reference](https://arxiv.org/abs/1704.04861v1)).
   - `inchannels`: The number of input channels. The default value is 3.
   - `nclasses`: The number of output classes
 """
-function mobilenetv1(width_mult::Number, config::Vector{<:Tuple}; activation = relu,
+function mobilenetv1(width_mult::Real, config::AbstractVector{<:Tuple}; activation = relu,
                      inchannels::Integer = 3, nclasses::Integer = 1000)
     layers = []
     for (dw, outch, stride, nrepeats) in config
-        outch = Int(outch * width_mult)
+        outch = floor(Int, outch * width_mult)
         for _ in 1:nrepeats
             layer = dw ?
                     depthwise_sep_conv_norm((3, 3), inchannels, outch, activation;
@@ -76,7 +76,7 @@ struct MobileNetv1
 end
 @functor MobileNetv1
 
-function MobileNetv1(width_mult::Number = 1; pretrain::Bool = false,
+function MobileNetv1(width_mult::Real = 1; pretrain::Bool = false,
                      inchannels::Integer = 3, nclasses::Integer = 1000)
     layers = mobilenetv1(width_mult, MOBILENETV1_CONFIGS; inchannels, nclasses)
     if pretrain

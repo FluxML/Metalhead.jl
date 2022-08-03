@@ -154,8 +154,7 @@ function inceptionv3(; inchannels::Integer = 3, nclasses::Integer = 1000)
                      inceptionv3_d(768),
                      inceptionv3_e(1280),
                      inceptionv3_e(2048))
-    classifier = create_classifier(2048, nclasses; dropout_rate = 0.2)
-    return Chain(backbone, classifier)
+    return Chain(backbone, create_classifier(2048, nclasses; dropout_rate = 0.2))
 end
 
 """

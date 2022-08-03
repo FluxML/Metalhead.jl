@@ -53,8 +53,7 @@ function googlenet(; inchannels::Integer = 3, nclasses::Integer = 1000)
                      MaxPool((3, 3); stride = 2, pad = 1),
                      _inceptionblock(832, 256, 160, 320, 32, 128, 128),
                      _inceptionblock(832, 384, 192, 384, 48, 128, 128))
-    classifier = create_classifier(1024, nclasses; dropout_rate = 0.4)
-    return Chain(backbone, classifier)
+    return Chain(backbone, create_classifier(1024, nclasses; dropout_rate = 0.4))
 end
 
 """

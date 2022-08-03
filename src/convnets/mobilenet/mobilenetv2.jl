@@ -1,5 +1,5 @@
 """
-    mobilenetv2(width_mult::Number, configs::Vector{<:Tuple};
+    mobilenetv2(width_mult::Real, configs::AbstractVector{<:Tuple};
                 max_width::Integer = 1280, inchannels::Integer = 3,
                 nclasses::Integer = 1000)
 
@@ -22,7 +22,7 @@ Create a MobileNetv2 model.
   - `max_width`: The maximum number of feature maps in any layer of the network
   - `nclasses`: The number of output classes
 """
-function mobilenetv2(width_mult::Number, configs::Vector{<:Tuple};
+function mobilenetv2(width_mult::Real, configs::AbstractVector{<:Tuple};
                      max_width::Integer = 1280, inchannels::Integer = 3,
                      nclasses::Integer = 1000)
     divisor = width_mult == 0.1 ? 4 : 8
@@ -83,10 +83,9 @@ struct MobileNetv2
 end
 @functor MobileNetv2
 
-function MobileNetv2(width_mult::Number = 1; pretrain::Bool = false,
+function MobileNetv2(width_mult::Real = 1; pretrain::Bool = false,
                      inchannels::Integer = 3, nclasses::Integer = 1000)
     layers = mobilenetv2(width_mult, MOBILENETV2_CONFIGS; inchannels, nclasses)
-    pretrain && loadpretrain!(layers, string("MobileNetv2"))
     if pretrain
         loadpretrain!(layers, string("MobileNetv2"))
     end

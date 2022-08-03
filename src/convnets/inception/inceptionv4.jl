@@ -117,8 +117,7 @@ function inceptionv4(; dropout_rate = 0.0, inchannels::Integer = 3,
                      inceptionv4_c(),
                      inceptionv4_c(),
                      inceptionv4_c())
-    classifier = create_classifier(1536, nclasses; dropout_rate)
-    return Chain(backbone, classifier)
+    return Chain(backbone, create_classifier(1536, nclasses; dropout_rate))
 end
 
 """

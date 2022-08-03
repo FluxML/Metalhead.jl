@@ -76,7 +76,7 @@ const VIT_CONFIGS = Dict(:tiny => (depth = 12, embedplanes = 192, nheads = 3),
                                        mlp_ratio = 64 // 13))
 
 """
-    ViT(mode::Symbol = base; imsize::Dims{2} = (256, 256), inchannels::Integer = 3,
+    ViT(config::Symbol = base; imsize::Dims{2} = (256, 256), inchannels::Integer = 3,
         patch_size::Dims{2} = (16, 16), pool = :class, nclasses::Integer = 1000)
 
 Creates a Vision Transformer (ViT) model.
@@ -84,7 +84,7 @@ Creates a Vision Transformer (ViT) model.
 
 # Arguments
 
-  - `mode`: the model configuration, one of
+  - `config`: the model configuration, one of
     `[:tiny, :small, :base, :large, :huge, :giant, :gigantic]`
   - `imsize`: image size
   - `inchannels`: number of input channels
@@ -99,10 +99,10 @@ struct ViT
 end
 @functor ViT
 
-function ViT(mode::Symbol; imsize::Dims{2} = (256, 256), patch_size::Dims{2} = (16, 16),
+function ViT(config::Symbol; imsize::Dims{2} = (256, 256), patch_size::Dims{2} = (16, 16),
              inchannels::Integer = 3, nclasses::Integer = 1000)
-    _checkconfig(mode, keys(VIT_CONFIGS))
-    layers = vit(imsize; inchannels, patch_size, nclasses, VIT_CONFIGS[mode]...)
+    _checkconfig(config, keys(VIT_CONFIGS))
+    layers = vit(imsize; inchannels, patch_size, nclasses, VIT_CONFIGS[config]...)
     return ViT(layers)
 end
 

@@ -99,7 +99,8 @@ Create a DenseNet model
   - `reduction`: the factor by which the number of feature maps is scaled across each transition
   - `nclasses`: the number of output classes
 """
-function densenet(nblocks::Vector{<:Integer}; growth_rate::Integer = 32, reduction = 0.5,
+function densenet(nblocks::AbstractVector{<:Integer}; growth_rate::Integer = 32,
+                  reduction = 0.5,
                   inchannels::Integer = 3, nclasses::Integer = 1000)
     return densenet(2 * growth_rate, [fill(growth_rate, n) for n in nblocks];
                     reduction, inchannels, nclasses)

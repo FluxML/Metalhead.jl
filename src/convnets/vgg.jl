@@ -40,7 +40,7 @@ Create VGG convolution layers
   - `batchnorm`: set to `true` to include batch normalization after each convolution
   - `inchannels`: number of input channels
 """
-function vgg_convolutional_layers(config::Vector{<:Tuple}, batchnorm::Bool,
+function vgg_convolutional_layers(config::AbstractVector{<:Tuple}, batchnorm::Bool,
                                   inchannels::Integer)
     layers = []
     ifilters = inchannels
@@ -69,7 +69,7 @@ Create VGG classifier (fully connected) layers
 function vgg_classifier_layers(imsize::NTuple{3, <:Integer}, nclasses::Integer,
                                fcsize::Integer, dropout_rate)
     return Chain(MLUtils.flatten,
-                 Dense(Int(prod(imsize)), fcsize, relu),
+                 Dense(prod(imsize), fcsize, relu),
                  Dropout(dropout_rate),
                  Dense(fcsize, fcsize, relu),
                  Dropout(dropout_rate),
@@ -107,10 +107,7 @@ const VGG_CONV_CONFIGS = Dict(:A => [(64, 1), (128, 1), (256, 2), (512, 2), (512
                               :D => [(64, 2), (128, 2), (256, 3), (512, 3), (512, 3)],
                               :E => [(64, 2), (128, 2), (256, 4), (512, 4), (512, 4)])
 
-const VGG_CONFIGS = Dict(11 => :A,
-                         13 => :B,
-                         16 => :D,
-                         19 => :E)
+const VGG_CONFIGS = Dict(11 => :A, 13 => :B, 16 => :D, 19 => :E)
 
 """
     VGG(imsize::Dims{2}; config, inchannels, batchnorm = false, nclasses, fcsize, dropout_rate)

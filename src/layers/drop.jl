@@ -50,6 +50,23 @@ end
 # Dispatch for CPU
 dropblock_mask(rng, x, gamma, bs) = _dropblock_mask(rng, x, gamma, bs)
 
+"""
+    DropBlock(drop_block_prob = 0.1, block_size = 7, gamma_scale = 1.0,
+              rng = rng_from_array())
+
+The `DropBlock` layer. While training, it zeroes out continguous regions of
+size `block_size` in the input. During inference, it simply returns the input `x`.
+((reference)[https://arxiv.org/abs/1810.12890])
+
+# Arguments
+
+  - `drop_block_prob`: probability of dropping a block
+  - `block_size`: size of the block to drop
+  - `gamma_scale`: multiplicative factor for `gamma` used. For the calculation of gamma,
+    refer to [the paper](https://arxiv.org/abs/1810.12890).
+  - `rng`: can be used to pass in a custom RNG instead of the default. Custom RNGs are only
+    supported on the CPU.
+"""
 mutable struct DropBlock{F, R <: AbstractRNG}
     drop_block_prob::F
     block_size::Integer
@@ -84,23 +101,6 @@ function Flux.testmode!(m::DropBlock, mode = true)
     return (m.active = (isnothing(mode) || mode == :auto) ? nothing : !mode; m)
 end
 
-"""
-    DropBlock(drop_block_prob = 0.1, block_size = 7, gamma_scale = 1.0,
-              rng = rng_from_array())
-
-The `DropBlock` layer. While training, it zeroes out continguous regions of
-size `block_size` in the input. During inference, it simply returns the input `x`.
-((reference)[https://arxiv.org/abs/1810.12890])
-
-# Arguments
-
-  - `drop_block_prob`: probability of dropping a block
-  - `block_size`: size of the block to drop
-  - `gamma_scale`: multiplicative factor for `gamma` used. For the calculation of gamma,
-    refer to [the paper](https://arxiv.org/abs/1810.12890).
-  - `rng`: can be used to pass in a custom RNG instead of the default. Custom RNGs are only
-    supported on the CPU.
-"""
 function DropBlock(drop_block_prob = 0.1, block_size::Integer = 7, gamma_scale = 1.0,
                    rng = rng_from_array())
     if drop_block_prob == 0.0

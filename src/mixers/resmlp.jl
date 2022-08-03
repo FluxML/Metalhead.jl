@@ -27,15 +27,14 @@ function resmixerblock(planes::Integer, npatches::Integer; mlp_layer = mlp_block
                                       LayerScale(planes, layerscale_init),
                                       DropPath(drop_path_rate)), +),
                  SkipConnection(Chain(Flux.Scale(planes),
-                                      mlp_layer(planes, Int(mlp_ratio * planes);
-                                                dropout_rate,
-                                                activation),
+                                      mlp_layer(planes, floor(Int, mlp_ratio * planes);
+                                                dropout_rate, activation),
                                       LayerScale(planes, layerscale_init),
                                       DropPath(drop_path_rate)), +))
 end
 
 """
-    ResMLP(size::Symbol; patch_size::Dims{2} = (16, 16), imsize::Dims{2} = (224, 224),
+    ResMLP(config::Symbol; patch_size::Dims{2} = (16, 16), imsize::Dims{2} = (224, 224),
            inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Creates a model with the ResMLP architecture.
@@ -43,7 +42,7 @@ Creates a model with the ResMLP architecture.
 
 # Arguments
 
-  - `size`: the size of the model - one of `small`, `base`, `large` or `huge`
+  - `config`: the size of the model - one of `small`, `base`, `large` or `huge`
   - `patch_size`: the size of the patches
   - `imsize`: the size of the input image
   - `inchannels`: the number of input channels
@@ -56,13 +55,12 @@ struct ResMLP
 end
 @functor ResMLP
 
-function ResMLP(size::Symbol; imsize::Dims{2} = (224, 224), patch_size::Dims{2} = (16, 16),
+function ResMLP(config::Symbol; imsize::Dims{2} = (224, 224),
+                patch_size::Dims{2} = (16, 16),
                 inchannels::Integer = 3, nclasses::Integer = 1000)
-    _checkconfig(size, keys(MIXER_CONFIGS))
-    depth = MIXER_CONFIGS[size][:depth]
-    embedplanes = MIXER_CONFIGS[size][:planes]
-    layers = mlpmixer(resmixerblock, imsize; mlp_ratio = 4.0, patch_size, embedplanes,
-                      depth, inchannels, nclasses)
+    _checkconfig(config, keys(MIXER_CONFIGS))
+    layers = mlpmixer(resmixerblock, imsize; mlp_ratio = 4.0, patch_size,
+                      MIXER_CONFIGS[config]..., inchannels, nclasses)
     return ResMLP(layers)
 end
 

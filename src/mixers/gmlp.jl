@@ -63,7 +63,7 @@ Creates a feedforward block based on the gMLP model architecture described in th
 function spatial_gating_block(planes::Integer, npatches::Integer; mlp_ratio = 4.0,
                               norm_layer = LayerNorm, mlp_layer = gated_mlp_block,
                               dropout_rate = 0.0, drop_path_rate = 0.0, activation = gelu)
-    channelplanes = Int(mlp_ratio * planes)
+    channelplanes = floor(Int, mlp_ratio * planes)
     sgu = inplanes -> SpatialGatingUnit(inplanes, npatches; norm_layer)
     return SkipConnection(Chain(norm_layer(planes),
                                 mlp_layer(sgu, planes, channelplanes; activation,
@@ -72,7 +72,7 @@ function spatial_gating_block(planes::Integer, npatches::Integer; mlp_ratio = 4.
 end
 
 """
-    gMLP(size::Symbol; patch_size::Dims{2} = (16, 16), imsize::Dims{2} = (224, 224),
+    gMLP(config::Symbol; patch_size::Dims{2} = (16, 16), imsize::Dims{2} = (224, 224),
          inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Creates a model with the gMLP architecture.
@@ -80,7 +80,7 @@ Creates a model with the gMLP architecture.
 
 # Arguments
 
-  - `size`: the size of the model - one of `small`, `base`, `large` or `huge`
+  - `config`: the size of the model - one of `small`, `base`, `large` or `huge`
   - `patch_size`: the size of the patches
   - `imsize`: the size of the input image
   - `inchannels`: the number of input channels
@@ -93,13 +93,11 @@ struct gMLP
 end
 @functor gMLP
 
-function gMLP(size::Symbol; imsize::Dims{2} = (224, 224), patch_size::Dims{2} = (16, 16),
+function gMLP(config::Symbol; imsize::Dims{2} = (224, 224), patch_size::Dims{2} = (16, 16),
               inchannels::Integer = 3, nclasses::Integer = 1000)
-    _checkconfig(size, keys(MIXER_CONFIGS))
-    depth = MIXER_CONFIGS[size][:depth]
-    embedplanes = MIXER_CONFIGS[size][:planes]
+    _checkconfig(config, keys(MIXER_CONFIGS))
     layers = mlpmixer(spatial_gating_block, imsize; mlp_layer = gated_mlp_block, patch_size,
-                      embedplanes, depth, inchannels, nclasses)
+                      MIXER_CONFIGS[config]..., inchannels, nclasses)
     return gMLP(layers)
 end
 
