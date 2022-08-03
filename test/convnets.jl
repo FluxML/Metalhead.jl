@@ -121,6 +121,45 @@ end
     end
 end
 
+@testset "Res2Net" begin
+    @testset for (base_width, scale) in [(26, 4), (48, 2), (14, 8), (26, 6), (26, 8)]
+        m = Res2Net(50; base_width, scale)
+        @test size(m(x_224)) == (1000, 1)
+        if (Res2Net, depth, cardinality, base_width) in PRETRAINED_MODELS
+            @test acctest(Res2Net(depth, pretrain = true))
+        else
+            @test_throws ArgumentError Res2Net(depth, pretrain = true)
+        end
+        @test gradtest(m, x_224)
+        _gc()
+    end
+    @testset for (base_width, scale) in [(26, 4)]
+        m = Res2Net(101; base_width, scale)
+        @test size(m(x_224)) == (1000, 1)
+        if (Res2Net, depth, cardinality, base_width) in PRETRAINED_MODELS
+            @test acctest(Res2Net(depth, pretrain = true))
+        else
+            @test_throws ArgumentError Res2Net(depth, pretrain = true)
+        end
+        @test gradtest(m, x_224)
+        _gc()
+    end
+end
+
+@testset "Res2NeXt" begin
+    @testset for depth in [50, 101]
+        m = Res2NeXt(depth)
+        @test size(m(x_224)) == (1000, 1)
+        if (Res2NeXt, depth) in PRETRAINED_MODELS
+            @test acctest(Res2NeXt(depth, pretrain = true))
+        else
+            @test_throws ArgumentError Res2NeXt(depth, pretrain = true)
+        end
+        @test gradtest(m, x_224)
+        _gc()
+    end
+end
+
 @testset "EfficientNet" begin
     @testset "EfficientNet($config)" for config in [:b0, :b1, :b2, :b3, :b4, :b5] #:b6, :b7, :b8]
         # preferred image resolution scaling
