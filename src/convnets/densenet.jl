@@ -100,8 +100,7 @@ Create a DenseNet model
   - `nclasses`: the number of output classes
 """
 function densenet(nblocks::AbstractVector{<:Integer}; growth_rate::Integer = 32,
-                  reduction = 0.5,
-                  inchannels::Integer = 3, nclasses::Integer = 1000)
+                  reduction = 0.5, inchannels::Integer = 3, nclasses::Integer = 1000)
     return densenet(2 * growth_rate, [fill(growth_rate, n) for n in nblocks];
                     reduction, inchannels, nclasses)
 end
@@ -133,11 +132,11 @@ end
 function DenseNet(config::Integer; pretrain::Bool = false, growth_rate::Integer = 32,
                   reduction = 0.5, inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(config, keys(DENSENET_CONFIGS))
-    model = densenet(DENSENET_CONFIGS[config]; growth_rate, reduction, inchannels, nclasses)
+    layers = densenet(DENSENET_CONFIGS[config]; growth_rate, reduction, inchannels, nclasses)
     if pretrain
-        loadpretrain!(model, string("densenet", config))
+        loadpretrain!(layers, string("densenet", config))
     end
-    return model
+    return DenseNet(layers)
 end
 
 (m::DenseNet)(x) = m.layers(x)
