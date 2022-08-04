@@ -29,7 +29,8 @@ function mobilenetv2(width_mult::Real, configs::AbstractVector{<:Tuple};
     # building first layer
     inplanes = _round_channels(32 * width_mult, divisor)
     layers = []
-    append!(layers, conv_norm((3, 3), inchannels, inplanes; pad = 1, stride = 2))
+    append!(layers,
+            conv_norm((3, 3), inchannels, inplanes; bias = false, pad = 1, stride = 2))
     # building inverted residual blocks
     for (t, c, n, s, a) in configs
         outplanes = _round_channels(c * width_mult, divisor)

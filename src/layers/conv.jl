@@ -136,7 +136,7 @@ function invertedresidual(kernel_size, inplanes::Integer, hidden_planes::Integer
                              norm_layer = BatchNorm)
     invres = Chain(conv1...,
                    conv_norm(kernel_size, hidden_planes, hidden_planes, activation;
-                             bias = false, stride, pad = pad, groups = hidden_planes)...,
+                             bias = false, stride, pad, groups = hidden_planes)...,
                    selayer,
                    conv_norm((1, 1), hidden_planes, outplanes, identity; bias = false)...)
     return (stride == 1 && inplanes == outplanes) ? SkipConnection(invres, +) : invres
