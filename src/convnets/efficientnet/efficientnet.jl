@@ -29,28 +29,27 @@ function efficientnet(scalings::NTuple{2, Real},
     wscale, dscale = scalings
     scalew(w) = wscale ≈ 1 ? w : ceil(Int64, wscale * w)
     scaled(d) = dscale ≈ 1 ? d : ceil(Int64, dscale * d)
-    out_channels = _round_channels(scalew(32), 8)
-    stem = conv_norm((3, 3), inchannels, out_channels, swish; bias = false, stride = 2,
+    outplanes = _round_channels(scalew(32), 8)
+    stem = conv_norm((3, 3), inchannels, outplanes, swish; bias = false, stride = 2,
                      pad = SamePad())
     blocks = []
     for (n, k, s, e, i, o) in block_configs
-        in_channels = _round_channels(scalew(i), 8)
-        out_channels = _round_channels(scalew(o), 8)
+        inchannels = _round_channels(scalew(i), 8)
+        outplanes = _round_channels(scalew(o), 8)
         repeats = scaled(n)
         push!(blocks,
-              invertedresidual((k, k), in_channels, out_channels, swish; expansion = e,
+              invertedresidual((k, k), in_channels, outplanes, swish; expansion = e,
                                stride = s, reduction = 4))
         for _ in 1:(repeats - 1)
             push!(blocks,
-                  invertedresidual((k, k), out_channels, out_channels, swish; expansion = e,
+                  invertedresidual((k, k), outplanes, outplanes, swish; expansion = e,
                                    stride = 1, reduction = 4))
         end
     end
-    head_out_channels = _round_channels(max_width, 8)
+    headplanes = _round_channels(max_width, 8)
     append!(blocks,
-            conv_norm((1, 1), out_channels, head_out_channels, swish;
-                      bias = false, pad = SamePad()))
-    return Chain(Chain(stem..., blocks...), create_classifier(head_out_channels, nclasses))
+            conv_norm((1, 1), outplanes, headplanes, swish; bias = false, pad = SamePad()))
+    return Chain(Chain(stem..., blocks...), create_classifier(headplanes, nclasses))
 end
 
 # n: # of block repetitions
@@ -101,9 +100,11 @@ struct EfficientNet
 end
 @functor EfficientNet
 
-function EfficientNet(config::Symbol; pretrain::Bool = false)
+function EfficientNet(config::Symbol; pretrain::Bool = false, inchannels::Integer = 3,
+                      nclasses::Integer = 1000)
     _checkconfig(config, keys(EFFICIENTNET_GLOBAL_CONFIGS))
-    model = efficientnet(EFFICIENTNET_GLOBAL_CONFIGS[config][2], EFFICIENTNET_BLOCK_CONFIGS)
+    model = efficientnet(EFFICIENTNET_GLOBAL_CONFIGS[config][2], EFFICIENTNET_BLOCK_CONFIGS;
+                         inchannels, nclasses)
     if pretrain
         loadpretrain!(model, string("efficientnet-", config))
     end

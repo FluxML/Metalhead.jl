@@ -24,14 +24,14 @@ Create a MobileNetv3 model.
   - `max_width`: The maximum number of feature maps in any layer of the network
   - `nclasses`: the number of output classes
 """
-function mobilenetv3(width_mult::Real, configs::AbstractVector{<:Tuple};
+function mobilenetv3(configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
                      max_width::Integer = 1024, inchannels::Integer = 3,
                      nclasses::Integer = 1000)
     # building first layer
     inplanes = _round_channels(16 * width_mult, 8)
     layers = []
     append!(layers,
-            conv_norm((3, 3), inchannels, inplanes, hardswish; pad = 1, stride = 2,
+            conv_norm((3, 3), inchannels, inplanes, hardswish; stride = 2, pad = 1,
                       bias = false))
     explanes = 0
     # building inverted residual blocks
@@ -45,9 +45,8 @@ function mobilenetv3(width_mult::Real, configs::AbstractVector{<:Tuple};
         inplanes = outplanes
     end
     # building last layers
-    output_channel = max_width
-    output_channel = width_mult > 1.0 ? _round_channels(output_channel * width_mult, 8) :
-                     output_channel
+    output_channel = width_mult > 1.0 ? _round_channels(max_width * width_mult, 8) :
+                     max_width
     append!(layers, conv_norm((1, 1), inplanes, explanes, hardswish; bias = false))
     classifier = Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten,
                        Dense(explanes, output_channel, hardswish),
@@ -119,7 +118,7 @@ function MobileNetv3(config::Symbol; width_mult::Real = 1, pretrain::Bool = fals
                      inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(config, [:small, :large])
     max_width = (config == :large) ? 1280 : 1024
-    layers = mobilenetv3(width_mult, MOBILENETV3_CONFIGS[config]; max_width, inchannels,
+    layers = mobilenetv3(MOBILENETV3_CONFIGS[config]; width_mult, max_width, inchannels,
                          nclasses)
     if pretrain
         loadpretrain!(layers, string("MobileNetv3", config))

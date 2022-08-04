@@ -32,7 +32,8 @@ function ResNeXt(depth::Integer; pretrain::Bool = false, cardinality::Integer = 
     _checkconfig(depth, keys(LRESNET_CONFIGS))
     layers = resnet(LRESNET_CONFIGS[depth]...; inchannels, nclasses, cardinality, base_width)
     if pretrain
-        loadpretrain!(layers, string("resnext", depth, "_", cardinality, "x", base_width, "d"))
+        loadpretrain!(layers,
+                      string("resnext", depth, "_", cardinality, "x", base_width, "d"))
     end
     return ResNeXt(layers)
 end

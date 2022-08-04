@@ -73,12 +73,15 @@ function create_classifier(inplanes::Integer, nclasses::Integer, activation = id
         "`pool_layer` must be identity if `use_conv` is true"
     end
     classifier = []
-    flatten_in_pool ? push!(classifier, pool_layer, MLUtils.flatten) : 
+    if flatten_in_pool
+        push!(classifier, pool_layer, MLUtils.flatten)
+    else
         push!(classifier, pool_layer)
+    end
     # Dropout is applied after the pooling layer
     isnothing(dropout_rate) ? nothing : push!(classifier, Dropout(dropout_rate))
     # Fully-connected layer
     use_conv ? push!(classifier, Conv((1, 1), inplanes => nclasses, activation)) :
-        push!(classifier, Dense(inplanes => nclasses, activation))
+    push!(classifier, Dense(inplanes => nclasses, activation))
     return Chain(classifier...)
 end
