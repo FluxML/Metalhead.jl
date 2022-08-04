@@ -27,7 +27,7 @@ function ResNet(depth::Integer; pretrain::Bool = false, inchannels::Integer = 3,
     _checkconfig(depth, keys(RESNET_CONFIGS))
     layers = resnet(RESNET_CONFIGS[depth]...; inchannels, nclasses)
     if pretrain
-        loadpretrain!(layers, string("ResNet", depth))
+        loadpretrain!(layers, string("resnet", depth))
     end
     return ResNet(layers)
 end

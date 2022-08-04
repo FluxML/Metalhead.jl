@@ -77,7 +77,7 @@ function SqueezeNet(; pretrain::Bool = false, inchannels::Integer = 3,
                     nclasses::Integer = 1000)
     layers = squeezenet(; inchannels, nclasses)
     if pretrain
-        loadpretrain!(layers, "SqueezeNet")
+        loadpretrain!(layers, "squeezenet")
     end
     return SqueezeNet(layers)
 end

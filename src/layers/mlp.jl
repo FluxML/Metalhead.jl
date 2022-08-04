@@ -66,16 +66,19 @@ Creates a classifier head to be used for models.
 function create_classifier(inplanes::Integer, nclasses::Integer, activation = identity;
                            use_conv::Bool = false, pool_layer = AdaptiveMeanPool((1, 1)),
                            dropout_rate = nothing)
-    # Pooling
+    # Decide whether to flatten the input or not
     flatten_in_pool = !use_conv && pool_layer !== identity
     if use_conv
         @assert pool_layer === identity
         "`pool_layer` must be identity if `use_conv` is true"
     end
-    global_pool = flatten_in_pool ? [pool_layer, MLUtils.flatten] : [pool_layer]
+    classifier = []
+    flatten_in_pool ? push!(classifier, pool_layer, MLUtils.flatten) : 
+        push!(classifier, pool_layer)
+    # Dropout is applied after the pooling layer
+    isnothing(dropout_rate) ? nothing : push!(classifier, Dropout(dropout_rate))
     # Fully-connected layer
-    fc = use_conv ? Conv((1, 1), inplanes => nclasses, activation) :
-         Dense(inplanes => nclasses, activation)
-    drop = isnothing(dropout_rate) ? [] : [Dropout(dropout_rate)]
-    return Chain(global_pool..., drop..., fc)
+    use_conv ? push!(classifier, Conv((1, 1), inplanes => nclasses, activation)) :
+        push!(classifier, Dense(inplanes => nclasses, activation))
+    return Chain(classifier...)
 end

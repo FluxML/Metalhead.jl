@@ -1,5 +1,3 @@
-## Inceptionv3
-
 """
     inceptionv3_a(inplanes, pool_proj)
 
