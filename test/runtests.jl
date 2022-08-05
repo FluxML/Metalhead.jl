@@ -18,11 +18,7 @@ const PRETRAINED_MODELS = [
     (WideResNet, 101),
     (ResNeXt, 50, 32, 4),
     (ResNeXt, 101, 64, 4),
-    (ResNeXt, 101, 32, 8),
-    (DenseNet, 121),
-    (DenseNet, 161),
-    (DenseNet, 169),
-    (DenseNet, 201),
+    (ResNeXt, 101, 32, 8)
 ]
 
 function _gc()
@@ -33,7 +29,6 @@ end
 function gradtest(model, input)
     y, pb = Zygote.pullback(() -> model(input), Flux.params(model))
     gs = pb(ones(Float32, size(y)))
-
     # if we make it to here with no error, success!
     return true
 end
@@ -50,13 +45,12 @@ const TEST_IMG = imresize(Images.load(TEST_PATH), (224, 224))
 # CHW -> WHC
 const TEST_X = permutedims(convert(Array{Float32}, channelview(TEST_IMG)), (3, 2, 1)) |> normalize_imagenet
 
-# image net labels
+# ImageNet labels
 const TEST_LBLS = readlines(download("https://raw.githubusercontent.com/pytorch/hub/master/imagenet_classes.txt"))
 
 function acctest(model)
     ypred = model(TEST_X) |> vec
     top5 = TEST_LBLS[sortperm(ypred; rev = true)]
-
     return "acoustic guitar" ∈ top5
 end
 

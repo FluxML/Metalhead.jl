@@ -174,6 +174,7 @@ See also [`inceptionv3`](#).
 struct Inceptionv3
     layers::Any
 end
+@functor Inceptionv3
 
 function Inceptionv3(; pretrain::Bool = false, inchannels::Integer = 3,
                      nclasses::Integer = 1000)
@@ -183,8 +184,6 @@ function Inceptionv3(; pretrain::Bool = false, inchannels::Integer = 3,
     end
     return Inceptionv3(layers)
 end
-
-@functor Inceptionv3
 
 (m::Inceptionv3)(x) = m.layers(x)
 

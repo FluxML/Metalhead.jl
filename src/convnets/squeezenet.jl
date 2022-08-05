@@ -62,10 +62,6 @@ Create a SqueezeNet
   - `inchannels`: number of input channels.
   - `nclasses`: the number of output classes.
 
-!!! warning
-    
-    `SqueezeNet` does not currently support pretrained weights.
-
 See also [`squeezenet`](#).
 """
 struct SqueezeNet
