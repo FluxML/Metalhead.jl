@@ -107,8 +107,13 @@ function depthwise_sep_conv_norm(kernel_size, inplanes::Integer, outplanes::Inte
 end
 
 """
-    invertedresidual(kernel_size, inplanes, hidden_planes, outplanes, activation = relu;
-                     stride, reduction = nothing)
+    invertedresidual(kernel_size, inplanes::Integer, hidden_planes::Integer,
+                     outplanes::Integer, activation = relu; stride::Integer,
+                     reduction::Union{Nothing, Integer} = nothing)
+
+    invertedresidual(kernel_size, inplanes::Integer, outplanes::Integer,
+                     activation = relu; stride::Integer, expansion::Real,
+                     reduction::Union{Nothing, Integer} = nothing)
 
 Create a basic inverted residual block for MobileNet variants
 ([reference](https://arxiv.org/abs/1905.02244)).
@@ -117,7 +122,8 @@ Create a basic inverted residual block for MobileNet variants
 
   - `kernel_size`: kernel size of the convolutional layers
   - `inplanes`: number of input feature maps
-  - `hidden_planes`: The number of feature maps in the hidden layer
+  - `hidden_planes`: The number of feature maps in the hidden layer. Alternatively, 
+    specify the keyword argument `expansion`, which calculates 
   - `outplanes`: The number of output feature maps
   - `activation`: The activation function for the first two convolution layer
   - `stride`: The stride of the convolutional kernel, has to be either 1 or 2
@@ -129,7 +135,7 @@ function invertedresidual(kernel_size, inplanes::Integer, hidden_planes::Integer
                           reduction::Union{Nothing, Integer} = nothing)
     @assert stride in [1, 2] "`stride` has to be 1 or 2"
     pad = @. (kernel_size - 1) ÷ 2
-    conv1 = (inplanes == hidden_planes) ? (identity,) :
+    conv1 = inplanes == hidden_planes ? (identity,) :
             conv_norm((1, 1), inplanes, hidden_planes, activation; bias = false)
     selayer = isnothing(reduction) ? identity :
               squeeze_excite(hidden_planes; reduction, activation, gate_activation = hardσ,
@@ -139,13 +145,12 @@ function invertedresidual(kernel_size, inplanes::Integer, hidden_planes::Integer
                              bias = false, stride, pad, groups = hidden_planes)...,
                    selayer,
                    conv_norm((1, 1), hidden_planes, outplanes, identity; bias = false)...)
-    return (stride == 1 && inplanes == outplanes) ? SkipConnection(invres, +) : invres
+    return stride == 1 && inplanes == outplanes ? SkipConnection(invres, +) : invres
 end
 
 function invertedresidual(kernel_size, inplanes::Integer, outplanes::Integer,
                           activation = relu; stride::Integer, expansion::Real,
                           reduction::Union{Nothing, Integer} = nothing)
-    hidden_planes = floor(Int, inplanes * expansion)
-    return invertedresidual(kernel_size, inplanes, hidden_planes, outplanes, activation;
-                            stride, reduction)
+    return invertedresidual(kernel_size, inplanes, floor(Int, inplanes * expansion),
+                            outplanes, activation; stride, reduction)
 end

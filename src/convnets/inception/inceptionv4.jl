@@ -121,7 +121,8 @@ function inceptionv4(; dropout_rate = 0.0, inchannels::Integer = 3,
 end
 
 """
-    Inceptionv4(; pretrain::Bool = false, inchannels::Integer = 3, nclasses::Integer = 1000)
+    Inceptionv4(; pretrain::Bool = false, inchannels::Integer = 3,
+                nclasses::Integer = 1000)
 
 Creates an Inceptionv4 model.
 ([reference](https://arxiv.org/abs/1602.07261))

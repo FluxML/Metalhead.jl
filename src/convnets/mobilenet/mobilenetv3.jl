@@ -1,5 +1,5 @@
 """
-    mobilenetv3(width_mult::Real, configs::AbstractVector{<:Tuple};
+    mobilenetv3(configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
                 max_width::Integer = 1024, inchannels::Integer = 3,
                 nclasses::Integer = 1000)
 
@@ -7,10 +7,6 @@ Create a MobileNetv3 model.
 ([reference](https://arxiv.org/abs/1905.02244)).
 
 # Arguments
-
-  - `width_mult`: Controls the number of output feature maps in each block
-    (with 1.0 being the default in the paper;
-    this is usually a value between 0.1 and 1.4)
 
   - `configs`: a "list of tuples" configuration for each layer that details:
     
@@ -20,6 +16,9 @@ Create a MobileNetv3 model.
       + `r::Integer` - The reduction factor (`>= 1` or `nothing` to skip) for squeeze and excite layers
       + `s::Integer` - The stride of the convolutional kernel
       + `a` - The activation function used in the bottleneck (typically `hardswish` or `relu`)
+
+  - `width_mult`: Controls the number of output feature maps in each block
+    (with 1.0 being the default in the paper; this is usually a value between 0.1 and 1.4.)
   - `inchannels`: The number of input channels.
   - `max_width`: The maximum number of feature maps in any layer of the network
   - `nclasses`: the number of output classes
@@ -45,13 +44,13 @@ function mobilenetv3(configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
         inplanes = outplanes
     end
     # building last layers
-    output_channel = width_mult > 1.0 ? _round_channels(max_width * width_mult, 8) :
+    headplanes = width_mult > 1.0 ? _round_channels(max_width * width_mult, 8) :
                      max_width
     append!(layers, conv_norm((1, 1), inplanes, explanes, hardswish; bias = false))
     classifier = Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten,
-                       Dense(explanes, output_channel, hardswish),
+                       Dense(explanes, headplanes, hardswish),
                        Dropout(0.2),
-                       Dense(output_channel, nclasses))
+                       Dense(headplanes, nclasses))
     return Chain(Chain(layers...), classifier)
 end
 
@@ -117,7 +116,7 @@ end
 function MobileNetv3(config::Symbol; width_mult::Real = 1, pretrain::Bool = false,
                      inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(config, [:small, :large])
-    max_width = (config == :large) ? 1280 : 1024
+    max_width = config == :large ? 1280 : 1024
     layers = mobilenetv3(MOBILENETV3_CONFIGS[config]; width_mult, max_width, inchannels,
                          nclasses)
     if pretrain

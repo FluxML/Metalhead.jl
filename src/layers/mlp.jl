@@ -81,7 +81,10 @@ function create_classifier(inplanes::Integer, nclasses::Integer, activation = id
     # Dropout is applied after the pooling layer
     isnothing(dropout_rate) ? nothing : push!(classifier, Dropout(dropout_rate))
     # Fully-connected layer
-    use_conv ? push!(classifier, Conv((1, 1), inplanes => nclasses, activation)) :
-    push!(classifier, Dense(inplanes => nclasses, activation))
+    if use_conv
+        push!(classifier, Conv((1, 1), inplanes => nclasses, activation))
+    else
+        push!(classifier, Dense(inplanes => nclasses, activation))
+    end
     return Chain(classifier...)
 end
