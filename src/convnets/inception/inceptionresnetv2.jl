@@ -75,7 +75,7 @@ Creates an InceptionResNetv2 model.
   - `dropout_rate`: rate of dropout in classifier head.
   - `nclasses`: the number of output classes.
 """
-function inceptionresnetv2(; inchannels::Integer = 3, dropout_rate = 0.0,
+function inceptionresnetv2(; dropout_rate = 0.0, inchannels::Integer = 3,
                            nclasses::Integer = 1000)
     backbone = Chain(conv_norm((3, 3), inchannels, 32; stride = 2)...,
                      conv_norm((3, 3), 32, 32)...,
@@ -96,8 +96,8 @@ function inceptionresnetv2(; inchannels::Integer = 3, dropout_rate = 0.0,
 end
 
 """
-    InceptionResNetv2(; pretrain::Bool = false, inchannels::Integer = 3,
-                        nclasses::Integer = 1000)
+    InceptionResNetv2(; pretrain::Bool = false, inchannels::Integer = 3, 
+                      nclasses::Integer = 1000)
 
 Creates an InceptionResNetv2 model.
 ([reference](https://arxiv.org/abs/1602.07261))
@@ -106,7 +106,6 @@ Creates an InceptionResNetv2 model.
 
   - `pretrain`: set to `true` to load the pre-trained weights for ImageNet
   - `inchannels`: number of input channels.
-  - `dropout_rate`: rate of dropout in classifier head.
   - `nclasses`: the number of output classes.
 
 !!! warning

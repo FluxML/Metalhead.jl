@@ -1,5 +1,5 @@
 """
-    mobilenetv2(width_mult::Real, configs::AbstractVector{<:Tuple};
+    mobilenetv2(configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
                 max_width::Integer = 1280, inchannels::Integer = 3,
                 nclasses::Integer = 1000)
 
@@ -8,9 +8,6 @@ Create a MobileNetv2 model.
 
 # Arguments
 
-  - `width_mult`: Controls the number of output feature maps in each block
-    (with 1.0 being the default in the paper)
-
   - `configs`: A "list of tuples" configuration for each layer that details:
     
       + `t`: The expansion factor that controls the number of feature maps in the bottleneck layer
@@ -18,11 +15,14 @@ Create a MobileNetv2 model.
       + `n`: The number of times a block is repeated
       + `s`: The stride of the convolutional kernel
       + `a`: The activation function used in the bottleneck layer
+
+  - `width_mult`: Controls the number of output feature maps in each block
+    (with 1.0 being the default in the paper)
   - `inchannels`: The number of input channels.
   - `max_width`: The maximum number of feature maps in any layer of the network
   - `nclasses`: The number of output classes
 """
-function mobilenetv2(width_mult::Real, configs::AbstractVector{<:Tuple};
+function mobilenetv2(configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
                      max_width::Integer = 1280, inchannels::Integer = 3,
                      nclasses::Integer = 1000)
     divisor = width_mult == 0.1 ? 4 : 8
@@ -86,7 +86,7 @@ end
 
 function MobileNetv2(width_mult::Real = 1; pretrain::Bool = false,
                      inchannels::Integer = 3, nclasses::Integer = 1000)
-    layers = mobilenetv2(width_mult, MOBILENETV2_CONFIGS; inchannels, nclasses)
+    layers = mobilenetv2(MOBILENETV2_CONFIGS; width_mult, inchannels, nclasses)
     if pretrain
         loadpretrain!(layers, string("MobileNetv2"))
     end

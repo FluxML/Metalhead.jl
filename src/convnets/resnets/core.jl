@@ -85,15 +85,15 @@ end
 
 # Downsample layer using convolutions.
 function downsample_conv(inplanes::Integer, outplanes::Integer; stride::Integer = 1,
-                         norm_layer = BatchNorm, revnorm = false)
+                         norm_layer = BatchNorm, revnorm::Bool = false)
     return Chain(conv_norm((1, 1), inplanes => outplanes, identity; norm_layer, revnorm,
                            pad = SamePad(), stride, bias = false)...)
 end
 
 # Downsample layer using max pooling
 function downsample_pool(inplanes::Integer, outplanes::Integer; stride::Integer = 1,
-                         norm_layer = BatchNorm, revnorm = false)
-    pool = (stride == 1) ? identity : MeanPool((2, 2); stride, pad = SamePad())
+                         norm_layer = BatchNorm, revnorm::Bool = false)
+    pool = stride == 1 ? identity : MeanPool((2, 2); stride, pad = SamePad())
     return Chain(pool,
                  conv_norm((1, 1), inplanes => outplanes, identity; norm_layer, revnorm,
                            bias = false)...)
@@ -123,7 +123,7 @@ const RESNET_SHORTCUTS = Dict(:A => (downsample_identity, downsample_identity),
 
 # Stride for each block in the ResNet model
 function resnet_stride(stage_idx::Integer, block_idx::Integer)
-    return (stage_idx == 1 || block_idx != 1) ? 1 : 2
+    return stage_idx == 1 || block_idx != 1 ? 1 : 2
 end
 
 # returns `DropBlock`s for each stage of the ResNet as in timm.
@@ -221,7 +221,7 @@ function basicblock_builder(block_repeats::AbstractVector{<:Integer};
         # `resnet_stride` is a callback that the user can tweak to change the stride of the
         # blocks. It defaults to the standard behaviour as in the paper
         stride = stride_fn(stage_idx, block_idx)
-        downsample_fn = (stride != 1 || inplanes != planes * expansion) ?
+        downsample_fn = stride != 1 || inplanes != planes * expansion ?
                         downsample_tuple[1] : downsample_tuple[2]
         drop_path = DropPath(pathschedule[schedule_idx])
         drop_block = DropBlock(blockschedule[schedule_idx])
@@ -256,7 +256,7 @@ function bottleneck_builder(block_repeats::AbstractVector{<:Integer};
         # `resnet_stride` is a callback that the user can tweak to change the stride of the
         # blocks. It defaults to the standard behaviour as in the paper
         stride = stride_fn(stage_idx, block_idx)
-        downsample_fn = (stride != 1 || inplanes != planes * expansion) ?
+        downsample_fn = stride != 1 || inplanes != planes * expansion ?
                         downsample_tuple[1] : downsample_tuple[2]
         drop_path = DropPath(pathschedule[schedule_idx])
         drop_block = DropBlock(blockschedule[schedule_idx])

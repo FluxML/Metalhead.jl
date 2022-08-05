@@ -38,7 +38,7 @@ function efficientnet(scalings::NTuple{2, Real},
         outplanes = _round_channels(scalew(o), 8)
         repeats = scaled(n)
         push!(blocks,
-              invertedresidual((k, k), in_channels, outplanes, swish; expansion = e,
+              invertedresidual((k, k), inchannels, outplanes, swish; expansion = e,
                                stride = s, reduction = 4))
         for _ in 1:(repeats - 1)
             push!(blocks,

@@ -132,7 +132,8 @@ end
 function DenseNet(config::Integer; pretrain::Bool = false, growth_rate::Integer = 32,
                   reduction = 0.5, inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(config, keys(DENSENET_CONFIGS))
-    layers = densenet(DENSENET_CONFIGS[config]; growth_rate, reduction, inchannels, nclasses)
+    layers = densenet(DENSENET_CONFIGS[config]; growth_rate, reduction, inchannels,
+                      nclasses)
     if pretrain
         loadpretrain!(layers, string("densenet", config))
     end
