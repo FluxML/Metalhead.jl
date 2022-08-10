@@ -1,5 +1,6 @@
 [resnet101]
 git-tree-sha1 = "68d563526ab34d3e5aa66b7d96278d2acde212f9"
+lazy = true
 
     [[resnet101.download]]
     sha256 = "0725f05db5772cfab1024b8d0d6c85ac1fc5a83eb6f0fe02b67b1e689d5a28db"
@@ -7,6 +8,7 @@ git-tree-sha1 = "68d563526ab34d3e5aa66b7d96278d2acde212f9"
 
 [resnet152]
 git-tree-sha1 = "85a97464b6cef66e1217ae829d3620651cffab47"
+lazy = true
 
     [[resnet152.download]]
     sha256 = "a8d30a735ef5649ec40a74a0515ee3d6774499267be06f5f2b372259c5ced8d6"
@@ -14,6 +16,7 @@ git-tree-sha1 = "85a97464b6cef66e1217ae829d3620651cffab47"
 
 [resnet18]
 git-tree-sha1 = "4ced5a0338c0f0293940f1deb63e1c463125a6ff"
+lazy = true
 
     [[resnet18.download]]
     sha256 = "9444ef2285f507bd890d2ca852d663749f079110ed19b544e8d91f67f3cc6b83"
@@ -21,6 +24,7 @@ git-tree-sha1 = "4ced5a0338c0f0293940f1deb63e1c463125a6ff"
 
 [resnet34]
 git-tree-sha1 = "485519977f375ca1770b3ff3971f61e438823f5a"
+lazy = true
 
     [[resnet34.download]]
     sha256 = "71ed75be6db0160af7f30be33e2f4a44836310949d1374267510e5803b1fb313"
@@ -28,6 +32,7 @@ git-tree-sha1 = "485519977f375ca1770b3ff3971f61e438823f5a"
 
 [resnet50]
 git-tree-sha1 = "2973be0da60544080105756ecb3951cca2e007da"
+lazy = true
 
     [[resnet50.download]]
     sha256 = "60ad32eaf160444f3bfdb6f6d81ec1e5c36a3769be7df22aaa75127b16bb1501"
@@ -35,6 +40,7 @@ git-tree-sha1 = "2973be0da60544080105756ecb3951cca2e007da"
 
 [resnext101_32x8d]
 git-tree-sha1 = "d13a85131b2c0c62ef2af79a09137d4e0760a685"
+lazy = true
 
     [[resnext101_32x8d.download]]
     sha256 = "aeb48f86f50ee8b0ca7dc01ca0ff5a2d2b2163e43c524203c4a8bd589db9bcc6"
@@ -42,6 +48,7 @@ git-tree-sha1 = "d13a85131b2c0c62ef2af79a09137d4e0760a685"
 
 [resnext101_64x4d]
 git-tree-sha1 = "db50f48614e673a40f98fb80a17688b34f42067a"
+lazy = true
 
     [[resnext101_64x4d.download]]
     sha256 = "89764dd7dc3b3432f0424cb592cec5d9db2fb802ab1646f0e3c2cca2b2e5386b"
@@ -49,6 +56,7 @@ git-tree-sha1 = "db50f48614e673a40f98fb80a17688b34f42067a"
 
 [resnext50_32x4d]
 git-tree-sha1 = "1e7a08a4acae690b635e8d1caa06e75eeb2dd2fe"
+lazy = true
 
     [[resnext50_32x4d.download]]
     sha256 = "084ccbc40fde07496c401ee2bc389b9cd1d60b1ac3b7ccbfde05479ea91ca707"
@@ -56,6 +64,7 @@ git-tree-sha1 = "1e7a08a4acae690b635e8d1caa06e75eeb2dd2fe"
 
 [squeezenet]
 git-tree-sha1 = "e2eeee109fda46470d657b13669cca09d5ef2f8c"
+lazy = true
 
     [[squeezenet.download]]
     sha256 = "aebfa06f44767e5ff728b7b67b2d01352b4618bd5d305c26e603aabcd5ba593d"
@@ -95,6 +104,7 @@ lazy = true
 
 [wideresnet101]
 git-tree-sha1 = "b881a9469fb230faff414ce9f983bc113061ab1c"
+lazy = true
 
     [[wideresnet101.download]]
     sha256 = "defa61fd80a988bb07bb9db00c692d8d0a30d95e6276add1413fb7f1f3aa2607"
@@ -102,6 +112,7 @@ git-tree-sha1 = "b881a9469fb230faff414ce9f983bc113061ab1c"
 
 [wideresnet50]
 git-tree-sha1 = "bbc6bc632e743c992784b5121dcb0f6082c66b1f"
+lazy = true
 
     [[wideresnet50.download]]
     sha256 = "7596a67b7aba762c2bfce8367055da79a8a3c117bd79ce11124c9f1f5a96c4e3"
