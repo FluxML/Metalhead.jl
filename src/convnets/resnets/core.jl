@@ -116,7 +116,7 @@ function downsample_identity(inplanes::Integer, outplanes::Integer; kwargs...)
 end
 
 # Shortcut configurations for the ResNet models
-const SHORTCUT_DICT = Dict(:A => (downsample_identity, downsample_identity),
+const RESNET_SHORTCUTS = Dict(:A => (downsample_identity, downsample_identity),
                            :B => (downsample_conv, downsample_identity),
                            :C => (downsample_conv, downsample_conv),
                            :D => (downsample_pool, downsample_identity))
@@ -342,7 +342,7 @@ function resnet(block_type::Symbol, block_repeats::AbstractVector{<:Integer},
                   connection$activation, classifier_fn)
 end
 function resnet(block_fn, block_repeats, downsample_opt::Symbol = :B; kwargs...)
-    return resnet(block_fn, block_repeats, SHORTCUT_DICT[downsample_opt]; kwargs...)
+    return resnet(block_fn, block_repeats, RESNET_SHORTCUTS[downsample_opt]; kwargs...)
 end
 
 # block-layer configurations for ResNet-like models
@@ -351,3 +351,7 @@ const RESNET_CONFIGS = Dict(18 => (:basicblock, [2, 2, 2, 2]),
                             50 => (:bottleneck, [3, 4, 6, 3]),
                             101 => (:bottleneck, [3, 4, 23, 3]),
                             152 => (:bottleneck, [3, 8, 36, 3]))
+
+const LRESNET_CONFIGS = Dict(50 => (:bottleneck, [3, 4, 6, 3]),
+                             101 => (:bottleneck, [3, 4, 23, 3]),
+                             152 => (:bottleneck, [3, 8, 36, 3]))

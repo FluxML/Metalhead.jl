@@ -33,7 +33,11 @@ function bottle2neck(inplanes::Integer, planes::Integer; stride::Integer = 1,
                 for _ in 1:max(1, scale - 1)]
     reslayer = is_first ? Parallel(cat_channels, pool, conv_bns...) :
                Parallel(cat_channels, identity, Chain(PairwiseFusion(+, conv_bns...)))
-    tuplify(x) = is_first ? tuple(x...) : tuple(x[1], tuple(x[2:end]...))
+    if is_first
+        tuplify(x) = tuple(x...)
+    else
+        tuplify(x) = tuple(x[1], tuple(x[2:end]...))
+    end
     layers = [conv_norm((1, 1), inplanes => width * scale, activation;
                         norm_layer, revnorm, bias = false)...,
               chunk$(; size = width, dims = 3), tuplify, reslayer,
@@ -138,8 +142,8 @@ end
 function Res2NeXt(depth::Integer; pretrain::Bool = false, scale::Integer = 4,
                   base_width::Integer = 4, cardinality::Integer = 8,
                   inchannels::Integer = 3, nclasses::Integer = 1000)
-    _checkconfig(depth, sort(collect(keys(RESNET_CONFIGS)))[3:end])
-    layers = resnet(:bottle2neck, RESNET_CONFIGS[depth][2]; base_width, scale,
+    _checkconfig(depth, keys(LRESNET_CONFIGS))
+    layers = resnet(:bottle2neck, LRESNET_CONFIGS[depth][2]; base_width, scale,
                     cardinality, inchannels, nclasses)
     if pretrain
         loadpretrain!(layers,
