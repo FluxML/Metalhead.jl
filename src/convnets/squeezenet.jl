@@ -62,10 +62,6 @@ Create a SqueezeNet
   - `inchannels`: number of input channels.
   - `nclasses`: the number of output classes.
 
-!!! warning
-    
-    `SqueezeNet` does not currently support pretrained weights.
-
 See also [`squeezenet`](#).
 """
 struct SqueezeNet
@@ -77,7 +73,7 @@ function SqueezeNet(; pretrain::Bool = false, inchannels::Integer = 3,
                     nclasses::Integer = 1000)
     layers = squeezenet(; inchannels, nclasses)
     if pretrain
-        loadpretrain!(layers, "SqueezeNet")
+        loadpretrain!(layers, "squeezenet")
     end
     return SqueezeNet(layers)
 end

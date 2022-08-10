@@ -280,15 +280,13 @@ function resnet_stages(get_layers, block_repeats::AbstractVector{<:Integer}, con
 end
 
 function resnet(img_dims, stem, get_layers, block_repeats::AbstractVector{<:Integer},
-                connection,
-                classifier_fn)
+                connection, classifier_fn)
     # Build stages of the ResNet
     stage_blocks = resnet_stages(get_layers, block_repeats, connection)
     backbone = Chain(stem, stage_blocks)
-    # Build the classifier head
+    # Add classifier to the backbone
     nfeaturemaps = Flux.outputsize(backbone, img_dims; padbatch = true)[3]
-    classifier = classifier_fn(nfeaturemaps)
-    return Chain(backbone, classifier)
+    return Chain(backbone, classifier_fn(nfeaturemaps))
 end
 
 function resnet(block_type::Symbol, block_repeats::AbstractVector{<:Integer};

@@ -1,3 +1,75 @@
+[resnet101]
+git-tree-sha1 = "68d563526ab34d3e5aa66b7d96278d2acde212f9"
+lazy = true
+
+    [[resnet101.download]]
+    sha256 = "0725f05db5772cfab1024b8d0d6c85ac1fc5a83eb6f0fe02b67b1e689d5a28db"
+    url = "https://huggingface.co/FluxML/resnet101/resolve/980158099e6917b74ade2b0a9599359f06057d21/resnet101.tar.gz"
+
+[resnet152]
+git-tree-sha1 = "85a97464b6cef66e1217ae829d3620651cffab47"
+lazy = true
+
+    [[resnet152.download]]
+    sha256 = "a8d30a735ef5649ec40a74a0515ee3d6774499267be06f5f2b372259c5ced8d6"
+    url = "https://huggingface.co/FluxML/resnet152/resolve/a66a3e1f5056179d167cb2165401950e3890b34d/resnet152.tar.gz"
+
+[resnet18]
+git-tree-sha1 = "4ced5a0338c0f0293940f1deb63e1c463125a6ff"
+lazy = true
+
+    [[resnet18.download]]
+    sha256 = "9444ef2285f507bd890d2ca852d663749f079110ed19b544e8d91f67f3cc6b83"
+    url = "https://huggingface.co/FluxML/resnet18/resolve/9b1c6c4f7c5dbe734d80d7d4b5f132ef58bf2467/resnet18.tar.gz"
+
+[resnet34]
+git-tree-sha1 = "485519977f375ca1770b3ff3971f61e438823f5a"
+lazy = true
+
+    [[resnet34.download]]
+    sha256 = "71ed75be6db0160af7f30be33e2f4a44836310949d1374267510e5803b1fb313"
+    url = "https://huggingface.co/FluxML/resnet34/resolve/0988ae2d4a86da06eefa6b61edf3e728861e286c/resnet34.tar.gz"
+
+[resnet50]
+git-tree-sha1 = "2973be0da60544080105756ecb3951cca2e007da"
+lazy = true
+
+    [[resnet50.download]]
+    sha256 = "60ad32eaf160444f3bfdb6f6d81ec1e5c36a3769be7df22aaa75127b16bb1501"
+    url = "https://huggingface.co/FluxML/resnet50/resolve/1529d6ddca42e3e705cb708c9de6f79188ce8ad5/resnet50.tar.gz"
+
+[resnext101_32x8d]
+git-tree-sha1 = "d13a85131b2c0c62ef2af79a09137d4e0760a685"
+lazy = true
+
+    [[resnext101_32x8d.download]]
+    sha256 = "aeb48f86f50ee8b0ca7dc01ca0ff5a2d2b2163e43c524203c4a8bd589db9bcc6"
+    url = "https://huggingface.co/FluxML/resnext101_32x8d/resolve/e060f030c445f644112efa2a00e3c544944046e1/resnext101_32x8d.tar.gz"
+
+[resnext101_64x4d]
+git-tree-sha1 = "db50f48614e673a40f98fb80a17688b34f42067a"
+lazy = true
+
+    [[resnext101_64x4d.download]]
+    sha256 = "89764dd7dc3b3432f0424cb592cec5d9db2fb802ab1646f0e3c2cca2b2e5386b"
+    url = "https://huggingface.co/FluxML/resnext101_64x4d/resolve/0d0485da04efe5a53289a560d105c42d3ca5435c/resnext101_64x4d.tar.gz"
+
+[resnext50_32x4d]
+git-tree-sha1 = "1e7a08a4acae690b635e8d1caa06e75eeb2dd2fe"
+lazy = true
+
+    [[resnext50_32x4d.download]]
+    sha256 = "084ccbc40fde07496c401ee2bc389b9cd1d60b1ac3b7ccbfde05479ea91ca707"
+    url = "https://huggingface.co/FluxML/resnext50_32x4d/resolve/150c52c9646fe697030d38ab2be767564fb4f28c/resnext50_32x4d.tar.gz"
+
+[squeezenet]
+git-tree-sha1 = "e2eeee109fda46470d657b13669cca09d5ef2f8c"
+lazy = true
+
+    [[squeezenet.download]]
+    sha256 = "aebfa06f44767e5ff728b7b67b2d01352b4618bd5d305c26e603aabcd5ba593d"
+    url = "https://huggingface.co/FluxML/squeezenet/resolve/01ef4221df5260bd992c669ab587eed74df0c39f/squeezenet.tar.gz"
+
 [vgg11]
 git-tree-sha1 = "78ffe7d74c475cc28175f9e23a545ce2f17b1520"
 lazy = true
@@ -30,42 +102,18 @@ lazy = true
     sha256 = "5fe26391572b9f6ac84eaa0541d27e959f673f82e6515026cdcd3262cbd93ceb"
     url = "https://huggingface.co/FluxML/vgg19/resolve/88e9056f60b054eccdc190a2eeb23731d5c693b6/vgg19.tar.gz"
 
-[resnet18]
-git-tree-sha1 = "7b555ed2708e551bfdbcb7e71b25001f4b3731c6"
+[wideresnet101]
+git-tree-sha1 = "b881a9469fb230faff414ce9f983bc113061ab1c"
 lazy = true
 
-    [[resnet18.download]]
-    sha256 = "d5782fd873a3072df251c7a4b3cf16efca8ee1da1180ff815bc107833f84bb26"
-    url = "https://huggingface.co/FluxML/resnet18/resolve/ef9c74047fda4a4a503b1f72553ec05acc90929f/resnet18.tar.gz"
+    [[wideresnet101.download]]
+    sha256 = "defa61fd80a988bb07bb9db00c692d8d0a30d95e6276add1413fb7f1f3aa2607"
+    url = "https://huggingface.co/FluxML/wideresnet101/resolve/ad4df1016bb5eba4c10e2d37b049ca5d2a455670/wideresnet101.tar.gz"
 
-[resnet34]
-git-tree-sha1 = "e6e79666cd0fc81cd828508314e6c7f66df8d43d"
+[wideresnet50]
+git-tree-sha1 = "bbc6bc632e743c992784b5121dcb0f6082c66b1f"
 lazy = true
 
-    [[resnet34.download]]
-    sha256 = "a8dec13609a86f7a2adac6a44b3af912a863bc2d7319120066c5fdaa04c3f395"
-    url = "https://huggingface.co/FluxML/resnet34/resolve/42061ddb463902885eea4fcc85275462a5445987/resnet34.tar.gz"
-
-[resnet50]
-git-tree-sha1 = "5c442ffd6c51a70c3bc36d849fca86beced446d4"
-lazy = true
-
-    [[resnet50.download]]
-    sha256 = "5325920ec91c2a4499ad7e659961f9eaac2b1a3a2905ca6410eaa593ecd35503"
-    url = "https://huggingface.co/FluxML/resnet50/resolve/10e601719e1cd5b0cab87ce7fd1e8f69a07ce042/resnet50.tar.gz"
-
-[resnet101]
-git-tree-sha1 = "694a8563ec20fb826334dd663d532b10bb2b3c97"
-lazy = true
-
-    [[resnet101.download]]
-    sha256 = "f4d737ce640957c30f76bfa642fc9da23e6852d81474d58a2338c1148e55bff0"
-    url = "https://huggingface.co/FluxML/resnet101/resolve/ea37819163cc3f4a41989a6239ce505e483b112d/resnet101.tar.gz"
-
-[resnet152]
-git-tree-sha1 = "55eb883248a276d710d75ecaecfbd2427e50cc0a"
-lazy = true
-
-    [[resnet152.download]]
-    sha256 = "57be335e6828d1965c9d11f933d2d41f51e5e534f9bfdbde01c6144fa8862a4d"
-    url = "https://huggingface.co/FluxML/resnet152/resolve/ba28814d5746643387b5c0e1d2269104e5e9bc8d/resnet152.tar.gz"
+    [[wideresnet50.download]]
+    sha256 = "7596a67b7aba762c2bfce8367055da79a8a3c117bd79ce11124c9f1f5a96c4e3"
+    url = "https://huggingface.co/FluxML/wideresnet50/resolve/5eca9979f5d9438a684b1e6a5b227f9d5611965a/wideresnet50.tar.gz"

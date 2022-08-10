@@ -30,7 +30,7 @@ function SEResNet(depth::Integer; pretrain::Bool = false, inchannels::Integer = 
     layers = resnet(RESNET_CONFIGS[depth]...; inchannels, nclasses,
                     attn_fn = squeeze_excite)
     if pretrain
-        loadpretrain!(layers, string("SEResNet", depth))
+        loadpretrain!(layers, string("seresnet", depth))
     end
     return SEResNet(layers)
 end
@@ -39,8 +39,8 @@ backbone(m::SEResNet) = m.layers[1]
 classifier(m::SEResNet) = m.layers[2]
 
 """
-    SEResNeXt(depth::Integer; pretrain::Bool = false, cardinality = 32, base_width = 4,
-              inchannels::Integer = 3, nclasses::Integer = 1000)
+    SEResNeXt(depth::Integer; pretrain::Bool = false, cardinality::Integer = 32,
+              base_width::Integer = 4, inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Creates a SEResNeXt model with the specified depth, cardinality, and base width.
 ((reference)[https://arxiv.org/pdf/1709.01507.pdf])
@@ -67,13 +67,13 @@ end
 
 (m::SEResNeXt)(x) = m.layers(x)
 
-function SEResNeXt(depth::Integer; pretrain::Bool = false, cardinality = 32, base_width = 4,
-                   inchannels::Integer = 3, nclasses::Integer = 1000)
+function SEResNeXt(depth::Integer; pretrain::Bool = false, cardinality::Integer = 32,
+                   base_width::Integer = 4, inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(depth, sort(collect(keys(RESNET_CONFIGS)))[3:end])
     layers = resnet(RESNET_CONFIGS[depth]...; inchannels, nclasses, cardinality, base_width,
                     attn_fn = squeeze_excite)
     if pretrain
-        loadpretrain!(layers, string("SEResNeXt", depth, "_", cardinality, "x", base_width))
+        loadpretrain!(layers, string("seresnext", depth, "_", cardinality, "x", base_width))
     end
     return SEResNeXt(layers)
 end

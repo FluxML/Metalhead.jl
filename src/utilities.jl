@@ -73,6 +73,5 @@ end
 
 # Utility function for depth and configuration checks in models
 function _checkconfig(config, configs)
-    @assert config in configs
-    return "Invalid configuration. Must be one of $(sort(collect(configs)))."
+    @assert config in configs "Invalid configuration. Must be one of $(sort(collect(configs)))."
 end

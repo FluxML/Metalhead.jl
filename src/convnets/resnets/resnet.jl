@@ -11,10 +11,6 @@ Creates a ResNet model with the specified depth.
   - `inchannels`: The number of input channels.
   - `nclasses`: the number of output classes
 
-!!! warning
-    
-    `ResNet` does not currently support pretrained weights.
-
 Advanced users who want more configuration options will be better served by using [`resnet`](#).
 """
 struct ResNet
@@ -27,7 +23,7 @@ function ResNet(depth::Integer; pretrain::Bool = false, inchannels::Integer = 3,
     _checkconfig(depth, keys(RESNET_CONFIGS))
     layers = resnet(RESNET_CONFIGS[depth]...; inchannels, nclasses)
     if pretrain
-        loadpretrain!(layers, string("ResNet", depth))
+        loadpretrain!(layers, string("resnet", depth))
     end
     return ResNet(layers)
 end
@@ -51,10 +47,6 @@ The number of channels in outer 1x1 convolutions is the same.
   - `pretrain`: set to `true` to load the model with pre-trained weights for ImageNet
   - `inchannels`: The number of input channels.
   - `nclasses`: the number of output classes
-
-!!! warning
-    
-    `WideResNet` does not currently support pretrained weights.
 
 Advanced users who want more configuration options will be better served by using [`resnet`](#).
 """

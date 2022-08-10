@@ -22,15 +22,14 @@ end
 
 @testset "ResNet" begin
     # Tests for pretrained ResNets
-    ## TODO: find a way to port pretrained models to the new ResNet API
     @testset "ResNet($sz)" for sz in [18, 34, 50, 101, 152]
         m = ResNet(sz)
         @test size(m(x_224)) == (1000, 1)
-        # if (ResNet, sz) in PRETRAINED_MODELS
-        #     @test acctest(ResNet(sz, pretrain = true))
-        # else
-        #     @test_throws ArgumentError ResNet(sz, pretrain = true)
-        # end
+        if (ResNet, sz) in PRETRAINED_MODELS
+            @test acctest(ResNet(sz, pretrain = true))
+        else
+            @test_throws ArgumentError ResNet(sz, pretrain = true)
+        end
     end
 
     @testset "resnet" begin
@@ -79,9 +78,9 @@ end
                 m = ResNeXt(depth; cardinality, base_width)
                 @test size(m(x_224)) == (1000, 1)
                 if (ResNeXt, depth, cardinality, base_width) in PRETRAINED_MODELS
-                    @test acctest(ResNeXt(depth, pretrain = true))
+                    @test acctest(ResNeXt(depth; cardinality, base_width, pretrain = true))
                 else
-                    @test_throws ArgumentError ResNeXt(depth, pretrain = true)
+                    @test_throws ArgumentError ResNeXt(depth; cardinality, base_width, pretrain = true)
                 end
                 @test gradtest(m, x_224)
                 _gc()
