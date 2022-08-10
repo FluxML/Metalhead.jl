@@ -292,7 +292,7 @@ function resnet(img_dims, stem, get_layers, block_repeats::AbstractVector{<:Inte
     return Chain(backbone, classifier_fn(nfeaturemaps))
 end
 
-function resnet(block_type::Symbol, block_repeats::AbstractVector{<:Integer},
+function resnet(block_type, block_repeats::AbstractVector{<:Integer},
                 downsample_opt::NTuple{2, Any} = (downsample_conv, downsample_identity);
                 cardinality::Integer = 1, base_width::Integer = 64, inplanes::Integer = 64,
                 reduction_factor::Integer = 1, imsize::Dims{2} = (256, 256),
@@ -304,7 +304,7 @@ function resnet(block_type::Symbol, block_repeats::AbstractVector{<:Integer},
     # Build stem
     stem = stem_fn(; inchannels)
     # Block builder
-    if block_type === :basicblock
+    if block_type == basicblock
         @assert cardinality==1 "Cardinality must be 1 for `basicblock`"
         @assert base_width==64 "Base width must be 64 for `basicblock`"
         get_layers = basicblock_builder(block_repeats; inplanes, reduction_factor,
@@ -314,7 +314,7 @@ function resnet(block_type::Symbol, block_repeats::AbstractVector{<:Integer},
                                         planes_fn = resnet_planes,
                                         downsample_tuple = downsample_opt,
                                         kwargs...)
-    elseif block_type === :bottleneck
+    elseif block_type == bottleneck
         get_layers = bottleneck_builder(block_repeats; inplanes, cardinality, base_width,
                                         reduction_factor, activation, norm_layer, revnorm,
                                         attn_fn, drop_block_rate, drop_path_rate,
@@ -322,7 +322,7 @@ function resnet(block_type::Symbol, block_repeats::AbstractVector{<:Integer},
                                         planes_fn = resnet_planes,
                                         downsample_tuple = downsample_opt,
                                         kwargs...)
-    elseif block_type === :bottle2neck
+    elseif block_type == bottle2neck
         @assert drop_block_rate==0.0 "DropBlock not supported for `bottle2neck`"
         @assert drop_path_rate==0.0 "DropPath not supported for `bottle2neck`"
         @assert reduction_factor==1 "Reduction factor not supported for `bottle2neck`"
@@ -346,12 +346,12 @@ function resnet(block_fn, block_repeats, downsample_opt::Symbol = :B; kwargs...)
 end
 
 # block-layer configurations for ResNet-like models
-const RESNET_CONFIGS = Dict(18 => (:basicblock, [2, 2, 2, 2]),
-                            34 => (:basicblock, [3, 4, 6, 3]),
-                            50 => (:bottleneck, [3, 4, 6, 3]),
-                            101 => (:bottleneck, [3, 4, 23, 3]),
-                            152 => (:bottleneck, [3, 8, 36, 3]))
+const RESNET_CONFIGS = Dict(18 => (basicblock, [2, 2, 2, 2]),
+                            34 => (basicblock, [3, 4, 6, 3]),
+                            50 => (bottleneck, [3, 4, 6, 3]),
+                            101 => (bottleneck, [3, 4, 23, 3]),
+                            152 => (bottleneck, [3, 8, 36, 3]))
 
-const LRESNET_CONFIGS = Dict(50 => (:bottleneck, [3, 4, 6, 3]),
-                             101 => (:bottleneck, [3, 4, 23, 3]),
-                             152 => (:bottleneck, [3, 8, 36, 3]))
+const LRESNET_CONFIGS = Dict(50 => (bottleneck, [3, 4, 6, 3]),
+                             101 => (bottleneck, [3, 4, 23, 3]),
+                             152 => (bottleneck, [3, 8, 36, 3]))
