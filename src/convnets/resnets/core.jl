@@ -1,8 +1,9 @@
 """
-    basicblock(inplanes, planes; stride = 1, reduction_factor = 1, activation = relu,
-                    norm_layer = BatchNorm, revnorm = false,
-                    drop_block = identity, drop_path = identity,
-                    attn_fn = planes -> identity)
+    basicblock(inplanes::Integer, planes::Integer; stride::Integer = 1,
+               reduction_factor::Integer = 1, activation = relu,
+               norm_layer = BatchNorm, revnorm::Bool = false,
+               drop_block = identity, drop_path = identity,
+               attn_fn = planes -> identity)
 
 Creates a basic residual block (see [reference](https://arxiv.org/abs/1512.03385v1)).
 
@@ -11,10 +12,11 @@ Creates a basic residual block (see [reference](https://arxiv.org/abs/1512.03385
   - `inplanes`: number of input feature maps
   - `planes`: number of feature maps for the block
   - `stride`: the stride of the block
-  - `reduction_factor`: the factor by which the input feature maps
-    are reduced before the first convolution.
+  - `reduction_factor`: the factor by which the input feature maps are reduced before 
+    the first convolution.
   - `activation`: the activation function to use.
   - `norm_layer`: the normalization layer to use.
+  - `revnorm`: set to `true` to place the normalisation layer before the convolution
   - `drop_block`: the drop block layer
   - `drop_path`: the drop path layer
   - `attn_fn`: the attention function to use. See [`squeeze_excite`](#) for an example.
@@ -36,11 +38,12 @@ function basicblock(inplanes::Integer, planes::Integer; stride::Integer = 1,
 end
 
 """
-    bottleneck(inplanes, planes; stride = 1, cardinality = 1, base_width = 64,
-                    reduction_factor = 1, activation = relu,
-                    norm_layer = BatchNorm, revnorm = false,
-                    drop_block = identity, drop_path = identity,
-                    attn_fn = planes -> identity)
+    bottleneck(inplanes::Integer, planes::Integer; stride::Integer,
+               cardinality::Integer = 1, base_width::Integer = 64,
+               reduction_factor::Integer = 1, activation = relu,
+               norm_layer = BatchNorm, revnorm::Bool = false,
+               drop_block = identity, drop_path = identity,
+               attn_fn = planes -> identity)
 
 Creates a bottleneck residual block (see [reference](https://arxiv.org/abs/1512.03385v1)).
 
@@ -55,6 +58,7 @@ Creates a bottleneck residual block (see [reference](https://arxiv.org/abs/1512.
     convolution.
   - `activation`: the activation function to use.
   - `norm_layer`: the normalization layer to use.
+  - `revnorm`: set to `true` to place the normalisation layer before the convolution
   - `drop_block`: the drop block layer
   - `drop_path`: the drop path layer
   - `attn_fn`: the attention function to use. See [`squeeze_excite`](#) for an example.
@@ -112,7 +116,7 @@ function downsample_identity(inplanes::Integer, outplanes::Integer; kwargs...)
 end
 
 # Shortcut configurations for the ResNet models
-const shortcut_dict = Dict(:A => (downsample_identity, downsample_identity),
+const RESNET_SHORTCUTS = Dict(:A => (downsample_identity, downsample_identity),
                            :B => (downsample_conv, downsample_identity),
                            :C => (downsample_conv, downsample_conv),
                            :D => (downsample_pool, downsample_identity))
@@ -153,7 +157,8 @@ on how to use this function.
         shows peformance improvements over the `:deep` stem in some cases.
 
   - `inchannels`: The number of channels in the input.
-  - `replace_pool`: Set to true to replace the max pooling layers with a 3x3 convolution + normalization with a stride of two.
+  - `replace_pool`: Set to true to replace the max pooling layers with a 3x3 convolution + 
+    normalization with a stride of two.
   - `norm_layer`: The normalisation layer used in the stem.
   - `activation`: The activation function used in the stem.
 """
@@ -253,8 +258,6 @@ function bottleneck_builder(block_repeats::AbstractVector{<:Integer};
         stride = stride_fn(stage_idx, block_idx)
         downsample_fn = (stride != 1 || inplanes != planes * expansion) ?
                         downsample_tuple[1] : downsample_tuple[2]
-        # DropBlock, DropPath both take in rates based on a linear scaling schedule
-        schedule_idx = sum(block_repeats[1:(stage_idx - 1)]) + block_idx
         drop_path = DropPath(pathschedule[schedule_idx])
         drop_block = DropBlock(blockschedule[schedule_idx])
         block = bottleneck(inplanes, planes; stride, cardinality, base_width,
@@ -289,20 +292,19 @@ function resnet(img_dims, stem, get_layers, block_repeats::AbstractVector{<:Inte
     return Chain(backbone, classifier_fn(nfeaturemaps))
 end
 
-function resnet(block_type::Symbol, block_repeats::AbstractVector{<:Integer};
-                downsample_opt::NTuple{2, Any} = (downsample_conv, downsample_identity),
+function resnet(block_type, block_repeats::AbstractVector{<:Integer},
+                downsample_opt::NTuple{2, Any} = (downsample_conv, downsample_identity);
                 cardinality::Integer = 1, base_width::Integer = 64, inplanes::Integer = 64,
                 reduction_factor::Integer = 1, imsize::Dims{2} = (256, 256),
-                inchannels::Integer = 3, stem_fn = resnet_stem,
-                connection = addact, activation = relu, norm_layer = BatchNorm,
-                revnorm::Bool = false, attn_fn = planes -> identity,
-                pool_layer = AdaptiveMeanPool((1, 1)), use_conv::Bool = false,
-                drop_block_rate = 0.0, drop_path_rate = 0.0, dropout_rate = 0.0,
-                nclasses::Integer = 1000)
+                inchannels::Integer = 3, stem_fn = resnet_stem, connection = addact,
+                activation = relu, norm_layer = BatchNorm, revnorm::Bool = false,
+                attn_fn = planes -> identity, pool_layer = AdaptiveMeanPool((1, 1)),
+                use_conv::Bool = false, drop_block_rate = 0.0, drop_path_rate = 0.0,
+                dropout_rate = 0.0, nclasses::Integer = 1000, kwargs...)
     # Build stem
     stem = stem_fn(; inchannels)
     # Block builder
-    if block_type == :basicblock
+    if block_type == basicblock
         @assert cardinality==1 "Cardinality must be 1 for `basicblock`"
         @assert base_width==64 "Base width must be 64 for `basicblock`"
         get_layers = basicblock_builder(block_repeats; inplanes, reduction_factor,
@@ -310,14 +312,26 @@ function resnet(block_type::Symbol, block_repeats::AbstractVector{<:Integer};
                                         drop_block_rate, drop_path_rate,
                                         stride_fn = resnet_stride,
                                         planes_fn = resnet_planes,
-                                        downsample_tuple = downsample_opt)
-    elseif block_type == :bottleneck
+                                        downsample_tuple = downsample_opt,
+                                        kwargs...)
+    elseif block_type == bottleneck
         get_layers = bottleneck_builder(block_repeats; inplanes, cardinality, base_width,
-                                        reduction_factor, activation, norm_layer,
-                                        revnorm, attn_fn, drop_block_rate, drop_path_rate,
+                                        reduction_factor, activation, norm_layer, revnorm,
+                                        attn_fn, drop_block_rate, drop_path_rate,
                                         stride_fn = resnet_stride,
                                         planes_fn = resnet_planes,
-                                        downsample_tuple = downsample_opt)
+                                        downsample_tuple = downsample_opt,
+                                        kwargs...)
+    elseif block_type == bottle2neck
+        @assert drop_block_rate==0.0 "DropBlock not supported for `bottle2neck`"
+        @assert drop_path_rate==0.0 "DropPath not supported for `bottle2neck`"
+        @assert reduction_factor==1 "Reduction factor not supported for `bottle2neck`"
+        get_layers = bottle2neck_builder(block_repeats; inplanes, cardinality, base_width,
+                                         activation, norm_layer, revnorm, attn_fn,
+                                         stride_fn = resnet_stride,
+                                         planes_fn = resnet_planes,
+                                         downsample_tuple = downsample_opt,
+                                         kwargs...)
     else
         # TODO: write better message when we have link to dev docs for resnet
         throw(ArgumentError("Unknown block type $block_type"))
@@ -328,12 +342,16 @@ function resnet(block_type::Symbol, block_repeats::AbstractVector{<:Integer};
                   connection$activation, classifier_fn)
 end
 function resnet(block_fn, block_repeats, downsample_opt::Symbol = :B; kwargs...)
-    return resnet(block_fn, block_repeats, shortcut_dict[downsample_opt]; kwargs...)
+    return resnet(block_fn, block_repeats, RESNET_SHORTCUTS[downsample_opt]; kwargs...)
 end
 
 # block-layer configurations for ResNet-like models
-const RESNET_CONFIGS = Dict(18 => (:basicblock, [2, 2, 2, 2]),
-                            34 => (:basicblock, [3, 4, 6, 3]),
-                            50 => (:bottleneck, [3, 4, 6, 3]),
-                            101 => (:bottleneck, [3, 4, 23, 3]),
-                            152 => (:bottleneck, [3, 8, 36, 3]))
+const RESNET_CONFIGS = Dict(18 => (basicblock, [2, 2, 2, 2]),
+                            34 => (basicblock, [3, 4, 6, 3]),
+                            50 => (bottleneck, [3, 4, 6, 3]),
+                            101 => (bottleneck, [3, 4, 23, 3]),
+                            152 => (bottleneck, [3, 8, 36, 3]))
+
+const LRESNET_CONFIGS = Dict(50 => (bottleneck, [3, 4, 6, 3]),
+                             101 => (bottleneck, [3, 4, 23, 3]),
+                             152 => (bottleneck, [3, 8, 36, 3]))

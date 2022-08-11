@@ -96,7 +96,8 @@ function inceptionresnetv2(; inchannels::Integer = 3, dropout_rate = 0.0,
 end
 
 """
-    InceptionResNetv2(; pretrain::Bool = false, inchannels::Integer = 3, dropout_rate = 0.0, nclasses::Integer = 1000)
+    InceptionResNetv2(; pretrain::Bool = false, inchannels::Integer = 3,
+                        nclasses::Integer = 1000)
 
 Creates an InceptionResNetv2 model.
 ([reference](https://arxiv.org/abs/1602.07261))
@@ -118,9 +119,8 @@ end
 @functor InceptionResNetv2
 
 function InceptionResNetv2(; pretrain::Bool = false, inchannels::Integer = 3,
-                           dropout_rate = 0.0,
                            nclasses::Integer = 1000)
-    layers = inceptionresnetv2(; inchannels, dropout_rate, nclasses)
+    layers = inceptionresnetv2(; inchannels, nclasses)
     if pretrain
         loadpretrain!(layers, "InceptionResNetv2")
     end

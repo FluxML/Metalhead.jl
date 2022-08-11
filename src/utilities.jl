@@ -38,7 +38,10 @@ Concatenate `x` and `y` (and any `z`s) along the channel dimension (third dimens
 Equivalent to `cat(x, y, zs...; dims=3)`.
 Convenient reduction operator for use with `Parallel`.
 """
-cat_channels(xy...) = cat(xy...; dims = Val(3))
+cat_channels(xs::AbstractArray...) = cat(xs...; dims = Val(3))
+cat_channels(x::AbstractArray, y::Tuple) = cat_channels(x, y...)
+cat_channels(x::Tuple, y::AbstractArray...) = cat_channels(x..., y...)
+cat_channels(x::Tuple) = cat_channels(x...)
 
 """
     swapdims(perm)

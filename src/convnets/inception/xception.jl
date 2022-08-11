@@ -66,8 +66,7 @@ function xception(; dropout_rate = 0.0, inchannels::Integer = 3, nclasses::Integ
                      xception_block(728, 1024, 2; stride = 2, grow_at_start = false),
                      depthwise_sep_conv_norm((3, 3), 1024, 1536; pad = 1)...,
                      depthwise_sep_conv_norm((3, 3), 1536, 2048; pad = 1)...)
-    classifier = create_classifier(2048, nclasses; dropout_rate)
-    return Chain(backbone, classifier)
+    return Chain(backbone, create_classifier(2048, nclasses; dropout_rate))
 end
 
 """
