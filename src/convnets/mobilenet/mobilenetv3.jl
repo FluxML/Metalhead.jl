@@ -24,8 +24,8 @@ Create a MobileNetv3 model.
   - `nclasses`: the number of output classes
 """
 function mobilenetv3(configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
-                     max_width::Integer = 1024, inchannels::Integer = 3,
-                     nclasses::Integer = 1000)
+                     max_width::Integer = 1024, dropout_rate = 0.2,
+                     inchannels::Integer = 3, nclasses::Integer = 1000)
     # building first layer
     inplanes = _round_channels(16 * width_mult, 8)
     layers = []
@@ -39,8 +39,8 @@ function mobilenetv3(configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
         outplanes = _round_channels(c * width_mult, 8)
         explanes = _round_channels(inplanes * t, 8)
         push!(layers,
-              invertedresidual((k, k), inplanes, explanes, outplanes, activation;
-                               stride, reduction))
+              mbconv((k, k), inplanes, explanes, outplanes, activation;
+                     stride, reduction))
         inplanes = outplanes
     end
     # building last layers
@@ -49,7 +49,7 @@ function mobilenetv3(configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
     append!(layers, conv_norm((1, 1), inplanes, explanes, hardswish; bias = false))
     classifier = Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten,
                        Dense(explanes, headplanes, hardswish),
-                       Dropout(0.2),
+                       Dropout(dropout_rate),
                        Dense(headplanes, nclasses))
     return Chain(Chain(layers...), classifier)
 end

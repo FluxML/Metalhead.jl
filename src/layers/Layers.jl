@@ -19,7 +19,7 @@ include("attention.jl")
 export MHAttention
 
 include("conv.jl")
-export conv_norm, basic_conv_bn, dwsep_conv_bn, invertedresidual
+export conv_norm, basic_conv_bn, dwsep_conv_bn, mbconv, fused_mbconv
 
 include("drop.jl")
 export DropBlock, DropPath

@@ -29,15 +29,7 @@ Create a convolution + batch normalization pair with activation.
 """
 function conv_norm(kernel_size, inplanes::Integer, outplanes::Integer, activation = relu;
                    norm_layer = BatchNorm, revnorm::Bool = false, eps::Float32 = 1.0f-5,
-                   momentum::Union{Nothing, Float32} = nothing, preact::Bool = false,
-                   use_norm::Bool = true, kwargs...)
-    # handle momentum for BatchNorm
-    if norm_layer == BatchNorm
-        momentum = isnothing(momentum) ? 0.1f0 : momentum
-        norm_layer = (args...; kargs...) -> BatchNorm(args...; momentum, kargs...)
-    elseif norm_layer != BatchNorm && !isnothing(momentum)
-        error("momentum is only supported for BatchNorm")
-    end
+                   preact::Bool = false, use_norm::Bool = true, kwargs...)
     # no normalization layer
     if !use_norm
         if preact || revnorm
@@ -75,10 +67,11 @@ function conv_norm(kernel_size, ch::Pair{<:Integer, <:Integer}, activation = ide
     return conv_norm(kernel_size, inplanes, outplanes, activation; kwargs...)
 end
 
-# conv + bn layer combination as used by the inception model family
+# conv + bn layer combination as used by the inception model family matching
+# the default values used in TensorFlow
 function basic_conv_bn(kernel_size, inplanes, outplanes, activation = relu; kwargs...)
-    return conv_norm(kernel_size, inplanes, outplanes, activation; eps = 1.0f-3,
-                     bias = false, kwargs...)
+    return conv_norm(kernel_size, inplanes, outplanes, activation; norm_layer = BatchNorm,
+                     eps = 1.0f-3, bias = false, kwargs...)
 end
 
 """
@@ -115,22 +108,22 @@ See Fig. 3 in [reference](https://arxiv.org/abs/1704.04861v1).
   - `bias`, `weight`, `init`: initialization for the convolution kernel (see [`Flux.Conv`](#))
 """
 function dwsep_conv_bn(kernel_size, inplanes::Integer, outplanes::Integer,
-                       activation = relu; eps::Float32 = 1.0f-5, momentum::Float32 = 0.1f0,
+                       activation = relu; eps::Float32 = 1.0f-5,
                        revnorm::Bool = false, stride::Integer = 1,
                        use_norm::NTuple{2, Bool} = (true, true), kwargs...)
-    return vcat(conv_norm(kernel_size, inplanes, inplanes, activation;
+    return vcat(conv_norm(kernel_size, inplanes, inplanes, activation; eps,
                           revnorm, use_norm = use_norm[1], stride,
                           groups = inplanes, kwargs...),
-                conv_norm((1, 1), inplanes, outplanes, activation;
+                conv_norm((1, 1), inplanes, outplanes, activation; eps,
                           revnorm, use_norm = use_norm[2]))
 end
 
 """
-    invertedresidual(kernel_size, inplanes::Integer, hidden_planes::Integer,
+    mbconv(kernel_size, inplanes::Integer, hidden_planes::Integer,
                      outplanes::Integer, activation = relu; stride::Integer,
                      reduction::Union{Nothing, Integer} = nothing)
 
-    invertedresidual(kernel_size, inplanes::Integer, outplanes::Integer,
+    mbconv(kernel_size, inplanes::Integer, outplanes::Integer,
                      activation = relu; stride::Integer, expansion::Real,
                      reduction::Union{Nothing, Integer} = nothing)
 
@@ -151,29 +144,48 @@ Create a basic inverted residual block for MobileNet variants
   - `reduction`: The reduction factor for the number of hidden feature maps
     in a squeeze and excite layer (see [`squeeze_excite`](#)).
 """
-function invertedresidual(kernel_size, inplanes::Integer, hidden_planes::Integer,
-                          outplanes::Integer, activation = relu; stride::Integer,
-                          reduction::Union{Nothing, Integer} = nothing,
-                          momentum::Float32 = 0.1f0)
+function mbconv(kernel_size, inplanes::Integer, hidden_planes::Integer,
+                outplanes::Integer, activation = relu; stride::Integer,
+                reduction::Union{Nothing, Integer} = nothing,
+                norm_layer = BatchNorm)
     @assert stride in [1, 2] "`stride` has to be 1 or 2"
-    pad = @. (kernel_size - 1) ÷ 2
-    conv1 = inplanes == hidden_planes ? (identity,) :
-            conv_norm((1, 1), inplanes, hidden_planes, activation; bias = false)
-    selayer = isnothing(reduction) ? identity :
-              squeeze_excite(hidden_planes; reduction, activation, gate_activation = hardσ,
-                             norm_layer = BatchNorm)
-    invres = [conv1...,
-        conv_norm(kernel_size, hidden_planes, hidden_planes, activation;
-                  bias = false, stride, pad, groups = hidden_planes, momentum)...,
-        selayer,
-        conv_norm((1, 1), hidden_planes, outplanes, identity; bias = false)...]
-    layers = Chain(filter(!=(identity), invres)...)
-    return stride == 1 && inplanes == outplanes ? SkipConnection(layers, +) : layers
+    layers = []
+    # expand
+    if inplanes != hidden_planes
+        append!(layers,
+                conv_norm((1, 1), inplanes, hidden_planes, activation; bias = false,
+                          norm_layer))
+    end
+    # squeeze-excite layer
+    if !isnothing(reduction)
+        append!(layers,
+                squeeze_excite(hidden_planes, inplanes ÷ reduction; activation,
+                               gate_activation = hardσ))
+    end
+    # depthwise
+    append!(layers,
+            conv_norm(kernel_size, hidden_planes, hidden_planes, activation; bias = false,
+                      norm_layer, stride, pad = SamePad(), groups = hidden_planes))
+    # project
+    append!(layers, conv_norm((1, 1), hidden_planes, outplanes, identity; bias = false))
+    return stride == 1 && inplanes == outplanes ? SkipConnection(Chain(layers...), +) :
+           Chain(layers...)
 end
 
-function invertedresidual(kernel_size, inplanes::Integer, outplanes::Integer,
-                          activation = relu; stride::Integer, expansion::Real,
-                          reduction::Union{Nothing, Integer} = nothing)
-    return invertedresidual(kernel_size, inplanes, round(Int, inplanes * expansion),
-                            outplanes, activation; stride, reduction)
+function fused_mbconv(kernel_size, inplanes::Integer, explanes::Integer, outplanes::Integer,
+                      activation = relu; stride::Integer, norm_layer = BatchNorm)
+    @assert stride in [1, 2] "`stride` has to be 1 or 2"
+    layers = []
+    if explanes != inplanes
+        # fused expand
+        append!(layers,
+                conv_norm(kernel_size, inplanes, explanes, activation; norm_layer, stride))
+        # project
+        append!(layers, conv_norm((1, 1), explanes, outplanes, identity; norm_layer))
+    else
+        append!(layers,
+                conv_norm((1, 1), inplanes, outplanes, activation; norm_layer, stride))
+    end
+    return stride == 1 && inplanes == outplanes ? SkipConnection(Chain(layers...), +) :
+           Chain(layers...)
 end

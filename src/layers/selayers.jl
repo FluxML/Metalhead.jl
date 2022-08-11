@@ -1,32 +1,44 @@
 """
-    squeeze_excite(inplanes; reduction = 16, rd_divisor = 8,
-                   activation = relu, gate_activation = sigmoid, norm_layer = identity,
-                   rd_planes = _round_channels(inplanes ÷ reduction, rd_divisor, 0.0))
+    squeeze_excite(inplanes::Integer, squeeze_planes::Integer;
+                   norm_layer = planes -> identity, activation = relu,
+                   gate_activation = sigmoid)
 
-Creates a squeeze-and-excitation layer used in MobileNets and SE-Nets.
+    squeeze_excite(inplanes; reduction = 16, rd_divisor = 8,
+                   activation = relu, gate_activation = sigmoid, norm_layer = identity)
+
+Creates a squeeze-and-excitation layer used in MobileNets, EfficientNets and SE-ResNets.
 
 # Arguments
 
   - `inplanes`: The number of input feature maps
-  - `reduction`: The reduction factor for the number of hidden feature maps
-  - `rd_divisor`: The divisor for the number of hidden feature maps.
+  - `squeeze_planes`: The number of feature maps in the intermediate layers. Alternatively,
+    specify the keyword arguments `reduction` and `rd_divisior`, which determine the number
+    of feature maps in the intermediate layers from the number of input feature maps as:
+    `squeeze_planes = _round_channels(inplanes ÷ reduction, rd_divisor, 0)`.
+    (See [`_round_channels`](#) for details. The default values are `reduction = 16` and
+    `rd_divisor = 8`.)
   - `activation`: The activation function for the first convolution layer
   - `gate_activation`: The activation function for the gate layer
   - `norm_layer`: The normalization layer to be used after the convolution layers
   - `rd_planes`: The number of hidden feature maps in a squeeze and excite layer
 """
-function squeeze_excite(inplanes::Integer; reduction::Integer = 16,
-                        rd_divisor::Integer = 8, activation = relu,
-                        gate_activation = sigmoid, norm_layer = planes -> identity,
-                        rd_planes = _round_channels(inplanes ÷ reduction, rd_divisor, 0))
+function squeeze_excite(inplanes::Integer, squeeze_planes::Integer;
+                        norm_layer = planes -> identity, activation = relu,
+                        gate_activation = sigmoid)
     layers = [AdaptiveMeanPool((1, 1)),
-        Conv((1, 1), inplanes => rd_planes),
-        norm_layer(rd_planes),
+        Conv((1, 1), inplanes => squeeze_planes),
+        norm_layer(squeeze_planes),
         activation,
-        Conv((1, 1), rd_planes => inplanes),
+        Conv((1, 1), squeeze_planes => inplanes),
         norm_layer(inplanes),
         gate_activation]
     return SkipConnection(Chain(filter!(!=(identity), layers)...), .*)
+end
+
+function squeeze_excite(inplanes::Integer; reduction::Integer = 16, rd_divisor::Integer = 8,
+                        kwargs...)
+    return squeeze_excite(inplanes, _round_channels(inplanes ÷ reduction, rd_divisor, 0);
+                          kwargs...)
 end
 
 """

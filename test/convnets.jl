@@ -161,7 +161,7 @@ end
 end
 
 @testset "EfficientNet" begin
-    @testset "EfficientNet($config)" for config in [:b0, :b1, :b2, :b3, :b4, :b5] #:b6, :b7, :b8]
+    @testset "EfficientNet($config)" for config in [:b0, :b1, :b2, :b3, :b4, :b5, :b6, :b7, :b8]
         # preferred image resolution scaling
         r = Metalhead.EFFICIENTNET_GLOBAL_CONFIGS[config][1]
         x = rand(Float32, r, r, 3, 1)

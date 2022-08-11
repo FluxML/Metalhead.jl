@@ -32,12 +32,19 @@ function efficientnetv2(config::AbstractVector{<:Tuple}; max_width::Integer = 17
             conv_norm((3, 3), inchannels, inplanes, swish; pad = 1, stride = 2,
                       bias = false))
     # building inverted residual blocks
-    for (t, c, n, s, reduction) in config
-        outplanes = _round_channels(c * width_mult, 8)
+    for (t, inplanes, outplanes, n, s, reduction) in config
+        explanes = _round_channels(inplanes * t, 8)
         for i in 1:n
-            push!(layers,
-                  invertedresidual((3, 3), inplanes, outplanes, swish; expansion = t,
-                                   stride = i == 1 ? s : 1, reduction))
+            stride = i == 1 ? s : 1
+            if isnothing(reduction)
+                push!(layers,
+                      fused_mbconv((3, 3), inplanes, explanes, outplanes, swish; stride))
+            else
+                inplanes = _round_channels(inplanes * width_mult, 8)
+                outplanes = _round_channels(outplanes * width_mult, 8)
+                push!(layers,
+                      mbconv((3, 3), inplanes, explanes, outplanes, swish; stride))
+            end
             inplanes = outplanes
         end
     end
@@ -49,37 +56,37 @@ function efficientnetv2(config::AbstractVector{<:Tuple}; max_width::Integer = 17
 end
 
 # block configs for EfficientNetv2
-const EFFNETV2_CONFIGS = Dict(:small => [# t, c, n, s, r
-                                  (1, 24, 2, 1, nothing),
-                                  (4, 48, 4, 2, nothing),
-                                  (4, 64, 4, 2, nothing),
-                                  (4, 128, 6, 2, 4),
-                                  (6, 160, 9, 1, 4),
-                                  (6, 256, 15, 2, 4)],
-                              :medium => [# t, c, n, s, r
-                                  (1, 24, 3, 1, nothing),
-                                  (4, 48, 5, 2, nothing),
-                                  (4, 80, 5, 2, nothing),
-                                  (4, 160, 7, 2, 4),
-                                  (6, 176, 14, 1, 4),
-                                  (6, 304, 18, 2, 4),
-                                  (6, 512, 5, 1, 4)],
-                              :large => [# t, c, n, s, r
-                                  (1, 32, 4, 1, nothing),
-                                  (4, 64, 8, 2, nothing),
-                                  (4, 96, 8, 2, nothing),
-                                  (4, 192, 16, 2, 4),
-                                  (6, 256, 24, 1, 4),
-                                  (6, 512, 32, 2, 4),
-                                  (6, 640, 8, 1, 4)],
-                              :xlarge => [# t, c, n, s, r
-                                  (1, 32, 4, 1, nothing),
-                                  (4, 64, 8, 2, nothing),
-                                  (4, 96, 8, 2, nothing),
-                                  (4, 192, 16, 2, 4),
-                                  (6, 256, 24, 1, 4),
-                                  (6, 512, 32, 2, 4),
-                                  (6, 640, 8, 1, 4)])
+const EFFNETV2_CONFIGS = Dict(:small => [
+                                  (1, 24, 24, 2, 1, nothing),
+                                  (4, 24, 48, 4, 2, nothing),
+                                  (4, 48, 64, 4, 2, nothing),
+                                  (4, 64, 128, 6, 2, 4),
+                                  (6, 128, 160, 9, 1, 4),
+                                  (6, 160, 256, 15, 2, 4)],
+                              :medium => [
+                                  (1, 24, 24, 3, 1, nothing),
+                                  (4, 24, 48, 5, 2, nothing),
+                                  (4, 48, 80, 5, 2, nothing),
+                                  (4, 80, 160, 7, 2, 4),
+                                  (6, 160, 176, 14, 1, 4),
+                                  (6, 176, 304, 18, 2, 4),
+                                  (6, 304, 512, 5, 1, 4)],
+                              :large => [
+                                  (1, 32, 32, 4, 1, nothing),
+                                  (4, 32, 64, 7, 2, nothing),
+                                  (4, 64, 96, 7, 2, nothing),
+                                  (4, 96, 192, 10, 2, 4),
+                                  (6, 192, 224, 19, 1, 4),
+                                  (6, 224, 384, 25, 2, 4),
+                                  (6, 384, 640, 7, 1, 4)],
+                              :xlarge => [
+                                  (1, 32, 32, 4, 1, nothing),
+                                  (4, 32, 64, 8, 2, nothing),
+                                  (4, 64, 96, 8, 2, nothing),
+                                  (4, 96, 192, 16, 2, 4),
+                                  (6, 192, 256, 24, 1, 4),
+                                  (6, 256, 512, 32, 2, 4),
+                                  (6, 512, 640, 8, 1, 4)])
 
 """
     EfficientNetv2(config::Symbol; pretrain::Bool = false, width_mult::Real = 1,

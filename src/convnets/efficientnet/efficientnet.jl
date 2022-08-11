@@ -17,35 +17,37 @@ Create an EfficientNet model ([reference](https://arxiv.org/abs/1905.11946v5)).
       + `e`: expansion ratio
       + `i`: block input channels (will be scaled by global width scaling)
       + `o`: block output channels (will be scaled by global width scaling)
-  - `max_width`: The maximum number of feature maps in any layer of the network
   - `inchannels`: number of input channels
   - `nclasses`: number of output classes
 """
 function efficientnet(scalings::NTuple{2, Real},
                       block_configs::AbstractVector{NTuple{6, Int}};
-                      max_width::Integer = 1280, inchannels::Integer = 3,
-                      nclasses::Integer = 1000)
+                      inchannels::Integer = 3, nclasses::Integer = 1000)
+    # building first layer
     wscale, dscale = scalings
     scalew(w) = wscale ≈ 1 ? w : ceil(Int64, wscale * w)
     scaled(d) = dscale ≈ 1 ? d : ceil(Int64, dscale * d)
     outplanes = _round_channels(scalew(32), 8)
     stem = conv_norm((3, 3), inchannels, outplanes, swish; bias = false, stride = 2,
                      pad = SamePad())
+    # building inverted residual blocks
     blocks = []
     for (n, k, s, e, i, o) in block_configs
         inchannels = _round_channels(scalew(i), 8)
+        explanes = _round_channels(inchannels * e, 8)
         outplanes = _round_channels(scalew(o), 8)
         repeats = scaled(n)
         push!(blocks,
-              invertedresidual((k, k), inchannels, outplanes, swish; expansion = e,
-                               stride = s, reduction = 4))
+              mbconv((k, k), inchannels, explanes, outplanes, swish;
+                     stride = s, reduction = 4))
         for _ in 1:(repeats - 1)
             push!(blocks,
-                  invertedresidual((k, k), outplanes, outplanes, swish; expansion = e,
-                                   stride = 1, reduction = 4))
+                  mbconv((k, k), outplanes, explanes, outplanes, swish;
+                         stride = 1, reduction = 4))
         end
     end
-    headplanes = _round_channels(max_width, 8)
+    # building last layers
+    headplanes = outplanes * 4
     append!(blocks,
             conv_norm((1, 1), outplanes, headplanes, swish; bias = false, pad = SamePad()))
     return Chain(Chain(stem..., blocks...), create_classifier(headplanes, nclasses))

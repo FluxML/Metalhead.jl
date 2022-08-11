@@ -37,8 +37,8 @@ function mobilenetv2(configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
         outplanes = _round_channels(c * width_mult, divisor)
         for i in 1:n
             push!(layers,
-                  invertedresidual((3, 3), inplanes, outplanes, a; expansion = t,
-                                   stride = i == 1 ? s : 1))
+                  mbconv((3, 3), inplanes, round(Int, inplanes * t), outplanes, a;
+                         stride = i == 1 ? s : 1))
             inplanes = outplanes
         end
     end
