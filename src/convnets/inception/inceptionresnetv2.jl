@@ -34,8 +34,8 @@ end
 function block17(scale = 1.0f0)
     branch1 = Chain(conv_norm((1, 1), 1088, 192)...)
     branch2 = Chain(conv_norm((1, 1), 1088, 128)...,
-                    conv_norm((1, 7), 128, 160; pad = (0, 3))...,
-                    conv_norm((7, 1), 160, 192; pad = (3, 0))...)
+                    conv_norm((7, 1), 128, 160; pad = (3, 0))...,
+                    conv_norm((1, 7), 160, 192; pad = (0, 3))...)
     branch3 = Chain(conv_norm((1, 1), 384, 1088)...)
     return SkipConnection(Chain(Parallel(cat_channels, branch1, branch2),
                                 branch3, inputscale(scale; activation = relu)), +)
@@ -56,8 +56,8 @@ end
 function block8(scale = 1.0f0; activation = identity)
     branch1 = Chain(conv_norm((1, 1), 2080, 192)...)
     branch2 = Chain(conv_norm((1, 1), 2080, 192)...,
-                    conv_norm((1, 3), 192, 224; pad = (0, 1))...,
-                    conv_norm((3, 1), 224, 256; pad = (1, 0))...)
+                    conv_norm((3, 1), 192, 224; pad = (1, 0))...,
+                    conv_norm((1, 3), 224, 256; pad = (0, 1))...)
     branch3 = Chain(conv_norm((1, 1), 448, 2080)...)
     return SkipConnection(Chain(Parallel(cat_channels, branch1, branch2),
                                 branch3, inputscale(scale; activation)), +)

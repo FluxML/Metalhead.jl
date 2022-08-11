@@ -35,8 +35,8 @@ function xception_block(inchannels::Integer, outchannels::Integer, nrepeats::Int
         end
         push!(layers, relu)
         append!(layers,
-                depthwise_sep_conv_norm((3, 3), inc, outc; pad = 1, bias = false,
-                                        use_norm = (false, false)))
+                dwsep_conv_bn((3, 3), inc, outc; pad = 1, bias = false,
+                              use_norm = (false, false)))
         push!(layers, BatchNorm(outc))
     end
     layers = start_with_relu ? layers : layers[2:end]
@@ -64,8 +64,8 @@ function xception(; dropout_rate = 0.0, inchannels::Integer = 3, nclasses::Integ
                      xception_block(256, 728, 2; stride = 2),
                      [xception_block(728, 728, 3) for _ in 1:8]...,
                      xception_block(728, 1024, 2; stride = 2, grow_at_start = false),
-                     depthwise_sep_conv_norm((3, 3), 1024, 1536; pad = 1)...,
-                     depthwise_sep_conv_norm((3, 3), 1536, 2048; pad = 1)...)
+                     dwsep_conv_bn((3, 3), 1024, 1536; pad = 1)...,
+                     dwsep_conv_bn((3, 3), 1536, 2048; pad = 1)...)
     return Chain(backbone, create_classifier(2048, nclasses; dropout_rate))
 end
 

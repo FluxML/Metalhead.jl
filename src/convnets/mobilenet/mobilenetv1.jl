@@ -22,16 +22,16 @@ Create a MobileNetv1 model ([reference](https://arxiv.org/abs/1704.04861v1)).
 function mobilenetv1(width_mult::Real, config::AbstractVector{<:Tuple}; activation = relu,
                      inchannels::Integer = 3, nclasses::Integer = 1000)
     layers = []
-    for (dw, outch, stride, nrepeats) in config
-        outch = floor(Int, outch * width_mult)
+    for (dw, outchannels, stride, nrepeats) in config
+        outchannels = floor(Int, outchannels * width_mult)
         for _ in 1:nrepeats
             layer = dw ?
-                    depthwise_sep_conv_norm((3, 3), inchannels, outch, activation;
-                                            stride = stride, pad = 1, bias = false) :
-                    conv_norm((3, 3), inchannels, outch, activation; stride, pad = 1,
+                    dwsep_conv_bn((3, 3), inchannels, outchannels, activation;
+                                  stride, pad = 1, bias = false) :
+                    conv_norm((3, 3), inchannels, outchannels, activation; stride, pad = 1,
                               bias = false)
             append!(layers, layer)
-            inchannels = outch
+            inchannels = outchannels
         end
     end
     return Chain(Chain(layers...), create_classifier(inchannels, nclasses))

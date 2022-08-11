@@ -1,5 +1,5 @@
 """
-    efficientnetv2(config::AbstractVector{NTuple{5, Int}}; max_width::Integer = 1792,
+    efficientnetv2(config::AbstractVector{<:Tuple}; max_width::Integer = 1792,
                    width_mult::Real = 1.0, inchannels::Integer = 3,
                    nclasses::Integer = 1000)
 
@@ -14,16 +14,15 @@ Create an EfficientNetv2 model ([reference](https://arxiv.org/abs/2104.00298)).
       + `c`: output channels of the block (will be scaled by width_mult)
       + `n`: number of block repetitions
       + `s`: kernel stride in the block except the first block of each stage
-      + `se`: whether to use a `squeeze_excite` layer in the block or not
+      + `r`: reduction factor of the squeeze-excite layer
 
-  - `max_width`: maximum number of output channels before the fully connected
-    classification blocks
+  - `max_width`: The maximum number of feature maps in any layer of the network
   - `width_mult`: Controls the number of output feature maps in each block
     (with 1 being the default in the paper)
   - `inchannels`: number of input channels
   - `nclasses`: number of output classes
 """
-function efficientnetv2(config::AbstractVector{NTuple{5, Int}}; max_width::Integer = 1792,
+function efficientnetv2(config::AbstractVector{<:Tuple}; max_width::Integer = 1792,
                         width_mult::Real = 1.0, inchannels::Integer = 3,
                         nclasses::Integer = 1000)
     # building first layer
@@ -33,13 +32,12 @@ function efficientnetv2(config::AbstractVector{NTuple{5, Int}}; max_width::Integ
             conv_norm((3, 3), inchannels, inplanes, swish; pad = 1, stride = 2,
                       bias = false))
     # building inverted residual blocks
-    for (t, c, n, s, se) in config
+    for (t, c, n, s, reduction) in config
         outplanes = _round_channels(c * width_mult, 8)
         for i in 1:n
             push!(layers,
                   invertedresidual((3, 3), inplanes, outplanes, swish; expansion = t,
-                                   stride = i == 1 ? s : 1,
-                                   reduction = se == 1 ? 4 : nothing))
+                                   stride = i == 1 ? s : 1, reduction))
             inplanes = outplanes
         end
     end
@@ -50,43 +48,38 @@ function efficientnetv2(config::AbstractVector{NTuple{5, Int}}; max_width::Integ
     return Chain(Chain(layers...), create_classifier(outplanes, nclasses))
 end
 
-# config dict of inverted residual blocks for EfficientNetv2
-# t: expansion factor of the block
-# c: output channels of the block (will be scaled by width_mult)
-# n: number of block repetitions
-# s: kernel stride in the block except the first block of each stage
-# se: whether to use a `squeeze_excite` layer in the block or not
-const EFFNETV2_CONFIGS = Dict(:small => [# t, c, n, s, SE
-                                  (1, 24, 2, 1, 0),
-                                  (4, 48, 4, 2, 0),
-                                  (4, 64, 4, 2, 0),
-                                  (4, 128, 6, 2, 1),
-                                  (6, 160, 9, 1, 1),
-                                  (6, 256, 15, 2, 1)],
-                              :medium => [# t, c, n, s, SE
-                                  (1, 24, 3, 1, 0),
-                                  (4, 48, 5, 2, 0),
-                                  (4, 80, 5, 2, 0),
-                                  (4, 160, 7, 2, 1),
-                                  (6, 176, 14, 1, 1),
-                                  (6, 304, 18, 2, 1),
-                                  (6, 512, 5, 1, 1)],
-                              :large => [# t, c, n, s, SE
-                                  (1, 32, 4, 1, 0),
-                                  (4, 64, 8, 2, 0),
-                                  (4, 96, 8, 2, 0),
-                                  (4, 192, 16, 2, 1),
-                                  (6, 256, 24, 1, 1),
-                                  (6, 512, 32, 2, 1),
-                                  (6, 640, 8, 1, 1)],
-                              :xlarge => [# t, c, n, s, SE
-                                  (1, 32, 4, 1, 0),
-                                  (4, 64, 8, 2, 0),
-                                  (4, 96, 8, 2, 0),
-                                  (4, 192, 16, 2, 1),
-                                  (6, 256, 24, 1, 1),
-                                  (6, 512, 32, 2, 1),
-                                  (6, 640, 8, 1, 1)])
+# block configs for EfficientNetv2
+const EFFNETV2_CONFIGS = Dict(:small => [# t, c, n, s, r
+                                  (1, 24, 2, 1, nothing),
+                                  (4, 48, 4, 2, nothing),
+                                  (4, 64, 4, 2, nothing),
+                                  (4, 128, 6, 2, 4),
+                                  (6, 160, 9, 1, 4),
+                                  (6, 256, 15, 2, 4)],
+                              :medium => [# t, c, n, s, r
+                                  (1, 24, 3, 1, nothing),
+                                  (4, 48, 5, 2, nothing),
+                                  (4, 80, 5, 2, nothing),
+                                  (4, 160, 7, 2, 4),
+                                  (6, 176, 14, 1, 4),
+                                  (6, 304, 18, 2, 4),
+                                  (6, 512, 5, 1, 4)],
+                              :large => [# t, c, n, s, r
+                                  (1, 32, 4, 1, nothing),
+                                  (4, 64, 8, 2, nothing),
+                                  (4, 96, 8, 2, nothing),
+                                  (4, 192, 16, 2, 4),
+                                  (6, 256, 24, 1, 4),
+                                  (6, 512, 32, 2, 4),
+                                  (6, 640, 8, 1, 4)],
+                              :xlarge => [# t, c, n, s, r
+                                  (1, 32, 4, 1, nothing),
+                                  (4, 64, 8, 2, nothing),
+                                  (4, 96, 8, 2, nothing),
+                                  (4, 192, 16, 2, 4),
+                                  (6, 256, 24, 1, 4),
+                                  (6, 512, 32, 2, 4),
+                                  (6, 640, 8, 1, 4)])
 
 """
     EfficientNetv2(config::Symbol; pretrain::Bool = false, width_mult::Real = 1,

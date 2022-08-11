@@ -1,7 +1,7 @@
 """
     mobilenetv2(configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
-                max_width::Integer = 1280, inchannels::Integer = 3,
-                nclasses::Integer = 1000)
+                max_width::Integer = 1280, divisor::Integer = 8, dropout_rate = 0.2,
+                inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Create a MobileNetv2 model.
 ([reference](https://arxiv.org/abs/1801.04381)).
@@ -18,14 +18,15 @@ Create a MobileNetv2 model.
 
   - `width_mult`: Controls the number of output feature maps in each block
     (with 1 being the default in the paper)
-  - `inchannels`: The number of input channels.
   - `max_width`: The maximum number of feature maps in any layer of the network
+  - `divisor`: The divisor used to round the number of feature maps in each block
+  - `dropout_rate`: rate of dropout in the classifier head
+  - `inchannels`: The number of input channels.
   - `nclasses`: The number of output classes
 """
 function mobilenetv2(configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
-                     max_width::Integer = 1280, inchannels::Integer = 3,
-                     nclasses::Integer = 1000)
-    divisor = width_mult == 0.1 ? 4 : 8
+                     max_width::Integer = 1280, divisor::Integer = 8, dropout_rate = 0.2,
+                     inchannels::Integer = 3, nclasses::Integer = 1000)
     # building first layer
     inplanes = _round_channels(32 * width_mult, divisor)
     layers = []
@@ -42,10 +43,9 @@ function mobilenetv2(configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
         end
     end
     # building last layers
-    outplanes = width_mult > 1 ? _round_channels(max_width * width_mult, divisor) :
-                max_width
+    outplanes = _round_channels(max_width * max(1, width_mult), divisor)
     append!(layers, conv_norm((1, 1), inplanes, outplanes, relu6; bias = false))
-    return Chain(Chain(layers...), create_classifier(outplanes, nclasses))
+    return Chain(Chain(layers...), create_classifier(outplanes, nclasses; dropout_rate))
 end
 
 # Layer configurations for MobileNetv2
