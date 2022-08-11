@@ -177,6 +177,20 @@ end
     end
 end
 
+@testset "EfficientNetv2" begin
+    @testset for config in [:small, :medium, :large, :xlarge]
+        m = EfficientNetv2(config)
+        @test size(m(x_224)) == (1000, 1)
+        if (EfficientNetv2, config) in PRETRAINED_MODELS
+            @test acctest(EfficientNetv2(config, pretrain = true))
+        else
+            @test_throws ArgumentError EfficientNetv2(config, pretrain = true)
+        end
+        @test gradtest(m, x_224)
+        _gc()
+    end
+end
+
 @testset "GoogLeNet" begin
     m = GoogLeNet()
     @test size(m(x_224)) == (1000, 1)
