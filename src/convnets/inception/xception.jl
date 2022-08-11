@@ -8,7 +8,7 @@ Create an Xception block.
 
 # Arguments
 
-  - `inchannels`: The number of channels in the input.
+  - `inchannels`: number of input channels
   - `outchannels`: number of output channels.
   - `nrepeats`: number of repeats of depthwise separable convolution layers.
   - `stride`: stride by which to downsample the input.

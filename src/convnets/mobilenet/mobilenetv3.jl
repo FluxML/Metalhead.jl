@@ -18,7 +18,7 @@ Create a MobileNetv3 model.
       + `a` - The activation function used in the bottleneck (typically `hardswish` or `relu`)
 
   - `width_mult`: Controls the number of output feature maps in each block
-    (with 1.0 being the default in the paper; this is usually a value between 0.1 and 1.4.)
+    (with 1 being the default in the paper; this is usually a value between 0.1 and 1.4.)
   - `inchannels`: The number of input channels.
   - `max_width`: The maximum number of feature maps in any layer of the network
   - `nclasses`: the number of output classes
@@ -45,7 +45,7 @@ function mobilenetv3(configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
     end
     # building last layers
     headplanes = width_mult > 1.0 ? _round_channels(max_width * width_mult, 8) :
-                     max_width
+                 max_width
     append!(layers, conv_norm((1, 1), inplanes, explanes, hardswish; bias = false))
     classifier = Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten,
                        Dense(explanes, headplanes, hardswish),
@@ -100,10 +100,10 @@ Set `pretrain = true` to load the model with pre-trained weights for ImageNet.
 
   - `config`: :small or :large for the size of the model (see paper).
   - `width_mult`: Controls the number of output feature maps in each block
-    (with 1.0 being the default in the paper;
+    (with 1 being the default in the paper;
     this is usually a value between 0.1 and 1.4)
   - `pretrain`: whether to load the pre-trained weights for ImageNet
-  - `inchannels`: The number of channels in the input.
+  - `inchannels`: number of input channels
   - `nclasses`: the number of output classes
 
 See also [`Metalhead.mobilenetv3`](#).

@@ -7,7 +7,7 @@ Create a MobileNetv1 model ([reference](https://arxiv.org/abs/1704.04861v1)).
 # Arguments
 
   - `width_mult`: Controls the number of output feature maps in each block
-    (with 1.0 being the default in the paper)
+    (with 1 being the default in the paper)
 
   - `configs`: A "list of tuples" configuration for each layer that details:
     
@@ -63,7 +63,7 @@ Set `pretrain` to `true` to load the pretrained weights for ImageNet.
 # Arguments
 
   - `width_mult`: Controls the number of output feature maps in each block
-    (with 1.0 being the default in the paper;
+    (with 1 being the default in the paper;
     this is usually a value between 0.1 and 1.4)
   - `inchannels`: The number of input channels.
   - `pretrain`: Whether to load the pre-trained weights for ImageNet

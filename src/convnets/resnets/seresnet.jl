@@ -22,8 +22,6 @@ struct SEResNet
 end
 @functor SEResNet
 
-(m::SEResNet)(x) = m.layers(x)
-
 function SEResNet(depth::Integer; pretrain::Bool = false, inchannels::Integer = 3,
                   nclasses::Integer = 1000)
     _checkconfig(depth, keys(RESNET_CONFIGS))
@@ -34,6 +32,8 @@ function SEResNet(depth::Integer; pretrain::Bool = false, inchannels::Integer = 
     end
     return SEResNet(layers)
 end
+
+(m::SEResNet)(x) = m.layers(x)
 
 backbone(m::SEResNet) = m.layers[1]
 classifier(m::SEResNet) = m.layers[2]
@@ -65,18 +65,20 @@ struct SEResNeXt
 end
 @functor SEResNeXt
 
-(m::SEResNeXt)(x) = m.layers(x)
-
 function SEResNeXt(depth::Integer; pretrain::Bool = false, cardinality::Integer = 32,
-                   base_width::Integer = 4, inchannels::Integer = 3, nclasses::Integer = 1000)
+                   base_width::Integer = 4, inchannels::Integer = 3,
+                   nclasses::Integer = 1000)
     _checkconfig(depth, keys(LRESNET_CONFIGS))
-    layers = resnet(LRESNET_CONFIGS[depth]...; inchannels, nclasses, cardinality, base_width,
+    layers = resnet(LRESNET_CONFIGS[depth]...; inchannels, nclasses, cardinality,
+                    base_width,
                     attn_fn = squeeze_excite)
     if pretrain
         loadpretrain!(layers, string("seresnext", depth, "_", cardinality, "x", base_width))
     end
     return SEResNeXt(layers)
 end
+
+(m::SEResNeXt)(x) = m.layers(x)
 
 backbone(m::SEResNeXt) = m.layers[1]
 classifier(m::SEResNeXt) = m.layers[2]

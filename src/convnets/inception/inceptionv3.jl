@@ -133,7 +133,8 @@ Create an Inception-v3 model ([reference](https://arxiv.org/abs/1512.00567v3)).
 
   - `nclasses`: the number of output classes
 """
-function inceptionv3(; dropout_rate = 0.2, inchannels::Integer = 3, nclasses::Integer = 1000)
+function inceptionv3(; dropout_rate = 0.2, inchannels::Integer = 3,
+                     nclasses::Integer = 1000)
     backbone = Chain(conv_norm((3, 3), inchannels, 32; stride = 2)...,
                      conv_norm((3, 3), 32, 32)...,
                      conv_norm((3, 3), 32, 64; pad = 1)...,

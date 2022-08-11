@@ -12,7 +12,7 @@ Creates a basic residual block (see [reference](https://arxiv.org/abs/1512.03385
   - `inplanes`: number of input feature maps
   - `planes`: number of feature maps for the block
   - `stride`: the stride of the block
-  - `reduction_factor`: the factor by which the input feature maps are reduced before 
+  - `reduction_factor`: the factor by which the input feature maps are reduced before
     the first convolution.
   - `activation`: the activation function to use.
   - `norm_layer`: the normalization layer to use.
@@ -117,9 +117,9 @@ end
 
 # Shortcut configurations for the ResNet models
 const RESNET_SHORTCUTS = Dict(:A => (downsample_identity, downsample_identity),
-                           :B => (downsample_conv, downsample_identity),
-                           :C => (downsample_conv, downsample_conv),
-                           :D => (downsample_pool, downsample_identity))
+                              :B => (downsample_conv, downsample_identity),
+                              :C => (downsample_conv, downsample_conv),
+                              :D => (downsample_pool, downsample_identity))
 
 # Stride for each block in the ResNet model
 function resnet_stride(stage_idx::Integer, block_idx::Integer)
@@ -156,8 +156,8 @@ on how to use this function.
         convolution. This is an experimental variant from the `timm` library in Python that
         shows peformance improvements over the `:deep` stem in some cases.
 
-  - `inchannels`: The number of channels in the input.
-  - `replace_pool`: Set to true to replace the max pooling layers with a 3x3 convolution + 
+  - `inchannels`: number of input channels
+  - `replace_pool`: Set to true to replace the max pooling layers with a 3x3 convolution +
     normalization with a stride of two.
   - `norm_layer`: The normalisation layer used in the stem.
   - `activation`: The activation function used in the stem.
@@ -323,9 +323,9 @@ function resnet(block_type, block_repeats::AbstractVector{<:Integer},
                                         downsample_tuple = downsample_opt,
                                         kwargs...)
     elseif block_type == bottle2neck
-        @assert drop_block_rate==0.0 "DropBlock not supported for `bottle2neck`"
-        @assert drop_path_rate==0.0 "DropPath not supported for `bottle2neck`"
-        @assert reduction_factor==1 "Reduction factor not supported for `bottle2neck`"
+        @assert drop_block_rate==0.0 "DropBlock not supported for `bottle2neck`. Set `drop_block_rate` to 0.0"
+        @assert drop_path_rate==0.0 "DropPath not supported for `bottle2neck`. Set `drop_path_rate` to 0.0"
+        @assert reduction_factor==1 "Reduction factor not supported for `bottle2neck`. Set `reduction_factor` to 1"
         get_layers = bottle2neck_builder(block_repeats; inplanes, cardinality, base_width,
                                          activation, norm_layer, revnorm, attn_fn,
                                          stride_fn = resnet_stride,
