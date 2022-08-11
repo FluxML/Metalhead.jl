@@ -122,8 +122,10 @@ Create a basic inverted residual block for MobileNet variants
 
   - `kernel_size`: kernel size of the convolutional layers
   - `inplanes`: number of input feature maps
-  - `hidden_planes`: The number of feature maps in the hidden layer. Alternatively, 
-    specify the keyword argument `expansion`, which calculates 
+  - `hidden_planes`: The number of feature maps in the hidden layer. Alternatively,
+    specify the keyword argument `expansion`, which calculates the number of feature
+    maps in the hidden layer from the number of input feature maps as:
+    `hidden_planes = inplanes * expansion`
   - `outplanes`: The number of output feature maps
   - `activation`: The activation function for the first two convolution layer
   - `stride`: The stride of the convolutional kernel, has to be either 1 or 2

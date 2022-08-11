@@ -46,7 +46,7 @@ The number of channels in outer 1x1 convolutions is the same.
   - `depth`: one of `[18, 34, 50, 101, 152]`. The depth of the Wide ResNet model.
   - `pretrain`: set to `true` to load the model with pre-trained weights for ImageNet
   - `inchannels`: The number of input channels.
-  - `nclasses`: the number of output classes
+  - `nclasses`: The number of output classes
 
 Advanced users who want more configuration options will be better served by using [`resnet`](#).
 """

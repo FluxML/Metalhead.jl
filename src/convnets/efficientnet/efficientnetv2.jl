@@ -1,3 +1,28 @@
+"""
+    efficientnetv2(config::AbstractVector{NTuple{5, Int}}; max_width::Integer = 1792,
+                   width_mult::Real = 1.0, inchannels::Integer = 3,
+                   nclasses::Integer = 1000)
+
+Create an EfficientNetv2 model ([reference](https://arxiv.org/abs/2104.00298)).
+
+# Arguments
+
+  - `config`: configuration for each inverted residual block,
+    given as a vector of tuples with elements:
+    
+      + `t`: expansion factor of the block
+      + `c`: output channels of the block (will be scaled by width_mult)
+      + `n`: number of block repetitions
+      + `s`: kernel stride in the block except the first block of each stage
+      + `se`: whether to use a `squeeze_excite` layer in the block or not
+
+  - `max_width`: maximum number of output channels before the fully connected
+    classification blocks
+  - `width_mult`: Controls the number of output feature maps in each block
+    (with 1 being the default in the paper)
+  - `inchannels`: number of input channels
+  - `nclasses`: number of output classes
+"""
 function efficientnetv2(config::AbstractVector{NTuple{5, Int}}; max_width::Integer = 1792,
                         width_mult::Real = 1.0, inchannels::Integer = 3,
                         nclasses::Integer = 1000)
@@ -8,13 +33,13 @@ function efficientnetv2(config::AbstractVector{NTuple{5, Int}}; max_width::Integ
             conv_norm((3, 3), inchannels, inplanes, swish; pad = 1, stride = 2,
                       bias = false))
     # building inverted residual blocks
-    for (t, c, n, s, r) in config
+    for (t, c, n, s, se) in config
         outplanes = _round_channels(c * width_mult, 8)
         for i in 1:n
             push!(layers,
                   invertedresidual((3, 3), inplanes, outplanes, swish; expansion = t,
                                    stride = i == 1 ? s : 1,
-                                   reduction = r == 1 ? 4 : nothing))
+                                   reduction = se == 1 ? 4 : nothing))
             inplanes = outplanes
         end
     end
@@ -25,6 +50,12 @@ function efficientnetv2(config::AbstractVector{NTuple{5, Int}}; max_width::Integ
     return Chain(Chain(layers...), create_classifier(outplanes, nclasses))
 end
 
+# config dict of inverted residual blocks for EfficientNetv2
+# t: expansion factor of the block
+# c: output channels of the block (will be scaled by width_mult)
+# n: number of block repetitions
+# s: kernel stride in the block except the first block of each stage
+# se: whether to use a `squeeze_excite` layer in the block or not
 const EFFNETV2_CONFIGS = Dict(:small => [# t, c, n, s, SE
                                   (1, 24, 2, 1, 0),
                                   (4, 48, 4, 2, 0),
@@ -57,6 +88,21 @@ const EFFNETV2_CONFIGS = Dict(:small => [# t, c, n, s, SE
                                   (6, 512, 32, 2, 1),
                                   (6, 640, 8, 1, 1)])
 
+"""
+    EfficientNetv2(config::Symbol; pretrain::Bool = false, width_mult::Real = 1,
+                   inchannels::Integer = 3, nclasses::Integer = 1000)
+
+Create an EfficientNetv2 model ([reference](https://arxiv.org/abs/2104.00298)).
+
+# Arguments
+
+  - `config`: size of the network (one of `[:small, :medium, :large, :xlarge]`)
+  - `pretrain`: whether to load the pre-trained weights for ImageNet
+  - `width_mult`: Controls the number of output feature maps in each block (with 1
+    being the default in the paper)
+  - `inchannels`: number of input channels
+  - `nclasses`: number of output classes
+"""
 struct EfficientNetv2
     layers::Any
 end

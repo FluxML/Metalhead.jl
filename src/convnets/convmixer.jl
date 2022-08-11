@@ -13,7 +13,7 @@ Creates a ConvMixer model.
   - `kernel_size`: kernel size of the convolutional layers
   - `patch_size`: size of the patches
   - `activation`: activation function used after the convolutional layers
-  - `inchannels`: The number of channels in the input.
+  - `inchannels`: number of input channels
   - `nclasses`: number of classes in the output
 """
 function convmixer(planes::Integer, depth::Integer; kernel_size = (9, 9),
@@ -48,7 +48,7 @@ Creates a ConvMixer model.
 # Arguments
 
   - `config`: the size of the model, either `:base`, `:small` or `:large`
-  - `inchannels`: The number of channels in the input.
+  - `inchannels`: number of input channels
   - `nclasses`: number of classes in the output
 """
 struct ConvMixer

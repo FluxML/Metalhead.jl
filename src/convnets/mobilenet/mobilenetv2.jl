@@ -17,7 +17,7 @@ Create a MobileNetv2 model.
       + `a`: The activation function used in the bottleneck layer
 
   - `width_mult`: Controls the number of output feature maps in each block
-    (with 1.0 being the default in the paper)
+    (with 1 being the default in the paper)
   - `inchannels`: The number of input channels.
   - `max_width`: The maximum number of feature maps in any layer of the network
   - `nclasses`: The number of output classes
@@ -71,7 +71,7 @@ Set `pretrain` to `true` to load the pretrained weights for ImageNet.
 # Arguments
 
   - `width_mult`: Controls the number of output feature maps in each block
-    (with 1.0 being the default in the paper;
+    (with 1 being the default in the paper;
     this is usually a value between 0.1 and 1.4)
   - `pretrain`: Whether to load the pre-trained weights for ImageNet
   - `inchannels`: The number of input channels.
