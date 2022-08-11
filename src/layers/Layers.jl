@@ -11,13 +11,15 @@ using MLUtils
 using PartialFunctions
 using Random
 
+import Flux.testmode!
+
 include("../utilities.jl")
 
 include("attention.jl")
 export MHAttention
 
 include("conv.jl")
-export conv_norm, depthwise_sep_conv_norm, invertedresidual
+export conv_norm, basic_conv_bn, dwsep_conv_bn, invertedresidual
 
 include("drop.jl")
 export DropBlock, DropPath

@@ -10,14 +10,14 @@ Create an Inception-v3 style-A module
   - `pool_proj`: the number of output feature maps for the pooling projection
 """
 function inceptionv3_a(inplanes, pool_proj)
-    branch1x1 = Chain(conv_norm((1, 1), inplanes, 64))
-    branch5x5 = Chain(conv_norm((1, 1), inplanes, 48)...,
-                      conv_norm((5, 5), 48, 64; pad = 2)...)
-    branch3x3 = Chain(conv_norm((1, 1), inplanes, 64)...,
-                      conv_norm((3, 3), 64, 96; pad = 1)...,
-                      conv_norm((3, 3), 96, 96; pad = 1)...)
+    branch1x1 = Chain(basic_conv_bn((1, 1), inplanes, 64)...)
+    branch5x5 = Chain(basic_conv_bn((1, 1), inplanes, 48)...,
+                      basic_conv_bn((5, 5), 48, 64; pad = 2)...)
+    branch3x3 = Chain(basic_conv_bn((1, 1), inplanes, 64)...,
+                      basic_conv_bn((3, 3), 64, 96; pad = 1)...,
+                      basic_conv_bn((3, 3), 96, 96; pad = 1)...)
     branch_pool = Chain(MeanPool((3, 3); pad = 1, stride = 1),
-                        conv_norm((1, 1), inplanes, pool_proj)...)
+                        basic_conv_bn((1, 1), inplanes, pool_proj)...)
     return Parallel(cat_channels,
                     branch1x1, branch5x5, branch3x3, branch_pool)
 end
@@ -33,10 +33,10 @@ Create an Inception-v3 style-B module
   - `inplanes`: number of input feature maps
 """
 function inceptionv3_b(inplanes)
-    branch3x3_1 = Chain(conv_norm((3, 3), inplanes, 384; stride = 2))
-    branch3x3_2 = Chain(conv_norm((1, 1), inplanes, 64)...,
-                        conv_norm((3, 3), 64, 96; pad = 1)...,
-                        conv_norm((3, 3), 96, 96; stride = 2)...)
+    branch3x3_1 = Chain(basic_conv_bn((3, 3), inplanes, 384; stride = 2)...)
+    branch3x3_2 = Chain(basic_conv_bn((1, 1), inplanes, 64)...,
+                        basic_conv_bn((3, 3), 64, 96; pad = 1)...,
+                        basic_conv_bn((3, 3), 96, 96; stride = 2)...)
     branch_pool = MaxPool((3, 3); stride = 2)
     return Parallel(cat_channels,
                     branch3x3_1, branch3x3_2, branch_pool)
@@ -55,17 +55,17 @@ Create an Inception-v3 style-C module
   - `n`: the "grid size" (kernel size) for the convolution layers
 """
 function inceptionv3_c(inplanes, inner_planes, n = 7)
-    branch1x1 = Chain(conv_norm((1, 1), inplanes, 192))
-    branch7x7_1 = Chain(conv_norm((1, 1), inplanes, inner_planes)...,
-                        conv_norm((1, n), inner_planes, inner_planes; pad = (0, 3))...,
-                        conv_norm((n, 1), inner_planes, 192; pad = (3, 0))...)
-    branch7x7_2 = Chain(conv_norm((1, 1), inplanes, inner_planes)...,
-                        conv_norm((n, 1), inner_planes, inner_planes; pad = (3, 0))...,
-                        conv_norm((1, n), inner_planes, inner_planes; pad = (0, 3))...,
-                        conv_norm((n, 1), inner_planes, inner_planes; pad = (3, 0))...,
-                        conv_norm((1, n), inner_planes, 192; pad = (0, 3))...)
+    branch1x1 = Chain(basic_conv_bn((1, 1), inplanes, 192)...)
+    branch7x7_1 = Chain(basic_conv_bn((1, 1), inplanes, inner_planes)...,
+                        basic_conv_bn((n, 1), inner_planes, inner_planes; pad = (3, 0))...,
+                        basic_conv_bn((1, n), inner_planes, 192; pad = (0, 3))...)
+    branch7x7_2 = Chain(basic_conv_bn((1, 1), inplanes, inner_planes)...,
+                        basic_conv_bn((1, n), inner_planes, inner_planes; pad = (0, 3))...,
+                        basic_conv_bn((n, 1), inner_planes, inner_planes; pad = (3, 0))...,
+                        basic_conv_bn((1, n), inner_planes, inner_planes; pad = (0, 3))...,
+                        basic_conv_bn((n, 1), inner_planes, 192; pad = (3, 0))...)
     branch_pool = Chain(MeanPool((3, 3); pad = 1, stride = 1),
-                        conv_norm((1, 1), inplanes, 192)...)
+                        basic_conv_bn((1, 1), inplanes, 192)...)
     return Parallel(cat_channels,
                     branch1x1, branch7x7_1, branch7x7_2, branch_pool)
 end
@@ -81,12 +81,12 @@ Create an Inception-v3 style-D module
   - `inplanes`: number of input feature maps
 """
 function inceptionv3_d(inplanes)
-    branch3x3 = Chain(conv_norm((1, 1), inplanes, 192)...,
-                      conv_norm((3, 3), 192, 320; stride = 2)...)
-    branch7x7x3 = Chain(conv_norm((1, 1), inplanes, 192)...,
-                        conv_norm((1, 7), 192, 192; pad = (0, 3))...,
-                        conv_norm((7, 1), 192, 192; pad = (3, 0))...,
-                        conv_norm((3, 3), 192, 192; stride = 2)...)
+    branch3x3 = Chain(basic_conv_bn((1, 1), inplanes, 192)...,
+                      basic_conv_bn((3, 3), 192, 320; stride = 2)...)
+    branch7x7x3 = Chain(basic_conv_bn((1, 1), inplanes, 192)...,
+                        basic_conv_bn((7, 1), 192, 192; pad = (3, 0))...,
+                        basic_conv_bn((1, 7), 192, 192; pad = (0, 3))...,
+                        basic_conv_bn((3, 3), 192, 192; stride = 2)...)
     branch_pool = MaxPool((3, 3); stride = 2)
     return Parallel(cat_channels,
                     branch3x3, branch7x7x3, branch_pool)
@@ -103,16 +103,16 @@ Create an Inception-v3 style-E module
   - `inplanes`: number of input feature maps
 """
 function inceptionv3_e(inplanes)
-    branch1x1 = Chain(conv_norm((1, 1), inplanes, 320))
-    branch3x3_1 = Chain(conv_norm((1, 1), inplanes, 384))
-    branch3x3_1a = Chain(conv_norm((1, 3), 384, 384; pad = (0, 1)))
-    branch3x3_1b = Chain(conv_norm((3, 1), 384, 384; pad = (1, 0)))
-    branch3x3_2 = Chain(conv_norm((1, 1), inplanes, 448)...,
-                        conv_norm((3, 3), 448, 384; pad = 1)...)
-    branch3x3_2a = Chain(conv_norm((1, 3), 384, 384; pad = (0, 1)))
-    branch3x3_2b = Chain(conv_norm((3, 1), 384, 384; pad = (1, 0)))
+    branch1x1 = Chain(basic_conv_bn((1, 1), inplanes, 320)...)
+    branch3x3_1 = Chain(basic_conv_bn((1, 1), inplanes, 384)...)
+    branch3x3_1a = Chain(basic_conv_bn((3, 1), 384, 384; pad = (1, 0))...)
+    branch3x3_1b = Chain(basic_conv_bn((1, 3), 384, 384; pad = (0, 1))...)
+    branch3x3_2 = Chain(basic_conv_bn((1, 1), inplanes, 448)...,
+                        basic_conv_bn((3, 3), 448, 384; pad = 1)...)
+    branch3x3_2a = Chain(basic_conv_bn((3, 1), 384, 384; pad = (1, 0))...)
+    branch3x3_2b = Chain(basic_conv_bn((1, 3), 384, 384; pad = (0, 1))...)
     branch_pool = Chain(MeanPool((3, 3); pad = 1, stride = 1),
-                        conv_norm((1, 1), inplanes, 192)...)
+                        basic_conv_bn((1, 1), inplanes, 192)...)
     return Parallel(cat_channels,
                     branch1x1,
                     Chain(branch3x3_1,
@@ -135,12 +135,12 @@ Create an Inception-v3 model ([reference](https://arxiv.org/abs/1512.00567v3)).
 """
 function inceptionv3(; dropout_rate = 0.2, inchannels::Integer = 3,
                      nclasses::Integer = 1000)
-    backbone = Chain(conv_norm((3, 3), inchannels, 32; stride = 2)...,
-                     conv_norm((3, 3), 32, 32)...,
-                     conv_norm((3, 3), 32, 64; pad = 1)...,
+    backbone = Chain(basic_conv_bn((3, 3), inchannels, 32; stride = 2)...,
+                     basic_conv_bn((3, 3), 32, 32)...,
+                     basic_conv_bn((3, 3), 32, 64; pad = 1)...,
                      MaxPool((3, 3); stride = 2),
-                     conv_norm((1, 1), 64, 80)...,
-                     conv_norm((3, 3), 80, 192)...,
+                     basic_conv_bn((1, 1), 64, 80)...,
+                     basic_conv_bn((3, 3), 80, 192)...,
                      MaxPool((3, 3); stride = 2),
                      inceptionv3_a(192, 32),
                      inceptionv3_a(256, 64),

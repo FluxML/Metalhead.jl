@@ -17,10 +17,9 @@ Create an EfficientNet model ([reference](https://arxiv.org/abs/1905.11946v5)).
       + `e`: expansion ratio
       + `i`: block input channels (will be scaled by global width scaling)
       + `o`: block output channels (will be scaled by global width scaling)
+  - `max_width`: The maximum number of feature maps in any layer of the network
   - `inchannels`: number of input channels
   - `nclasses`: number of output classes
-  - `max_width`: maximum number of output channels before the fully connected
-    classification blocks
 """
 function efficientnet(scalings::NTuple{2, Real},
                       block_configs::AbstractVector{NTuple{6, Int}};
@@ -52,12 +51,7 @@ function efficientnet(scalings::NTuple{2, Real},
     return Chain(Chain(stem..., blocks...), create_classifier(headplanes, nclasses))
 end
 
-# n: # of block repetitions
-# k: kernel size k x k
-# s: stride
-# e: expantion ratio
-# i: block input channels
-# o: block output channels
+# block configs for EfficientNet
 const EFFICIENTNET_BLOCK_CONFIGS = [
     # (n, k, s, e, i, o)
     (1, 3, 1, 1, 32, 16),

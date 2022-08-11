@@ -34,13 +34,13 @@ function mobilenetv3(configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
                       bias = false))
     explanes = 0
     # building inverted residual blocks
-    for (k, t, c, r, a, s) in configs
+    for (k, t, c, reduction, activation, stride) in configs
         # inverted residual layers
         outplanes = _round_channels(c * width_mult, 8)
         explanes = _round_channels(inplanes * t, 8)
         push!(layers,
-              invertedresidual((k, k), inplanes, explanes, outplanes, a;
-                               stride = s, reduction = r))
+              invertedresidual((k, k), inplanes, explanes, outplanes, activation;
+                               stride, reduction))
         inplanes = outplanes
     end
     # building last layers
@@ -56,7 +56,7 @@ end
 
 # Layer configurations for small and large models for MobileNetv3
 const MOBILENETV3_CONFIGS = Dict(:small => [
-                                     # k, t, c, SE, a, s
+                                     # k, t, c, r, a, s
                                      (3, 1, 16, 4, relu, 2),
                                      (3, 4.5, 24, nothing, relu, 2),
                                      (3, 3.67, 24, nothing, relu, 1),
@@ -70,7 +70,7 @@ const MOBILENETV3_CONFIGS = Dict(:small => [
                                      (5, 6, 96, 4, hardswish, 1),
                                  ],
                                  :large => [
-                                     # k, t, c, SE, a, s
+                                     # k, t, c, r, a, s
                                      (3, 1, 16, nothing, relu, 1),
                                      (3, 4, 24, nothing, relu, 2),
                                      (3, 3, 24, nothing, relu, 1),

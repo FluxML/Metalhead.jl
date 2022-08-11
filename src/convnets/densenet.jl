@@ -10,8 +10,8 @@ Create a Densenet bottleneck layer
   - `outplanes`: number of output feature maps on bottleneck branch
     (and scaling factor for inner feature maps; see ref)
 """
-function dense_bottleneck(inplanes::Integer, outplanes::Integer)
-    inner_channels = 4 * outplanes
+function dense_bottleneck(inplanes::Integer, outplanes::Integer; expansion::Integer = 4)
+    inner_channels = expansion * outplanes
     return SkipConnection(Chain(conv_norm((1, 1), inplanes, inner_channels; bias = false,
                                           revnorm = true)...,
                                 conv_norm((3, 3), inner_channels, outplanes; pad = 1,
