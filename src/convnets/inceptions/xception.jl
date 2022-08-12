@@ -19,8 +19,7 @@ function xception_block(inchannels::Integer, outchannels::Integer, nrepeats::Int
                         stride::Integer = 1, start_with_relu::Bool = true,
                         grow_at_start::Bool = true)
     if outchannels != inchannels || stride != 1
-        skip = conv_norm((1, 1), inchannels, outchannels, identity; stride = stride,
-                         bias = false)
+        skip = conv_norm((1, 1), inchannels, outchannels, identity; stride = stride)
     else
         skip = [identity]
     end
@@ -35,8 +34,7 @@ function xception_block(inchannels::Integer, outchannels::Integer, nrepeats::Int
         end
         push!(layers, relu)
         append!(layers,
-                dwsep_conv_bn((3, 3), inc, outc; pad = 1, bias = false,
-                              use_norm = (false, false)))
+                dwsep_conv_bn((3, 3), inc, outc; pad = 1, use_norm = (false, false)))
         push!(layers, BatchNorm(outc))
     end
     layers = start_with_relu ? layers : layers[2:end]
@@ -57,8 +55,8 @@ Creates an Xception model.
   - `nclasses`: the number of output classes.
 """
 function xception(; dropout_rate = 0.0, inchannels::Integer = 3, nclasses::Integer = 1000)
-    backbone = Chain(conv_norm((3, 3), inchannels, 32; stride = 2, bias = false)...,
-                     conv_norm((3, 3), 32, 64; bias = false)...,
+    backbone = Chain(conv_norm((3, 3), inchannels, 32; stride = 2)...,
+                     conv_norm((3, 3), 32, 64)...,
                      xception_block(64, 128, 2; stride = 2, start_with_relu = false),
                      xception_block(128, 256, 2; stride = 2),
                      xception_block(256, 728, 2; stride = 2),

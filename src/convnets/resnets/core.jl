@@ -29,9 +29,9 @@ function basicblock(inplanes::Integer, planes::Integer; stride::Integer = 1,
     first_planes = planes ÷ reduction_factor
     outplanes = planes
     conv_bn1 = conv_norm((3, 3), inplanes => first_planes, identity; norm_layer, revnorm,
-                         stride, pad = 1, bias = false)
+                         stride, pad = 1)
     conv_bn2 = conv_norm((3, 3), first_planes => outplanes, identity; norm_layer, revnorm,
-                         pad = 1, bias = false)
+                         pad = 1)
     layers = [conv_bn1..., drop_block, activation, conv_bn2..., attn_fn(outplanes),
         drop_path]
     return Chain(filter!(!=(identity), layers)...)
@@ -72,12 +72,10 @@ function bottleneck(inplanes::Integer, planes::Integer; stride::Integer,
     width = fld(planes * base_width, 64) * cardinality
     first_planes = width ÷ reduction_factor
     outplanes = planes * 4
-    conv_bn1 = conv_norm((1, 1), inplanes => first_planes, activation; norm_layer, revnorm,
-                         bias = false)
+    conv_bn1 = conv_norm((1, 1), inplanes => first_planes, activation; norm_layer, revnorm)
     conv_bn2 = conv_norm((3, 3), first_planes => width, identity; norm_layer, revnorm,
-                         stride, pad = 1, groups = cardinality, bias = false)
-    conv_bn3 = conv_norm((1, 1), width => outplanes, identity; norm_layer, revnorm,
-                         bias = false)
+                         stride, pad = 1, groups = cardinality)
+    conv_bn3 = conv_norm((1, 1), width => outplanes, identity; norm_layer, revnorm)
     layers = [conv_bn1..., conv_bn2..., drop_block, activation, conv_bn3...,
         attn_fn(outplanes), drop_path]
     return Chain(filter!(!=(identity), layers)...)
@@ -87,7 +85,7 @@ end
 function downsample_conv(inplanes::Integer, outplanes::Integer; stride::Integer = 1,
                          norm_layer = BatchNorm, revnorm::Bool = false)
     return Chain(conv_norm((1, 1), inplanes => outplanes, identity; norm_layer, revnorm,
-                           pad = SamePad(), stride, bias = false)...)
+                           pad = SamePad(), stride)...)
 end
 
 # Downsample layer using max pooling
@@ -95,8 +93,7 @@ function downsample_pool(inplanes::Integer, outplanes::Integer; stride::Integer 
                          norm_layer = BatchNorm, revnorm::Bool = false)
     pool = stride == 1 ? identity : MeanPool((2, 2); stride, pad = SamePad())
     return Chain(pool,
-                 conv_norm((1, 1), inplanes => outplanes, identity; norm_layer, revnorm,
-                           bias = false)...)
+                 conv_norm((1, 1), inplanes => outplanes, identity; norm_layer, revnorm)...)
 end
 
 # Downsample layer which is an identity projection. Uses max pooling
@@ -178,9 +175,9 @@ function resnet_stem(stem_type::Symbol = :default; inchannels::Integer = 3,
             stem_channels = (3 * (stem_width ÷ 4), stem_width)
         end
         conv1 = Chain(conv_norm((3, 3), inchannels => stem_channels[1], activation;
-                                norm_layer, revnorm, stride = 2, pad = 1, bias = false)...,
+                                norm_layer, revnorm, stride = 2, pad = 1)...,
                       conv_norm((3, 3), stem_channels[1] => stem_channels[2], activation;
-                                norm_layer, pad = 1, bias = false)...,
+                                norm_layer, pad = 1)...,
                       Conv((3, 3), stem_channels[2] => inplanes; pad = 1, bias = false))
     else
         conv1 = Conv((7, 7), inchannels => inplanes; stride = 2, pad = 3, bias = false)
@@ -189,8 +186,7 @@ function resnet_stem(stem_type::Symbol = :default; inchannels::Integer = 3,
     # Stem pooling
     stempool = replace_pool ?
                Chain(conv_norm((3, 3), inplanes => inplanes, activation; norm_layer,
-                               revnorm,
-                               stride = 2, pad = 1, bias = false)...) :
+                               revnorm, stride = 2, pad = 1)...) :
                MaxPool((3, 3); stride = 2, pad = 1)
     return Chain(conv1, bn1, stempool)
 end

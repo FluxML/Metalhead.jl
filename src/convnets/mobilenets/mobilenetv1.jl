@@ -27,9 +27,8 @@ function mobilenetv1(width_mult::Real, config::AbstractVector{<:Tuple}; activati
         for _ in 1:nrepeats
             layer = dw ?
                     dwsep_conv_bn((3, 3), inchannels, outchannels, activation;
-                                  stride, pad = 1, bias = false) :
-                    conv_norm((3, 3), inchannels, outchannels, activation; stride, pad = 1,
-                              bias = false)
+                                  stride, pad = 1) :
+                    conv_norm((3, 3), inchannels, outchannels, activation; stride, pad = 1)
             append!(layers, layer)
             inchannels = outchannels
         end
