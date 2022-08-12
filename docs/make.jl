@@ -19,10 +19,9 @@ makedocs(modules = [Metalhead, Artifacts, LazyArtifacts, Images, OneHotArrays, D
         #       analytics = "UA-36890222-9",
         #       assets = ["assets/flux.css"],
         #       prettyurls = get(ENV, "CI", nothing) == "true"),
-        # )
+        )
 
-deploydocs(
-    # repo = "github.com/FluxML/Metalhead.jl.git",
+deploydocs(repo = "github.com/Saransh-cpp/Metalhead.jl.git",
            devurl = "latest",
            versions = ["stable" => "v^", "v#.#.#", "latest" => "latest"],
            target = "build",
