@@ -30,8 +30,7 @@ function mobilenetv3(configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
     inplanes = _round_channels(16 * width_mult, 8)
     layers = []
     append!(layers,
-            conv_norm((3, 3), inchannels, inplanes, hardswish; stride = 2, pad = 1,
-                      bias = false))
+            conv_norm((3, 3), inchannels, inplanes, hardswish; stride = 2, pad = 1))
     explanes = 0
     # building inverted residual blocks
     for (k, t, c, reduction, activation, stride) in configs
@@ -46,7 +45,7 @@ function mobilenetv3(configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
     # building last layers
     headplanes = width_mult > 1.0 ? _round_channels(max_width * width_mult, 8) :
                  max_width
-    append!(layers, conv_norm((1, 1), inplanes, explanes, hardswish; bias = false))
+    append!(layers, conv_norm((1, 1), inplanes, explanes, hardswish))
     classifier = Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten,
                        Dense(explanes, headplanes, hardswish),
                        Dropout(dropout_rate),

@@ -31,7 +31,7 @@ function mobilenetv2(configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
     inplanes = _round_channels(32 * width_mult, divisor)
     layers = []
     append!(layers,
-            conv_norm((3, 3), inchannels, inplanes; bias = false, pad = 1, stride = 2))
+            conv_norm((3, 3), inchannels, inplanes; pad = 1, stride = 2))
     # building inverted residual blocks
     for (t, c, n, s, a) in configs
         outplanes = _round_channels(c * width_mult, divisor)
@@ -44,7 +44,7 @@ function mobilenetv2(configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
     end
     # building last layers
     outplanes = _round_channels(max_width * max(1, width_mult), divisor)
-    append!(layers, conv_norm((1, 1), inplanes, outplanes, relu6; bias = false))
+    append!(layers, conv_norm((1, 1), inplanes, outplanes, relu6))
     return Chain(Chain(layers...), create_classifier(outplanes, nclasses; dropout_rate))
 end
 

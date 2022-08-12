@@ -12,10 +12,10 @@ Create a Densenet bottleneck layer
 """
 function dense_bottleneck(inplanes::Integer, outplanes::Integer; expansion::Integer = 4)
     inner_channels = expansion * outplanes
-    return SkipConnection(Chain(conv_norm((1, 1), inplanes, inner_channels; bias = false,
+    return SkipConnection(Chain(conv_norm((1, 1), inplanes, inner_channels;
                                           revnorm = true)...,
                                 conv_norm((3, 3), inner_channels, outplanes; pad = 1,
-                                          bias = false, revnorm = true)...),
+                                          revnorm = true)...),
                           cat_channels)
 end
 
@@ -31,7 +31,7 @@ Create a DenseNet transition sequence
   - `outplanes`: number of output feature maps
 """
 function transition(inplanes::Integer, outplanes::Integer)
-    return Chain(conv_norm((1, 1), inplanes, outplanes; bias = false, revnorm = true)...,
+    return Chain(conv_norm((1, 1), inplanes, outplanes; revnorm = true)...,
                  MeanPool((2, 2)))
 end
 
@@ -72,7 +72,7 @@ function densenet(inplanes::Integer, growth_rates; reduction = 0.5, inchannels::
                   nclasses::Integer = 1000)
     layers = []
     append!(layers,
-            conv_norm((7, 7), inchannels, inplanes; stride = 2, pad = (3, 3), bias = false))
+            conv_norm((7, 7), inchannels, inplanes; stride = 2, pad = (3, 3)))
     push!(layers, MaxPool((3, 3); stride = 2, pad = (1, 1)))
     outplanes = 0
     for (i, rates) in enumerate(growth_rates)

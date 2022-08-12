@@ -1,5 +1,5 @@
 """
-    convmixer(planes::Integer, depth::Integer; kernel_size = (9, 9),
+    convmixer(planes::Integer, depth::Integer; kernel_size::Dims{2} = (9, 9),
               patch_size::Dims{2} = (7, 7), activation = gelu,
               inchannels::Integer = 3, nclasses::Integer = 1000)
 
@@ -16,7 +16,7 @@ Creates a ConvMixer model.
   - `inchannels`: number of input channels
   - `nclasses`: number of classes in the output
 """
-function convmixer(planes::Integer, depth::Integer; kernel_size = (9, 9),
+function convmixer(planes::Integer, depth::Integer; kernel_size::Dims{2} = (9, 9),
                    patch_size::Dims{2} = (7, 7), activation = gelu,
                    inchannels::Integer = 3, nclasses::Integer = 1000)
     stem = conv_norm(patch_size, inchannels, planes, activation; preact = true,
