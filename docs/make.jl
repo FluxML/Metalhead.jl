@@ -14,11 +14,11 @@ makedocs(modules = [Metalhead, Artifacts, LazyArtifacts, Images, OneHotArrays, D
                       "api/models.md",
                    ],
                  ],
-        #  format = Documenter.HTML(
-        #       canonical = "https://fluxml.ai/Metalhead.jl/stable/",
-        #       analytics = "UA-36890222-9",
-        #       assets = ["assets/flux.css"],
-        #       prettyurls = get(ENV, "CI", nothing) == "true"),
+         format = Documenter.HTML(
+            #   canonical = "https://fluxml.ai/Metalhead.jl/stable/",
+            #   analytics = "UA-36890222-9",
+              assets = ["assets/flux.css"],
+              prettyurls = get(ENV, "CI", nothing) == "true"),
         )
 
 deploydocs(repo = "github.com/Saransh-cpp/Metalhead.jl.git",
