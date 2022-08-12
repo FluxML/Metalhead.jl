@@ -93,3 +93,29 @@ jobs:
       - uses: codecov/codecov-action@v2
         with:
           file: lcov.info
+
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: julia-actions/setup-julia@v1
+        with:
+          version: '1.6'
+      - run: |
+          julia --project=docs -e '
+            using Pkg
+            Pkg.develop(PackageSpec(path=pwd()))
+            Pkg.instantiate()'
+      - run: |
+          julia --color=yes --project=docs/ -e '
+            using Metalhead
+            # using Pkg; Pkg.activate("docs")
+            using Documenter
+            using Documenter: doctest
+            DocMeta.setdocmeta!(Metalhead, :DocTestSetup, :(using Metalhead); recursive=true)
+            doctest(Metalhead)'
+      - run: julia --project=docs docs/make.jl
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}

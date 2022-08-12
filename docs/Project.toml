@@ -1,6 +1,8 @@
 [deps]
+Artifacts = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
 DataAugmentation = "88a5189c-e7ff-4f85-ac6b-e6158070f02e"
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
 Images = "916415d5-f1e6-5110-898d-aaa5f9f070e0"
-Metalhead = "dbeba491-748d-5e0e-a39e-b530a07fa0cc"
-Publish = "f065f642-d108-4f50-8aa5-6749150a895a"
+LazyArtifacts = "4af54fe1-eca0-43a8-85a7-787d91b784e3"
+OneHotArrays = "0b1bfda6-eb8a-41d2-88d8-f5af5cad476f"
