@@ -178,7 +178,7 @@ end
 end
 
 @testset "EfficientNetv2" begin
-    @testset for config in [:small, :medium, :large, :xlarge]
+    @testset for config in [:small, :medium, :large] # :xlarge]
         m = EfficientNetv2(config)
         @test size(m(x_224)) == (1000, 1)
         if (EfficientNetv2, config) in PRETRAINED_MODELS

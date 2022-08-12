@@ -116,6 +116,7 @@ function Base.show(io::IO, d::DropBlock)
     return print(io, ")")
 end
 
+# TODO look into "row" mode for stochastic depth
 """
     DropPath(p; [rng = rng_from_array(x)])
 
