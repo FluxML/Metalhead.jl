@@ -9,6 +9,12 @@ on:
       - master
     tags: '*'
 
+concurrency:
+  # Skip intermediate builds: always.
+  # Cancel intermediate builds: only if it is a pull request build.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
 jobs:
   test:
     name: ${{ matrix.suite }} - Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }}
@@ -118,4 +124,4 @@ jobs:
       - run: julia --project=docs docs/make.jl
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
+          DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
