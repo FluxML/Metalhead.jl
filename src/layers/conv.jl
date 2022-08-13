@@ -181,7 +181,8 @@ function fused_mbconv(kernel_size::Dims{2}, inplanes::Integer,
     if explanes != inplanes
         # fused expand
         append!(layers,
-                conv_norm(kernel_size, inplanes, explanes, activation; norm_layer, stride))
+                conv_norm(kernel_size, inplanes, explanes, activation; norm_layer, stride,
+                          pad = SamePad()))
         # project
         append!(layers, conv_norm((1, 1), explanes, outplanes, identity; norm_layer))
     else
