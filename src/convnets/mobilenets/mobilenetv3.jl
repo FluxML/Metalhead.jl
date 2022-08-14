@@ -1,7 +1,7 @@
 """
     mobilenetv3(configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
-                max_width::Integer = 1024, inchannels::Integer = 3,
-                nclasses::Integer = 1000)
+                max_width::Integer = 1024, dropout_rate = 0.2,
+                inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Create a MobileNetv3 model.
 ([reference](https://arxiv.org/abs/1905.02244)).
@@ -19,12 +19,14 @@ Create a MobileNetv3 model.
 
   - `width_mult`: Controls the number of output feature maps in each block
     (with 1 being the default in the paper; this is usually a value between 0.1 and 1.4.)
-  - `inchannels`: The number of input channels.
   - `max_width`: The maximum number of feature maps in any layer of the network
+  - `dropout_rate`: The dropout rate to use in the classifier head. Set to `nothing` to disable.
+  - `inchannels`: The number of input channels.
   - `nclasses`: the number of output classes
 """
 function mobilenetv3(configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
-                     max_width::Integer = 1024, dropout_rate = 0.2,
+                     max_width::Integer = 1024, reduced_tail::Bool = false,
+                     tail_dilated::Bool = false, dropout_rate = 0.2,
                      inchannels::Integer = 3, nclasses::Integer = 1000)
     # building first layer
     inplanes = _round_channels(16 * width_mult, 8)
@@ -32,25 +34,34 @@ function mobilenetv3(configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
     append!(layers,
             conv_norm((3, 3), inchannels, inplanes, hardswish; stride = 2, pad = 1))
     explanes = 0
+    nstages = length(configs)
+    reduced_divider = 1
     # building inverted residual blocks
-    for (k, t, c, reduction, activation, stride) in configs
+    for (i, (k, t, c, reduction, activation, stride)) in enumerate(configs)
+        dilation = 1
+        if nstages - i <= 2
+            if reduced_tail
+                reduced_divider = 2
+                c /= reduced_divider
+            end
+            if tail_dilated
+                dilation = 2
+            end
+        end
         # inverted residual layers
         outplanes = _round_channels(c * width_mult, 8)
         explanes = _round_channels(inplanes * t, 8)
         push!(layers,
               mbconv((k, k), inplanes, explanes, outplanes, activation;
-                     stride, reduction))
+                     stride, reduction, dilation))
         inplanes = outplanes
     end
     # building last layers
-    headplanes = width_mult > 1.0 ? _round_channels(max_width * width_mult, 8) :
-                 max_width
+    headplanes = _round_channels(max_width ÷ reduced_divider * width_mult, 8)
     append!(layers, conv_norm((1, 1), inplanes, explanes, hardswish))
-    classifier = Chain(AdaptiveMeanPool((1, 1)), MLUtils.flatten,
-                       Dense(explanes, headplanes, hardswish),
-                       Dropout(dropout_rate),
-                       Dense(headplanes, nclasses))
-    return Chain(Chain(layers...), classifier)
+    return Chain(Chain(layers...),
+                 create_classifier(explanes, headplanes, nclasses,
+                                   (hardswish, identity); dropout_rate))
 end
 
 # Layer configurations for small and large models for MobileNetv3

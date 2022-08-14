@@ -27,12 +27,11 @@ function basicblock(inplanes::Integer, planes::Integer; stride::Integer = 1,
                     drop_block = identity, drop_path = identity,
                     attn_fn = planes -> identity)
     first_planes = planes ÷ reduction_factor
-    outplanes = planes
     conv_bn1 = conv_norm((3, 3), inplanes => first_planes, identity; norm_layer, revnorm,
                          stride, pad = 1)
-    conv_bn2 = conv_norm((3, 3), first_planes => outplanes, identity; norm_layer, revnorm,
+    conv_bn2 = conv_norm((3, 3), first_planes => planes, identity; norm_layer, revnorm,
                          pad = 1)
-    layers = [conv_bn1..., drop_block, activation, conv_bn2..., attn_fn(outplanes),
+    layers = [conv_bn1..., drop_block, activation, conv_bn2..., attn_fn(planes),
         drop_path]
     return Chain(filter!(!=(identity), layers)...)
 end
@@ -201,7 +200,7 @@ function basicblock_builder(block_repeats::AbstractVector{<:Integer};
                             expansion::Integer = 1, norm_layer = BatchNorm,
                             revnorm::Bool = false, activation = relu,
                             attn_fn = planes -> identity,
-                            drop_block_rate = 0.0, drop_path_rate = 0.0,
+                            drop_block_rate = nothing, drop_path_rate = nothing,
                             stride_fn = resnet_stride, planes_fn = resnet_planes,
                             downsample_tuple = (downsample_conv, downsample_identity))
     pathschedule = linear_scheduler(drop_path_rate; depth = sum(block_repeats))
@@ -236,7 +235,7 @@ function bottleneck_builder(block_repeats::AbstractVector{<:Integer};
                             expansion::Integer = 4, norm_layer = BatchNorm,
                             revnorm::Bool = false, activation = relu,
                             attn_fn = planes -> identity,
-                            drop_block_rate = 0.0, drop_path_rate = 0.0,
+                            drop_block_rate = nothing, drop_path_rate = nothing,
                             stride_fn = resnet_stride, planes_fn = resnet_planes,
                             downsample_tuple = (downsample_conv, downsample_identity))
     pathschedule = linear_scheduler(drop_path_rate; depth = sum(block_repeats))
@@ -295,8 +294,8 @@ function resnet(block_type, block_repeats::AbstractVector{<:Integer},
                 inchannels::Integer = 3, stem_fn = resnet_stem, connection = addact,
                 activation = relu, norm_layer = BatchNorm, revnorm::Bool = false,
                 attn_fn = planes -> identity, pool_layer = AdaptiveMeanPool((1, 1)),
-                use_conv::Bool = false, drop_block_rate = 0.0, drop_path_rate = 0.0,
-                dropout_rate = 0.0, nclasses::Integer = 1000, kwargs...)
+                use_conv::Bool = false, drop_block_rate = nothing, drop_path_rate = nothing,
+                dropout_rate = nothing, nclasses::Integer = 1000, kwargs...)
     # Build stem
     stem = stem_fn(; inchannels)
     # Block builder
@@ -319,8 +318,8 @@ function resnet(block_type, block_repeats::AbstractVector{<:Integer},
                                         downsample_tuple = downsample_opt,
                                         kwargs...)
     elseif block_type == bottle2neck
-        @assert drop_block_rate==0.0 "DropBlock not supported for `bottle2neck`. Set `drop_block_rate` to 0.0"
-        @assert drop_path_rate==0.0 "DropPath not supported for `bottle2neck`. Set `drop_path_rate` to 0.0"
+        @assert isnothing(drop_block_rate) "DropBlock not supported for `bottle2neck`. Set `drop_block_rate` to nothing"
+        @assert isnothing(drop_path_rate) "DropPath not supported for `bottle2neck`. Set `drop_path_rate` to nothing"
         @assert reduction_factor==1 "Reduction factor not supported for `bottle2neck`. Set `reduction_factor` to 1"
         get_layers = bottle2neck_builder(block_repeats; inplanes, cardinality, base_width,
                                          activation, norm_layer, revnorm, attn_fn,
@@ -347,7 +346,7 @@ const RESNET_CONFIGS = Dict(18 => (basicblock, [2, 2, 2, 2]),
                             50 => (bottleneck, [3, 4, 6, 3]),
                             101 => (bottleneck, [3, 4, 23, 3]),
                             152 => (bottleneck, [3, 8, 36, 3]))
-
+# larger ResNet-like models
 const LRESNET_CONFIGS = Dict(50 => (bottleneck, [3, 4, 6, 3]),
                              101 => (bottleneck, [3, 4, 23, 3]),
                              152 => (bottleneck, [3, 8, 36, 3]))

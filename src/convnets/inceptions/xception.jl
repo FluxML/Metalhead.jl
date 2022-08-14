@@ -43,14 +43,14 @@ function xception_block(inchannels::Integer, outchannels::Integer, nrepeats::Int
 end
 
 """
-    xception(; dropout_rate = 0.0, inchannels::Integer = 3, nclasses::Integer = 1000)
+    xception(; dropout_rate = nothing, inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Creates an Xception model.
 ([reference](https://arxiv.org/abs/1610.02357))
 
 # Arguments
 
-  - `dropout_rate`: rate of dropout in classifier head.
+  - `dropout_rate`: rate of dropout in classifier head. Set to `nothing` to disable dropout.
   - `inchannels`: number of input channels.
   - `nclasses`: the number of output classes.
 """

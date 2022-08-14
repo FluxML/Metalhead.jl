@@ -1,3 +1,4 @@
+# TODO @theabhirath figure out consistent behaviour for dropout rates - 0.0 vs `nothing`
 """
     mlp_block(inplanes::Integer, hidden_planes::Integer, outplanes::Integer = inplanes; 
               dropout_rate = 0., activation = gelu)
@@ -45,46 +46,3 @@ function gated_mlp_block(gate_layer, inplanes::Integer, hidden_planes::Integer,
                  Dropout(dropout_rate))
 end
 gated_mlp_block(::typeof(identity), args...; kwargs...) = mlp_block(args...; kwargs...)
-
-"""
-    create_classifier(inplanes::Integer, nclasses::Integer, activation = identity;
-                      pool_layer = AdaptiveMeanPool((1, 1)),
-                      dropout_rate = 0.0, use_conv::Bool = false)
-
-Creates a classifier head to be used for models.
-
-# Arguments
-
-  - `inplanes`: number of input feature maps
-  - `nclasses`: number of output classes
-  - `activation`: activation function to use
-  - `pool_layer`: pooling layer to use. This is passed in with the layer instantiated with
-    any arguments that are needed i.e. as `AdaptiveMeanPool((1, 1))`, for example.
-  - `dropout_rate`: dropout rate used in the classifier head.
-  - `use_conv`: whether to use a 1x1 convolutional layer instead of a `Dense` layer.
-"""
-function create_classifier(inplanes::Integer, nclasses::Integer, activation = identity;
-                           use_conv::Bool = false, pool_layer = AdaptiveMeanPool((1, 1)),
-                           dropout_rate = nothing)
-    # Decide whether to flatten the input or not
-    flatten_in_pool = !use_conv && pool_layer !== identity
-    if use_conv
-        @assert pool_layer === identity
-        "`pool_layer` must be identity if `use_conv` is true"
-    end
-    classifier = []
-    if flatten_in_pool
-        push!(classifier, pool_layer, MLUtils.flatten)
-    else
-        push!(classifier, pool_layer)
-    end
-    # Dropout is applied after the pooling layer
-    isnothing(dropout_rate) ? nothing : push!(classifier, Dropout(dropout_rate))
-    # Fully-connected layer
-    if use_conv
-        push!(classifier, Conv((1, 1), inplanes => nclasses, activation))
-    else
-        push!(classifier, Dense(inplanes => nclasses, activation))
-    end
-    return Chain(classifier...)
-end

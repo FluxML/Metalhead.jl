@@ -20,7 +20,7 @@ Create a MobileNetv2 model.
     (with 1 being the default in the paper)
   - `max_width`: The maximum number of feature maps in any layer of the network
   - `divisor`: The divisor used to round the number of feature maps in each block
-  - `dropout_rate`: rate of dropout in the classifier head
+  - `dropout_rate`: rate of dropout in the classifier head. Set to `nothing` to disable dropout.
   - `inchannels`: The number of input channels.
   - `nclasses`: The number of output classes
 """
@@ -33,12 +33,13 @@ function mobilenetv2(configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
     append!(layers,
             conv_norm((3, 3), inchannels, inplanes; pad = 1, stride = 2))
     # building inverted residual blocks
-    for (t, c, n, s, a) in configs
+    for (t, c, n, s, activation) in configs
         outplanes = _round_channels(c * width_mult, divisor)
         for i in 1:n
+            stride = i == 1 ? s : 1
             push!(layers,
-                  mbconv((3, 3), inplanes, round(Int, inplanes * t), outplanes, a;
-                         stride = i == 1 ? s : 1))
+                  mbconv((3, 3), inplanes, round(Int, inplanes * t), outplanes,
+                         activation; stride))
             inplanes = outplanes
         end
     end
