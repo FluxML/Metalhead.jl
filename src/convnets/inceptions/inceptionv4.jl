@@ -85,7 +85,7 @@ function inceptionv4_c()
 end
 
 """
-    inceptionv4(; inchannels::Integer = 3, dropout_rate = 0.0, nclasses::Integer = 1000)
+    inceptionv4(; inchannels::Integer = 3, dropout_rate = nothing, nclasses::Integer = 1000)
 
 Create an Inceptionv4 model.
 ([reference](https://arxiv.org/abs/1602.07261))
@@ -93,10 +93,10 @@ Create an Inceptionv4 model.
 # Arguments
 
   - `inchannels`: number of input channels.
-  - `dropout_rate`: rate of dropout in classifier head.
+  - `dropout_rate`: rate of dropout in classifier head. Set to `nothing` to disable dropout.
   - `nclasses`: the number of output classes.
 """
-function inceptionv4(; dropout_rate = 0.0, inchannels::Integer = 3,
+function inceptionv4(; dropout_rate = nothing, inchannels::Integer = 3,
                      nclasses::Integer = 1000)
     backbone = Chain(basic_conv_bn((3, 3), inchannels, 32; stride = 2)...,
                      basic_conv_bn((3, 3), 32, 32)...,

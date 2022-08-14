@@ -1,5 +1,6 @@
 """
-    mobilenetv1(width_mult::Real, config::AbstractVector{<:Tuple}; activation = relu,
+    mobilenetv1(width_mult::Real, config::AbstractVector{<:Tuple}; 
+                activation = relu, dropout_rate = nothing,
                 inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Create a MobileNetv1 model ([reference](https://arxiv.org/abs/1704.04861v1)).
@@ -16,10 +17,12 @@ Create a MobileNetv1 model ([reference](https://arxiv.org/abs/1704.04861v1)).
       + `s`: The stride of the convolutional kernel
       + `r`: The number of time this configuration block is repeated
   - `activate`: The activation function to use throughout the network
+  - `dropout_rate`: The dropout rate to use in the classifier head. Set to `nothing` to disable.
   - `inchannels`: The number of input channels. The default value is 3.
   - `nclasses`: The number of output classes
 """
-function mobilenetv1(width_mult::Real, config::AbstractVector{<:Tuple}; activation = relu,
+function mobilenetv1(width_mult::Real, config::AbstractVector{<:Tuple};
+                     activation = relu, dropout_rate = nothing,
                      inchannels::Integer = 3, nclasses::Integer = 1000)
     layers = []
     for (dw, outchannels, stride, nrepeats) in config
@@ -33,7 +36,7 @@ function mobilenetv1(width_mult::Real, config::AbstractVector{<:Tuple}; activati
             inchannels = outchannels
         end
     end
-    return Chain(Chain(layers...), create_classifier(inchannels, nclasses))
+    return Chain(Chain(layers...), create_classifier(inchannels, nclasses; dropout_rate))
 end
 
 # Layer configurations for MobileNetv1

@@ -28,8 +28,7 @@ jobs:
         suite:
           - '["AlexNet", "VGG"]'
           - '["GoogLeNet", "SqueezeNet", "MobileNet"]'
-          - '"EfficientNet"' 
-          - '"EfficientNetv2"'
+          - '"EfficientNet"'
           - 'r"/*/ResNet*"'
           - '[r"ResNeXt", r"SEResNet"]'
           - '[r"Res2Net", r"Res2NeXt"]'

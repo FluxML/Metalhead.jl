@@ -20,7 +20,8 @@ regions of size `block_size` in the input. Otherwise, it simply returns the inpu
   - `rng`: can be used to pass in a custom RNG instead of the default. Custom RNGs are only
     supported on the CPU.
   - `x`: input array
-  - `drop_block_prob`: probability of dropping a block
+  - `drop_block_prob`: probability of dropping a block. If `nothing` is passed, it returns 
+    `identity`.
   - `block_size`: size of the block to drop
   - `gamma_scale`: multiplicative factor for `gamma` used. For the calculations,
     refer to [the paper](https://arxiv.org/abs/1810.12890).
@@ -56,11 +57,25 @@ dropblock_mask(rng, x, gamma, bs) = _dropblock_mask(rng, x, gamma, bs)
 
 The `DropBlock` layer. While training, it zeroes out continguous regions of
 size `block_size` in the input. During inference, it simply returns the input `x`.
+It can be used in two ways: either with all blocks having the same survival probability
+or with a linear scaling rule across the blocks. This is performed only at training time.
+At test time, the `DropBlock` layer is equivalent to `identity`.
+
+!!! warning
+    
+    In the case of the linear scaling rule, the calculations of survival probabilities for each
+    block may lead to a survival probability > 1 for a given block. This will lead to
+    `DropBlock` erroring. This usually happens with a low number of blocks and a high base
+    survival probability, so in such cases it is recommended to use a fixed base survival
+    probability across blocks. If this is not desired, then a lower base survival probability
+    is recommended.
+
 ((reference)[https://arxiv.org/abs/1810.12890])
 
 # Arguments
 
-  - `drop_block_prob`: probability of dropping a block
+  - `drop_block_prob`: probability of dropping a block. If `nothing` is passed, it returns
+    `identity`.
   - `block_size`: size of the block to drop
   - `gamma_scale`: multiplicative factor for `gamma` used. For the calculation of gamma,
     refer to [the paper](https://arxiv.org/abs/1810.12890).
@@ -90,11 +105,8 @@ ChainRulesCore.@non_differentiable _dropblock_checks(x, drop_block_prob, gamma_s
 
 function (m::DropBlock)(x)
     _dropblock_checks(x, m.drop_block_prob, m.gamma_scale)
-    if Flux._isactive(m)
-        return dropblock(m.rng, x, m.drop_block_prob, m.block_size, m.gamma_scale)
-    else
-        return x
-    end
+    return Flux._isactive(m) ?
+           dropblock(m.rng, x, m.drop_block_prob, m.block_size, m.gamma_scale) : x
 end
 
 function Flux.testmode!(m::DropBlock, mode = true)
@@ -103,7 +115,7 @@ end
 
 function DropBlock(drop_block_prob = 0.1, block_size::Integer = 7, gamma_scale = 1.0,
                    rng = rng_from_array())
-    if drop_block_prob == 0.0
+    if isnothing(drop_block_prob)
         return identity
     end
     return DropBlock(drop_block_prob, block_size, gamma_scale, nothing, rng)
@@ -120,8 +132,8 @@ end
 """
     DropPath(p; [rng = rng_from_array(x)])
 
-Implements Stochastic Depth - equivalent to `Dropout(p; dims = 4)` when `0 < p ≤ 1` and
-`identity` otherwise.
+Implements Stochastic Depth - equivalent to `Dropout(p; dims = 4)` when `0 ≤ p ≤ 1` and
+`identity` if p is `nothing`.
 ([reference](https://arxiv.org/abs/1603.09382))
 
 This layer can be used to drop certain blocks in a residual structure and allow them to
@@ -134,10 +146,10 @@ equivalent to `identity`.
     
     In the case of the linear scaling rule, the calculations of survival probabilities for each
     block may lead to a survival probability > 1 for a given block. This will lead to
-    `DropPath` returning `identity`, which may not be desirable. This usually happens with
-    a low number of blocks and a high base survival probability, so it is recommended to
-    use a fixed base survival probability across blocks. If this is not possible, then
-    a lower base survival probability is recommended.
+    `DropPath` erroring. This usually happens with a low number of blocks and a high base
+    survival probability, so in such cases it is recommended to use a fixed base survival
+    probability across  blocks. If this is not desired, then a lower base survival probability
+    is recommended.
 
 # Arguments
 
@@ -146,4 +158,6 @@ equivalent to `identity`.
     for more information on the behaviour of this argument. Custom RNGs are only supported
     on the CPU.
 """
-DropPath(p; rng = rng_from_array()) = 0 < p ≤ 1 ? Dropout(p; dims = 4, rng) : identity
+function DropPath(p; rng = rng_from_array())
+    return isnothing(p) ? identity : Dropout(p; dims = 4, rng)
+end

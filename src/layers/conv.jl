@@ -146,9 +146,9 @@ Create a basic inverted residual block for MobileNet variants
   - `reduction`: The reduction factor for the number of hidden feature maps
     in a squeeze and excite layer (see [`squeeze_excite`](#))
 """
-function mbconv(kernel_size::Dims{2}, inplanes::Integer,
-                explanes::Integer, outplanes::Integer, activation = relu;
-                stride::Integer, reduction::Union{Nothing, Integer} = nothing,
+function mbconv(kernel_size::Dims{2}, inplanes::Integer, explanes::Integer,
+                outplanes::Integer, activation = relu; stride::Integer,
+                dilation::Integer = 1, reduction::Union{Nothing, Integer} = nothing,
                 norm_layer = BatchNorm)
     @assert stride in [1, 2] "`stride` has to be 1 or 2"
     layers = []
@@ -158,9 +158,10 @@ function mbconv(kernel_size::Dims{2}, inplanes::Integer,
                 conv_norm((1, 1), inplanes, explanes, activation; norm_layer))
     end
     # depthwise
+    stride = dilation > 1 ? 1 : stride
     append!(layers,
             conv_norm(kernel_size, explanes, explanes, activation; norm_layer,
-                      stride, pad = SamePad(), groups = explanes))
+                      stride, dilation, pad = SamePad(), groups = explanes))
     # squeeze-excite layer
     if !isnothing(reduction)
         push!(layers,

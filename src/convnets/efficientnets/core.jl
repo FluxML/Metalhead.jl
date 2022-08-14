@@ -4,13 +4,13 @@ struct MBConvConfig <: _MBConfig
     kernel_size::Dims{2}
     inplanes::Integer
     outplanes::Integer
-    expansion::Number
+    expansion::Real
     stride::Integer
     nrepeats::Integer
 end
 function MBConvConfig(kernel_size::Integer, inplanes::Integer, outplanes::Integer,
-                      expansion::Number, stride::Integer, nrepeats::Integer,
-                      width_mult::Number = 1, depth_mult::Number = 1)
+                      expansion::Real, stride::Integer, nrepeats::Integer,
+                      width_mult::Real = 1, depth_mult::Real = 1)
     inplanes = _round_channels(inplanes * width_mult, 8)
     outplanes = _round_channels(outplanes * width_mult, 8)
     nrepeats = ceil(Int, nrepeats * depth_mult)
@@ -35,12 +35,12 @@ struct FusedMBConvConfig <: _MBConfig
     kernel_size::Dims{2}
     inplanes::Integer
     outplanes::Integer
-    expansion::Number
+    expansion::Real
     stride::Integer
     nrepeats::Integer
 end
 function FusedMBConvConfig(kernel_size::Integer, inplanes::Integer, outplanes::Integer,
-                           expansion::Number, stride::Integer, nrepeats::Integer)
+                           expansion::Real, stride::Integer, nrepeats::Integer)
     return FusedMBConvConfig((kernel_size, kernel_size), inplanes, outplanes, expansion,
                              stride, nrepeats)
 end
