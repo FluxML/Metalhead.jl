@@ -275,7 +275,7 @@ function resnet_stages(get_layers, block_repeats::AbstractVector{<:Integer}, con
         # Construct the blocks for each stage
         blocks = map(1:nblocks) do block_idx
             branches = get_layers(stage_idx, block_idx)
-            return (length(branches) == 1) ? only(branches) :
+            return length(branches) == 1 ? only(branches) :
                    Parallel(connection, branches...)
         end
         push!(stages, Chain(blocks...))
@@ -283,10 +283,10 @@ function resnet_stages(get_layers, block_repeats::AbstractVector{<:Integer}, con
     return Chain(stages...)
 end
 
-function resnet(img_dims, stem, builders, block_repeats::AbstractVector{<:Integer},
+function resnet(img_dims, stem, get_layers, block_repeats::AbstractVector{<:Integer},
                 connection, classifier_fn)
     # Build stages of the ResNet
-    stage_blocks = resnet_stages(builders, block_repeats, connection)
+    stage_blocks = resnet_stages(get_layers, block_repeats, connection)
     backbone = Chain(stem, stage_blocks)
     # Add classifier to the backbone
     nfeaturemaps = Flux.outputsize(backbone, img_dims; padbatch = true)[3]
@@ -308,17 +308,19 @@ function resnet(block_type, block_repeats::AbstractVector{<:Integer},
     if block_type == basicblock
         @assert cardinality==1 "Cardinality must be 1 for `basicblock`"
         @assert base_width==64 "Base width must be 64 for `basicblock`"
-        builder = basicblock_builder(block_repeats; inplanes, reduction_factor,
-                                     activation, norm_layer, revnorm, attn_fn,
-                                     drop_block_rate, drop_path_rate,
-                                     stride_fn = resnet_stride, planes_fn = resnet_planes,
-                                     downsample_tuple = downsample_opt, kwargs...)
+        get_layers = basicblock_builder(block_repeats; inplanes, reduction_factor,
+                                        activation, norm_layer, revnorm, attn_fn,
+                                        drop_block_rate, drop_path_rate,
+                                        stride_fn = resnet_stride,
+                                        planes_fn = resnet_planes,
+                                        downsample_tuple = downsample_opt, kwargs...)
     elseif block_type == bottleneck
-        builder = bottleneck_builder(block_repeats; inplanes, cardinality,
-                                     base_width, reduction_factor, activation, norm_layer,
-                                     revnorm, attn_fn, drop_block_rate, drop_path_rate,
-                                     stride_fn = resnet_stride, planes_fn = resnet_planes,
-                                     downsample_tuple = downsample_opt, kwargs...)
+        get_layers = bottleneck_builder(block_repeats; inplanes, cardinality, base_width,
+                                        reduction_factor, activation, norm_layer, revnorm,
+                                        attn_fn, drop_block_rate, drop_path_rate,
+                                        stride_fn = resnet_stride,
+                                        planes_fn = resnet_planes,
+                                        downsample_tuple = downsample_opt, kwargs...)
     elseif block_type == bottle2neck
         @assert isnothing(drop_block_rate)
         "DropBlock not supported for `bottle2neck`. Set `drop_block_rate` to nothing"
@@ -337,8 +339,8 @@ function resnet(block_type, block_repeats::AbstractVector{<:Integer},
     end
     classifier_fn = nfeatures -> create_classifier(nfeatures, nclasses; dropout_rate,
                                                    pool_layer, use_conv)
-    return resnet((imsize..., inchannels), stem, fill(builder, length(block_repeats)),
-                  block_repeats, connection$activation, classifier_fn)
+    return resnet((imsize..., inchannels), stem, get_layers, block_repeats,
+                  connection$activation, classifier_fn)
 end
 function resnet(block_fn, block_repeats, downsample_opt::Symbol = :B; kwargs...)
     return resnet(block_fn, block_repeats, RESNET_SHORTCUTS[downsample_opt]; kwargs...)
