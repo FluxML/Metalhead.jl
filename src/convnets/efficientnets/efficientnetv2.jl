@@ -56,7 +56,8 @@ function EfficientNetv2(config::Symbol; pretrain::Bool = false,
                         inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(config, sort(collect(keys(EFFNETV2_CONFIGS))))
     layers = efficientnet(EFFNETV2_CONFIGS[config],
-                          vcat(fill(fused_mbconv_builder, 3), fill(mbconv_builder, 4));
+                          vcat(fill(fused_mbconv_builder, 3),
+                               fill(mbconv_builder, length(EFFNETV2_CONFIGS[config]) - 3));
                           headplanes = 1280, inchannels, nclasses)
     if pretrain
         loadpretrain!(layers, string("efficientnetv2"))
