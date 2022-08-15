@@ -9,7 +9,6 @@ const EFFICIENTNET_BLOCK_CONFIGS = [
     (5, 112, 192, 6, 2, 4),
     (3, 192, 320, 6, 1, 1),
 ]
-
 # Data is organised as (r, (w, d))
 # r: image resolution
 # w: width scaling
@@ -44,9 +43,10 @@ end
 function EfficientNet(config::Symbol; pretrain::Bool = false, inchannels::Integer = 3,
                       nclasses::Integer = 1000)
     _checkconfig(config, keys(EFFICIENTNET_GLOBAL_CONFIGS))
-    cfg_fn = (args...) -> MBConvConfig(args..., EFFICIENTNET_GLOBAL_CONFIGS[config][2]...)
-    block_configs = [cfg_fn(args...) for args in EFFICIENTNET_BLOCK_CONFIGS]
-    layers = efficientnet(block_configs; inchannels, nclasses)
+    scalings = EFFICIENTNET_GLOBAL_CONFIGS[config][2]
+    layers = efficientnet(EFFICIENTNET_BLOCK_CONFIGS,
+                          fill(mbconv_builder, length(EFFICIENTNET_BLOCK_CONFIGS));
+                          scalings, inchannels, nclasses)
     if pretrain
         loadpretrain!(layers, string("efficientnet-", config))
     end

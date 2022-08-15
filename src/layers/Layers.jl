@@ -19,13 +19,16 @@ include("attention.jl")
 export MHAttention
 
 include("conv.jl")
-export conv_norm, basic_conv_bn, dwsep_conv_bn, mbconv, fused_mbconv
+export conv_norm, basic_conv_bn, dwsep_conv_bn
 
 include("drop.jl")
 export DropBlock, DropPath
 
 include("embeddings.jl")
 export PatchEmbedding, ViPosEmbedding, ClassTokens
+
+include("mbconv.jl")
+export mbconv, fused_mbconv
 
 include("mlp.jl")
 export mlp_block, gated_mlp_block

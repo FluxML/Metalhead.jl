@@ -54,7 +54,6 @@ function bottle2neck_builder(block_repeats::AbstractVector{<:Integer};
                              attn_fn = planes -> identity,
                              stride_fn = resnet_stride, planes_fn = resnet_planes,
                              downsample_tuple = (downsample_conv, downsample_identity))
-    planes_vec = collect(planes_fn(block_repeats))
     # closure over `idxs`
     function get_layers(stage_idx::Integer, block_idx::Integer)
         # This is needed for block `inplanes` and `planes` calculations

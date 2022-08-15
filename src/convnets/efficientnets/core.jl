@@ -1,78 +1,61 @@
-abstract type _MBConfig end
-
-struct MBConvConfig <: _MBConfig
-    kernel_size::Dims{2}
-    inplanes::Integer
-    outplanes::Integer
-    expansion::Real
-    stride::Integer
-    nrepeats::Integer
-end
-function MBConvConfig(kernel_size::Integer, inplanes::Integer, outplanes::Integer,
-                      expansion::Real, stride::Integer, nrepeats::Integer,
-                      width_mult::Real = 1, depth_mult::Real = 1)
+function mbconv_builder(block_configs::AbstractVector{NTuple{6, Int}},
+                        stage_idx::Integer; scalings::NTuple{2, Real} = (1, 1),
+                        norm_layer = BatchNorm)
+    depth_mult, width_mult = scalings
+    k, inplanes, outplanes, expansion, stride, nrepeats = block_configs[stage_idx]
     inplanes = _round_channels(inplanes * width_mult, 8)
     outplanes = _round_channels(outplanes * width_mult, 8)
-    nrepeats = ceil(Int, nrepeats * depth_mult)
-    return MBConvConfig((kernel_size, kernel_size), inplanes, outplanes, expansion,
-                        stride, nrepeats)
+    function get_layers(block_idx)
+        inplanes = block_idx == 1 ? inplanes : outplanes
+        explanes = _round_channels(inplanes * expansion, 8)
+        stride = block_idx == 1 ? stride : 1
+        block = mbconv((k, k), inplanes, explanes, outplanes, swish; norm_layer,
+                       stride, reduction = 4)
+        return stride == 1 && inplanes == outplanes ? (identity, block) : (block,)
+    end
+    return get_layers, ceil(Int, nrepeats * depth_mult)
 end
 
-function efficientnetblock(m::MBConvConfig, norm_layer)
-    layers = []
-    explanes = _round_channels(m.inplanes * m.expansion, 8)
-    push!(layers,
-          mbconv(m.kernel_size, m.inplanes, explanes, m.outplanes, swish; norm_layer,
-                 stride = m.stride, reduction = 4))
-    explanes = _round_channels(m.outplanes * m.expansion, 8)
-    append!(layers,
-            [mbconv(m.kernel_size, m.outplanes, explanes, m.outplanes, swish; norm_layer,
-                    stride = 1, reduction = 4) for _ in 1:(m.nrepeats - 1)])
-    return Chain(layers...)
+function fused_mbconv_builder(block_configs::AbstractVector{NTuple{6, Int}},
+                              stage_idx::Integer; norm_layer = BatchNorm)
+    k, inplanes, outplanes, expansion, stride, nrepeats = block_configs[stage_idx]
+    function get_layers(block_idx)
+        inplanes = block_idx == 1 ? inplanes : outplanes
+        explanes = _round_channels(inplanes * expansion, 8)
+        stride = block_idx == 1 ? stride : 1
+        block = fused_mbconv((k, k), inplanes, explanes, outplanes, swish;
+                             norm_layer, stride)
+        return stride == 1 && inplanes == outplanes ? (identity, block) : (block,)
+    end
+    return get_layers, nrepeats
 end
 
-struct FusedMBConvConfig <: _MBConfig
-    kernel_size::Dims{2}
-    inplanes::Integer
-    outplanes::Integer
-    expansion::Real
-    stride::Integer
-    nrepeats::Integer
-end
-function FusedMBConvConfig(kernel_size::Integer, inplanes::Integer, outplanes::Integer,
-                           expansion::Real, stride::Integer, nrepeats::Integer)
-    return FusedMBConvConfig((kernel_size, kernel_size), inplanes, outplanes, expansion,
-                             stride, nrepeats)
+function efficientnet_builder(block_configs::AbstractVector{NTuple{6, Int}},
+                              residual_fns::AbstractVector;
+                              scalings::NTuple{2, Real} = (1, 1), norm_layer = BatchNorm)
+    bxs = [residual_fn(block_configs, stage_idx; scalings, norm_layer)
+           for (stage_idx, residual_fn) in enumerate(residual_fns)]
+    return (stage_idx, block_idx) -> first.(bxs)[stage_idx](block_idx), last.(bxs)
 end
 
-function efficientnetblock(m::FusedMBConvConfig, norm_layer)
-    layers = []
-    explanes = _round_channels(m.inplanes * m.expansion, 8)
-    push!(layers,
-          fused_mbconv(m.kernel_size, m.inplanes, explanes, m.outplanes, swish;
-                       norm_layer, stride = m.stride))
-    explanes = _round_channels(m.outplanes * m.expansion, 8)
-    append!(layers,
-            [fused_mbconv(m.kernel_size, m.outplanes, explanes, m.outplanes, swish;
-                          norm_layer, stride = 1) for _ in 1:(m.nrepeats - 1)])
-    return Chain(layers...)
-end
-
-function efficientnet(block_configs::AbstractVector{<:_MBConfig};
-                      headplanes::Union{Nothing, Integer} = nothing,
+function efficientnet(block_configs::AbstractVector{NTuple{6, Int}},
+                      residual_fns::AbstractVector; scalings::NTuple{2, Real} = (1, 1),
+                      headplanes::Integer = _round_channels(block_configs[end][3] *
+                                                            scalings[2], 8) * 4,
                       norm_layer = BatchNorm, dropout_rate = nothing,
                       inchannels::Integer = 3, nclasses::Integer = 1000)
     layers = []
     # stem of the model
     append!(layers,
-            conv_norm((3, 3), inchannels, block_configs[1].inplanes, swish; norm_layer,
+            conv_norm((3, 3), inchannels, block_configs[1][2], swish; norm_layer,
                       stride = 2, pad = SamePad()))
     # building inverted residual blocks
-    append!(layers, [efficientnetblock(cfg, norm_layer) for cfg in block_configs])
+    get_layers, block_repeats = efficientnet_builder(block_configs, residual_fns;
+                                                     scalings, norm_layer)
+    append!(layers, resnet_stages(get_layers, block_repeats, +))
     # building last layers
-    outplanes = block_configs[end].outplanes
-    headplanes = isnothing(headplanes) ? outplanes * 4 : headplanes
     append!(layers,
-            conv_norm((1, 1), outplanes, headplanes, swish; pad = SamePad()))
+            conv_norm((1, 1), _round_channels(block_configs[end][3] * scalings[2], 8),
+                      headplanes, swish; pad = SamePad()))
     return Chain(Chain(layers...), create_classifier(headplanes, nclasses; dropout_rate))
 end
