@@ -19,6 +19,11 @@ include("layers/Layers.jl")
 using .Layers
 
 # CNN models
+## Builders
+include("convnets/builders/core.jl")
+include("convnets/builders/mbconv.jl")
+include("convnets/builders/resblocks.jl")
+## AlexNet and VGG
 include("convnets/alexnet.jl")
 include("convnets/vgg.jl")
 ## ResNets

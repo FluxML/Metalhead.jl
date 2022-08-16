@@ -37,7 +37,7 @@ function mobilenetv2(block_configs::AbstractVector{<:Tuple}; width_mult::Real = 
                                                      fill(mbconv_builder,
                                                           length(block_configs));
                                                      inplanes)
-    append!(layers, resnet_stages(get_layers, block_repeats, +))
+    append!(layers, cnn_stages(get_layers, block_repeats, +))
     # building last layers
     outplanes = _round_channels(max_width * max(1, width_mult), divisor)
     append!(layers,
