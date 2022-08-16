@@ -195,98 +195,10 @@ function resnet_planes(block_repeats::AbstractVector{<:Integer})
                              for (stage_idx, stages) in enumerate(block_repeats))
 end
 
-function basicblock_builder(block_repeats::AbstractVector{<:Integer};
-                            inplanes::Integer = 64, reduction_factor::Integer = 1,
-                            expansion::Integer = 1, norm_layer = BatchNorm,
-                            revnorm::Bool = false, activation = relu,
-                            attn_fn = planes -> identity,
-                            drop_block_rate = nothing, drop_path_rate = nothing,
-                            stride_fn = resnet_stride, planes_fn = resnet_planes,
-                            downsample_tuple = (downsample_conv, downsample_identity))
-    # DropBlock, DropPath both take in rates based on a linear scaling schedule
-    # Also get `planes_vec` needed for block `inplanes` and `planes` calculations
-    pathschedule = linear_scheduler(drop_path_rate; depth = sum(block_repeats))
-    blockschedule = linear_scheduler(drop_block_rate; depth = sum(block_repeats))
-    planes_vec = collect(planes_fn(block_repeats))
-    # closure over `idxs`
-    function get_layers(stage_idx::Integer, block_idx::Integer)
-        # DropBlock, DropPath both take in rates based on a linear scaling schedule
-        # This is also needed for block `inplanes` and `planes` calculations
-        schedule_idx = sum(block_repeats[1:(stage_idx - 1)]) + block_idx
-        planes = planes_vec[schedule_idx]
-        inplanes = schedule_idx == 1 ? inplanes : planes_vec[schedule_idx - 1] * expansion
-        # `resnet_stride` is a callback that the user can tweak to change the stride of the
-        # blocks. It defaults to the standard behaviour as in the paper
-        stride = stride_fn(stage_idx, block_idx)
-        downsample_fn = stride != 1 || inplanes != planes * expansion ?
-                        downsample_tuple[1] : downsample_tuple[2]
-        drop_path = DropPath(pathschedule[schedule_idx])
-        drop_block = DropBlock(blockschedule[schedule_idx])
-        block = basicblock(inplanes, planes; stride, reduction_factor, activation,
-                           norm_layer, revnorm, attn_fn, drop_path, drop_block)
-        downsample = downsample_fn(inplanes, planes * expansion; stride, norm_layer,
-                                   revnorm)
-        return block, downsample
-    end
-    return get_layers
-end
-
-function bottleneck_builder(block_repeats::AbstractVector{<:Integer};
-                            inplanes::Integer = 64, cardinality::Integer = 1,
-                            base_width::Integer = 64, reduction_factor::Integer = 1,
-                            expansion::Integer = 4, norm_layer = BatchNorm,
-                            revnorm::Bool = false, activation = relu,
-                            attn_fn = planes -> identity,
-                            drop_block_rate = nothing, drop_path_rate = nothing,
-                            stride_fn = resnet_stride, planes_fn = resnet_planes,
-                            downsample_tuple = (downsample_conv, downsample_identity))
-    pathschedule = linear_scheduler(drop_path_rate; depth = sum(block_repeats))
-    blockschedule = linear_scheduler(drop_block_rate; depth = sum(block_repeats))
-    planes_vec = collect(planes_fn(block_repeats))
-    # closure over `idxs`
-    function get_layers(stage_idx::Integer, block_idx::Integer)
-        # DropBlock, DropPath both take in rates based on a linear scaling schedule
-        # This is also needed for block `inplanes` and `planes` calculations
-        schedule_idx = sum(block_repeats[1:(stage_idx - 1)]) + block_idx
-        planes = planes_vec[schedule_idx]
-        inplanes = schedule_idx == 1 ? inplanes : planes_vec[schedule_idx - 1] * expansion
-        # `resnet_stride` is a callback that the user can tweak to change the stride of the
-        # blocks. It defaults to the standard behaviour as in the paper
-        stride = stride_fn(stage_idx, block_idx)
-        downsample_fn = stride != 1 || inplanes != planes * expansion ?
-                        downsample_tuple[1] : downsample_tuple[2]
-        drop_path = DropPath(pathschedule[schedule_idx])
-        drop_block = DropBlock(blockschedule[schedule_idx])
-        block = bottleneck(inplanes, planes; stride, cardinality, base_width,
-                           reduction_factor, activation, norm_layer, revnorm,
-                           attn_fn, drop_path, drop_block)
-        downsample = downsample_fn(inplanes, planes * expansion; stride, norm_layer,
-                                   revnorm)
-        return block, downsample
-    end
-    return get_layers
-end
-
-# TODO @theabhirath figure out a better name and potentially refactor other CNNs to use this
-function resnet_stages(get_layers, block_repeats::AbstractVector{<:Integer}, connection)
-    # Construct each stage
-    stages = []
-    for (stage_idx, nblocks) in enumerate(block_repeats)
-        # Construct the blocks for each stage
-        blocks = map(1:nblocks) do block_idx
-            branches = get_layers(stage_idx, block_idx)
-            return length(branches) == 1 ? only(branches) :
-                   Parallel(connection, branches...)
-        end
-        push!(stages, Chain(blocks...))
-    end
-    return Chain(stages...)
-end
-
 function resnet(img_dims, stem, get_layers, block_repeats::AbstractVector{<:Integer},
                 connection, classifier_fn)
     # Build stages of the ResNet
-    stage_blocks = resnet_stages(get_layers, block_repeats, connection)
+    stage_blocks = cnn_stages(get_layers, block_repeats, connection)
     backbone = Chain(stem, stage_blocks)
     # Add classifier to the backbone
     nfeaturemaps = Flux.outputsize(backbone, img_dims; padbatch = true)[3]
@@ -352,7 +264,8 @@ const RESNET_CONFIGS = Dict(18 => (basicblock, [2, 2, 2, 2]),
                             50 => (bottleneck, [3, 4, 6, 3]),
                             101 => (bottleneck, [3, 4, 23, 3]),
                             152 => (bottleneck, [3, 8, 36, 3]))
-# larger ResNet-like models
+# block configurations for larger ResNet-like models that do not use
+# depths 18 and 34
 const LRESNET_CONFIGS = Dict(50 => (bottleneck, [3, 4, 6, 3]),
                              101 => (bottleneck, [3, 4, 23, 3]),
                              152 => (bottleneck, [3, 8, 36, 3]))
