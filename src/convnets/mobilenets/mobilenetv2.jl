@@ -14,7 +14,6 @@ Create a MobileNetv2 model.
       + `c`: The number of output feature maps
       + `n`: The number of times a block is repeated
       + `s`: The stride of the convolutional kernel
-      + `a`: The activation function used in the bottleneck layer
 
   - `width_mult`: Controls the number of output feature maps in each block
     (with 1 being the default in the paper)
@@ -24,41 +23,39 @@ Create a MobileNetv2 model.
   - `inchannels`: The number of input channels.
   - `nclasses`: The number of output classes
 """
-function mobilenetv2(configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
-                     max_width::Integer = 1280, divisor::Integer = 8, dropout_rate = 0.2,
+function mobilenetv2(block_configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
+                     max_width::Integer = 1280, divisor::Integer = 8,
+                     inplanes::Integer = 32, dropout_rate = 0.2,
                      inchannels::Integer = 3, nclasses::Integer = 1000)
     # building first layer
-    inplanes = _round_channels(32 * width_mult, divisor)
+    inplanes = _round_channels(inplanes * width_mult, divisor)
     layers = []
     append!(layers,
             conv_norm((3, 3), inchannels, inplanes; pad = 1, stride = 2))
     # building inverted residual blocks
-    for (t, c, n, s, activation) in configs
-        outplanes = _round_channels(c * width_mult, divisor)
-        for i in 1:n
-            stride = i == 1 ? s : 1
-            push!(layers,
-                  mbconv((3, 3), inplanes, round(Int, inplanes * t), outplanes,
-                         activation; stride))
-            inplanes = outplanes
-        end
-    end
+    get_layers, block_repeats = mbconv_stack_builder(block_configs,
+                                                     fill(mbconv_builder,
+                                                          length(block_configs));
+                                                     inplanes)
+    append!(layers, resnet_stages(get_layers, block_repeats, +))
     # building last layers
     outplanes = _round_channels(max_width * max(1, width_mult), divisor)
-    append!(layers, conv_norm((1, 1), inplanes, outplanes, relu6))
+    append!(layers,
+            conv_norm((1, 1), _round_channels(block_configs[end][2], 8),
+                      outplanes, relu6))
     return Chain(Chain(layers...), create_classifier(outplanes, nclasses; dropout_rate))
 end
 
 # Layer configurations for MobileNetv2
 const MOBILENETV2_CONFIGS = [
-    # t, c, n, s, a
-    (1, 16, 1, 1, relu6),
-    (6, 24, 2, 2, relu6),
-    (6, 32, 3, 2, relu6),
-    (6, 64, 4, 2, relu6),
-    (6, 96, 3, 1, relu6),
-    (6, 160, 3, 2, relu6),
-    (6, 320, 1, 1, relu6),
+    # k, c, e, s, n, r, a
+    (3, 16, 1, 1, 1, nothing, relu6),
+    (3, 24, 6, 2, 2, nothing, relu6),
+    (3, 32, 6, 2, 3, nothing, relu6),
+    (3, 64, 6, 2, 4, nothing, relu6),
+    (3, 96, 6, 1, 3, nothing, relu6),
+    (3, 160, 6, 2, 3, nothing, relu6),
+    (3, 320, 6, 1, 1, nothing, relu6),
 ]
 
 """
