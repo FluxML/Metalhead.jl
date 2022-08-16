@@ -59,7 +59,8 @@ function fused_mbconv(kernel_size::Dims{2}, inplanes::Integer,
         append!(layers, conv_norm((1, 1), explanes, outplanes, identity; norm_layer))
     else
         append!(layers,
-                conv_norm((1, 1), inplanes, outplanes, activation; norm_layer, stride))
+                conv_norm(kernel_size, inplanes, outplanes, activation; pad = SamePad(),
+                          norm_layer, stride))
     end
     return Chain(layers...)
 end

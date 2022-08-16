@@ -1,36 +1,36 @@
 # block configs for EfficientNetv2
-# data organised as (k, i, o, e, s, n)
+# data organised as (k, c, e, s, n, r, a)
 const EFFNETV2_CONFIGS = Dict(:small => [
-                                  (3, 24, 24, 1, 1, 2),
-                                  (3, 24, 48, 4, 2, 4),
-                                  (3, 48, 64, 4, 2, 4),
-                                  (3, 64, 128, 4, 2, 6),
-                                  (3, 128, 160, 6, 1, 9),
-                                  (3, 160, 256, 6, 2, 15)],
+                                  (3, 24, 1, 1, 2, nothing, swish),
+                                  (3, 48, 4, 2, 4, nothing, swish),
+                                  (3, 64, 4, 2, 4, nothing, swish),
+                                  (3, 128, 4, 2, 6, 4, swish),
+                                  (3, 160, 6, 1, 9, 4, swish),
+                                  (3, 256, 6, 2, 15, 4, swish)],
                               :medium => [
-                                  (3, 24, 24, 1, 1, 3),
-                                  (3, 24, 48, 4, 2, 5),
-                                  (3, 48, 80, 4, 2, 5),
-                                  (3, 80, 160, 4, 2, 7),
-                                  (3, 160, 176, 6, 1, 14),
-                                  (3, 176, 304, 6, 2, 18),
-                                  (3, 304, 512, 6, 1, 5)],
+                                  (3, 24, 1, 1, 3, nothing, swish),
+                                  (3, 48, 4, 2, 5, nothing, swish),
+                                  (3, 80, 4, 2, 5, nothing, swish),
+                                  (3, 160, 4, 2, 7, 4, swish),
+                                  (3, 176, 6, 1, 14, 4, swish),
+                                  (3, 304, 6, 2, 18, 4, swish),
+                                  (3, 512, 6, 1, 5, 4, swish)],
                               :large => [
-                                  (3, 32, 32, 1, 1, 4),
-                                  (3, 32, 64, 4, 2, 7),
-                                  (3, 64, 96, 4, 2, 7),
-                                  (3, 96, 192, 4, 2, 10),
-                                  (3, 192, 224, 6, 1, 19),
-                                  (3, 224, 384, 6, 2, 25),
-                                  (3, 384, 640, 6, 1, 7)],
+                                  (3, 32, 1, 1, 4, nothing, swish),
+                                  (3, 64, 4, 2, 7, nothing, swish),
+                                  (3, 96, 4, 2, 7, nothing, swish),
+                                  (3, 192, 4, 2, 10, 4, swish),
+                                  (3, 224, 6, 1, 19, 4, swish),
+                                  (3, 384, 6, 2, 25, 4, swish),
+                                  (3, 640, 6, 1, 7, 4, swish)],
                               :xlarge => [
-                                  (3, 32, 32, 1, 1, 4),
-                                  (3, 32, 64, 4, 2, 8),
-                                  (3, 64, 96, 4, 2, 8),
-                                  (3, 96, 192, 4, 2, 16),
-                                  (3, 192, 224, 6, 1, 24),
-                                  (3, 384, 512, 6, 2, 32),
-                                  (3, 512, 768, 6, 1, 8)])
+                                  (3, 32, 1, 1, 4, nothing, swish),
+                                  (3, 64, 4, 2, 8, nothing, swish),
+                                  (3, 96, 4, 2, 8, nothing, swish),
+                                  (3, 192, 4, 2, 16, 4, swish),
+                                  (3, 384, 6, 1, 24, 4, swish),
+                                  (3, 512, 6, 2, 32, 4, swish),
+                                  (3, 768, 6, 1, 8, 4, swish)])
 
 """
     EfficientNetv2(config::Symbol; pretrain::Bool = false, width_mult::Real = 1,
@@ -58,9 +58,10 @@ function EfficientNetv2(config::Symbol; pretrain::Bool = false,
     layers = efficientnet(EFFNETV2_CONFIGS[config],
                           vcat(fill(fused_mbconv_builder, 3),
                                fill(mbconv_builder, length(EFFNETV2_CONFIGS[config]) - 3));
-                          headplanes = 1280, inchannels, nclasses)
+                          inplanes = EFFNETV2_CONFIGS[config][1][2], headplanes = 1280,
+                          inchannels, nclasses)
     if pretrain
-        loadpretrain!(layers, string("efficientnetv2"))
+        loadpretrain!(layers, string("efficientnetv2-", config))
     end
     return EfficientNetv2(layers)
 end

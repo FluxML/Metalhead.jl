@@ -1,13 +1,13 @@
 # block configs for EfficientNet
 const EFFICIENTNET_BLOCK_CONFIGS = [
-    # k, i, o, e, s, n
-    (3, 32, 16, 1, 1, 1),
-    (3, 16, 24, 6, 2, 2),
-    (5, 24, 40, 6, 2, 2),
-    (3, 40, 80, 6, 2, 3),
-    (5, 80, 112, 6, 1, 3),
-    (5, 112, 192, 6, 2, 4),
-    (3, 192, 320, 6, 1, 1),
+    # k, c, e, s, n, r, a
+    (3, 16, 1, 1, 1, 4, swish),
+    (3, 24, 6, 2, 2, 4, swish),
+    (5, 40, 6, 2, 2, 4, swish),
+    (3, 80, 6, 2, 3, 4, swish),
+    (5, 112, 6, 1, 3, 4, swish),
+    (5, 192, 6, 2, 4, 4, swish),
+    (3, 320, 6, 1, 1, 4, swish),
 ]
 # Data is organised as (r, (w, d))
 # r: image resolution
@@ -46,7 +46,7 @@ function EfficientNet(config::Symbol; pretrain::Bool = false, inchannels::Intege
     scalings = EFFICIENTNET_GLOBAL_CONFIGS[config][2]
     layers = efficientnet(EFFICIENTNET_BLOCK_CONFIGS,
                           fill(mbconv_builder, length(EFFICIENTNET_BLOCK_CONFIGS));
-                          scalings, inchannels, nclasses)
+                          inplanes = 32, scalings, inchannels, nclasses)
     if pretrain
         loadpretrain!(layers, string("efficientnet-", config))
     end
