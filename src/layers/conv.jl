@@ -64,7 +64,6 @@ function conv_norm(kernel_size::Dims{2}, inplanes::Integer, outplanes::Integer,
         norm_layer(normplanes, activations.bn; ϵ = eps)]
     return revnorm ? reverse(layers) : layers
 end
-
 function conv_norm(kernel_size::Dims{2}, ch::Pair{<:Integer, <:Integer},
                    activation = identity; kwargs...)
     inplanes, outplanes = ch
@@ -77,51 +76,4 @@ function basic_conv_bn(kernel_size::Dims{2}, inplanes, outplanes, activation = r
                        kwargs...)
     return conv_norm(kernel_size, inplanes, outplanes, activation; norm_layer = BatchNorm,
                      eps = 1.0f-3, kwargs...)
-end
-
-"""
-    dwsep_conv_bn(kernel_size::Dims{2}, inplanes::Integer, outplanes::Integer,
-                  activation = relu; eps::Float32 = 1.0f-5, revnorm::Bool = false, 
-                  stride::Integer = 1, use_norm::NTuple{2, Bool} = (true, true),
-                  pad::Integer = 0, dilation::Integer = 1, [bias, weight, init])
-
-Create a depthwise separable convolution chain as used in MobileNetv1.
-This is sequence of layers:
-
-  - a `kernel_size` depthwise convolution from `inplanes => inplanes`
-  - a (batch) normalisation layer + `activation` (if `use_norm[1] == true`; otherwise
-    `activation` is applied to the convolution output)
-  - a `kernel_size` convolution from `inplanes => outplanes`
-  - a (batch) normalisation layer + `activation` (if `use_norm[2] == true`; otherwise
-    `activation` is applied to the convolution output)
-
-See Fig. 3 in [reference](https://arxiv.org/abs/1704.04861v1).
-
-# Arguments
-
-  - `kernel_size`: size of the convolution kernel (tuple)
-  - `inplanes`: number of input feature maps
-  - `outplanes`: number of output feature maps
-  - `activation`: the activation function for the final layer
-  - `revnorm`: set to `true` to place the batch norm before the convolution
-  - `use_norm`: a tuple of two booleans to specify whether to use normalization for the first and
-    second convolution
-  - `bias`: a tuple of two booleans to specify whether to use bias for the first and second
-    convolution. This is set to `(false, false)` by default if `use_norm[0] == true` and
-    `use_norm[1] == true`.
-  - `stride`: stride of the first convolution kernel
-  - `pad`: padding of the first convolution kernel
-  - `dilation`: dilation of the first convolution kernel
-  - `weight`, `init`: initialization for the convolution kernel (see [`Flux.Conv`](#))
-"""
-function dwsep_conv_bn(kernel_size::Dims{2}, inplanes::Integer,
-                       outplanes::Integer, activation = relu; eps::Float32 = 1.0f-5,
-                       revnorm::Bool = false, stride::Integer = 1,
-                       use_norm::NTuple{2, Bool} = (true, true),
-                       bias::NTuple{2, Bool} = (!use_norm[1], !use_norm[2]), kwargs...)
-    return vcat(conv_norm(kernel_size, inplanes, inplanes, activation; eps,
-                          revnorm, use_norm = use_norm[1], stride, bias = bias[1],
-                          groups = inplanes, kwargs...),
-                conv_norm((1, 1), inplanes, outplanes, activation; eps,
-                          revnorm, use_norm = use_norm[2], bias = bias[2]))
 end

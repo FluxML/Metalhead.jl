@@ -1,14 +1,22 @@
 # block configs for EfficientNet
+# data organised as (k, c, e, s, n, r, a) for each stage
+# k: kernel size
+# c: output channels
+# e: expansion ratio
+# s: stride
+# n: number of repeats
+# r: reduction ratio for squeeze-excite layer
+# a: activation function
 const EFFICIENTNET_BLOCK_CONFIGS = [
-    # k, c, e, s, n, r, a
-    (3, 16, 1, 1, 1, 4, swish),
-    (3, 24, 6, 2, 2, 4, swish),
-    (5, 40, 6, 2, 2, 4, swish),
-    (3, 80, 6, 2, 3, 4, swish),
-    (5, 112, 6, 1, 3, 4, swish),
-    (5, 192, 6, 2, 4, 4, swish),
-    (3, 320, 6, 1, 1, 4, swish),
+    (mbconv, 3, 16, 1, 1, 1, 4, swish),
+    (mbconv, 3, 24, 6, 2, 2, 4, swish),
+    (mbconv, 5, 40, 6, 2, 2, 4, swish),
+    (mbconv, 3, 80, 6, 2, 3, 4, swish),
+    (mbconv, 5, 112, 6, 1, 3, 4, swish),
+    (mbconv, 5, 192, 6, 2, 4, 4, swish),
+    (mbconv, 3, 320, 6, 1, 1, 4, swish),
 ]
+
 # Data is organised as (r, (w, d))
 # r: image resolution
 # w: width scaling
@@ -44,9 +52,8 @@ function EfficientNet(config::Symbol; pretrain::Bool = false, inchannels::Intege
                       nclasses::Integer = 1000)
     _checkconfig(config, keys(EFFICIENTNET_GLOBAL_CONFIGS))
     scalings = EFFICIENTNET_GLOBAL_CONFIGS[config][2]
-    layers = efficientnet(EFFICIENTNET_BLOCK_CONFIGS,
-                          fill(mbconv_builder, length(EFFICIENTNET_BLOCK_CONFIGS));
-                          inplanes = 32, scalings, inchannels, nclasses)
+    layers = efficientnet(EFFICIENTNET_BLOCK_CONFIGS; inplanes = 32, scalings,
+                          inchannels, nclasses)
     if pretrain
         loadpretrain!(layers, string("efficientnet-", config))
     end

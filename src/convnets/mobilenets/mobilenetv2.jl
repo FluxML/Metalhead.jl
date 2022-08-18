@@ -33,29 +33,26 @@ function mobilenetv2(block_configs::AbstractVector{<:Tuple}; width_mult::Real = 
     append!(layers,
             conv_norm((3, 3), inchannels, inplanes; pad = 1, stride = 2))
     # building inverted residual blocks
-    get_layers, block_repeats = mbconv_stack_builder(block_configs,
-                                                     fill(mbconv_builder,
-                                                          length(block_configs));
-                                                     inplanes)
+    get_layers, block_repeats = mbconv_stack_builder(block_configs, inplanes; width_mult)
     append!(layers, cnn_stages(get_layers, block_repeats, +))
     # building last layers
     outplanes = _round_channels(max_width * max(1, width_mult), divisor)
     append!(layers,
-            conv_norm((1, 1), _round_channels(block_configs[end][2], 8),
+            conv_norm((1, 1), _round_channels(block_configs[end][3], 8),
                       outplanes, relu6))
     return Chain(Chain(layers...), create_classifier(outplanes, nclasses; dropout_rate))
 end
 
 # Layer configurations for MobileNetv2
 const MOBILENETV2_CONFIGS = [
-    # k, c, e, s, n, r, a
-    (3, 16, 1, 1, 1, nothing, relu6),
-    (3, 24, 6, 2, 2, nothing, relu6),
-    (3, 32, 6, 2, 3, nothing, relu6),
-    (3, 64, 6, 2, 4, nothing, relu6),
-    (3, 96, 6, 1, 3, nothing, relu6),
-    (3, 160, 6, 2, 3, nothing, relu6),
-    (3, 320, 6, 1, 1, nothing, relu6),
+    # f, k, c, e, s, n r, a
+    (mbconv, 3, 16, 1, 1, 1, nothing, swish),
+    (mbconv, 3, 24, 6, 2, 2, nothing, swish),
+    (mbconv, 3, 32, 6, 2, 3, nothing, swish),
+    (mbconv, 3, 64, 6, 2, 4, nothing, swish),
+    (mbconv, 3, 96, 6, 1, 3, nothing, swish),
+    (mbconv, 3, 160, 6, 2, 3, nothing, swish),
+    (mbconv, 3, 320, 6, 1, 1, nothing, swish),
 ]
 
 """
