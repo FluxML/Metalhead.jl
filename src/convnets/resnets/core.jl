@@ -71,7 +71,8 @@ function bottleneck(inplanes::Integer, planes::Integer; stride::Integer,
     width = fld(planes * base_width, 64) * cardinality
     first_planes = width ÷ reduction_factor
     outplanes = planes * 4
-    conv_bn1 = conv_norm((1, 1), inplanes => first_planes, activation; norm_layer, revnorm)
+    conv_bn1 = conv_norm((1, 1), inplanes => first_planes, activation; norm_layer,
+                         revnorm)
     conv_bn2 = conv_norm((3, 3), first_planes => width, identity; norm_layer, revnorm,
                          stride, pad = 1, groups = cardinality)
     conv_bn3 = conv_norm((1, 1), width => outplanes, identity; norm_layer, revnorm)
@@ -92,7 +93,8 @@ function downsample_pool(inplanes::Integer, outplanes::Integer; stride::Integer 
                          norm_layer = BatchNorm, revnorm::Bool = false)
     pool = stride == 1 ? identity : MeanPool((2, 2); stride, pad = SamePad())
     return Chain(pool,
-                 conv_norm((1, 1), inplanes => outplanes, identity; norm_layer, revnorm)...)
+                 conv_norm((1, 1), inplanes => outplanes, identity; norm_layer,
+                           revnorm)...)
 end
 
 # Downsample layer which is an identity projection. Uses max pooling
@@ -161,8 +163,7 @@ on how to use this function.
 function resnet_stem(stem_type::Symbol = :default; inchannels::Integer = 3,
                      replace_pool::Bool = false, activation = relu,
                      norm_layer = BatchNorm, revnorm::Bool = false)
-    @assert stem_type in [:default, :deep, :deep_tiered]
-    "Stem type must be one of [:default, :deep, :deep_tiered]"
+    _checkconfig(stem_type, [:default, :deep, :deep_tiered])
     # Main stem
     deep_stem = stem_type == :deep || stem_type == :deep_tiered
     inplanes = deep_stem ? stem_width * 2 : 64
@@ -199,7 +200,7 @@ function resnet(img_dims, stem, get_layers, block_repeats::AbstractVector{<:Inte
                 connection, classifier_fn)
     # Build stages of the ResNet
     stage_blocks = cnn_stages(get_layers, block_repeats, connection)
-    backbone = Chain(stem, stage_blocks)
+    backbone = Chain(stem, stage_blocks...)
     # Add classifier to the backbone
     nfeaturemaps = Flux.outputsize(backbone, img_dims; padbatch = true)[3]
     return Chain(backbone, classifier_fn(nfeaturemaps))
@@ -207,12 +208,14 @@ end
 
 function resnet(block_type, block_repeats::AbstractVector{<:Integer},
                 downsample_opt::NTuple{2, Any} = (downsample_conv, downsample_identity);
-                cardinality::Integer = 1, base_width::Integer = 64, inplanes::Integer = 64,
+                cardinality::Integer = 1, base_width::Integer = 64,
+                inplanes::Integer = 64,
                 reduction_factor::Integer = 1, imsize::Dims{2} = (256, 256),
                 inchannels::Integer = 3, stem_fn = resnet_stem, connection = addact,
                 activation = relu, norm_layer = BatchNorm, revnorm::Bool = false,
                 attn_fn = planes -> identity, pool_layer = AdaptiveMeanPool((1, 1)),
-                use_conv::Bool = false, drop_block_rate = nothing, drop_path_rate = nothing,
+                use_conv::Bool = false, drop_block_rate = nothing,
+                drop_path_rate = nothing,
                 dropout_rate = nothing, nclasses::Integer = 1000, kwargs...)
     # Build stem
     stem = stem_fn(; inchannels)
@@ -234,12 +237,12 @@ function resnet(block_type, block_repeats::AbstractVector{<:Integer},
                                         planes_fn = resnet_planes,
                                         downsample_tuple = downsample_opt, kwargs...)
     elseif block_type == bottle2neck
-        @assert isnothing(drop_block_rate)
-        "DropBlock not supported for `bottle2neck`. Set `drop_block_rate` to nothing"
-        @assert isnothing(drop_path_rate)
-        "DropPath not supported for `bottle2neck`. Set `drop_path_rate` to nothing"
-        @assert reduction_factor == 1
-        "Reduction factor not supported for `bottle2neck`. Set `reduction_factor` to 1"
+        @assert isnothing(drop_block_rate) "DropBlock not supported for `bottle2neck`.
+        Set `drop_block_rate` to nothing."
+        @assert isnothing(drop_path_rate) "DropPath not supported for `bottle2neck`.
+        Set `drop_path_rate` to nothing."
+        @assert reduction_factor==1 "Reduction factor not supported for `bottle2neck`.
+        Set `reduction_factor` to 1."
         get_layers = bottle2neck_builder(block_repeats; inplanes, cardinality, base_width,
                                          activation, norm_layer, revnorm, attn_fn,
                                          stride_fn = resnet_stride,

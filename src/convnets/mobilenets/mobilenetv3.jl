@@ -25,77 +25,58 @@ Create a MobileNetv3 model.
   - `nclasses`: the number of output classes
 """
 function mobilenetv3(configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
-                     max_width::Integer = 1024, reduced_tail::Bool = false,
-                     tail_dilated::Bool = false, dropout_rate = 0.2,
+                     max_width::Integer = 1024, dropout_rate = 0.2,
                      inchannels::Integer = 3, nclasses::Integer = 1000)
     # building first layer
     inplanes = _round_channels(16 * width_mult, 8)
     layers = []
     append!(layers,
             conv_norm((3, 3), inchannels, inplanes, hardswish; stride = 2, pad = 1))
-    explanes = 0
-    nstages = length(configs)
-    reduced_divider = 1
     # building inverted residual blocks
-    for (i, (k, t, c, reduction, activation, stride)) in enumerate(configs)
-        dilation = 1
-        if nstages - i <= 2
-            if reduced_tail
-                reduced_divider = 2
-                c /= reduced_divider
-            end
-            if tail_dilated
-                dilation = 2
-            end
-        end
-        # inverted residual layers
-        outplanes = _round_channels(c * width_mult, 8)
-        explanes = _round_channels(inplanes * t, 8)
-        push!(layers,
-              mbconv((k, k), inplanes, explanes, outplanes, activation;
-                     stride, reduction, dilation))
-        inplanes = outplanes
-    end
+    get_layers, block_repeats = mbconv_stack_builder(configs, inplanes; width_mult)
+    append!(layers, cnn_stages(get_layers, block_repeats, +))
     # building last layers
-    headplanes = _round_channels(max_width ÷ reduced_divider * width_mult, 8)
-    append!(layers, conv_norm((1, 1), inplanes, explanes, hardswish))
+    explanes = _round_channels(configs[end][3] * width_mult, 8)
+    midplanes = _round_channels(explanes * configs[end][4], 8)
+    headplanes = _round_channels(max_width * width_mult, 8)
+    append!(layers, conv_norm((1, 1), explanes, midplanes, hardswish))
     return Chain(Chain(layers...),
-                 create_classifier(explanes, headplanes, nclasses,
+                 create_classifier(midplanes, headplanes, nclasses,
                                    (hardswish, identity); dropout_rate))
 end
 
 # Layer configurations for small and large models for MobileNetv3
+# Data is organised as (f, k, c, e, s, n, r, a)
+# f: mbconv block function - we use `mbconv_m3` for all blocks
+# k: kernel size
+# c: output channels
+# e: expansion factor
+# s: stride
+# n: number of repeats
+# r: squeeze and excite reduction factor
+# a: activation function
 const MOBILENETV3_CONFIGS = Dict(:small => [
-                                     # k, t, c, r, a, s
-                                     (3, 1, 16, 4, relu, 2),
-                                     (3, 4.5, 24, nothing, relu, 2),
-                                     (3, 3.67, 24, nothing, relu, 1),
-                                     (5, 4, 40, 4, hardswish, 2),
-                                     (5, 6, 40, 4, hardswish, 1),
-                                     (5, 6, 40, 4, hardswish, 1),
-                                     (5, 3, 48, 4, hardswish, 1),
-                                     (5, 3, 48, 4, hardswish, 1),
-                                     (5, 6, 96, 4, hardswish, 2),
-                                     (5, 6, 96, 4, hardswish, 1),
-                                     (5, 6, 96, 4, hardswish, 1),
+                                     # f, k, c, e, s, n, r, a
+                                     (mbconv_m3, 3, 16, 1, 2, 1, 4, relu),
+                                     (mbconv_m3, 3, 24, 4.5, 2, 1, nothing, relu),
+                                     (mbconv_m3, 3, 24, 3.67, 1, 1, nothing, relu),
+                                     (mbconv_m3, 5, 40, 4, 2, 1, 4, hardswish),
+                                     (mbconv_m3, 5, 40, 6, 1, 2, 4, hardswish),
+                                     (mbconv_m3, 5, 48, 3, 1, 2, 4, hardswish),
+                                     (mbconv_m3, 5, 96, 6, 1, 3, 4, hardswish),
                                  ],
                                  :large => [
-                                     # k, t, c, r, a, s
-                                     (3, 1, 16, nothing, relu, 1),
-                                     (3, 4, 24, nothing, relu, 2),
-                                     (3, 3, 24, nothing, relu, 1),
-                                     (5, 3, 40, 4, relu, 2),
-                                     (5, 3, 40, 4, relu, 1),
-                                     (5, 3, 40, 4, relu, 1),
-                                     (3, 6, 80, nothing, hardswish, 2),
-                                     (3, 2.5, 80, nothing, hardswish, 1),
-                                     (3, 2.3, 80, nothing, hardswish, 1),
-                                     (3, 2.3, 80, nothing, hardswish, 1),
-                                     (3, 6, 112, 4, hardswish, 1),
-                                     (3, 6, 112, 4, hardswish, 1),
-                                     (5, 6, 160, 4, hardswish, 2),
-                                     (5, 6, 160, 4, hardswish, 1),
-                                     (5, 6, 160, 4, hardswish, 1),
+                                     # f, k, c, e, s, n, r, a
+                                     (mbconv_m3, 3, 16, 1, 1, 1, nothing, relu),
+                                     (mbconv_m3, 3, 24, 4, 2, 1, nothing, relu),
+                                     (mbconv_m3, 3, 24, 3, 1, 1, nothing, relu),
+                                     (mbconv_m3, 5, 40, 3, 2, 1, 4, relu),
+                                     (mbconv_m3, 5, 40, 3, 1, 2, 4, relu),
+                                     (mbconv_m3, 3, 80, 6, 2, 1, nothing, hardswish),
+                                     (mbconv_m3, 3, 80, 2.5, 1, 1, nothing, hardswish),
+                                     (mbconv_m3, 3, 80, 2.3, 1, 2, nothing, hardswish),
+                                     (mbconv_m3, 3, 112, 6, 1, 2, 4, hardswish),
+                                     (mbconv_m3, 5, 160, 6, 1, 3, 4, hardswish),
                                  ])
 
 """

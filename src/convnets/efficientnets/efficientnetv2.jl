@@ -1,36 +1,39 @@
 # block configs for EfficientNetv2
-# data organised as (k, c, e, s, n, r, a)
-const EFFNETV2_CONFIGS = Dict(:small => [
-                                  (3, 24, 1, 1, 2, nothing, swish),
-                                  (3, 48, 4, 2, 4, nothing, swish),
-                                  (3, 64, 4, 2, 4, nothing, swish),
-                                  (3, 128, 4, 2, 6, 4, swish),
-                                  (3, 160, 6, 1, 9, 4, swish),
-                                  (3, 256, 6, 2, 15, 4, swish)],
-                              :medium => [
-                                  (3, 24, 1, 1, 3, nothing, swish),
-                                  (3, 48, 4, 2, 5, nothing, swish),
-                                  (3, 80, 4, 2, 5, nothing, swish),
-                                  (3, 160, 4, 2, 7, 4, swish),
-                                  (3, 176, 6, 1, 14, 4, swish),
-                                  (3, 304, 6, 2, 18, 4, swish),
-                                  (3, 512, 6, 1, 5, 4, swish)],
-                              :large => [
-                                  (3, 32, 1, 1, 4, nothing, swish),
-                                  (3, 64, 4, 2, 7, nothing, swish),
-                                  (3, 96, 4, 2, 7, nothing, swish),
-                                  (3, 192, 4, 2, 10, 4, swish),
-                                  (3, 224, 6, 1, 19, 4, swish),
-                                  (3, 384, 6, 2, 25, 4, swish),
-                                  (3, 640, 6, 1, 7, 4, swish)],
-                              :xlarge => [
-                                  (3, 32, 1, 1, 4, nothing, swish),
-                                  (3, 64, 4, 2, 8, nothing, swish),
-                                  (3, 96, 4, 2, 8, nothing, swish),
-                                  (3, 192, 4, 2, 16, 4, swish),
-                                  (3, 384, 6, 1, 24, 4, swish),
-                                  (3, 512, 6, 2, 32, 4, swish),
-                                  (3, 768, 6, 1, 8, 4, swish)])
+# data organised as (k, c, e, s, n, r, a) for each stage
+# k: kernel size
+# c: output channels
+# e: expansion ratio
+# s: stride
+# n: number of repeats
+# r: reduction ratio for squeeze-excite layer - specified only for `mbconv`
+# a: activation function
+const EFFNETV2_CONFIGS = Dict(:small => [(fused_mbconv, 3, 24, 1, 1, 2, swish),
+                                  (fused_mbconv, 3, 48, 4, 2, 4, swish),
+                                  (fused_mbconv, 3, 64, 4, 2, 4, swish),
+                                  (mbconv, 3, 128, 4, 2, 6, 4, swish),
+                                  (mbconv, 3, 160, 6, 1, 9, 4, swish),
+                                  (mbconv, 3, 256, 6, 2, 15, 4, swish)],
+                              :medium => [(fused_mbconv, 3, 24, 1, 1, 3, swish),
+                                  (fused_mbconv, 3, 48, 4, 2, 5, swish),
+                                  (fused_mbconv, 3, 80, 4, 2, 5, swish),
+                                  (mbconv, 3, 160, 4, 2, 7, 4, swish),
+                                  (mbconv, 3, 176, 6, 1, 14, 4, swish),
+                                  (mbconv, 3, 304, 6, 2, 18, 4, swish),
+                                  (mbconv, 3, 512, 6, 1, 5, 4, swish)],
+                              :large => [(fused_mbconv, 3, 32, 1, 1, 4, swish),
+                                  (fused_mbconv, 3, 64, 4, 2, 7, swish),
+                                  (fused_mbconv, 3, 96, 4, 2, 7, swish),
+                                  (mbconv, 3, 192, 4, 2, 10, 4, swish),
+                                  (mbconv, 3, 224, 6, 1, 19, 4, swish),
+                                  (mbconv, 3, 384, 6, 2, 25, 4, swish),
+                                  (mbconv, 3, 640, 6, 1, 7, 4, swish)],
+                              :xlarge => [(fused_mbconv, 3, 32, 1, 1, 4, swish),
+                                  (fused_mbconv, 3, 64, 4, 2, 8, swish),
+                                  (fused_mbconv, 3, 96, 4, 2, 8, swish),
+                                  (mbconv, 3, 192, 4, 2, 16, 4, swish),
+                                  (mbconv, 3, 384, 6, 1, 24, 4, swish),
+                                  (mbconv, 3, 512, 6, 2, 32, 4, swish),
+                                  (mbconv, 3, 768, 6, 1, 8, 4, swish)])
 
 """
     EfficientNetv2(config::Symbol; pretrain::Bool = false, width_mult::Real = 1,
@@ -55,11 +58,9 @@ end
 function EfficientNetv2(config::Symbol; pretrain::Bool = false,
                         inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(config, sort(collect(keys(EFFNETV2_CONFIGS))))
-    layers = efficientnet(EFFNETV2_CONFIGS[config],
-                          vcat(fill(fused_mbconv_builder, 3),
-                               fill(mbconv_builder, length(EFFNETV2_CONFIGS[config]) - 3));
-                          inplanes = EFFNETV2_CONFIGS[config][1][2], headplanes = 1280,
-                          inchannels, nclasses)
+    block_configs = EFFNETV2_CONFIGS[config]
+    layers = efficientnet(block_configs; inplanes = block_configs[1][3],
+                          headplanes = 1280, inchannels, nclasses)
     if pretrain
         loadpretrain!(layers, string("efficientnetv2-", config))
     end

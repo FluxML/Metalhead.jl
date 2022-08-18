@@ -93,10 +93,8 @@ end
 trainable(a::DropBlock) = (;)
 
 function _dropblock_checks(x::AbstractArray{<:Any, 4}, drop_block_prob, gamma_scale)
-    @assert 0 ≤ drop_block_prob ≤ 1
-    "drop_block_prob must be between 0 and 1, got $drop_block_prob"
-    @assert 0 ≤ gamma_scale ≤ 1
-    return "gamma_scale must be between 0 and 1, got $gamma_scale"
+    @assert 0≤drop_block_prob≤1 "drop_block_prob must be between 0 and 1, got $drop_block_prob"
+    @assert 0≤gamma_scale≤1 "gamma_scale must be between 0 and 1, got $gamma_scale"
 end
 function _dropblock_checks(x, drop_block_prob, gamma_scale)
     throw(ArgumentError("x must be an array with 4 dimensions (H, W, C, N) for DropBlock."))

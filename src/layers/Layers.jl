@@ -28,7 +28,7 @@ include("embeddings.jl")
 export PatchEmbedding, ViPosEmbedding, ClassTokens
 
 include("mbconv.jl")
-export mbconv, fused_mbconv
+export mbconv, mbconv_m3, fused_mbconv
 
 include("mlp.jl")
 export mlp_block, gated_mlp_block
