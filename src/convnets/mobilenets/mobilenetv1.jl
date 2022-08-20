@@ -84,7 +84,7 @@ end
 
 function MobileNetv1(width_mult::Real = 1; pretrain::Bool = false,
                      inchannels::Integer = 3, nclasses::Integer = 1000)
-    layers = mobilenetv1(width_mult, MOBILENETV1_CONFIGS; inchannels, nclasses)
+    layers = mobilenetv1(MOBILENETV1_CONFIGS; width_mult, inchannels, nclasses)
     if pretrain
         loadpretrain!(layers, string("MobileNetv1"))
     end

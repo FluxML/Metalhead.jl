@@ -27,7 +27,7 @@ jobs:
           - x64
         suite:
           - '["AlexNet", "VGG"]'
-          - '["GoogLeNet", "SqueezeNet", "MobileNet"]'
+          - '["GoogLeNet", "SqueezeNet", "MobileNets"]'
           - '"EfficientNet"'
           - 'r"/*/ResNet*"'
           - '[r"ResNeXt", r"SEResNet"]'
