@@ -21,7 +21,7 @@ Create a MobileNetv1 model ([reference](https://arxiv.org/abs/1704.04861v1)).
   - `inchannels`: The number of input channels. The default value is 3.
   - `nclasses`: The number of output classes
 """
-function mobilenetv1(width_mult::Real, config::AbstractVector{<:Tuple};
+function mobilenetv1(config::AbstractVector{<:Tuple}; width_mult::Real = 1,
                      activation = relu, dropout_rate = nothing,
                      inchannels::Integer = 3, nclasses::Integer = 1000)
     layers = []
@@ -36,8 +36,14 @@ function mobilenetv1(width_mult::Real, config::AbstractVector{<:Tuple};
 end
 
 # Layer configurations for MobileNetv1
+# f: block function - we use `dwsep_conv_bn` for all blocks
+# k: kernel size
+# c: output channels
+# s: stride
+# n: number of repeats
+# a: activation function
 const MOBILENETV1_CONFIGS = [
-    # k, c, s, r
+    # f, k, c, s, n, a
     (dwsep_conv_bn, 3, 64, 1, 1, relu6),
     (dwsep_conv_bn, 3, 128, 2, 1, relu6),
     (dwsep_conv_bn, 3, 128, 1, 1, relu6),
@@ -50,23 +56,26 @@ const MOBILENETV1_CONFIGS = [
 ]
 
 """
-    MobileNetv1(width_mult = 1; inchannels::Integer = 3, pretrain::Bool = false,
-                nclasses::Integer = 1000)
+    MobileNetv1(width_mult::Real = 1; pretrain::Bool = false,
+                inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Create a MobileNetv1 model with the baseline configuration
 ([reference](https://arxiv.org/abs/1704.04861v1)).
-Set `pretrain` to `true` to load the pretrained weights for ImageNet.
 
 # Arguments
 
   - `width_mult`: Controls the number of output feature maps in each block
     (with 1 being the default in the paper;
     this is usually a value between 0.1 and 1.4)
-  - `inchannels`: The number of input channels.
   - `pretrain`: Whether to load the pre-trained weights for ImageNet
+  - `inchannels`: The number of input channels.
   - `nclasses`: The number of output classes
 
-See also [`Metalhead.mobilenetv1`](#).
+!!! warning
+    
+    `MobileNetv1` does not currently support pretrained weights.
+
+See also [`mobilenetv1`](#).
 """
 struct MobileNetv1
     layers::Any

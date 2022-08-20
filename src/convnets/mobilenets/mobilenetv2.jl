@@ -33,19 +33,27 @@ function mobilenetv2(block_configs::AbstractVector{<:Tuple}; width_mult::Real = 
     append!(layers,
             conv_norm((3, 3), inchannels, inplanes; pad = 1, stride = 2))
     # building inverted residual blocks
-    get_layers, block_repeats = mbconv_stack_builder(block_configs, inplanes; width_mult)
+    get_layers, block_repeats = mbconv_stack_builder(block_configs, inplanes; width_mult,
+                                                     divisor)
     append!(layers, cnn_stages(get_layers, block_repeats, +))
     # building last layers
-    outplanes = _round_channels(max_width * max(1, width_mult), divisor)
-    append!(layers,
-            conv_norm((1, 1), _round_channels(block_configs[end][3], 8),
-                      outplanes, relu6))
-    return Chain(Chain(layers...), create_classifier(outplanes, nclasses; dropout_rate))
+    outplanes = _round_channels(block_configs[end][3], divisor)
+    headplanes = _round_channels(max_width * max(1, width_mult), divisor)
+    append!(layers, conv_norm((1, 1), outplanes, headplanes, relu6))
+    return Chain(Chain(layers...), create_classifier(headplanes, nclasses; dropout_rate))
 end
 
 # Layer configurations for MobileNetv2
+# f: block function - we use `dwsep_conv_bn` for the first block and `mbconv` for the rest
+# k: kernel size
+# c: output channels
+# e: expansion factor
+# s: stride
+# n: number of repeats
+# r: reduction factor
+# a: activation function
 const MOBILENETV2_CONFIGS = [
-    # f, k, c, e, s, n r, a
+    # f, k, c, e, s, n, r, a
     (mbconv, 3, 16, 1, 1, 1, nothing, swish),
     (mbconv, 3, 24, 6, 2, 2, nothing, swish),
     (mbconv, 3, 32, 6, 2, 3, nothing, swish),
@@ -61,7 +69,6 @@ const MOBILENETV2_CONFIGS = [
 
 Create a MobileNetv2 model with the specified configuration.
 ([reference](https://arxiv.org/abs/1801.04381)).
-Set `pretrain` to `true` to load the pretrained weights for ImageNet.
 
 # Arguments
 
@@ -72,7 +79,11 @@ Set `pretrain` to `true` to load the pretrained weights for ImageNet.
   - `inchannels`: The number of input channels.
   - `nclasses`: The number of output classes
 
-See also [`Metalhead.mobilenetv2`](#).
+!!! warning
+    
+    `MobileNetv2` does not currently support pretrained weights.
+
+See also [`mobilenetv2`](#).
 """
 struct MobileNetv2
     layers::Any

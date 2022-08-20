@@ -33,7 +33,8 @@ function mobilenetv3(configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
     append!(layers,
             conv_norm((3, 3), inchannels, inplanes, hardswish; stride = 2, pad = 1))
     # building inverted residual blocks
-    get_layers, block_repeats = mbconv_stack_builder(configs, inplanes; width_mult)
+    get_layers, block_repeats = mbconv_stack_builder(configs, inplanes; width_mult,
+                                                     se_from_explanes = true)
     append!(layers, cnn_stages(get_layers, block_repeats, +))
     # building last layers
     explanes = _round_channels(configs[end][3] * width_mult, 8)
@@ -46,8 +47,7 @@ function mobilenetv3(configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
 end
 
 # Layer configurations for small and large models for MobileNetv3
-# Data is organised as (f, k, c, e, s, n, r, a)
-# f: mbconv block function - we use `mbconv_m3` for all blocks
+# f: mbconv block function - we use `mbconv` for all blocks
 # k: kernel size
 # c: output channels
 # e: expansion factor
@@ -57,26 +57,26 @@ end
 # a: activation function
 const MOBILENETV3_CONFIGS = Dict(:small => [
                                      # f, k, c, e, s, n, r, a
-                                     (mbconv_m3, 3, 16, 1, 2, 1, 4, relu),
-                                     (mbconv_m3, 3, 24, 4.5, 2, 1, nothing, relu),
-                                     (mbconv_m3, 3, 24, 3.67, 1, 1, nothing, relu),
-                                     (mbconv_m3, 5, 40, 4, 2, 1, 4, hardswish),
-                                     (mbconv_m3, 5, 40, 6, 1, 2, 4, hardswish),
-                                     (mbconv_m3, 5, 48, 3, 1, 2, 4, hardswish),
-                                     (mbconv_m3, 5, 96, 6, 1, 3, 4, hardswish),
+                                     (mbconv, 3, 16, 1, 2, 1, 4, relu),
+                                     (mbconv, 3, 24, 4.5, 2, 1, nothing, relu),
+                                     (mbconv, 3, 24, 3.67, 1, 1, nothing, relu),
+                                     (mbconv, 5, 40, 4, 2, 1, 4, hardswish),
+                                     (mbconv, 5, 40, 6, 1, 2, 4, hardswish),
+                                     (mbconv, 5, 48, 3, 1, 2, 4, hardswish),
+                                     (mbconv, 5, 96, 6, 1, 3, 4, hardswish),
                                  ],
                                  :large => [
                                      # f, k, c, e, s, n, r, a
-                                     (mbconv_m3, 3, 16, 1, 1, 1, nothing, relu),
-                                     (mbconv_m3, 3, 24, 4, 2, 1, nothing, relu),
-                                     (mbconv_m3, 3, 24, 3, 1, 1, nothing, relu),
-                                     (mbconv_m3, 5, 40, 3, 2, 1, 4, relu),
-                                     (mbconv_m3, 5, 40, 3, 1, 2, 4, relu),
-                                     (mbconv_m3, 3, 80, 6, 2, 1, nothing, hardswish),
-                                     (mbconv_m3, 3, 80, 2.5, 1, 1, nothing, hardswish),
-                                     (mbconv_m3, 3, 80, 2.3, 1, 2, nothing, hardswish),
-                                     (mbconv_m3, 3, 112, 6, 1, 2, 4, hardswish),
-                                     (mbconv_m3, 5, 160, 6, 1, 3, 4, hardswish),
+                                     (mbconv, 3, 16, 1, 1, 1, nothing, relu),
+                                     (mbconv, 3, 24, 4, 2, 1, nothing, relu),
+                                     (mbconv, 3, 24, 3, 1, 1, nothing, relu),
+                                     (mbconv, 5, 40, 3, 2, 1, 4, relu),
+                                     (mbconv, 5, 40, 3, 1, 2, 4, relu),
+                                     (mbconv, 3, 80, 6, 2, 1, nothing, hardswish),
+                                     (mbconv, 3, 80, 2.5, 1, 1, nothing, hardswish),
+                                     (mbconv, 3, 80, 2.3, 1, 2, nothing, hardswish),
+                                     (mbconv, 3, 112, 6, 1, 2, 4, hardswish),
+                                     (mbconv, 5, 160, 6, 1, 3, 4, hardswish),
                                  ])
 
 """
@@ -97,7 +97,11 @@ Set `pretrain = true` to load the model with pre-trained weights for ImageNet.
   - `inchannels`: number of input channels
   - `nclasses`: the number of output classes
 
-See also [`Metalhead.mobilenetv3`](#).
+!!! warning
+    
+    `MobileNetv3` does not currently support pretrained weights.
+
+See also [`mobilenetv3`](#).
 """
 struct MobileNetv3
     layers::Any

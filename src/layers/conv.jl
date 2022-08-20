@@ -33,7 +33,7 @@ Create a convolution + batch normalization pair with activation.
 function conv_norm(kernel_size::Dims{2}, inplanes::Integer, outplanes::Integer,
                    activation = relu; norm_layer = BatchNorm, revnorm::Bool = false,
                    eps::Float32 = 1.0f-5, preact::Bool = false, use_norm::Bool = true,
-                   bias = !use_norm, kwargs...)
+                   momentum::Union{Nothing, Number} = nothing, bias = !use_norm, kwargs...)
     # no normalization layer
     if !use_norm
         if preact || revnorm
@@ -58,6 +58,11 @@ function conv_norm(kernel_size::Dims{2}, inplanes::Integer, outplanes::Integer,
         else
             activations = (conv = activation, bn = identity)
         end
+    end
+    # handle momentum for BatchNorm
+    if !isnothing(momentum)
+        @assert norm_layer==BatchNorm "`momentum` is only supported for `BatchNorm`"
+        norm_layer = (args...; kwargs...) -> BatchNorm(args...; momentum, kwargs...)
     end
     # layers
     layers = [Conv(kernel_size, inplanes => outplanes, activations.conv; bias, kwargs...),

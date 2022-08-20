@@ -46,6 +46,7 @@ include("convnets/efficientnets/efficientnetv2.jl")
 include("convnets/mobilenets/mobilenetv1.jl")
 include("convnets/mobilenets/mobilenetv2.jl")
 include("convnets/mobilenets/mobilenetv3.jl")
+include("convnets/mobilenets/mnasnet.jl")
 ## Others
 include("convnets/densenet.jl")
 include("convnets/squeezenet.jl")
@@ -69,14 +70,16 @@ export AlexNet, VGG, VGG11, VGG13, VGG16, VGG19,
        WideResNet, ResNeXt, SEResNet, SEResNeXt, Res2Net, Res2NeXt,
        DenseNet, DenseNet121, DenseNet161, DenseNet169, DenseNet201,
        GoogLeNet, Inception3, Inceptionv3, Inceptionv4, InceptionResNetv2, Xception,
-       SqueezeNet, MobileNetv1, MobileNetv2, MobileNetv3, EfficientNet, EfficientNetv2,
+       SqueezeNet, MobileNetv1, MobileNetv2, MobileNetv3, MNASNet,
+       EfficientNet, EfficientNetv2,
        MLPMixer, ResMLP, gMLP, ViT, ConvMixer, ConvNeXt
 
 # use Flux._big_show to pretty print large models
 for T in (:AlexNet, :VGG, :SqueezeNet, :ResNet, :WideResNet, :ResNeXt,
           :SEResNet, :SEResNeXt, :Res2Net, :Res2NeXt, :GoogLeNet, :DenseNet,
           :Inceptionv3, :Inceptionv4, :InceptionResNetv2, :Xception,
-          :MobileNetv1, :MobileNetv2, :MobileNetv3, :EfficientNet, :EfficientNetv2,
+          :MobileNetv1, :MobileNetv2, :MobileNetv3, :MNASNet,
+          :EfficientNet, :EfficientNetv2,
           :MLPMixer, :ResMLP, :gMLP, :ViT, :ConvMixer, :ConvNeXt)
     @eval Base.show(io::IO, ::MIME"text/plain", model::$T) = _maybe_big_show(io, model)
 end

@@ -1,13 +1,13 @@
 function dwsepconv_builder(block_configs, inplanes::Integer, stage_idx::Integer,
                            width_mult::Number; norm_layer = BatchNorm, kwargs...)
-    _, k, outplanes, stride, nrepeats, activation = block_configs[stage_idx]
+    block_fn, k, outplanes, stride, nrepeats, activation = block_configs[stage_idx]
     outplanes = floor(Int, outplanes * width_mult)
     inplanes = stage_idx == 1 ? inplanes : block_configs[stage_idx - 1][3]
     function get_layers(block_idx::Integer)
         inplanes = block_idx == 1 ? inplanes : outplanes
         stride = block_idx == 1 ? stride : 1
-        block = Chain(dwsep_conv_bn((k, k), inplanes, outplanes, activation;
-                                    stride, pad = SamePad(), norm_layer, kwargs...)...)
+        block = Chain(block_fn((k, k), inplanes, outplanes, activation;
+                               stride, pad = SamePad(), norm_layer, kwargs...)...)
         return (block,)
     end
     return get_layers, nrepeats
@@ -15,15 +15,15 @@ end
 
 function mbconv_builder(block_configs, inplanes::Integer, stage_idx::Integer,
                         scalings::NTuple{2, Real}; norm_layer = BatchNorm,
-                        round_fn = planes -> _round_channels(planes, 8), kwargs...)
+                        divisor::Integer = 8, kwargs...)
     width_mult, depth_mult = scalings
     block_fn, k, outplanes, expansion, stride, nrepeats, reduction, activation = block_configs[stage_idx]
     inplanes = stage_idx == 1 ? inplanes : block_configs[stage_idx - 1][3]
-    inplanes = round_fn(inplanes * width_mult)
-    outplanes = _round_channels(outplanes * width_mult, 8)
+    inplanes = _round_channels(inplanes * width_mult, divisor)
+    outplanes = _round_channels(outplanes * width_mult, divisor)
     function get_layers(block_idx::Integer)
         inplanes = block_idx == 1 ? inplanes : outplanes
-        explanes = _round_channels(inplanes * expansion, 8)
+        explanes = _round_channels(inplanes * expansion, divisor)
         stride = block_idx == 1 ? stride : 1
         block = block_fn((k, k), inplanes, explanes, outplanes, activation; norm_layer,
                          stride, reduction, no_skip = true, kwargs...)
@@ -51,14 +51,14 @@ end
 
 function fused_mbconv_builder(block_configs, inplanes::Integer,
                               stage_idx::Integer; norm_layer = BatchNorm, kwargs...)
-    _, k, outplanes, expansion, stride, nrepeats, activation = block_configs[stage_idx]
+    block_fn, k, outplanes, expansion, stride, nrepeats, activation = block_configs[stage_idx]
     inplanes = stage_idx == 1 ? inplanes : block_configs[stage_idx - 1][3]
     function get_layers(block_idx::Integer)
         inplanes = block_idx == 1 ? inplanes : outplanes
         explanes = _round_channels(inplanes * expansion, 8)
         stride = block_idx == 1 ? stride : 1
-        block = fused_mbconv((k, k), inplanes, explanes, outplanes, activation;
-                             norm_layer, stride, no_skip = true, kwargs...)
+        block = block_fn((k, k), inplanes, explanes, outplanes, activation;
+                         norm_layer, stride, no_skip = true, kwargs...)
         return stride == 1 && inplanes == outplanes ? (identity, block) : (block,)
     end
     return get_layers, nrepeats
@@ -74,8 +74,7 @@ function _get_builder(::typeof(dwsep_conv_bn), block_configs, inplanes::Integer;
                                     kwargs...)
 end
 
-function _get_builder(::Union{typeof(mbconv), typeof(mbconv_m3)}, block_configs,
-                      inplanes::Integer;
+function _get_builder(::typeof(mbconv), block_configs, inplanes::Integer;
                       scalings::Union{Nothing, NTuple{2, Real}} = nothing,
                       width_mult::Union{Nothing, Number} = nothing, norm_layer, kwargs...)
     if isnothing(scalings)

@@ -68,8 +68,9 @@ function mbconv(kernel_size::Dims{2}, inplanes::Integer, explanes::Integer,
                 outplanes::Integer, activation = relu; stride::Integer,
                 dilation::Integer = 1, reduction::Union{Nothing, Integer} = nothing,
                 norm_layer = BatchNorm, momentum::Union{Nothing, Number} = nothing,
-                no_skip::Bool = false)
+                se_from_explanes::Bool = false, divisor::Integer = 8, no_skip::Bool = false)
     @assert stride in [1, 2] "`stride` has to be 1 or 2 for `mbconv`"
+    # handle momentum for BatchNorm
     if !isnothing(momentum)
         @assert norm_layer==BatchNorm "`momentum` is only supported for `BatchNorm`"
         norm_layer = (args...; kwargs...) -> BatchNorm(args...; momentum, kwargs...)
@@ -86,42 +87,10 @@ function mbconv(kernel_size::Dims{2}, inplanes::Integer, explanes::Integer,
                       stride, dilation, pad = SamePad(), groups = explanes))
     # squeeze-excite layer
     if !isnothing(reduction)
+        squeeze_planes = _round_channels((se_from_explanes ? explanes : inplanes) ÷
+                                         reduction, divisor)
         push!(layers,
-              squeeze_excite(explanes, max(1, inplanes ÷ reduction); activation,
-                             gate_activation = hardσ))
-    end
-    # project
-    append!(layers, conv_norm((1, 1), explanes, outplanes, identity))
-    use_skip = stride == 1 && inplanes == outplanes && !no_skip
-    return use_skip ? SkipConnection(Chain(layers...), +) : Chain(layers...)
-end
-
-function mbconv_m3(kernel_size::Dims{2}, inplanes::Integer, explanes::Integer,
-                   outplanes::Integer, activation = relu; stride::Integer,
-                   dilation::Integer = 1, reduction::Union{Nothing, Integer} = nothing,
-                   norm_layer = BatchNorm, momentum::Union{Nothing, Number} = nothing,
-                   no_skip::Bool = false)
-    @assert stride in [1, 2] "`stride` has to be 1 or 2 for `mbconv`"
-    if !isnothing(momentum)
-        @assert norm_layer==BatchNorm "`momentum` is only supported for `BatchNorm`"
-        norm_layer = (args...; kwargs...) -> BatchNorm(args...; momentum, kwargs...)
-    end
-    layers = []
-    # expand
-    if inplanes != explanes
-        append!(layers,
-                conv_norm((1, 1), inplanes, explanes, activation; norm_layer))
-    end
-    # depthwise
-    append!(layers,
-            conv_norm(kernel_size, explanes, explanes, activation; norm_layer,
-                      stride, dilation, pad = SamePad(), groups = explanes))
-    # squeeze-excite layer
-    if !isnothing(reduction)
-        push!(layers,
-              squeeze_excite(explanes, _round_channels(explanes ÷ reduction, 8);
-                             activation,
-                             gate_activation = hardσ))
+              squeeze_excite(explanes, squeeze_planes; activation, gate_activation = hardσ))
     end
     # project
     append!(layers, conv_norm((1, 1), explanes, outplanes, identity))
