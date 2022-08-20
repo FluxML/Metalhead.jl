@@ -208,7 +208,8 @@ end
 
 function resnet(block_type, block_repeats::AbstractVector{<:Integer},
                 downsample_opt::NTuple{2, Any} = (downsample_conv, downsample_identity);
-                cardinality::Integer = 1, base_width::Integer = 64, inplanes::Integer = 64,
+                cardinality::Integer = 1, base_width::Integer = 64,
+                inplanes::Integer = 64,
                 reduction_factor::Integer = 1, imsize::Dims{2} = (256, 256),
                 inchannels::Integer = 3, stem_fn = resnet_stem, connection = addact,
                 activation = relu, norm_layer = BatchNorm, revnorm::Bool = false,
