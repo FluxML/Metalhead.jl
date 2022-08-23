@@ -2,7 +2,9 @@ function dwsepconv_builder(block_configs, inplanes::Integer, stage_idx::Integer,
                            width_mult::Real; norm_layer = BatchNorm, kwargs...)
     block_fn, k, outplanes, stride, nrepeats, activation = block_configs[stage_idx]
     outplanes = floor(Int, outplanes * width_mult)
-    inplanes = stage_idx == 1 ? inplanes : block_configs[stage_idx - 1][3]
+    if stage_idx != 1
+        inplanes = floor(Int, block_configs[stage_idx - 1][3] * width_mult)
+    end
     function get_layers(block_idx::Integer)
         inplanes = block_idx == 1 ? inplanes : outplanes
         stride = block_idx == 1 ? stride : 1
@@ -23,8 +25,9 @@ function mbconv_builder(block_configs, inplanes::Integer, stage_idx::Integer,
     if !isnothing(reduction)
         reduction = !se_from_explanes ? reduction * expansion : reduction
     end
-    inplanes = stage_idx == 1 ? inplanes : block_configs[stage_idx - 1][3]
-    inplanes = _round_channels(inplanes * width_mult, divisor)
+    if stage_idx != 1
+        inplanes = _round_channels(block_configs[stage_idx - 1][3] * width_mult, divisor)
+    end
     outplanes = _round_channels(outplanes * width_mult, divisor)
     function get_layers(block_idx::Integer)
         inplanes = block_idx == 1 ? inplanes : outplanes

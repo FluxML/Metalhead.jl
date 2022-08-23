@@ -3,8 +3,9 @@
                    norm_layer = planes -> identity, activation = relu,
                    gate_activation = sigmoid)
 
-    squeeze_excite(inplanes; reduction = 16, rd_divisor = 8,
-                   activation = relu, gate_activation = sigmoid, norm_layer = identity)
+    squeeze_excite(inplanes::Integer; reduction::Real = 16,
+                   norm_layer = planes -> identity, activation = relu,
+                   gate_activation = sigmoid)
 
 Creates a squeeze-and-excitation layer used in MobileNets, EfficientNets and SE-ResNets.
 
@@ -14,9 +15,7 @@ Creates a squeeze-and-excitation layer used in MobileNets, EfficientNets and SE-
   - `squeeze_planes`: The number of feature maps in the intermediate layers. Alternatively,
     specify the keyword arguments `reduction` and `rd_divisior`, which determine the number
     of feature maps in the intermediate layers from the number of input feature maps as:
-    `squeeze_planes = _round_channels(inplanes ÷ reduction, rd_divisor, 0)`.
-    (See [`_round_channels`](#) for details. The default values are `reduction = 16` and
-    `rd_divisor = 8`.)
+    `squeeze_planes = _round_channels(inplanes ÷ reduction)`. (See [`_round_channels`](#) for details.)
   - `activation`: The activation function for the first convolution layer
   - `gate_activation`: The activation function for the gate layer
   - `norm_layer`: The normalization layer to be used after the convolution layers

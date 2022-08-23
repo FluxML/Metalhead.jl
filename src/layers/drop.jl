@@ -70,7 +70,7 @@ At test time, the `DropBlock` layer is equivalent to `identity`.
     probability across blocks. If this is not desired, then a lower base survival probability
     is recommended.
 
-((reference)[https://arxiv.org/abs/1810.12890])
+([reference](https://arxiv.org/abs/1810.12890))
 
 # Arguments
 

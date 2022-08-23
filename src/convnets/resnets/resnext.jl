@@ -3,7 +3,7 @@
             base_width::Integer = 4, inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Creates a ResNeXt model with the specified depth, cardinality, and base width.
-((reference)[https://arxiv.org/abs/1611.05431])
+([reference](https://arxiv.org/abs/1611.05431))
 
 # Arguments
 

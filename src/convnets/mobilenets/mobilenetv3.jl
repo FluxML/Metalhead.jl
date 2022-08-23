@@ -28,7 +28,7 @@ function mobilenetv3(configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
                      max_width::Integer = 1024, dropout_rate = 0.2,
                      inchannels::Integer = 3, nclasses::Integer = 1000)
     # building first layer
-    inplanes = _round_channels(16 * width_mult, 8)
+    inplanes = _round_channels(16 * width_mult)
     layers = []
     append!(layers,
             conv_norm((3, 3), inchannels, inplanes, hardswish; stride = 2, pad = 1))
@@ -38,12 +38,11 @@ function mobilenetv3(configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
                                                      se_round_fn = _round_channels)
     append!(layers, cnn_stages(get_layers, block_repeats, +))
     # building last layers
-    explanes = _round_channels(configs[end][3] * width_mult, 8)
-    midplanes = _round_channels(explanes * configs[end][4], 8)
-    headplanes = _round_channels(max_width * width_mult, 8)
+    explanes = _round_channels(configs[end][3] * width_mult)
+    midplanes = _round_channels(explanes * configs[end][4])
     append!(layers, conv_norm((1, 1), explanes, midplanes, hardswish))
     return Chain(Chain(layers...),
-                 create_classifier(midplanes, headplanes, nclasses,
+                 create_classifier(midplanes, max_width, nclasses,
                                    (hardswish, identity); dropout_rate))
 end
 

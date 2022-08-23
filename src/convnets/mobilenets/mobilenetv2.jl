@@ -37,7 +37,7 @@ function mobilenetv2(block_configs::AbstractVector{<:Tuple}; width_mult::Real = 
                                                      divisor)
     append!(layers, cnn_stages(get_layers, block_repeats, +))
     # building last layers
-    outplanes = _round_channels(block_configs[end][3], divisor)
+    outplanes = _round_channels(block_configs[end][3] * width_mult, divisor)
     headplanes = _round_channels(max_width * max(1, width_mult), divisor)
     append!(layers, conv_norm((1, 1), outplanes, headplanes, relu6))
     return Chain(Chain(layers...), create_classifier(headplanes, nclasses; dropout_rate))

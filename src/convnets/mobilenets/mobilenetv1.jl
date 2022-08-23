@@ -23,16 +23,18 @@ Create a MobileNetv1 model ([reference](https://arxiv.org/abs/1704.04861v1)).
 """
 function mobilenetv1(config::AbstractVector{<:Tuple}; width_mult::Real = 1,
                      activation = relu, dropout_rate = nothing,
-                     inchannels::Integer = 3, nclasses::Integer = 1000)
+                     inplanes::Integer = 32, inchannels::Integer = 3,
+                     nclasses::Integer = 1000)
     layers = []
     # stem of the model
+    inplanes = floor(Int, inplanes * width_mult)
     append!(layers,
-            conv_norm((3, 3), inchannels, config[1][3], activation; stride = 2, pad = 1))
+            conv_norm((3, 3), inchannels, inplanes, activation; stride = 2, pad = 1))
     # building inverted residual blocks
-    get_layers, block_repeats = mbconv_stack_builder(config, config[1][3]; width_mult)
+    get_layers, block_repeats = mbconv_stack_builder(config, inplanes; width_mult)
     append!(layers, cnn_stages(get_layers, block_repeats))
-    return Chain(Chain(layers...),
-                 create_classifier(config[end][3], nclasses; dropout_rate))
+    outplanes = floor(Int, config[end][3] * width_mult)
+    return Chain(Chain(layers...), create_classifier(outplanes, nclasses; dropout_rate))
 end
 
 # Layer configurations for MobileNetv1
@@ -45,14 +47,10 @@ end
 const MOBILENETV1_CONFIGS = [
     # f, k, c, s, n, a
     (dwsep_conv_bn, 3, 64, 1, 1, relu6),
-    (dwsep_conv_bn, 3, 128, 2, 1, relu6),
-    (dwsep_conv_bn, 3, 128, 1, 1, relu6),
-    (dwsep_conv_bn, 3, 256, 2, 1, relu6),
-    (dwsep_conv_bn, 3, 256, 1, 1, relu6),
-    (dwsep_conv_bn, 3, 512, 2, 1, relu6),
-    (dwsep_conv_bn, 3, 512, 1, 5, relu6),
-    (dwsep_conv_bn, 3, 1024, 2, 1, relu6),
-    (dwsep_conv_bn, 3, 1024, 1, 1, relu6),
+    (dwsep_conv_bn, 3, 128, 2, 2, relu6),
+    (dwsep_conv_bn, 3, 256, 2, 2, relu6),
+    (dwsep_conv_bn, 3, 512, 2, 6, relu6),
+    (dwsep_conv_bn, 3, 1024, 2, 2, relu6),
 ]
 
 """

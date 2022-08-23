@@ -2,7 +2,7 @@
     SEResNet(depth::Integer; pretrain::Bool = false, inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Creates a SEResNet model with the specified depth.
-((reference)[https://arxiv.org/pdf/1709.01507.pdf])
+([reference](https://arxiv.org/pdf/1709.01507.pdf))
 
 # Arguments
 
@@ -43,7 +43,7 @@ classifier(m::SEResNet) = m.layers[2]
               base_width::Integer = 4, inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Creates a SEResNeXt model with the specified depth, cardinality, and base width.
-((reference)[https://arxiv.org/pdf/1709.01507.pdf])
+([reference](https://arxiv.org/pdf/1709.01507.pdf))
 
 # Arguments
 

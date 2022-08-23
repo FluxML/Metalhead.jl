@@ -25,7 +25,7 @@ function mnasnet(block_configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
     norm_layer = (args...; kwargs...) -> BatchNorm(args...; momentum = _MNASNET_BN_MOMENTUM,
                                                    kwargs...)
     # building first layer
-    inplanes = _round_channels(inplanes * width_mult, 8)
+    inplanes = _round_channels(inplanes * width_mult)
     layers = []
     append!(layers,
             conv_norm((3, 3), inchannels, inplanes, relu; stride = 2, pad = 1,
@@ -35,8 +35,8 @@ function mnasnet(block_configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
                                                      norm_layer)
     append!(layers, cnn_stages(get_layers, block_repeats, +))
     # building last layers
-    outplanes = _round_channels(block_configs[end][3] * width_mult, 8)
-    headplanes = _round_channels(max_width * max(1, width_mult), 8)
+    outplanes = _round_channels(block_configs[end][3] * width_mult)
+    headplanes = _round_channels(max_width * max(1, width_mult))
     append!(layers,
             conv_norm((1, 1), outplanes, headplanes, relu; norm_layer))
     return Chain(Chain(layers...), create_classifier(headplanes, nclasses; dropout_rate))
@@ -119,3 +119,8 @@ function MNASNet(config::Symbol; width_mult::Real = 1, pretrain::Bool = false,
     end
     return MNASNet(layers)
 end
+
+(m::MNASNet)(x) = m.layers(x)
+
+backbone(m::MNASNet) = m.layers[1]
+classifier(m::MNASNet) = m.layers[2]
