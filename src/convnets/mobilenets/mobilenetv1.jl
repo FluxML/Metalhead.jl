@@ -27,13 +27,13 @@ function mobilenetv1(config::AbstractVector{<:Tuple}; width_mult::Real = 1,
                      nclasses::Integer = 1000)
     layers = []
     # stem of the model
-    inplanes = floor(Int, inplanes * width_mult)
+    inplanes = _round_channels(inplanes * width_mult)
     append!(layers,
             conv_norm((3, 3), inchannels, inplanes, activation; stride = 2, pad = 1))
     # building inverted residual blocks
     get_layers, block_repeats = mbconv_stack_builder(config, inplanes; width_mult)
     append!(layers, cnn_stages(get_layers, block_repeats))
-    outplanes = floor(Int, config[end][3] * width_mult)
+    outplanes = _round_channels(config[end][3] * width_mult)
     return Chain(Chain(layers...), create_classifier(outplanes, nclasses; dropout_rate))
 end
 

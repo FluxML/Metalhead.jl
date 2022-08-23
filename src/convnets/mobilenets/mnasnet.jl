@@ -36,10 +36,9 @@ function mnasnet(block_configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
     append!(layers, cnn_stages(get_layers, block_repeats, +))
     # building last layers
     outplanes = _round_channels(block_configs[end][3] * width_mult)
-    headplanes = _round_channels(max_width * max(1, width_mult))
     append!(layers,
-            conv_norm((1, 1), outplanes, headplanes, relu; norm_layer))
-    return Chain(Chain(layers...), create_classifier(headplanes, nclasses; dropout_rate))
+            conv_norm((1, 1), outplanes, max_width, relu; norm_layer))
+    return Chain(Chain(layers...), create_classifier(max_width, nclasses; dropout_rate))
 end
 
 # Layer configurations for MNasNet
@@ -115,7 +114,7 @@ function MNASNet(config::Symbol; width_mult::Real = 1, pretrain::Bool = false,
     inplanes, block_configs = MNASNET_CONFIGS[config]
     layers = mnasnet(block_configs; width_mult, inplanes, inchannels, nclasses)
     if pretrain
-        load_pretrained!(layers, "mnasnet$(width_mult)")
+        loadpretrain!(layers, "mnasnet$(width_mult)")
     end
     return MNASNet(layers)
 end

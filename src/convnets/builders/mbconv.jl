@@ -1,9 +1,9 @@
 function dwsepconv_builder(block_configs, inplanes::Integer, stage_idx::Integer,
                            width_mult::Real; norm_layer = BatchNorm, kwargs...)
     block_fn, k, outplanes, stride, nrepeats, activation = block_configs[stage_idx]
-    outplanes = floor(Int, outplanes * width_mult)
+    outplanes = _round_channels(outplanes * width_mult)
     if stage_idx != 1
-        inplanes = floor(Int, block_configs[stage_idx - 1][3] * width_mult)
+        inplanes = _round_channels(block_configs[stage_idx - 1][3] * width_mult)
     end
     function get_layers(block_idx::Integer)
         inplanes = block_idx == 1 ? inplanes : outplanes

@@ -44,7 +44,7 @@ function mobilenetv2(block_configs::AbstractVector{<:Tuple}; width_mult::Real = 
 end
 
 # Layer configurations for MobileNetv2
-# f: block function - we use `dwsep_conv_bn` for the first block and `mbconv` for the rest
+# f: block function - we use `mbconv` for all blocks
 # k: kernel size
 # c: output channels
 # e: expansion factor
