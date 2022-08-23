@@ -36,10 +36,9 @@ function squeeze_excite(inplanes::Integer, squeeze_planes::Integer;
         gate_activation]
     return SkipConnection(Chain(filter!(!=(identity), layers)...), .*)
 end
-function squeeze_excite(inplanes::Integer; reduction::Integer = 16,
-                        rd_divisor::Integer = 8, kwargs...)
-    return squeeze_excite(inplanes, _round_channels(inplanes ÷ reduction, rd_divisor, 0);
-                          kwargs...)
+function squeeze_excite(inplanes::Integer; reduction::Real = 16,
+                        round_fn = _round_channels, kwargs...)
+    return squeeze_excite(inplanes, round_fn(inplanes / reduction); kwargs...)
 end
 
 """

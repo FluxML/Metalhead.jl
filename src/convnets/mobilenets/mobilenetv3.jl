@@ -34,7 +34,8 @@ function mobilenetv3(configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
             conv_norm((3, 3), inchannels, inplanes, hardswish; stride = 2, pad = 1))
     # building inverted residual blocks
     get_layers, block_repeats = mbconv_stack_builder(configs, inplanes; width_mult,
-                                                     se_from_explanes = true)
+                                                     se_from_explanes = true,
+                                                     se_round_fn = _round_channels)
     append!(layers, cnn_stages(get_layers, block_repeats, +))
     # building last layers
     explanes = _round_channels(configs[end][3] * width_mult, 8)
@@ -55,8 +56,8 @@ end
 # n: number of repeats
 # r: squeeze and excite reduction factor
 # a: activation function
+# Data is organised as (f, k, c, e, s, n, r, a)
 const MOBILENETV3_CONFIGS = Dict(:small => [
-                                     # f, k, c, e, s, n, r, a
                                      (mbconv, 3, 16, 1, 2, 1, 4, relu),
                                      (mbconv, 3, 24, 4.5, 2, 1, nothing, relu),
                                      (mbconv, 3, 24, 3.67, 1, 1, nothing, relu),
@@ -66,7 +67,6 @@ const MOBILENETV3_CONFIGS = Dict(:small => [
                                      (mbconv, 5, 96, 6, 1, 3, 4, hardswish),
                                  ],
                                  :large => [
-                                     # f, k, c, e, s, n, r, a
                                      (mbconv, 3, 16, 1, 1, 1, nothing, relu),
                                      (mbconv, 3, 24, 4, 2, 1, nothing, relu),
                                      (mbconv, 3, 24, 3, 1, 1, nothing, relu),

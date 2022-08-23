@@ -1,5 +1,4 @@
 # block configs for EfficientNetv2
-# data organised as (k, c, e, s, n, r, a) for each stage
 # k: kernel size
 # c: output channels
 # e: expansion ratio
@@ -7,6 +6,7 @@
 # n: number of repeats
 # r: reduction ratio for squeeze-excite layer - specified only for `mbconv`
 # a: activation function
+# Data organised as (f, k, c, e, s, n, (r,) a) for each stage
 const EFFNETV2_CONFIGS = Dict(:small => [(fused_mbconv, 3, 24, 1, 1, 2, swish),
                                   (fused_mbconv, 3, 48, 4, 2, 4, swish),
                                   (fused_mbconv, 3, 64, 4, 2, 4, swish),

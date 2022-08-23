@@ -277,55 +277,53 @@ end
     end
 end
 
-@testset "MobileNet" verbose = true begin
-    for width_mult in [0.5, 0.75, 1, 1.3]
-        @testset "MobileNetv1" begin
-            m = MobileNetv1(width_mult)
+@testset "MobileNets (width = $width_mult)" for width_mult in [0.5, 0.75, 1, 1.3]
+    @testset "MobileNetv1" begin
+        m = MobileNetv1(width_mult)
+        @test size(m(x_224)) == (1000, 1)
+        if (MobileNetv1, width_mult) in PRETRAINED_MODELS
+            @test acctest(MobileNetv1(pretrain = true))
+        else
+            @test_throws ArgumentError MobileNetv1(pretrain = true)
+        end
+        @test gradtest(m, x_224)
+    end
+    _gc()
+    @testset "MobileNetv2" begin
+        m = MobileNetv2(width_mult)
+        @test size(m(x_224)) == (1000, 1)
+        if (MobileNetv2, width_mult) in PRETRAINED_MODELS
+            @test acctest(MobileNetv2(pretrain = true))
+        else
+            @test_throws ArgumentError MobileNetv2(pretrain = true)
+        end
+        @test gradtest(m, x_224)
+    end
+    _gc()
+    @testset "MobileNetv3" verbose = true begin
+        @testset for config in [:small, :large]
+            m = MobileNetv3(config; width_mult)
             @test size(m(x_224)) == (1000, 1)
-            if (MobileNetv1, width_mult) in PRETRAINED_MODELS
-                @test acctest(MobileNetv1(pretrain = true))
+            if (MobileNetv3, config, width_mult) in PRETRAINED_MODELS
+                @test acctest(MobileNetv3(config; pretrain = true))
             else
-                @test_throws ArgumentError MobileNetv1(pretrain = true)
+                @test_throws ArgumentError MobileNetv3(config; pretrain = true)
             end
             @test gradtest(m, x_224)
+            _gc()
         end
-        _gc()
-        @testset "MobileNetv2" begin
-            m = MobileNetv2(width_mult)
+    end
+    @testset "MNASNet" verbose = true begin
+        @testset for config in [:A1, :B1]
+            m = MNASNet(config; width_mult)
             @test size(m(x_224)) == (1000, 1)
-            if (MobileNetv2, width_mult) in PRETRAINED_MODELS
-                @test acctest(MobileNetv2(pretrain = true))
+            if (MNASNet, config, width_mult) in PRETRAINED_MODELS
+                @test acctest(MNASNet(config; pretrain = true))
             else
-                @test_throws ArgumentError MobileNetv2(pretrain = true)
+                @test_throws ArgumentError MNASNet(config; pretrain = true)
             end
             @test gradtest(m, x_224)
-        end
-        _gc()
-        @testset "MobileNetv3" verbose = true begin
-            @testset for config in [:small, :large]
-                m = MobileNetv3(config; width_mult)
-                @test size(m(x_224)) == (1000, 1)
-                if (MobileNetv3, config, width_mult) in PRETRAINED_MODELS
-                    @test acctest(MobileNetv3(config; pretrain = true))
-                else
-                    @test_throws ArgumentError MobileNetv3(config; pretrain = true)
-                end
-                @test gradtest(m, x_224)
-                _gc()
-            end
-        end
-        @testset "MNASNet" verbose = true begin
-            @testset for config in [:A1, :B1]
-                m = MNASNet(config; width_mult)
-                @test size(m(x_224)) == (1000, 1)
-                if (MNASNet, config, width_mult) in PRETRAINED_MODELS
-                    @test acctest(MNASNet(config; pretrain = true))
-                else
-                    @test_throws ArgumentError MNASNet(config; pretrain = true)
-                end
-                @test gradtest(m, x_224)
-                _gc()
-            end
+            _gc()
         end
     end
 end

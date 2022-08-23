@@ -30,7 +30,7 @@ jobs:
           - '["GoogLeNet", "SqueezeNet", "MobileNets"]'
           - '"EfficientNet"'
           - 'r"/*/ResNet*"'
-          - '[r"ResNeXt", r"SEResNet"]'
+          - 'r"/*/SEResNet*"'
           - '[r"Res2Net", r"Res2NeXt"]'
           - '"Inception"'
           - '"DenseNet"'

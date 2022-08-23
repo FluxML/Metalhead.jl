@@ -1,5 +1,4 @@
 # block configs for EfficientNet
-# data organised as (k, c, e, s, n, r, a) for each stage
 # k: kernel size
 # c: output channels
 # e: expansion ratio
@@ -7,6 +6,7 @@
 # n: number of repeats
 # r: reduction ratio for squeeze-excite layer
 # a: activation function
+# Data is organised as (k, c, e, s, n, r, a)
 const EFFICIENTNET_BLOCK_CONFIGS = [
     (mbconv, 3, 16, 1, 1, 1, 4, swish),
     (mbconv, 3, 24, 6, 2, 2, 4, swish),

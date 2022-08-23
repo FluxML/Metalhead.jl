@@ -2,7 +2,7 @@
 const _MNASNET_BN_MOMENTUM = 0.0003f0
 
 """
-    mnasnet(block_configs::AbstractVector{<:Tuple}; width_mult::Real,
+    mnasnet(block_configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
             max_width = 1280, dropout_rate = 0.2, inchannels::Integer = 3,
             nclasses::Integer = 1000)
 
@@ -18,24 +18,27 @@ Create an MNASNet model with the specified configuration.
   - `inchannels`: The number of input channels.
   - `nclasses`: The number of output classes
 """
-function mnasnet(block_configs::AbstractVector{<:Tuple}; width_mult::Real,
+function mnasnet(block_configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
                  max_width::Integer = 1280, inplanes::Integer = 32, dropout_rate = 0.2,
                  inchannels::Integer = 3, nclasses::Integer = 1000)
+    # norm layer for MNASNet is different from other models
+    norm_layer = (args...; kwargs...) -> BatchNorm(args...; momentum = _MNASNET_BN_MOMENTUM,
+                                                   kwargs...)
     # building first layer
     inplanes = _round_channels(inplanes * width_mult, 8)
     layers = []
     append!(layers,
             conv_norm((3, 3), inchannels, inplanes, relu; stride = 2, pad = 1,
-                      momentum = _MNASNET_BN_MOMENTUM))
+                      norm_layer))
     # building inverted residual blocks
     get_layers, block_repeats = mbconv_stack_builder(block_configs, inplanes; width_mult,
-                                                     momentum = _MNASNET_BN_MOMENTUM)
+                                                     norm_layer)
     append!(layers, cnn_stages(get_layers, block_repeats, +))
     # building last layers
     outplanes = _round_channels(block_configs[end][3] * width_mult, 8)
     headplanes = _round_channels(max_width * max(1, width_mult), 8)
     append!(layers,
-            conv_norm((1, 1), outplanes, headplanes, relu; momentum = _MNASNET_BN_MOMENTUM))
+            conv_norm((1, 1), outplanes, headplanes, relu; norm_layer))
     return Chain(Chain(layers...), create_classifier(headplanes, nclasses; dropout_rate))
 end
 
@@ -48,9 +51,9 @@ end
 # n: number of repeats
 # r: reduction factor - only used for `mbconv`
 # a: activation function
+# Data is organised as (f, k, c, (e,) s, n, (r,) a)
 const MNASNET_CONFIGS = Dict(:B1 => (32,
                                      [
-                                         # f, k, c, (e,) s, n, (r,) a
                                          (dwsep_conv_bn, 3, 16, 1, 1, relu),
                                          (mbconv, 3, 24, 3, 2, 3, nothing, relu),
                                          (mbconv, 5, 40, 3, 2, 3, nothing, relu),
@@ -68,19 +71,16 @@ const MNASNET_CONFIGS = Dict(:B1 => (32,
                                          (mbconv, 3, 112, 6, 1, 2, 4, relu),
                                          (mbconv, 5, 160, 6, 2, 3, 4, relu),
                                          (mbconv, 3, 320, 6, 1, 1, nothing, relu),
-                                     ])
-                             # TODO small doesn't work yet - need to fix squeeze and excite
-                             # channel calculations somehow
-                             #  :small => (8,
-                             #             [
-                             #                 (dwsep_conv_bn, 3, 8, 1, 1, relu),
-                             #                 (mbconv, 3, 16, 3, 2, 1, nothing, relu),
-                             #                 (mbconv, 3, 16, 6, 2, 2, nothing, relu),
-                             #                 (mbconv, 5, 32, 6, 2, 4, 4, relu),
-                             #                 (mbconv, 3, 32, 6, 1, 2, 3, relu),
-                             #                 (mbconv, 5, 88, 6, 2, 3, 3, relu),
-                             #                 (mbconv, 3, 144, 6, 1, 1, nothing, relu),]),
-                             )
+                                     ]),
+                             :small => (8,
+                                        [
+                                            (dwsep_conv_bn, 3, 8, 1, 1, relu),
+                                            (mbconv, 3, 16, 3, 2, 1, nothing, relu),
+                                            (mbconv, 3, 16, 6, 2, 2, nothing, relu),
+                                            (mbconv, 5, 32, 6, 2, 4, 4, relu),
+                                            (mbconv, 3, 32, 6, 1, 3, 4, relu),
+                                            (mbconv, 5, 88, 6, 2, 3, 4, relu),
+                                            (mbconv, 3, 144, 6, 1, 1, nothing, relu)]))
 
 """
     MNASNet(width_mult = 1; inchannels::Integer = 3, pretrain::Bool = false,
