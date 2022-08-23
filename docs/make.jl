@@ -11,7 +11,7 @@ makedocs(modules = [Metalhead, Artifacts, LazyArtifacts, Images, OneHotArrays, D
                    ],
                   "Developer guide" => "contributing.md",
                   "API reference" => [
-                      "api/models.md",
+                      "api/reference.md",
                    ],
                  ],
          format = Documenter.HTML(

@@ -63,7 +63,7 @@ Create a SqueezeNet
   - `inchannels`: number of input channels.
   - `nclasses`: the number of output classes.
 
-See also [`Metalhead.squeezenet`](@ref).
+See also [`squeezenet`](@ref).
 """
 struct SqueezeNet
     layers::Any

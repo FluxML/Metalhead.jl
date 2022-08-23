@@ -66,7 +66,11 @@ used to build the block for the model, see [`Metalhead.bottleneck_builder`](@ref
   - `revnorm`: set to `true` to place the normalisation layer before the convolution
   - `drop_block`: the drop block layer
   - `drop_path`: the drop path layer
+<<<<<<< HEAD
   - `attn_fn`: the attention function to use. See [`squeeze_excite`](@ref) for an example.
+=======
+  - `attn_fn`: the attention function to use. See [`Metalhead.squeeze_excite`](@ref) for an example.
+>>>>>>> 5ac81ce (Use `@autodocs` and fix references)
 """
 function bottleneck(inplanes::Integer, planes::Integer; stride::Integer,
                     cardinality::Integer = 1, base_width::Integer = 64,
@@ -231,7 +235,11 @@ const RESNET_SHORTCUTS = Dict(:A => (downsample_identity, downsample_identity),
     resnet_stem(; stem_type = :default, inchannels::Integer = 3, replace_stem_pool = false,
                   norm_layer = BatchNorm, activation = relu)
 
+<<<<<<< HEAD
 Builds a stem to be used in a ResNet model. See the `stem` argument of [`resnet`](@ref) for details
+=======
+Builds a stem to be used in a ResNet model. See the `stem` argument of [`Metalhead.resnet`](@ref) for details
+>>>>>>> 5ac81ce (Use `@autodocs` and fix references)
 on how to use this function.
 
 # Arguments
