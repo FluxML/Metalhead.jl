@@ -8,7 +8,7 @@ Create an Xception block.
 
 # Arguments
 
-  - `inchannels`: The number of channels in the input.
+  - `inchannels`: number of input channels
   - `outchannels`: number of output channels.
   - `nrepeats`: number of repeats of depthwise separable convolution layers.
   - `stride`: stride by which to downsample the input.
@@ -19,8 +19,7 @@ function xception_block(inchannels::Integer, outchannels::Integer, nrepeats::Int
                         stride::Integer = 1, start_with_relu::Bool = true,
                         grow_at_start::Bool = true)
     if outchannels != inchannels || stride != 1
-        skip = conv_norm((1, 1), inchannels, outchannels, identity; stride = stride,
-                         bias = false)
+        skip = conv_norm((1, 1), inchannels, outchannels, identity; stride = stride)
     else
         skip = [identity]
     end
@@ -35,8 +34,7 @@ function xception_block(inchannels::Integer, outchannels::Integer, nrepeats::Int
         end
         push!(layers, relu)
         append!(layers,
-                depthwise_sep_conv_norm((3, 3), inc, outc; pad = 1, bias = false,
-                                        use_norm = (false, false)))
+                dwsep_conv_bn((3, 3), inc, outc; pad = 1, use_norm = (false, false)))
         push!(layers, BatchNorm(outc))
     end
     layers = start_with_relu ? layers : layers[2:end]
@@ -45,27 +43,27 @@ function xception_block(inchannels::Integer, outchannels::Integer, nrepeats::Int
 end
 
 """
-    xception(; dropout_rate = 0.0, inchannels::Integer = 3, nclasses::Integer = 1000)
+    xception(; dropout_rate = nothing, inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Creates an Xception model.
 ([reference](https://arxiv.org/abs/1610.02357))
 
 # Arguments
 
-  - `dropout_rate`: rate of dropout in classifier head.
+  - `dropout_rate`: rate of dropout in classifier head. Set to `nothing` to disable dropout.
   - `inchannels`: number of input channels.
   - `nclasses`: the number of output classes.
 """
 function xception(; dropout_rate = 0.0, inchannels::Integer = 3, nclasses::Integer = 1000)
-    backbone = Chain(conv_norm((3, 3), inchannels, 32; stride = 2, bias = false)...,
-                     conv_norm((3, 3), 32, 64; bias = false)...,
+    backbone = Chain(conv_norm((3, 3), inchannels, 32; stride = 2)...,
+                     conv_norm((3, 3), 32, 64)...,
                      xception_block(64, 128, 2; stride = 2, start_with_relu = false),
                      xception_block(128, 256, 2; stride = 2),
                      xception_block(256, 728, 2; stride = 2),
                      [xception_block(728, 728, 3) for _ in 1:8]...,
                      xception_block(728, 1024, 2; stride = 2, grow_at_start = false),
-                     depthwise_sep_conv_norm((3, 3), 1024, 1536; pad = 1)...,
-                     depthwise_sep_conv_norm((3, 3), 1536, 2048; pad = 1)...)
+                     dwsep_conv_bn((3, 3), 1024, 1536; pad = 1)...,
+                     dwsep_conv_bn((3, 3), 1536, 2048; pad = 1)...)
     return Chain(backbone, create_classifier(2048, nclasses; dropout_rate))
 end
 

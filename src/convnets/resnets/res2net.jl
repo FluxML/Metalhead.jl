@@ -8,6 +8,7 @@ Creates a bottleneck block as described in the Res2Net paper.
 ([reference](https://arxiv.org/abs/1904.01169))
 
 # Arguments
+
   - `inplanes`: number of input feature maps
   - `planes`: number of feature maps for the block
   - `stride`: the stride of the block
@@ -29,21 +30,19 @@ function bottle2neck(inplanes::Integer, planes::Integer; stride::Integer = 1,
     outplanes = planes * 4
     pool = is_first && scale > 1 ? MeanPool((3, 3); stride, pad = 1) : identity
     conv_bns = [Chain(conv_norm((3, 3), width => width, activation; norm_layer, stride,
-                                pad = 1, groups = cardinality, bias = false)...)
+                                pad = 1, groups = cardinality)...)
                 for _ in 1:max(1, scale - 1)]
     reslayer = is_first ? Parallel(cat_channels, pool, conv_bns...) :
                Parallel(cat_channels, identity, Chain(PairwiseFusion(+, conv_bns...)))
-    tuplify = if is_first
-        x -> tuple(x...)
-    else
-        x -> tuple(x[1], tuple(x[2:end]...))
-    end
-    layers = [conv_norm((1, 1), inplanes => width * scale, activation;
-                        norm_layer, revnorm, bias = false)...,
-              chunk$(; size = width, dims = 3), tuplify, reslayer,
-              conv_norm((1, 1), width * scale => outplanes, activation;
-                        norm_layer, revnorm, bias = false)...,
-              attn_fn(outplanes)]
+    tuplify = is_first ? x -> tuple(x...) : x -> tuple(x[1], tuple(x[2:end]...))
+    layers = [
+        conv_norm((1, 1), inplanes => width * scale, activation;
+                  norm_layer, revnorm)...,
+        chunk$(; size = width, dims = 3), tuplify, reslayer,
+        conv_norm((1, 1), width * scale => outplanes, activation;
+                  norm_layer, revnorm)...,
+        attn_fn(outplanes),
+    ]
     return Chain(filter(!=(identity), layers)...)
 end
 
@@ -86,6 +85,7 @@ Creates a Res2Net model with the specified depth, scale, and base width.
 ([reference](https://arxiv.org/abs/1904.01169))
 
 # Arguments
+
   - `depth`: one of `[50, 101, 152]`. The depth of the Res2Net model.
   - `pretrain`: set to `true` to load the model with pre-trained weights for ImageNet
   - `scale`: the number of feature groups in the block. See the
@@ -125,6 +125,7 @@ Creates a Res2NeXt model with the specified depth, scale, base width and cardina
 ([reference](https://arxiv.org/abs/1904.01169))
 
 # Arguments
+
   - `depth`: one of `[50, 101, 152]`. The depth of the Res2Net model.
   - `pretrain`: set to `true` to load the model with pre-trained weights for ImageNet
   - `scale`: the number of feature groups in the block. See the

@@ -84,7 +84,7 @@ Creates a ConvNeXt model.
 # Arguments
 
   - `config`: The size of the model, one of `tiny`, `small`, `base`, `large` or `xlarge`.
-  - `inchannels`: The number of channels in the input.
+  - `inchannels`: number of input channels
   - `nclasses`: number of output classes
 
 See also [`Metalhead.convnext`](#).

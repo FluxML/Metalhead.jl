@@ -2,7 +2,7 @@
     ResNet(depth::Integer; pretrain::Bool = false, inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Creates a ResNet model with the specified depth.
-((reference)[https://arxiv.org/abs/1512.03385])
+([reference](https://arxiv.org/abs/1512.03385))
 
 # Arguments
 
@@ -39,14 +39,14 @@ classifier(m::ResNet) = m.layers[2]
 Creates a Wide ResNet model with the specified depth. The model is the same as ResNet
 except for the bottleneck number of channels which is twice larger in every block.
 The number of channels in outer 1x1 convolutions is the same.
-((reference)[https://arxiv.org/abs/1605.07146])
+([reference](https://arxiv.org/abs/1605.07146))
 
 # Arguments
 
   - `depth`: one of `[18, 34, 50, 101, 152]`. The depth of the Wide ResNet model.
   - `pretrain`: set to `true` to load the model with pre-trained weights for ImageNet
   - `inchannels`: The number of input channels.
-  - `nclasses`: the number of output classes
+  - `nclasses`: The number of output classes
 
 Advanced users who want more configuration options will be better served by using [`resnet`](#).
 """

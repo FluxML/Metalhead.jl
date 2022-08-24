@@ -3,10 +3,10 @@ seconddimmean(x) = dropdims(mean(x; dims = 2); dims = 2)
 
 # utility function for making sure that all layers have a channel size divisible by 8
 # used by MobileNet variants
-function _round_channels(channels, divisor, min_value = divisor)
+function _round_channels(channels::Number, divisor::Integer = 8, min_value::Integer = 0)
     new_channels = max(min_value, floor(Int, channels + divisor / 2) ÷ divisor * divisor)
     # Make sure that round down does not go down by more than 10%
-    return (new_channels < 0.9 * channels) ? new_channels + divisor : new_channels
+    return new_channels < 0.9 * channels ? new_channels + divisor : new_channels
 end
 
 """
@@ -66,13 +66,17 @@ function _maybe_big_show(io, model)
 end
 
 """
-    linear_scheduler(drop_path_rate = 0.0; start_value = 0.0, depth)
+    linear_scheduler(drop_rate = 0.0; start_value = 0.0, depth)
+    linear_scheduler(drop_rate::Nothing; depth::Integer)
 
-Returns the dropout rates for a given depth using the linear scaling rule.
+Returns the dropout rates for a given depth using the linear scaling rule. If the
+`drop_rate` is `nothing`, it returns a `Vector` of length `depth` with all values
+equal to `nothing`.
 """
 function linear_scheduler(drop_rate = 0.0; depth::Integer, start_value = 0.0)
     return LinRange(start_value, drop_rate, depth)
 end
+linear_scheduler(drop_rate::Nothing; depth::Integer) = fill(drop_rate, depth)
 
 # Utility function for depth and configuration checks in models
 function _checkconfig(config, configs)

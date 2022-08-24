@@ -10,12 +10,12 @@ Create a Densenet bottleneck layer
   - `outplanes`: number of output feature maps on bottleneck branch
     (and scaling factor for inner feature maps; see ref)
 """
-function dense_bottleneck(inplanes::Integer, outplanes::Integer)
-    inner_channels = 4 * outplanes
-    return SkipConnection(Chain(conv_norm((1, 1), inplanes, inner_channels; bias = false,
+function dense_bottleneck(inplanes::Integer, outplanes::Integer; expansion::Integer = 4)
+    inner_channels = expansion * outplanes
+    return SkipConnection(Chain(conv_norm((1, 1), inplanes, inner_channels;
                                           revnorm = true)...,
                                 conv_norm((3, 3), inner_channels, outplanes; pad = 1,
-                                          bias = false, revnorm = true)...),
+                                          revnorm = true)...),
                           cat_channels)
 end
 
@@ -31,7 +31,7 @@ Create a DenseNet transition sequence
   - `outplanes`: number of output feature maps
 """
 function transition(inplanes::Integer, outplanes::Integer)
-    return Chain(conv_norm((1, 1), inplanes, outplanes; bias = false, revnorm = true)...,
+    return Chain(conv_norm((1, 1), inplanes, outplanes; revnorm = true)...,
                  MeanPool((2, 2)))
 end
 
@@ -55,7 +55,8 @@ function dense_block(inplanes::Integer, growth_rates)
 end
 
 """
-    densenet(inplanes, growth_rates; reduction = 0.5, nclasses::Integer = 1000)
+    densenet(inplanes, growth_rates; reduction = 0.5, dropout_rate = nothing, 
+             inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Create a DenseNet model
 ([reference](https://arxiv.org/abs/1608.06993)).
@@ -66,13 +67,14 @@ Create a DenseNet model
   - `growth_rates`: the growth rates of output feature maps within each
     [`dense_block`](#) (a vector of vectors)
   - `reduction`: the factor by which the number of feature maps is scaled across each transition
+  - `dropout_rate`: the dropout rate for the classifier head. Set to `nothing` to disable dropout.
   - `nclasses`: the number of output classes
 """
-function densenet(inplanes::Integer, growth_rates; reduction = 0.5, inchannels::Integer = 3,
-                  nclasses::Integer = 1000)
+function densenet(inplanes::Integer, growth_rates; reduction = 0.5, dropout_rate = nothing,
+                  inchannels::Integer = 3, nclasses::Integer = 1000)
     layers = []
     append!(layers,
-            conv_norm((7, 7), inchannels, inplanes; stride = 2, pad = (3, 3), bias = false))
+            conv_norm((7, 7), inchannels, inplanes; stride = 2, pad = (3, 3)))
     push!(layers, MaxPool((3, 3); stride = 2, pad = (1, 1)))
     outplanes = 0
     for (i, rates) in enumerate(growth_rates)
@@ -83,7 +85,7 @@ function densenet(inplanes::Integer, growth_rates; reduction = 0.5, inchannels::
         inplanes = floor(Int, outplanes * reduction)
     end
     push!(layers, BatchNorm(outplanes, relu))
-    return Chain(Chain(layers...), create_classifier(outplanes, nclasses))
+    return Chain(Chain(layers...), create_classifier(outplanes, nclasses; dropout_rate))
 end
 
 """
@@ -100,9 +102,10 @@ Create a DenseNet model
   - `nclasses`: the number of output classes
 """
 function densenet(nblocks::AbstractVector{<:Integer}; growth_rate::Integer = 32,
-                  reduction = 0.5, inchannels::Integer = 3, nclasses::Integer = 1000)
+                  reduction = 0.5, dropout_rate = nothing, inchannels::Integer = 3,
+                  nclasses::Integer = 1000)
     return densenet(2 * growth_rate, [fill(growth_rate, n) for n in nblocks];
-                    reduction, inchannels, nclasses)
+                    reduction, dropout_rate, inchannels, nclasses)
 end
 
 const DENSENET_CONFIGS = Dict(121 => [6, 12, 24, 16],
@@ -132,7 +135,8 @@ end
 function DenseNet(config::Integer; pretrain::Bool = false, growth_rate::Integer = 32,
                   reduction = 0.5, inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(config, keys(DENSENET_CONFIGS))
-    layers = densenet(DENSENET_CONFIGS[config]; growth_rate, reduction, inchannels, nclasses)
+    layers = densenet(DENSENET_CONFIGS[config]; growth_rate, reduction, inchannels,
+                      nclasses)
     if pretrain
         loadpretrain!(layers, string("densenet", config))
     end

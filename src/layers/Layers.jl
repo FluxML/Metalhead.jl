@@ -11,13 +11,15 @@ using MLUtils
 using PartialFunctions
 using Random
 
+import Flux.testmode!
+
 include("../utilities.jl")
 
 include("attention.jl")
 export MHAttention
 
 include("conv.jl")
-export conv_norm, depthwise_sep_conv_norm, invertedresidual
+export conv_norm, basic_conv_bn, dwsep_conv_bn
 
 include("drop.jl")
 export DropBlock, DropPath
@@ -25,8 +27,14 @@ export DropBlock, DropPath
 include("embeddings.jl")
 export PatchEmbedding, ViPosEmbedding, ClassTokens
 
+include("mbconv.jl")
+export mbconv, fused_mbconv
+
 include("mlp.jl")
-export mlp_block, gated_mlp_block, create_fc, create_classifier
+export mlp_block, gated_mlp_block
+
+include("classifier.jl")
+export create_classifier
 
 include("normalise.jl")
 export prenorm, ChannelLayerNorm
