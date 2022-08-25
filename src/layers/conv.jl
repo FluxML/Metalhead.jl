@@ -5,9 +5,6 @@
               stride::Integer = 1, pad::Integer = 0, dilation::Integer = 1, 
               groups::Integer = 1, [bias, weight, init])
 
-    conv_norm(kernel_size::Dims{2}, inplanes => outplanes, activation = identity;
-              kwargs...)
-
 Create a convolution + normalisation layer pair with activation.
 
 # Arguments
@@ -16,7 +13,9 @@ Create a convolution + normalisation layer pair with activation.
   - `inplanes`: number of input feature maps
   - `outplanes`: number of output feature maps
   - `activation`: the activation function for the final layer
-  - `norm_layer`: the normalisation layer used
+  - `norm_layer`: the normalisation layer used. Note that using `identity` as the normalisation
+    layer will result in no normalisation being applied i.e. this will be the same as
+    setting `use_norm = false`.
   - `revnorm`: set to `true` to place the normalisation layer before the convolution
   - `preact`: set to `true` to place the activation function before the normalisation layer
     (only compatible with `revnorm = false`)
@@ -34,10 +33,14 @@ function conv_norm(kernel_size::Dims{2}, inplanes::Integer, outplanes::Integer,
                    activation = relu; norm_layer = BatchNorm, revnorm::Bool = false,
                    eps::Float32 = 1.0f-5, preact::Bool = false, use_norm::Bool = true,
                    bias = !use_norm, kwargs...)
-    # no normalization layer
+    # no normalization layer (including case where normalization layer is identity)
+    use_norm = use_norm && norm_layer !== identity
     if !use_norm
         if preact || revnorm
-            throw(ArgumentError("`preact` only supported with `use_norm = true`"))
+            throw(ArgumentError("`preact` only supported with `use_norm = true`. Check if
+            `use_norm = false` is intended. Note that it is also possible to trigger this
+            error if you set `norm_layer` to `identity` since that returns the same
+            behaviour as `use_norm`."))
         else
             # early return if no norm layer is required
             return [Conv(kernel_size, inplanes => outplanes, activation; kwargs...)]
@@ -45,10 +48,10 @@ function conv_norm(kernel_size::Dims{2}, inplanes::Integer, outplanes::Integer,
     end
     # channels for norm layer and activation functions for both conv and norm
     if revnorm
-        activations = (conv = activation, bn = identity)
+        activations = (conv = activation, norm = identity)
         normplanes = inplanes
     else
-        activations = (conv = identity, bn = activation)
+        activations = (conv = identity, norm = activation)
         normplanes = outplanes
     end
     # handle pre-activation
@@ -56,18 +59,13 @@ function conv_norm(kernel_size::Dims{2}, inplanes::Integer, outplanes::Integer,
         if revnorm
             throw(ArgumentError("`preact` and `revnorm` cannot be set at the same time"))
         else
-            activations = (conv = activation, bn = identity)
+            activations = (conv = activation, norm = identity)
         end
     end
     # layers
     layers = [Conv(kernel_size, inplanes => outplanes, activations.conv; bias, kwargs...),
-        norm_layer(normplanes, activations.bn; ϵ = eps)]
+        norm_layer(normplanes, activations.norm; ϵ = eps)]
     return revnorm ? reverse(layers) : layers
-end
-function conv_norm(kernel_size::Dims{2}, ch::Pair{<:Integer, <:Integer},
-                   activation = identity; kwargs...)
-    inplanes, outplanes = ch
-    return conv_norm(kernel_size, inplanes, outplanes, activation; kwargs...)
 end
 
 """

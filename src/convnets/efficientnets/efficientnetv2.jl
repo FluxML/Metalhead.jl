@@ -35,6 +35,15 @@ const EFFNETV2_CONFIGS = Dict(:small => [(fused_mbconv, 3, 24, 1, 1, 2, swish),
                                   (mbconv, 3, 512, 6, 2, 32, 4, swish),
                                   (mbconv, 3, 768, 6, 1, 8, 4, swish)])
 
+function efficientnetv2(config::Symbol; norm_layer = BatchNorm, dropout_rate = nothing,
+                        inchannels::Integer = 3, nclasses::Integer = 1000)
+    _checkconfig(config, keys(EFFNETV2_CONFIGS))
+    block_configs = EFFNETV2_CONFIGS[config]
+    return irmodelbuilder((1, 1), block_configs; activation = swish, norm_layer,
+                          inplanes = block_configs[1][3], headplanes = 1280,
+                          dropout_rate, inchannels, nclasses)
+end
+
 """
     EfficientNetv2(config::Symbol; pretrain::Bool = false, width_mult::Real = 1,
                    inchannels::Integer = 3, nclasses::Integer = 1000)
@@ -57,10 +66,7 @@ end
 
 function EfficientNetv2(config::Symbol; pretrain::Bool = false,
                         inchannels::Integer = 3, nclasses::Integer = 1000)
-    _checkconfig(config, sort(collect(keys(EFFNETV2_CONFIGS))))
-    block_configs = EFFNETV2_CONFIGS[config]
-    layers = efficientnet_core(block_configs; inplanes = block_configs[1][3],
-                               headplanes = 1280, inchannels, nclasses)
+    layers = efficientnetv2(config; inchannels, nclasses)
     if pretrain
         loadpretrain!(layers, string("efficientnetv2-", config))
     end

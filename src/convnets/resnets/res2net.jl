@@ -29,17 +29,17 @@ function bottle2neck(inplanes::Integer, planes::Integer; stride::Integer = 1,
     width = fld(planes * base_width, 64) * cardinality
     outplanes = planes * 4
     pool = is_first && scale > 1 ? MeanPool((3, 3); stride, pad = 1) : identity
-    conv_bns = [Chain(conv_norm((3, 3), width => width, activation; norm_layer, stride,
+    conv_bns = [Chain(conv_norm((3, 3), width, width, activation; norm_layer, stride,
                                 pad = 1, groups = cardinality)...)
                 for _ in 1:max(1, scale - 1)]
     reslayer = is_first ? Parallel(cat_channels, pool, conv_bns...) :
                Parallel(cat_channels, identity, Chain(PairwiseFusion(+, conv_bns...)))
     tuplify = is_first ? x -> tuple(x...) : x -> tuple(x[1], tuple(x[2:end]...))
     layers = [
-        conv_norm((1, 1), inplanes => width * scale, activation;
+        conv_norm((1, 1), inplanes, width * scale, activation;
                   norm_layer, revnorm)...,
         chunk$(; size = width, dims = 3), tuplify, reslayer,
-        conv_norm((1, 1), width * scale => outplanes, activation;
+        conv_norm((1, 1), width * scale, outplanes, activation;
                   norm_layer, revnorm)...,
         attn_fn(outplanes),
     ]

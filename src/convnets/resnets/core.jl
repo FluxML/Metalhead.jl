@@ -27,9 +27,9 @@ function basicblock(inplanes::Integer, planes::Integer; stride::Integer = 1,
                     drop_block = identity, drop_path = identity,
                     attn_fn = planes -> identity)
     first_planes = planes ÷ reduction_factor
-    conv_bn1 = conv_norm((3, 3), inplanes => first_planes, identity; norm_layer, revnorm,
+    conv_bn1 = conv_norm((3, 3), inplanes, first_planes, identity; norm_layer, revnorm,
                          stride, pad = 1)
-    conv_bn2 = conv_norm((3, 3), first_planes => planes, identity; norm_layer, revnorm,
+    conv_bn2 = conv_norm((3, 3), first_planes, planes, identity; norm_layer, revnorm,
                          pad = 1)
     layers = [conv_bn1..., drop_block, activation, conv_bn2..., attn_fn(planes),
         drop_path]
@@ -71,11 +71,11 @@ function bottleneck(inplanes::Integer, planes::Integer; stride::Integer,
     width = fld(planes * base_width, 64) * cardinality
     first_planes = width ÷ reduction_factor
     outplanes = planes * 4
-    conv_bn1 = conv_norm((1, 1), inplanes => first_planes, activation; norm_layer,
+    conv_bn1 = conv_norm((1, 1), inplanes, first_planes, activation; norm_layer,
                          revnorm)
-    conv_bn2 = conv_norm((3, 3), first_planes => width, identity; norm_layer, revnorm,
+    conv_bn2 = conv_norm((3, 3), first_planes, width, identity; norm_layer, revnorm,
                          stride, pad = 1, groups = cardinality)
-    conv_bn3 = conv_norm((1, 1), width => outplanes, identity; norm_layer, revnorm)
+    conv_bn3 = conv_norm((1, 1), width, outplanes, identity; norm_layer, revnorm)
     layers = [conv_bn1..., conv_bn2..., drop_block, activation, conv_bn3...,
         attn_fn(outplanes), drop_path]
     return Chain(filter!(!=(identity), layers)...)
@@ -84,7 +84,7 @@ end
 # Downsample layer using convolutions.
 function downsample_conv(inplanes::Integer, outplanes::Integer; stride::Integer = 1,
                          norm_layer = BatchNorm, revnorm::Bool = false)
-    return Chain(conv_norm((1, 1), inplanes => outplanes, identity; norm_layer, revnorm,
+    return Chain(conv_norm((1, 1), inplanes, outplanes, identity; norm_layer, revnorm,
                            pad = SamePad(), stride)...)
 end
 
@@ -93,7 +93,7 @@ function downsample_pool(inplanes::Integer, outplanes::Integer; stride::Integer 
                          norm_layer = BatchNorm, revnorm::Bool = false)
     pool = stride == 1 ? identity : MeanPool((2, 2); stride, pad = SamePad())
     return Chain(pool,
-                 conv_norm((1, 1), inplanes => outplanes, identity; norm_layer,
+                 conv_norm((1, 1), inplanes, outplanes, identity; norm_layer,
                            revnorm)...)
 end
 
@@ -165,18 +165,18 @@ function resnet_stem(stem_type::Symbol = :default; inchannels::Integer = 3,
                      norm_layer = BatchNorm, revnorm::Bool = false)
     _checkconfig(stem_type, [:default, :deep, :deep_tiered])
     # Main stem
-    deep_stem = stem_type == :deep || stem_type == :deep_tiered
+    deep_stem = stem_type === :deep || stem_type === :deep_tiered
     inplanes = deep_stem ? stem_width * 2 : 64
     # Deep stem that uses three successive 3x3 convolutions instead of a single 7x7 convolution
     if deep_stem
-        if stem_type == :deep
+        if stem_type === :deep
             stem_channels = (stem_width, stem_width)
-        elseif stem_type == :deep_tiered
+        elseif stem_type === :deep_tiered
             stem_channels = (3 * (stem_width ÷ 4), stem_width)
         end
-        conv1 = Chain(conv_norm((3, 3), inchannels => stem_channels[1], activation;
+        conv1 = Chain(conv_norm((3, 3), inchannels, stem_channels[1], activation;
                                 norm_layer, revnorm, stride = 2, pad = 1)...,
-                      conv_norm((3, 3), stem_channels[1] => stem_channels[2], activation;
+                      conv_norm((3, 3), stem_channels[1], stem_channels[2], activation;
                                 norm_layer, pad = 1)...,
                       Conv((3, 3), stem_channels[2] => inplanes; pad = 1, bias = false))
     else
@@ -185,7 +185,7 @@ function resnet_stem(stem_type::Symbol = :default; inchannels::Integer = 3,
     bn1 = norm_layer(inplanes, activation)
     # Stem pooling
     stempool = replace_pool ?
-               Chain(conv_norm((3, 3), inplanes => inplanes, activation; norm_layer,
+               Chain(conv_norm((3, 3), inplanes, inplanes, activation; norm_layer,
                                revnorm, stride = 2, pad = 1)...) :
                MaxPool((3, 3); stride = 2, pad = 1)
     return Chain(conv1, bn1, stempool)
@@ -194,16 +194,6 @@ end
 function resnet_planes(block_repeats::AbstractVector{<:Integer})
     return Iterators.flatten((64 * 2^(stage_idx - 1) for _ in 1:stages)
                              for (stage_idx, stages) in enumerate(block_repeats))
-end
-
-function resnetcore(img_dims, stem, get_layers, block_repeats::AbstractVector{<:Integer},
-                    connection, classifier_fn)
-    # Build stages of the ResNet
-    stage_blocks = cnn_stages(get_layers, block_repeats, connection)
-    backbone = Chain(stem, stage_blocks...)
-    # Add classifier to the backbone
-    nfeaturemaps = Flux.outputsize(backbone, img_dims; padbatch = true)[3]
-    return Chain(backbone, classifier_fn(nfeaturemaps))
 end
 
 function resnet(block_type, block_repeats::AbstractVector{<:Integer},
@@ -254,8 +244,8 @@ function resnet(block_type, block_repeats::AbstractVector{<:Integer},
     end
     classifier_fn = nfeatures -> create_classifier(nfeatures, nclasses; dropout_rate,
                                                    pool_layer, use_conv)
-    return resnet_core((imsize..., inchannels), stem, get_layers, block_repeats,
-                       connection$activation, classifier_fn)
+    return resnetbuilder((imsize..., inchannels), stem, get_layers, block_repeats,
+                         connection$activation, classifier_fn)
 end
 function resnet(block_fn, block_repeats, downsample_opt::Symbol = :B; kwargs...)
     return resnet(block_fn, block_repeats, RESNET_SHORTCUTS[downsample_opt]; kwargs...)

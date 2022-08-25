@@ -8,6 +8,8 @@
 end
 ChainRulesCore.@non_differentiable _dropblock_mask(rng, x, gamma, clipped_block_size)
 
+# TODO add experimental `DropBlock` options from timm such as gaussian noise and
+# more precise `DropBlock` to deal with edges (#188)
 """
     dropblock([rng = rng_from_array(x)], x::AbstractArray{T, 4}, drop_block_prob, block_size,
               gamma_scale, active::Bool = true)
@@ -20,7 +22,7 @@ regions of size `block_size` in the input. Otherwise, it simply returns the inpu
   - `rng`: can be used to pass in a custom RNG instead of the default. Custom RNGs are only
     supported on the CPU.
   - `x`: input array
-  - `drop_block_prob`: probability of dropping a block. If `nothing` is passed, it returns 
+  - `drop_block_prob`: probability of dropping a block. If `nothing` is passed, it returns
     `identity`.
   - `block_size`: size of the block to drop
   - `gamma_scale`: multiplicative factor for `gamma` used. For the calculations,
@@ -28,8 +30,6 @@ regions of size `block_size` in the input. Otherwise, it simply returns the inpu
 
 If you are an end-user, you do not want this function. Use [`DropBlock`](#) instead.
 """
-# TODO add experimental `DropBlock` options from timm such as gaussian noise and
-# more precise `DropBlock` to deal with edges (#188)
 function dropblock(rng::AbstractRNG, x::AbstractArray{T, 4}, drop_block_prob,
                    block_size::Integer, gamma_scale) where {T}
     H, W, _, _ = size(x)
@@ -108,7 +108,7 @@ function (m::DropBlock)(x)
 end
 
 function Flux.testmode!(m::DropBlock, mode = true)
-    return (m.active = (isnothing(mode) || mode == :auto) ? nothing : !mode; m)
+    return (m.active = (isnothing(mode) || mode === :auto) ? nothing : !mode; m)
 end
 
 function DropBlock(drop_block_prob = 0.1, block_size::Integer = 7, gamma_scale = 1.0,

@@ -20,18 +20,20 @@ using .Layers
 
 # CNN models
 ## Builders
-include("convnets/builders/core.jl")
+include("convnets/builders/irmodel.jl")
 include("convnets/builders/mbconv.jl")
 include("convnets/builders/resblocks.jl")
+include("convnets/builders/resnet.jl")
+include("convnets/builders/stages.jl")
 ## AlexNet and VGG
 include("convnets/alexnet.jl")
 include("convnets/vgg.jl")
 ## ResNets
 include("convnets/resnets/core.jl")
+include("convnets/resnets/res2net.jl")
 include("convnets/resnets/resnet.jl")
 include("convnets/resnets/resnext.jl")
 include("convnets/resnets/seresnet.jl")
-include("convnets/resnets/res2net.jl")
 ## Inceptions
 include("convnets/inceptions/googlenet.jl")
 include("convnets/inceptions/inceptionv3.jl")
@@ -39,7 +41,6 @@ include("convnets/inceptions/inceptionv4.jl")
 include("convnets/inceptions/inceptionresnetv2.jl")
 include("convnets/inceptions/xception.jl")
 ## EfficientNets
-include("convnets/efficientnets/core.jl")
 include("convnets/efficientnets/efficientnet.jl")
 include("convnets/efficientnets/efficientnetv2.jl")
 ## MobileNets

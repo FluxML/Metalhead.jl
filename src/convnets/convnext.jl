@@ -46,11 +46,11 @@ function convnext(depths::AbstractVector{<:Integer}, planes::AbstractVector{<:In
     "`planes` should have exactly one value for each block"
     downsample_layers = []
     push!(downsample_layers,
-          Chain(conv_norm((4, 4), inchannels => planes[1]; stride = 4,
+          Chain(conv_norm((4, 4), inchannels, planes[1]; stride = 4,
                           norm_layer = ChannelLayerNorm)...))
     for m in 1:(length(depths) - 1)
         push!(downsample_layers,
-              Chain(conv_norm((2, 2), planes[m] => planes[m + 1]; stride = 2,
+              Chain(conv_norm((2, 2), planes[m], planes[m + 1]; stride = 2,
                               norm_layer = ChannelLayerNorm, revnorm = true)...))
     end
     stages = []
@@ -111,7 +111,7 @@ function ConvNeXt(config::Symbol; pretrain::Bool = true, inchannels::Integer = 3
     _checkconfig(config, keys(CONVNEXT_CONFIGS))
     layers = convnext(config; inchannels, nclasses)
     if pretrain
-        layers = load_pretrained(layers, "convnext_$config")
+        layers = loadpretrain!(layers, "convnext_$config")
     end
     return ConvNeXt(layers)
 end

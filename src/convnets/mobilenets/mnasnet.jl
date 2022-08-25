@@ -1,55 +1,5 @@
-# momentum used for BatchNorm as per Tensorflow implementation
-const _MNASNET_BN_MOMENTUM = 0.0003f0
-
-"""
-    mnasnet(block_configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
-            max_width = 1280, dropout_rate = 0.2, inchannels::Integer = 3,
-            nclasses::Integer = 1000)
-
-Create an MNASNet model with the specified configuration.
-([reference](https://arxiv.org/abs/1807.11626)).
-
-# Arguments
-
-  - `width_mult`: Controls the number of output feature maps in each block
-    (with 1 being the default in the paper)
-  - `max_width`: The maximum number of feature maps in any layer of the network
-  - `dropout_rate`: rate of dropout in the classifier head. Set to `nothing` to disable dropout.
-  - `inchannels`: The number of input channels.
-  - `nclasses`: The number of output classes
-"""
-function mnasnet(block_configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
-                 max_width::Integer = 1280, inplanes::Integer = 32, dropout_rate = 0.2,
-                 inchannels::Integer = 3, nclasses::Integer = 1000)
-    # norm layer for MNASNet is different from other models
-    norm_layer = (args...; kwargs...) -> BatchNorm(args...; momentum = _MNASNET_BN_MOMENTUM,
-                                                   kwargs...)
-    # building first layer
-    inplanes = _round_channels(inplanes * width_mult)
-    layers = []
-    append!(layers,
-            conv_norm((3, 3), inchannels, inplanes, relu; stride = 2, pad = 1,
-                      norm_layer))
-    # building inverted residual blocks
-    get_layers, block_repeats = mbconv_stack_builder(block_configs, inplanes; width_mult,
-                                                     norm_layer)
-    append!(layers, cnn_stages(get_layers, block_repeats, +))
-    # building last layers
-    outplanes = _round_channels(block_configs[end][3] * width_mult)
-    append!(layers,
-            conv_norm((1, 1), outplanes, max_width, relu; norm_layer))
-    return Chain(Chain(layers...), create_classifier(max_width, nclasses; dropout_rate))
-end
-
-function mnasnet(config::Symbol; width_mult::Real = 1, max_width::Integer = 1280,
-                 dropout_rate = 0.2, inchannels::Integer = 3, nclasses::Integer = 1000)
-    inplanes, block_configs = MNASNET_CONFIGS[config]
-    return mnasnet(block_configs; width_mult, max_width, dropout_rate, inplanes,
-                   inchannels, nclasses)
-end
-
 # Layer configurations for MNasNet
-# f: block function - we use `dwsep_conv_bn` for the first block and `mbconv` for the rest
+# f: block function - we use `dwsep_conv_norm` for the first block and `mbconv` for the rest
 # k: kernel size
 # c: output channels
 # e: expansion factor - only used for `mbconv`
@@ -60,7 +10,7 @@ end
 # Data is organised as (f, k, c, (e,) s, n, (r,) a)
 const MNASNET_CONFIGS = Dict(:B1 => (32,
                                      [
-                                         (dwsep_conv_bn, 3, 16, 1, 1, relu),
+                                         (dwsep_conv_norm, 3, 16, 1, 1, relu),
                                          (mbconv, 3, 24, 3, 2, 3, nothing, relu),
                                          (mbconv, 5, 40, 3, 2, 3, nothing, relu),
                                          (mbconv, 5, 80, 6, 2, 3, nothing, relu),
@@ -70,7 +20,7 @@ const MNASNET_CONFIGS = Dict(:B1 => (32,
                                      ]),
                              :A1 => (32,
                                      [
-                                         (dwsep_conv_bn, 3, 16, 1, 1, relu),
+                                         (dwsep_conv_norm, 3, 16, 1, 1, relu),
                                          (mbconv, 3, 24, 6, 2, 2, nothing, relu),
                                          (mbconv, 5, 40, 3, 2, 3, 4, relu),
                                          (mbconv, 3, 80, 6, 2, 4, nothing, relu),
@@ -80,7 +30,7 @@ const MNASNET_CONFIGS = Dict(:B1 => (32,
                                      ]),
                              :small => (8,
                                         [
-                                            (dwsep_conv_bn, 3, 8, 1, 1, relu),
+                                            (dwsep_conv_norm, 3, 8, 1, 1, relu),
                                             (mbconv, 3, 16, 3, 2, 1, nothing, relu),
                                             (mbconv, 3, 16, 6, 2, 2, nothing, relu),
                                             (mbconv, 5, 32, 6, 2, 4, 4, relu),
@@ -88,6 +38,16 @@ const MNASNET_CONFIGS = Dict(:B1 => (32,
                                             (mbconv, 5, 88, 6, 2, 3, 4, relu),
                                             (mbconv, 3, 144, 6, 1, 1, nothing, relu),
                                         ]))
+
+function mnasnet(config::Symbol; width_mult::Real = 1, max_width::Integer = 1280,
+                 dropout_rate = 0.2, inchannels::Integer = 3, nclasses::Integer = 1000)
+    _checkconfig(config, keys(MNASNET_CONFIGS))
+    # momentum used for BatchNorm is as per Tensorflow implementation
+    norm_layer = (args...; kwargs...) -> BatchNorm(args...; momentum = 0.0003f0, kwargs...)
+    inplanes, block_configs = MNASNET_CONFIGS[config]
+    return irmodelbuilder(width_mult, block_configs; inplanes, norm_layer,
+                          headplanes = max_width, dropout_rate, inchannels, nclasses)
+end
 
 """
     MNASNet(width_mult = 1; inchannels::Integer = 3, pretrain::Bool = false,

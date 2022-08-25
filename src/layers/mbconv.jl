@@ -1,5 +1,5 @@
 """
-    dwsep_conv_bn(kernel_size::Dims{2}, inplanes::Integer, outplanes::Integer,
+    dwsep_conv_norm(kernel_size::Dims{2}, inplanes::Integer, outplanes::Integer,
                   activation = relu; eps::Float32 = 1.0f-5, revnorm::Bool = false, 
                   stride::Integer = 1, use_norm::NTuple{2, Bool} = (true, true),
                   pad::Integer = 0, [bias, weight, init])
@@ -32,15 +32,15 @@ See Fig. 3 in [reference](https://arxiv.org/abs/1704.04861v1).
   - `pad`: padding of the first convolution kernel
   - `weight`, `init`: initialization for the convolution kernel (see [`Flux.Conv`](#))
 """
-function dwsep_conv_bn(kernel_size::Dims{2}, inplanes::Integer, outplanes::Integer,
-                       activation = relu; eps::Float32 = 1.0f-5, revnorm::Bool = false,
-                       stride::Integer = 1, use_norm::NTuple{2, Bool} = (true, true),
-                       bias::NTuple{2, Bool} = (!use_norm[1], !use_norm[2]), kwargs...)
-    return vcat(conv_norm(kernel_size, inplanes, inplanes, activation; eps,
-                          revnorm, use_norm = use_norm[1], stride, bias = bias[1],
+function dwsep_conv_norm(kernel_size::Dims{2}, inplanes::Integer, outplanes::Integer,
+                         activation = relu; norm_layer = BatchNorm, eps::Float32 = 1.0f-5,
+                         use_norm::NTuple{2, Bool} = (true, true), stride::Integer = 1,
+                         bias::NTuple{2, Bool} = (!use_norm[1], !use_norm[2]), kwargs...)
+    return vcat(conv_norm(kernel_size, inplanes, inplanes, activation; eps, norm_layer,
+                          use_norm = use_norm[1], stride, bias = bias[1],
                           groups = inplanes, kwargs...),
-                conv_norm((1, 1), inplanes, outplanes, activation; eps,
-                          revnorm, use_norm = use_norm[2], bias = bias[2]))
+                conv_norm((1, 1), inplanes, outplanes, activation; eps, norm_layer,
+                          use_norm = use_norm[2], bias = bias[2]))
 end
 
 # TODO add support for stochastic depth to mbconv and fused_mbconv

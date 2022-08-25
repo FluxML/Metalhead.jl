@@ -31,6 +31,17 @@ const EFFICIENTNET_GLOBAL_CONFIGS = Dict(:b0 => (224, (1.0, 1.0)),
                                          :b7 => (600, (2.0, 3.1)),
                                          :b8 => (672, (2.2, 3.6)))
 
+function efficientnet(config::Symbol; norm_layer = BatchNorm,
+                      dropout_rate = nothing, inchannels::Integer = 3,
+                      nclasses::Integer = 1000)
+    _checkconfig(config, keys(EFFICIENTNET_GLOBAL_CONFIGS))
+    scalings = EFFICIENTNET_GLOBAL_CONFIGS[config][2]
+    return irmodelbuilder(scalings, EFFICIENTNET_BLOCK_CONFIGS; inplanes = 32,
+                          norm_layer, activation = swish,
+                          headplanes = EFFICIENTNET_BLOCK_CONFIGS[end][3] * 4,
+                          dropout_rate, inchannels, nclasses)
+end
+
 """
     EfficientNet(config::Symbol; pretrain::Bool = false)
 
@@ -50,10 +61,7 @@ end
 
 function EfficientNet(config::Symbol; pretrain::Bool = false, inchannels::Integer = 3,
                       nclasses::Integer = 1000)
-    _checkconfig(config, keys(EFFICIENTNET_GLOBAL_CONFIGS))
-    scalings = EFFICIENTNET_GLOBAL_CONFIGS[config][2]
-    layers = efficientnet_core(EFFICIENTNET_BLOCK_CONFIGS; inplanes = 32, scalings,
-                               inchannels, nclasses)
+    layers = efficientnet(config; inchannels, nclasses)
     if pretrain
         loadpretrain!(layers, string("efficientnet-", config))
     end
