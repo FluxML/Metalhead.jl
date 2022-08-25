@@ -1,8 +1,8 @@
-function efficientnet(block_configs::AbstractVector{<:Tuple}; inplanes::Integer,
-                      scalings::NTuple{2, Real} = (1, 1),
-                      headplanes::Integer = block_configs[end][3] * 4,
-                      norm_layer = BatchNorm, dropout_rate = nothing,
-                      inchannels::Integer = 3, nclasses::Integer = 1000)
+function efficientnetcore(block_configs::AbstractVector{<:Tuple}; inplanes::Integer,
+                          scalings::NTuple{2, Real} = (1, 1),
+                          headplanes::Integer = block_configs[end][3] * 4,
+                          norm_layer = BatchNorm, dropout_rate = nothing,
+                          inchannels::Integer = 3, nclasses::Integer = 1000)
     layers = []
     # stem of the model
     inplanes = _round_channels(inplanes * scalings[1])

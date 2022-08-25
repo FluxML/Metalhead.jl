@@ -52,8 +52,8 @@ function EfficientNet(config::Symbol; pretrain::Bool = false, inchannels::Intege
                       nclasses::Integer = 1000)
     _checkconfig(config, keys(EFFICIENTNET_GLOBAL_CONFIGS))
     scalings = EFFICIENTNET_GLOBAL_CONFIGS[config][2]
-    layers = efficientnet(EFFICIENTNET_BLOCK_CONFIGS; inplanes = 32, scalings,
-                          inchannels, nclasses)
+    layers = efficientnet_core(EFFICIENTNET_BLOCK_CONFIGS; inplanes = 32, scalings,
+                               inchannels, nclasses)
     if pretrain
         loadpretrain!(layers, string("efficientnet-", config))
     end

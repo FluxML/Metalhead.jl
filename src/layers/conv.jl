@@ -8,7 +8,7 @@
     conv_norm(kernel_size::Dims{2}, inplanes => outplanes, activation = identity;
               kwargs...)
 
-Create a convolution + batch normalization pair with activation.
+Create a convolution + normalisation layer pair with activation.
 
 # Arguments
 
@@ -16,11 +16,11 @@ Create a convolution + batch normalization pair with activation.
   - `inplanes`: number of input feature maps
   - `outplanes`: number of output feature maps
   - `activation`: the activation function for the final layer
-  - `norm_layer`: the normalization layer used
+  - `norm_layer`: the normalisation layer used
   - `revnorm`: set to `true` to place the normalisation layer before the convolution
-  - `preact`: set to `true` to place the activation function before the batch norm
+  - `preact`: set to `true` to place the activation function before the normalisation layer
     (only compatible with `revnorm = false`)
-  - `use_norm`: set to `false` to disable normalization
+  - `use_norm`: set to `false` to disable normalisation
     (only compatible with `revnorm = false` and `preact = false`)
   - `stride`: stride of the convolution kernel
   - `pad`: padding of the convolution kernel
@@ -70,8 +70,22 @@ function conv_norm(kernel_size::Dims{2}, ch::Pair{<:Integer, <:Integer},
     return conv_norm(kernel_size, inplanes, outplanes, activation; kwargs...)
 end
 
-# conv + bn layer combination as used by the inception model family matching
-# the default values used in TensorFlow
+"""
+    basic_conv_bn(kernel_size::Dims{2}, inplanes, outplanes, activation = relu;
+                  kwargs...)
+
+Returns a convolution + batch normalisation pair with activation as used by the
+Inception family of models with default values matching those used in the official
+TensorFlow implementation.
+
+# Arguments
+
+  - `kernel_size`: size of the convolution kernel (tuple)
+  - `inplanes`: number of input feature maps
+  - `outplanes`: number of output feature maps
+  - `activation`: the activation function for the final layer
+  - `kwargs`: keyword arguments passed to [`conv_norm`](@ref)
+"""
 function basic_conv_bn(kernel_size::Dims{2}, inplanes, outplanes, activation = relu;
                        kwargs...)
     return conv_norm(kernel_size, inplanes, outplanes, activation; norm_layer = BatchNorm,

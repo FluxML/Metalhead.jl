@@ -46,6 +46,13 @@ function mobilenetv3(configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
                                    (hardswish, identity); dropout_rate))
 end
 
+function mobilenetv3(config::Symbol; width_mult::Real = 1, dropout_rate = 0.2,
+                     inchannels::Integer = 3, nclasses::Integer = 1000)
+    max_width = config === :large ? 1280 : 1024
+    return mobilenetv3(MOBILENETV3_CONFIGS[config]; width_mult, max_width,
+                       dropout_rate, inchannels, nclasses)
+end
+
 # Layer configurations for small and large models for MobileNetv3
 # f: mbconv block function - we use `mbconv` for all blocks
 # k: kernel size
@@ -110,9 +117,7 @@ end
 function MobileNetv3(config::Symbol; width_mult::Real = 1, pretrain::Bool = false,
                      inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(config, [:small, :large])
-    max_width = config == :large ? 1280 : 1024
-    layers = mobilenetv3(MOBILENETV3_CONFIGS[config]; width_mult, max_width, inchannels,
-                         nclasses)
+    layers = mobilenetv3(config; width_mult, inchannels, nclasses)
     if pretrain
         loadpretrain!(layers, string("MobileNetv3", config))
     end

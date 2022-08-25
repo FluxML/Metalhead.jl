@@ -41,6 +41,13 @@ function mnasnet(block_configs::AbstractVector{<:Tuple}; width_mult::Real = 1,
     return Chain(Chain(layers...), create_classifier(max_width, nclasses; dropout_rate))
 end
 
+function mnasnet(config::Symbol; width_mult::Real = 1, max_width::Integer = 1280,
+                 dropout_rate = 0.2, inchannels::Integer = 3, nclasses::Integer = 1000)
+    inplanes, block_configs = MNASNET_CONFIGS[config]
+    return mnasnet(block_configs; width_mult, max_width, dropout_rate, inplanes,
+                   inchannels, nclasses)
+end
+
 # Layer configurations for MNasNet
 # f: block function - we use `dwsep_conv_bn` for the first block and `mbconv` for the rest
 # k: kernel size
@@ -79,7 +86,8 @@ const MNASNET_CONFIGS = Dict(:B1 => (32,
                                             (mbconv, 5, 32, 6, 2, 4, 4, relu),
                                             (mbconv, 3, 32, 6, 1, 3, 4, relu),
                                             (mbconv, 5, 88, 6, 2, 3, 4, relu),
-                                            (mbconv, 3, 144, 6, 1, 1, nothing, relu)]))
+                                            (mbconv, 3, 144, 6, 1, 1, nothing, relu),
+                                        ]))
 
 """
     MNASNet(width_mult = 1; inchannels::Integer = 3, pretrain::Bool = false,
@@ -111,8 +119,7 @@ end
 function MNASNet(config::Symbol; width_mult::Real = 1, pretrain::Bool = false,
                  inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(config, keys(MNASNET_CONFIGS))
-    inplanes, block_configs = MNASNET_CONFIGS[config]
-    layers = mnasnet(block_configs; width_mult, inplanes, inchannels, nclasses)
+    layers = mnasnet(config; width_mult, inchannels, nclasses)
     if pretrain
         loadpretrain!(layers, "mnasnet$(width_mult)")
     end

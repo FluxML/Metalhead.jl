@@ -37,6 +37,12 @@ function mobilenetv1(config::AbstractVector{<:Tuple}; width_mult::Real = 1,
     return Chain(Chain(layers...), create_classifier(outplanes, nclasses; dropout_rate))
 end
 
+function mobilenetv1(width_mult::Real = 1; activation = relu, dropout_rate = nothing,
+                     inchannels::Integer = 3, nclasses::Integer = 1000)
+    return mobilenetv1(MOBILENETV1_CONFIGS[config]; width_mult, activation,
+                       dropout_rate, inchannels, nclasses)
+end
+
 # Layer configurations for MobileNetv1
 # f: block function - we use `dwsep_conv_bn` for all blocks
 # k: kernel size

@@ -43,6 +43,14 @@ function mobilenetv2(block_configs::AbstractVector{<:Tuple}; width_mult::Real = 
     return Chain(Chain(layers...), create_classifier(headplanes, nclasses; dropout_rate))
 end
 
+function mobilenetv2(width_mult::Real = 1; max_width::Integer = 1280,
+                     divisor::Integer = 8, inplanes::Integer = 32,
+                     dropout_rate = 0.2, inchannels::Integer = 3,
+                     nclasses::Integer = 1000)
+    return mobilenetv2(MOBILENETV2_CONFIGS; width_mult, max_width, divisor, inplanes,
+                       dropout_rate, inchannels, nclasses)
+end
+
 # Layer configurations for MobileNetv2
 # f: block function - we use `mbconv` for all blocks
 # k: kernel size

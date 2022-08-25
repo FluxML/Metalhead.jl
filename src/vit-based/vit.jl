@@ -100,9 +100,12 @@ end
 @functor ViT
 
 function ViT(config::Symbol; imsize::Dims{2} = (256, 256), patch_size::Dims{2} = (16, 16),
-             inchannels::Integer = 3, nclasses::Integer = 1000)
+             pretrain::Bool = false, inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(config, keys(VIT_CONFIGS))
     layers = vit(imsize; inchannels, patch_size, nclasses, VIT_CONFIGS[config]...)
+    if pretrain
+        loadpretrain!(layers, string("vit", config))
+    end
     return ViT(layers)
 end
 

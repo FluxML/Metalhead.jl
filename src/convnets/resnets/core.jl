@@ -196,8 +196,8 @@ function resnet_planes(block_repeats::AbstractVector{<:Integer})
                              for (stage_idx, stages) in enumerate(block_repeats))
 end
 
-function resnet(img_dims, stem, get_layers, block_repeats::AbstractVector{<:Integer},
-                connection, classifier_fn)
+function resnetcore(img_dims, stem, get_layers, block_repeats::AbstractVector{<:Integer},
+                    connection, classifier_fn)
     # Build stages of the ResNet
     stage_blocks = cnn_stages(get_layers, block_repeats, connection)
     backbone = Chain(stem, stage_blocks...)
@@ -209,13 +209,14 @@ end
 function resnet(block_type, block_repeats::AbstractVector{<:Integer},
                 downsample_opt::NTuple{2, Any} = (downsample_conv, downsample_identity);
                 cardinality::Integer = 1, base_width::Integer = 64,
-                inplanes::Integer = 64,
-                reduction_factor::Integer = 1, imsize::Dims{2} = (256, 256),
-                inchannels::Integer = 3, stem_fn = resnet_stem, connection = addact,
-                activation = relu, norm_layer = BatchNorm, revnorm::Bool = false,
+                inplanes::Integer = 64, reduction_factor::Integer = 1,
+                stem_fn = resnet_stem, connection = addact, activation = relu,
+                norm_layer = BatchNorm, revnorm::Bool = false,
                 attn_fn = planes -> identity, pool_layer = AdaptiveMeanPool((1, 1)),
-                use_conv::Bool = false, drop_block_rate = nothing, drop_path_rate = nothing,
-                dropout_rate = nothing, nclasses::Integer = 1000, kwargs...)
+                use_conv::Bool = false, drop_block_rate = nothing,
+                drop_path_rate = nothing, dropout_rate = nothing,
+                imsize::Dims{2} = (256, 256), inchannels::Integer = 3,
+                nclasses::Integer = 1000, kwargs...)
     # Build stem
     stem = stem_fn(; inchannels)
     # Block builder
@@ -253,8 +254,8 @@ function resnet(block_type, block_repeats::AbstractVector{<:Integer},
     end
     classifier_fn = nfeatures -> create_classifier(nfeatures, nclasses; dropout_rate,
                                                    pool_layer, use_conv)
-    return resnet((imsize..., inchannels), stem, get_layers, block_repeats,
-                  connection$activation, classifier_fn)
+    return resnet_core((imsize..., inchannels), stem, get_layers, block_repeats,
+                       connection$activation, classifier_fn)
 end
 function resnet(block_fn, block_repeats, downsample_opt::Symbol = :B; kwargs...)
     return resnet(block_fn, block_repeats, RESNET_SHORTCUTS[downsample_opt]; kwargs...)

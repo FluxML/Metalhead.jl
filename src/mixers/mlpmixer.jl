@@ -57,11 +57,14 @@ end
 @functor MLPMixer
 
 function MLPMixer(config::Symbol; imsize::Dims{2} = (224, 224),
-                  patch_size::Dims{2} = (16, 16),
+                  patch_size::Dims{2} = (16, 16), pretrain::Bool = false,
                   inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(config, keys(MIXER_CONFIGS))
     layers = mlpmixer(mixerblock, imsize; patch_size, MIXER_CONFIGS[config]..., inchannels,
                       nclasses)
+    if pretrain
+        loadpretrain!(layers, string("mlpmixer", config))
+    end
     return MLPMixer(layers)
 end
 

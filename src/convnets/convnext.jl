@@ -68,6 +68,12 @@ function convnext(depths::AbstractVector{<:Integer}, planes::AbstractVector{<:In
     return Chain(Chain(backbone...), classifier)
 end
 
+function convnext(config::Symbol; drop_path_rate = 0.0, layerscale_init = 1.0f-6,
+                  inchannels::Integer = 3, nclasses::Integer = 1000)
+    return convnext(CONVNEXT_CONFIGS[config]...; drop_path_rate, layerscale_init,
+                    inchannels, nclasses)
+end
+
 # Configurations for ConvNeXt models
 const CONVNEXT_CONFIGS = Dict(:tiny => ([3, 3, 9, 3], [96, 192, 384, 768]),
                               :small => ([3, 3, 27, 3], [96, 192, 384, 768]),
@@ -76,7 +82,8 @@ const CONVNEXT_CONFIGS = Dict(:tiny => ([3, 3, 9, 3], [96, 192, 384, 768]),
                               :xlarge => ([3, 3, 27, 3], [256, 512, 1024, 2048]))
 
 """
-    ConvNeXt(config::Symbol; inchannels::Integer = 3, nclasses::Integer = 1000)
+    ConvNeXt(config::Symbol; pretrain::Bool = true, inchannels::Integer = 3,
+             nclasses::Integer = 1000)
 
 Creates a ConvNeXt model.
 ([reference](https://arxiv.org/abs/2201.03545))
@@ -84,8 +91,13 @@ Creates a ConvNeXt model.
 # Arguments
 
   - `config`: The size of the model, one of `tiny`, `small`, `base`, `large` or `xlarge`.
+  - `pretrain`: set to `true` to load pre-trained weights for ImageNet
   - `inchannels`: number of input channels
   - `nclasses`: number of output classes
+
+!!! warning
+    
+    `ConvNeXt` does not currently support pretrained weights.
 
 See also [`Metalhead.convnext`](#).
 """
@@ -94,9 +106,13 @@ struct ConvNeXt
 end
 @functor ConvNeXt
 
-function ConvNeXt(config::Symbol; inchannels::Integer = 3, nclasses::Integer = 1000)
+function ConvNeXt(config::Symbol; pretrain::Bool = true, inchannels::Integer = 3,
+                  nclasses::Integer = 1000)
     _checkconfig(config, keys(CONVNEXT_CONFIGS))
-    layers = convnext(CONVNEXT_CONFIGS[config]...; inchannels, nclasses)
+    layers = convnext(config; inchannels, nclasses)
+    if pretrain
+        layers = load_pretrained(layers, "convnext_$config")
+    end
     return ConvNeXt(layers)
 end
 
