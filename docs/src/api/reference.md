@@ -2,7 +2,7 @@
 
 The API reference of `Metalhead.jl`.
 
-**Note**:
+**Note**: This page is still in progress.
 
 ```@autodocs
 Modules = [Metalhead]
