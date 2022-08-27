@@ -126,10 +126,10 @@ end
 
 # returns `DropBlock`s for each stage of the ResNet as in timm.
 # TODO - add experimental options for DropBlock as part of the API (#188)
-# function _drop_blocks(drop_block_rate::AbstractFloat)
+# function _drop_blocks(dropblock_prob::AbstractFloat)
 #     return [
 #         identity, identity,
-#         DropBlock(drop_block_rate, 5, 0.25), DropBlock(drop_block_rate, 3, 1.00),
+#         DropBlock(dropblock_prob, 5, 0.25), DropBlock(dropblock_prob, 3, 1.00),
 #     ]
 # end
 
@@ -203,8 +203,8 @@ function resnet(block_type, block_repeats::AbstractVector{<:Integer},
                 stem_fn = resnet_stem, connection = addact, activation = relu,
                 norm_layer = BatchNorm, revnorm::Bool = false,
                 attn_fn = planes -> identity, pool_layer = AdaptiveMeanPool((1, 1)),
-                use_conv::Bool = false, drop_block_rate = nothing,
-                drop_path_rate = nothing, dropout_rate = nothing,
+                use_conv::Bool = false, dropblock_prob = nothing,
+                stochastic_depth_prob = nothing, dropout_prob = nothing,
                 imsize::Dims{2} = (256, 256), inchannels::Integer = 3,
                 nclasses::Integer = 1000, kwargs...)
     # Build stem
@@ -215,22 +215,22 @@ function resnet(block_type, block_repeats::AbstractVector{<:Integer},
         @assert base_width==64 "Base width must be 64 for `basicblock`"
         get_layers = basicblock_builder(block_repeats; inplanes, reduction_factor,
                                         activation, norm_layer, revnorm, attn_fn,
-                                        drop_block_rate, drop_path_rate,
+                                        dropblock_prob, stochastic_depth_prob,
                                         stride_fn = resnet_stride,
                                         planes_fn = resnet_planes,
                                         downsample_tuple = downsample_opt, kwargs...)
     elseif block_type == bottleneck
         get_layers = bottleneck_builder(block_repeats; inplanes, cardinality, base_width,
                                         reduction_factor, activation, norm_layer, revnorm,
-                                        attn_fn, drop_block_rate, drop_path_rate,
+                                        attn_fn, dropblock_prob, stochastic_depth_prob,
                                         stride_fn = resnet_stride,
                                         planes_fn = resnet_planes,
                                         downsample_tuple = downsample_opt, kwargs...)
     elseif block_type == bottle2neck
-        @assert isnothing(drop_block_rate) "DropBlock not supported for `bottle2neck`.
-        Set `drop_block_rate` to nothing."
-        @assert isnothing(drop_path_rate) "DropPath not supported for `bottle2neck`.
-        Set `drop_path_rate` to nothing."
+        @assert isnothing(dropblock_prob) "DropBlock not supported for `bottle2neck`.
+        Set `dropblock_prob` to nothing."
+        @assert isnothing(stochastic_depth_prob) "StochasticDepth not supported for `bottle2neck`.
+        Set `stochastic_depth_prob` to nothing."
         @assert reduction_factor==1 "Reduction factor not supported for `bottle2neck`.
         Set `reduction_factor` to 1."
         get_layers = bottle2neck_builder(block_repeats; inplanes, cardinality, base_width,
@@ -242,7 +242,7 @@ function resnet(block_type, block_repeats::AbstractVector{<:Integer},
         # TODO: write better message when we have link to dev docs for resnet
         throw(ArgumentError("Unknown block type $block_type"))
     end
-    classifier_fn = nfeatures -> create_classifier(nfeatures, nclasses; dropout_rate,
+    classifier_fn = nfeatures -> create_classifier(nfeatures, nclasses; dropout_prob,
                                                    pool_layer, use_conv)
     return resnetbuilder((imsize..., inchannels), stem, get_layers, block_repeats,
                          connection$activation, classifier_fn)

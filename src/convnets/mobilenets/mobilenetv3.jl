@@ -34,14 +34,14 @@ const MOBILENETV3_CONFIGS = Dict(:small => (1024,
                                                 (mbconv, 5, 160, 6, 1, 3, 4, hardswish),
                                             ]))
 
-function mobilenetv3(config::Symbol; width_mult::Real = 1, dropout_rate = 0.2,
+function mobilenetv3(config::Symbol; width_mult::Real = 1, dropout_prob = 0.2,
                      inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(config, [:small, :large])
     max_width, block_configs = MOBILENETV3_CONFIGS[config]
     return irmodelbuilder(width_mult, block_configs; inplanes = 16,
                           headplanes = max_width, activation = relu,
                           se_from_explanes = true, se_round_fn = _round_channels,
-                          expanded_classifier = true, dropout_rate, inchannels, nclasses)
+                          expanded_classifier = true, dropout_prob, inchannels, nclasses)
 end
 
 """

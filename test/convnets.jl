@@ -42,9 +42,9 @@ end
             ]
             @testset for layers in layer_list
                 drop_list = [
-                    (dropout_rate = 0.1, drop_path_rate = 0.1, drop_block_rate = 0.1),
-                    (dropout_rate = 0.5, drop_path_rate = 0.5, drop_block_rate = 0.5),
-                    (dropout_rate = 0.8, drop_path_rate = 0.8, drop_block_rate = 0.8),
+                    (dropout_prob = 0.1, stochastic_depth_prob = 0.1, dropblock_prob = 0.1),
+                    (dropout_prob = 0.5, stochastic_depth_prob = 0.5, dropblock_prob = 0.5),
+                    (dropout_prob = 0.8, stochastic_depth_prob = 0.8, dropblock_prob = 0.8),
                 ]
                 @testset for drop_rates in drop_list
                     m = Metalhead.resnet(block_fn, layers; drop_rates...)

@@ -1,6 +1,6 @@
 """
     MHAttention(planes::Integer, nheads::Integer = 8; qkv_bias::Bool = false, 
-                attn_dropout_rate = 0., proj_dropout_rate = 0.)
+                attn_dropout_prob = 0., proj_dropout_prob = 0.)
 
 Multi-head self-attention layer.
 
@@ -9,8 +9,8 @@ Multi-head self-attention layer.
   - `planes`: number of input channels
   - `nheads`: number of heads
   - `qkv_bias`: whether to use bias in the layer to get the query, key and value
-  - `attn_dropout_rate`: dropout rate after the self-attention layer
-  - `proj_dropout_rate`: dropout rate after the projection layer
+  - `attn_dropout_prob`: dropout probability after the self-attention layer
+  - `proj_dropout_prob`: dropout probability after the projection layer
 """
 struct MHAttention{P, Q, R}
     nheads::Int
@@ -21,11 +21,11 @@ end
 @functor MHAttention
 
 function MHAttention(planes::Integer, nheads::Integer = 8; qkv_bias::Bool = false,
-                     attn_dropout_rate = 0.0, proj_dropout_rate = 0.0)
+                     attn_dropout_prob = 0.0, proj_dropout_prob = 0.0)
     @assert planes % nheads==0 "planes should be divisible by nheads"
     qkv_layer = Dense(planes, planes * 3; bias = qkv_bias)
-    attn_drop = Dropout(attn_dropout_rate)
-    proj = Chain(Dense(planes, planes), Dropout(proj_dropout_rate))
+    attn_drop = Dropout(attn_dropout_prob)
+    proj = Chain(Dense(planes, planes), Dropout(proj_dropout_prob))
     return MHAttention(nheads, qkv_layer, attn_drop, proj)
 end
 

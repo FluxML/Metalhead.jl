@@ -55,7 +55,7 @@ function dense_block(inplanes::Integer, growth_rates)
 end
 
 """
-    densenet(inplanes, growth_rates; reduction = 0.5, dropout_rate = nothing, 
+    densenet(inplanes, growth_rates; reduction = 0.5, dropout_prob = nothing, 
              inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Create a DenseNet model
@@ -67,10 +67,10 @@ Create a DenseNet model
   - `growth_rates`: the growth rates of output feature maps within each
     [`dense_block`](#) (a vector of vectors)
   - `reduction`: the factor by which the number of feature maps is scaled across each transition
-  - `dropout_rate`: the dropout rate for the classifier head. Set to `nothing` to disable dropout.
+  - `dropout_prob`: the dropout probability for the classifier head. Set to `nothing` to disable dropout.
   - `nclasses`: the number of output classes
 """
-function densenet(inplanes::Integer, growth_rates; reduction = 0.5, dropout_rate = nothing,
+function densenet(inplanes::Integer, growth_rates; reduction = 0.5, dropout_prob = nothing,
                   inchannels::Integer = 3, nclasses::Integer = 1000)
     layers = []
     append!(layers,
@@ -85,7 +85,7 @@ function densenet(inplanes::Integer, growth_rates; reduction = 0.5, dropout_rate
         inplanes = floor(Int, outplanes * reduction)
     end
     push!(layers, BatchNorm(outplanes, relu))
-    return Chain(Chain(layers...), create_classifier(outplanes, nclasses; dropout_rate))
+    return Chain(Chain(layers...), create_classifier(outplanes, nclasses; dropout_prob))
 end
 
 """
@@ -97,15 +97,15 @@ Create a DenseNet model
 # Arguments
 
   - `nblocks`: number of dense blocks between transitions
-  - `growth_rate`: the output feature map growth rate of dense blocks (i.e. `k` in the ref)
+  - `growth_rate`: the output feature map growth probability of dense blocks (i.e. `k` in the ref)
   - `reduction`: the factor by which the number of feature maps is scaled across each transition
   - `nclasses`: the number of output classes
 """
 function densenet(nblocks::AbstractVector{<:Integer}; growth_rate::Integer = 32,
-                  reduction = 0.5, dropout_rate = nothing, inchannels::Integer = 3,
+                  reduction = 0.5, dropout_prob = nothing, inchannels::Integer = 3,
                   nclasses::Integer = 1000)
     return densenet(2 * growth_rate, [fill(growth_rate, n) for n in nblocks];
-                    reduction, dropout_rate, inchannels, nclasses)
+                    reduction, dropout_prob, inchannels, nclasses)
 end
 
 const DENSENET_CONFIGS = Dict(121 => [6, 12, 24, 16],

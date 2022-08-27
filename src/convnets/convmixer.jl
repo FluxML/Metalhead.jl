@@ -17,7 +17,7 @@ Creates a ConvMixer model.
   - `nclasses`: number of classes in the output
 """
 function convmixer(planes::Integer, depth::Integer; kernel_size::Dims{2} = (9, 9),
-                   patch_size::Dims{2} = (7, 7), activation = gelu, dropout_rate = nothing,
+                   patch_size::Dims{2} = (7, 7), activation = gelu, dropout_prob = nothing,
                    inchannels::Integer = 3, nclasses::Integer = 1000)
     layers = []
     # stem of the model
@@ -31,7 +31,7 @@ function convmixer(planes::Integer, depth::Integer; kernel_size::Dims{2} = (9, 9
                     conv_norm((1, 1), planes, planes, activation; preact = true)...)
               for _ in 1:depth]
     append!(layers, stages)
-    return Chain(Chain(layers...), create_classifier(planes, nclasses; dropout_rate))
+    return Chain(Chain(layers...), create_classifier(planes, nclasses; dropout_prob))
 end
 
 const CONVMIXER_CONFIGS = Dict(:base => ((1536, 20),

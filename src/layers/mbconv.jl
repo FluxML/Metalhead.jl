@@ -1,8 +1,8 @@
 """
     dwsep_conv_norm(kernel_size::Dims{2}, inplanes::Integer, outplanes::Integer,
-                  activation = relu; eps::Float32 = 1.0f-5, revnorm::Bool = false, 
-                  stride::Integer = 1, use_norm::NTuple{2, Bool} = (true, true),
-                  pad::Integer = 0, [bias, weight, init])
+                    activation = relu; eps::Float32 = 1.0f-5, revnorm::Bool = false, 
+                    stride::Integer = 1, use_norm::NTuple{2, Bool} = (true, true),
+                    pad::Integer = 0, [bias, weight, init])
 
 Create a depthwise separable convolution chain as used in MobileNetv1.
 This is sequence of layers:
@@ -38,12 +38,11 @@ function dwsep_conv_norm(kernel_size::Dims{2}, inplanes::Integer, outplanes::Int
                          bias::NTuple{2, Bool} = (!use_norm[1], !use_norm[2]), kwargs...)
     return vcat(conv_norm(kernel_size, inplanes, inplanes, activation; eps, norm_layer,
                           use_norm = use_norm[1], stride, bias = bias[1],
-                          groups = inplanes, kwargs...),
+                          groups = inplanes, kwargs...), # depthwise convolution
                 conv_norm((1, 1), inplanes, outplanes, activation; eps, norm_layer,
-                          use_norm = use_norm[2], bias = bias[2]))
+                          use_norm = use_norm[2], bias = bias[2])) # pointwise convolution
 end
 
-# TODO add support for stochastic depth to mbconv and fused_mbconv
 """
     mbconv(kernel_size::Dims{2}, inplanes::Integer, explanes::Integer,
            outplanes::Integer, activation = relu; stride::Integer,

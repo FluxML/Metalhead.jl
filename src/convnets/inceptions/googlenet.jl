@@ -36,7 +36,7 @@ Create an Inception-v1 model (commonly referred to as GoogLeNet)
 
   - `nclasses`: the number of output classes
 """
-function googlenet(; dropout_rate = 0.4, inchannels::Integer = 3, nclasses::Integer = 1000)
+function googlenet(; dropout_prob = 0.4, inchannels::Integer = 3, nclasses::Integer = 1000)
     backbone = Chain(Conv((7, 7), inchannels => 64; stride = 2, pad = 3),
                      MaxPool((3, 3); stride = 2, pad = 1),
                      Conv((1, 1), 64 => 64),
@@ -53,7 +53,7 @@ function googlenet(; dropout_rate = 0.4, inchannels::Integer = 3, nclasses::Inte
                      MaxPool((3, 3); stride = 2, pad = 1),
                      inceptionblock(832, 256, 160, 320, 32, 128, 128),
                      inceptionblock(832, 384, 192, 384, 48, 128, 128))
-    return Chain(backbone, create_classifier(1024, nclasses; dropout_rate))
+    return Chain(backbone, create_classifier(1024, nclasses; dropout_prob))
 end
 
 """

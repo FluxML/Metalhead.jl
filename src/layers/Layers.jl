@@ -22,7 +22,7 @@ include("conv.jl")
 export conv_norm, basic_conv_bn, dwsep_conv_norm
 
 include("drop.jl")
-export DropBlock, DropPath
+export DropBlock, StochasticDepth
 
 include("embeddings.jl")
 export PatchEmbedding, ViPosEmbedding, ClassTokens

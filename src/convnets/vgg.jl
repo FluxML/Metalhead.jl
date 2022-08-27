@@ -53,7 +53,7 @@ function vgg_convolutional_layers(config::AbstractVector{<:Tuple}, batchnorm::Bo
 end
 
 """
-    vgg_classifier_layers(imsize, nclasses, fcsize, dropout_rate)
+    vgg_classifier_layers(imsize, nclasses, fcsize, dropout_prob)
 
 Create VGG classifier (fully connected) layers
 ([reference](https://arxiv.org/abs/1409.1556v6)).
@@ -64,20 +64,20 @@ Create VGG classifier (fully connected) layers
     the convolution layers (see [`Metalhead.vgg_convolutional_layers`](#))
   - `nclasses`: number of output classes
   - `fcsize`: input and output size of the intermediate fully connected layer
-  - `dropout_rate`: the dropout level between each fully connected layer
+  - `dropout_prob`: the dropout level between each fully connected layer
 """
 function vgg_classifier_layers(imsize::NTuple{3, <:Integer}, nclasses::Integer,
-                               fcsize::Integer, dropout_rate)
+                               fcsize::Integer, dropout_prob)
     return Chain(MLUtils.flatten,
                  Dense(prod(imsize), fcsize, relu),
-                 Dropout(dropout_rate),
+                 Dropout(dropout_prob),
                  Dense(fcsize, fcsize, relu),
-                 Dropout(dropout_rate),
+                 Dropout(dropout_prob),
                  Dense(fcsize, nclasses))
 end
 
 """
-    vgg(imsize; config, inchannels, batchnorm = false, nclasses, fcsize, dropout_rate)
+    vgg(imsize; config, inchannels, batchnorm = false, nclasses, fcsize, dropout_prob)
 
 Create a VGG model
 ([reference](https://arxiv.org/abs/1409.1556v6)).
@@ -92,13 +92,13 @@ Create a VGG model
   - `nclasses`: number of output classes
   - `fcsize`: intermediate fully connected layer size
     (see [`Metalhead.vgg_classifier_layers`](#))
-  - `dropout_rate`: dropout level between fully connected layers
+  - `dropout_prob`: dropout level between fully connected layers
 """
 function vgg(imsize::Dims{2}; config, batchnorm::Bool = false, fcsize::Integer = 4096,
-             dropout_rate = 0.0, inchannels::Integer = 3, nclasses::Integer = 1000)
+             dropout_prob = 0.0, inchannels::Integer = 3, nclasses::Integer = 1000)
     conv = vgg_convolutional_layers(config, batchnorm, inchannels)
     imsize = outputsize(conv, (imsize..., inchannels); padbatch = true)[1:3]
-    class = vgg_classifier_layers(imsize, nclasses, fcsize, dropout_rate)
+    class = vgg_classifier_layers(imsize, nclasses, fcsize, dropout_prob)
     return Chain(Chain(conv...), class)
 end
 
@@ -110,7 +110,7 @@ const VGG_CONV_CONFIGS = Dict(:A => [(64, 1), (128, 1), (256, 2), (512, 2), (512
 const VGG_CONFIGS = Dict(11 => :A, 13 => :B, 16 => :D, 19 => :E)
 
 """
-    VGG(imsize::Dims{2}; config, inchannels, batchnorm = false, nclasses, fcsize, dropout_rate)
+    VGG(imsize::Dims{2}; config, inchannels, batchnorm = false, nclasses, fcsize, dropout_prob)
 
 Construct a VGG model with the specified input image size. Typically, the image size is `(224, 224)`.
 
@@ -123,16 +123,16 @@ Construct a VGG model with the specified input image size. Typically, the image 
   - `nclasses`: number of output classes
   - `fcsize`: intermediate fully connected layer size
     (see [`Metalhead.vgg_classifier_layers`](#))
-  - `dropout_rate`: dropout level between fully connected layers
+  - `dropout_prob`: dropout level between fully connected layers
 """
 struct VGG
     layers::Any
 end
 @functor VGG
 
-function VGG(imsize::Dims{2}; config, batchnorm::Bool = false, dropout_rate = 0.5,
+function VGG(imsize::Dims{2}; config, batchnorm::Bool = false, dropout_prob = 0.5,
              inchannels::Integer = 3, nclasses::Integer = 1000)
-    layers = vgg(imsize; config, inchannels, batchnorm, nclasses, dropout_rate)
+    layers = vgg(imsize; config, inchannels, batchnorm, nclasses, dropout_prob)
     return VGG(layers)
 end
 

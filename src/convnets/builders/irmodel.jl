@@ -2,7 +2,7 @@ function irmodelbuilder(scalings::NTuple{2, Real}, block_configs::AbstractVector
                         inplanes::Integer = 32, connection = +, activation = relu,
                         norm_layer = BatchNorm, divisor::Integer = 8,
                         tail_conv::Bool = true, expanded_classifier::Bool = false,
-                        headplanes::Integer, dropout_rate = nothing,
+                        headplanes::Integer, dropout_prob = nothing,
                         inchannels::Integer = 3, nclasses::Integer = 1000, kwargs...)
     width_mult, _ = scalings
     # building first layer
@@ -24,14 +24,14 @@ function irmodelbuilder(scalings::NTuple{2, Real}, block_configs::AbstractVector
             append!(layers,
                     conv_norm((1, 1), outplanes, midplanes, activation; norm_layer))
             classifier = create_classifier(midplanes, headplanes, nclasses,
-                                           (hardswish, identity); dropout_rate)
+                                           (hardswish, identity); dropout_prob)
         else
             append!(layers,
                     conv_norm((1, 1), outplanes, headplanes, activation; norm_layer))
-            classifier = create_classifier(headplanes, nclasses; dropout_rate)
+            classifier = create_classifier(headplanes, nclasses; dropout_prob)
         end
     else
-        classifier = create_classifier(outplanes, nclasses; dropout_rate)
+        classifier = create_classifier(outplanes, nclasses; dropout_prob)
     end
     return Chain(Chain(layers...), classifier)
 end

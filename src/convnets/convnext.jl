@@ -1,5 +1,5 @@
 """
-    convnextblock(planes::Integer, drop_path_rate = 0.0, layerscale_init = 1.0f-6)
+    convnextblock(planes::Integer, stochastic_depth_prob = 0.0, layerscale_init = 1.0f-6)
 
 Creates a single block of ConvNeXt.
 ([reference](https://arxiv.org/abs/2201.03545))
@@ -7,23 +7,24 @@ Creates a single block of ConvNeXt.
 # Arguments
 
   - `planes`: number of input channels.
-  - `drop_path_rate`: Stochastic depth rate.
+  - `stochastic_depth_prob`: Stochastic depth probability.
   - `layerscale_init`: Initial value for [`LayerScale`](#)
 """
-function convnextblock(planes::Integer, drop_path_rate = 0.0, layerscale_init = 1.0f-6)
+function convnextblock(planes::Integer, stochastic_depth_prob = 0.0,
+                       layerscale_init = 1.0f-6)
     layers = SkipConnection(Chain(DepthwiseConv((7, 7), planes => planes; pad = 3),
                                   swapdims((3, 1, 2, 4)),
                                   LayerNorm(planes; ϵ = 1.0f-6),
                                   mlp_block(planes, 4 * planes),
                                   LayerScale(planes, layerscale_init),
                                   swapdims((2, 3, 1, 4)),
-                                  DropPath(drop_path_rate)), +)
+                                  StochasticDepth(stochastic_depth_prob)), +)
     return layers
 end
 
 """
     convnext(depths::AbstractVector{<:Integer}, planes::AbstractVector{<:Integer};
-             drop_path_rate = 0.0, layerscale_init = 1.0f-6, inchannels::Integer = 3,
+             stochastic_depth_prob = 0.0, layerscale_init = 1.0f-6, inchannels::Integer = 3,
              nclasses::Integer = 1000)
 
 Creates the layers for a ConvNeXt model.
@@ -33,14 +34,15 @@ Creates the layers for a ConvNeXt model.
 
   - `depths`: list with configuration for depth of each block
   - `planes`: list with configuration for number of output channels in each block
-  - `drop_path_rate`: Stochastic depth rate.
+  - `stochastic_depth_prob`: Stochastic depth probability.
   - `layerscale_init`: Initial value for [`LayerScale`](#)
     ([reference](https://arxiv.org/abs/2103.17239))
   - `inchannels`: number of input channels.
   - `nclasses`: number of output classes
 """
 function convnext(depths::AbstractVector{<:Integer}, planes::AbstractVector{<:Integer};
-                  drop_path_rate = 0.0, layerscale_init = 1.0f-6, inchannels::Integer = 3,
+                  stochastic_depth_prob = 0.0, layerscale_init = 1.0f-6,
+                  inchannels::Integer = 3,
                   nclasses::Integer = 1000)
     @assert length(depths) == length(planes)
     "`planes` should have exactly one value for each block"
@@ -54,7 +56,7 @@ function convnext(depths::AbstractVector{<:Integer}, planes::AbstractVector{<:In
                               norm_layer = ChannelLayerNorm, revnorm = true)...))
     end
     stages = []
-    dp_rates = linear_scheduler(drop_path_rate; depth = sum(depths))
+    dp_rates = linear_scheduler(stochastic_depth_prob; depth = sum(depths))
     cur = 0
     for i in eachindex(depths)
         push!(stages,
@@ -68,9 +70,9 @@ function convnext(depths::AbstractVector{<:Integer}, planes::AbstractVector{<:In
     return Chain(Chain(backbone...), classifier)
 end
 
-function convnext(config::Symbol; drop_path_rate = 0.0, layerscale_init = 1.0f-6,
+function convnext(config::Symbol; stochastic_depth_prob = 0.0, layerscale_init = 1.0f-6,
                   inchannels::Integer = 3, nclasses::Integer = 1000)
-    return convnext(CONVNEXT_CONFIGS[config]...; drop_path_rate, layerscale_init,
+    return convnext(CONVNEXT_CONFIGS[config]...; stochastic_depth_prob, layerscale_init,
                     inchannels, nclasses)
 end
 
@@ -106,7 +108,7 @@ struct ConvNeXt
 end
 @functor ConvNeXt
 
-function ConvNeXt(config::Symbol; pretrain::Bool = true, inchannels::Integer = 3,
+function ConvNeXt(config::Symbol; pretrain::Bool = false, inchannels::Integer = 3,
                   nclasses::Integer = 1000)
     _checkconfig(config, keys(CONVNEXT_CONFIGS))
     layers = convnext(config; inchannels, nclasses)
