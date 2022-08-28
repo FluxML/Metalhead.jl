@@ -1,5 +1,5 @@
-function resnetbuilder(img_dims, stem, get_layers, block_repeats::AbstractVector{<:Integer},
-                       connection, classifier_fn)
+function build_resnet(img_dims, stem, get_layers, block_repeats::AbstractVector{<:Integer},
+                      connection, classifier_fn)
     # Build stages of the ResNet
     stage_blocks = cnn_stages(get_layers, block_repeats, connection)
     backbone = Chain(stem, stage_blocks...)

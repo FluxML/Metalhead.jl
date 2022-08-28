@@ -244,8 +244,8 @@ function resnet(block_type, block_repeats::AbstractVector{<:Integer},
     end
     classifier_fn = nfeatures -> create_classifier(nfeatures, nclasses; dropout_prob,
                                                    pool_layer, use_conv)
-    return resnetbuilder((imsize..., inchannels), stem, get_layers, block_repeats,
-                         connection$activation, classifier_fn)
+    return build_resnet((imsize..., inchannels), stem, get_layers, block_repeats,
+                        connection$activation, classifier_fn)
 end
 function resnet(block_fn, block_repeats, downsample_opt::Symbol = :B; kwargs...)
     return resnet(block_fn, block_repeats, RESNET_SHORTCUTS[downsample_opt]; kwargs...)

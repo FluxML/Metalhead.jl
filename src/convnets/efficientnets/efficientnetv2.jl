@@ -35,13 +35,14 @@ const EFFNETV2_CONFIGS = Dict(:small => [(fused_mbconv, 3, 24, 1, 1, 2, swish),
                                   (mbconv, 3, 512, 6, 2, 32, 4, swish),
                                   (mbconv, 3, 768, 6, 1, 8, 4, swish)])
 
-function efficientnetv2(config::Symbol; norm_layer = BatchNorm, dropout_prob = nothing,
-                        inchannels::Integer = 3, nclasses::Integer = 1000)
+function efficientnetv2(config::Symbol; norm_layer = BatchNorm, stochastic_depth_prob = 0.2,
+                        dropout_prob = nothing, inchannels::Integer = 3,
+                        nclasses::Integer = 1000)
     _checkconfig(config, keys(EFFNETV2_CONFIGS))
     block_configs = EFFNETV2_CONFIGS[config]
-    return irmodelbuilder((1, 1), block_configs; activation = swish, norm_layer,
-                          inplanes = block_configs[1][3], headplanes = 1280,
-                          dropout_prob, inchannels, nclasses)
+    return build_irmodel((1, 1), block_configs; activation = swish, norm_layer,
+                         inplanes = block_configs[1][3], headplanes = 1280,
+                         stochastic_depth_prob, dropout_prob, inchannels, nclasses)
 end
 
 """

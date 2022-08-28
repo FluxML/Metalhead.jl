@@ -46,8 +46,8 @@ end
                     (dropout_prob = 0.5, stochastic_depth_prob = 0.5, dropblock_prob = 0.5),
                     (dropout_prob = 0.8, stochastic_depth_prob = 0.8, dropblock_prob = 0.8),
                 ]
-                @testset for drop_rates in drop_list
-                    m = Metalhead.resnet(block_fn, layers; drop_rates...)
+                @testset for drop_probs in drop_list
+                    m = Metalhead.resnet(block_fn, layers; drop_probs...)
                     @test size(m(x_224)) == (1000, 1)
                     @test gradtest(m, x_224)
                     _gc()

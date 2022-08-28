@@ -56,11 +56,11 @@ function convnext(depths::AbstractVector{<:Integer}, planes::AbstractVector{<:In
                               norm_layer = ChannelLayerNorm, revnorm = true)...))
     end
     stages = []
-    dp_rates = linear_scheduler(stochastic_depth_prob; depth = sum(depths))
+    sdschedule = linear_scheduler(stochastic_depth_prob; depth = sum(depths))
     cur = 0
     for i in eachindex(depths)
         push!(stages,
-              [convnextblock(planes[i], dp_rates[cur + j], layerscale_init)
+              [convnextblock(planes[i], sdschedule[cur + j], layerscale_init)
                for j in 1:depths[i]])
         cur += depths[i]
     end

@@ -1,4 +1,4 @@
-# TODO @theabhirath figure out consistent behaviour for dropout rates - 0.0 vs `nothing`
+# TODO @theabhirath figure out consistent behaviour for dropout probs - 0.0 vs `nothing`
 """
     mlp_block(inplanes::Integer, hidden_planes::Integer, outplanes::Integer = inplanes; 
               dropout_prob = 0., activation = gelu)

@@ -62,15 +62,6 @@ It can be used in two ways: either with all blocks having the same survival prob
 or with a linear scaling rule across the blocks. This is performed only at training time.
 At test time, the `DropBlock` layer is equivalent to `identity`.
 
-!!! warning
-    
-    In the case of the linear scaling rule, the calculations of survival probabilities for each
-    block may lead to a survival probability > 1 for a given block. This will lead to
-    `DropBlock` erroring. This usually happens with a low number of blocks and a high base
-    survival probability, so in such cases it is recommended to use a fixed base survival
-    probability across blocks. If this is not desired, then a lower base survival probability
-    is recommended.
-
 ([reference](https://arxiv.org/abs/1810.12890))
 
 # Arguments
@@ -140,15 +131,6 @@ propagate completely through the skip connection. It can be used in two ways: ei
 all blocks having the same survival probability or with a linear scaling rule across the
 blocks. This is performed only at training time. At test time, the `StochasticDepth` layer is
 equivalent to `identity`.
-
-!!! warning
-    
-    In the case of the linear scaling rule, the calculations of survival probabilities for each
-    block may lead to a survival probability > 1 for a given block. This will lead to
-    `StochasticDepth` erroring. This usually happens with a low number of blocks and a high base
-    survival probability, so in such cases it is recommended to use a fixed base survival
-    probability across  blocks. If this is not desired, then a lower base survival probability
-    is recommended.
 
 # Arguments
 

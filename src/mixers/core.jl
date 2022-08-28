@@ -27,9 +27,10 @@ function mlpmixer(block, imsize::Dims{2} = (224, 224); norm_layer = LayerNorm,
                   depth::Integer = 12, inchannels::Integer = 3, nclasses::Integer = 1000,
                   kwargs...)
     npatches = prod(imsize .÷ patch_size)
-    dp_rates = linear_scheduler(stochastic_depth_prob; depth)
+    sdschedule = linear_scheduler(stochastic_depth_prob; depth)
     layers = Chain(PatchEmbedding(imsize; inchannels, patch_size, embedplanes),
-                   Chain([block(embedplanes, npatches; stochastic_depth_prob = dp_rates[i],
+                   Chain([block(embedplanes, npatches;
+                                stochastic_depth_prob = sdschedule[i],
                                 kwargs...)
                           for i in 1:depth]...))
     classifier = Chain(norm_layer(embedplanes), seconddimmean, Dense(embedplanes, nclasses))

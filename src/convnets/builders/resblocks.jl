@@ -6,14 +6,14 @@ function basicblock_builder(block_repeats::AbstractVector{<:Integer};
                             dropblock_prob = nothing, stochastic_depth_prob = nothing,
                             stride_fn = resnet_stride, planes_fn = resnet_planes,
                             downsample_tuple = (downsample_conv, downsample_identity))
-    # DropBlock, StochasticDepth both take in rates based on a linear scaling schedule
+    # DropBlock, StochasticDepth both take in probabilities based on a linear scaling schedule
     # Also get `planes_vec` needed for block `inplanes` and `planes` calculations
-    pathschedule = linear_scheduler(stochastic_depth_prob; depth = sum(block_repeats))
-    blockschedule = linear_scheduler(dropblock_prob; depth = sum(block_repeats))
+    sdschedule = linear_scheduler(stochastic_depth_prob; depth = sum(block_repeats))
+    dbschedule = linear_scheduler(dropblock_prob; depth = sum(block_repeats))
     planes_vec = collect(planes_fn(block_repeats))
     # closure over `idxs`
     function get_layers(stage_idx::Integer, block_idx::Integer)
-        # DropBlock, StochasticDepth both take in rates based on a linear scaling schedule
+        # DropBlock, StochasticDepth both take in probabilities based on a linear scaling schedule
         # This is also needed for block `inplanes` and `planes` calculations
         schedule_idx = sum(block_repeats[1:(stage_idx - 1)]) + block_idx
         planes = planes_vec[schedule_idx]
@@ -23,8 +23,8 @@ function basicblock_builder(block_repeats::AbstractVector{<:Integer};
         stride = stride_fn(stage_idx, block_idx)
         downsample_fn = stride != 1 || inplanes != planes * expansion ?
                         downsample_tuple[1] : downsample_tuple[2]
-        drop_path = StochasticDepth(pathschedule[schedule_idx])
-        drop_block = DropBlock(blockschedule[schedule_idx])
+        drop_path = StochasticDepth(sdschedule[schedule_idx])
+        drop_block = DropBlock(dbschedule[schedule_idx])
         block = basicblock(inplanes, planes; stride, reduction_factor, activation,
                            norm_layer, revnorm, attn_fn, drop_path, drop_block)
         downsample = downsample_fn(inplanes, planes * expansion; stride, norm_layer,
@@ -43,8 +43,8 @@ function bottleneck_builder(block_repeats::AbstractVector{<:Integer};
                             dropblock_prob = nothing, stochastic_depth_prob = nothing,
                             stride_fn = resnet_stride, planes_fn = resnet_planes,
                             downsample_tuple = (downsample_conv, downsample_identity))
-    pathschedule = linear_scheduler(stochastic_depth_prob; depth = sum(block_repeats))
-    blockschedule = linear_scheduler(dropblock_prob; depth = sum(block_repeats))
+    sdschedule = linear_scheduler(stochastic_depth_prob; depth = sum(block_repeats))
+    dbschedule = linear_scheduler(dropblock_prob; depth = sum(block_repeats))
     planes_vec = collect(planes_fn(block_repeats))
     # closure over `idxs`
     function get_layers(stage_idx::Integer, block_idx::Integer)
@@ -58,8 +58,8 @@ function bottleneck_builder(block_repeats::AbstractVector{<:Integer};
         stride = stride_fn(stage_idx, block_idx)
         downsample_fn = stride != 1 || inplanes != planes * expansion ?
                         downsample_tuple[1] : downsample_tuple[2]
-        drop_path = StochasticDepth(pathschedule[schedule_idx])
-        drop_block = DropBlock(blockschedule[schedule_idx])
+        drop_path = StochasticDepth(sdschedule[schedule_idx])
+        drop_block = DropBlock(dbschedule[schedule_idx])
         block = bottleneck(inplanes, planes; stride, cardinality, base_width,
                            reduction_factor, activation, norm_layer, revnorm,
                            attn_fn, drop_path, drop_block)

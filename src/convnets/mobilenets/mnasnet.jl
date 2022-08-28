@@ -45,8 +45,8 @@ function mnasnet(config::Symbol; width_mult::Real = 1, max_width::Integer = 1280
     # momentum used for BatchNorm is as per Tensorflow implementation
     norm_layer = (args...; kwargs...) -> BatchNorm(args...; momentum = 0.0003f0, kwargs...)
     inplanes, block_configs = MNASNET_CONFIGS[config]
-    return irmodelbuilder(width_mult, block_configs; inplanes, norm_layer,
-                          headplanes = max_width, dropout_prob, inchannels, nclasses)
+    return build_irmodel(width_mult, block_configs; inplanes, norm_layer,
+                         headplanes = max_width, dropout_prob, inchannels, nclasses)
 end
 
 """

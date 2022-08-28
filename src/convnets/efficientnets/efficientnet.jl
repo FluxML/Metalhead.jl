@@ -31,15 +31,15 @@ const EFFICIENTNET_GLOBAL_CONFIGS = Dict(:b0 => (224, (1.0, 1.0)),
                                          :b7 => (600, (2.0, 3.1)),
                                          :b8 => (672, (2.2, 3.6)))
 
-function efficientnet(config::Symbol; norm_layer = BatchNorm,
+function efficientnet(config::Symbol; norm_layer = BatchNorm, stochastic_depth_prob = 0.2,
                       dropout_prob = nothing, inchannels::Integer = 3,
                       nclasses::Integer = 1000)
     _checkconfig(config, keys(EFFICIENTNET_GLOBAL_CONFIGS))
     scalings = EFFICIENTNET_GLOBAL_CONFIGS[config][2]
-    return irmodelbuilder(scalings, EFFICIENTNET_BLOCK_CONFIGS; inplanes = 32,
-                          norm_layer, activation = swish,
-                          headplanes = EFFICIENTNET_BLOCK_CONFIGS[end][3] * 4,
-                          dropout_prob, inchannels, nclasses)
+    return build_irmodel(scalings, EFFICIENTNET_BLOCK_CONFIGS; inplanes = 32,
+                         norm_layer, stochastic_depth_prob, activation = swish,
+                         headplanes = EFFICIENTNET_BLOCK_CONFIGS[end][3] * 4,
+                         dropout_prob, inchannels, nclasses)
 end
 
 """

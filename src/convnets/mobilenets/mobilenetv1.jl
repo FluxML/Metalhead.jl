@@ -16,9 +16,9 @@ const MOBILENETV1_CONFIGS = [
 
 function mobilenetv1(width_mult::Real = 1; inplanes::Integer = 32, dropout_prob = nothing,
                      inchannels::Integer = 3, nclasses::Integer = 1000)
-    return irmodelbuilder(width_mult, MOBILENETV1_CONFIGS; inplanes, inchannels,
-                          activation = relu6, connection = nothing, tail_conv = false,
-                          headplanes = 1024, dropout_prob, nclasses)
+    return build_irmodel(width_mult, MOBILENETV1_CONFIGS; inplanes, inchannels,
+                         activation = relu6, connection = nothing, tail_conv = false,
+                         headplanes = 1024, dropout_prob, nclasses)
 end
 
 """
