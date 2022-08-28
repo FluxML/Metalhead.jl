@@ -21,17 +21,18 @@ function fire(inplanes::Integer, squeeze_planes::Integer, expand1x1_planes::Inte
 end
 
 """
-    squeezenet(; inchannels::Integer = 3, nclasses::Integer = 1000)
+    squeezenet(; dropout_prob = 0.5, inchannels::Integer = 3, nclasses::Integer = 1000)
 
-Create a SqueezeNet
+Create a SqueezeNet model.
 ([reference](https://arxiv.org/abs/1602.07360v4)).
 
 # Arguments
 
+  - `dropout_prob`: dropout probability for the classifier head. Set to `nothing` to disable dropout.
   - `inchannels`: number of input channels.
   - `nclasses`: the number of output classes.
 """
-function squeezenet(; inchannels::Integer = 3, nclasses::Integer = 1000)
+function squeezenet(; dropout_prob = 0.5, inchannels::Integer = 3, nclasses::Integer = 1000)
     backbone = Chain(Conv((3, 3), inchannels => 64, relu; stride = 2),
                      MaxPool((3, 3); stride = 2),
                      fire(64, 16, 64, 64),
@@ -44,14 +45,14 @@ function squeezenet(; inchannels::Integer = 3, nclasses::Integer = 1000)
                      fire(384, 48, 192, 192),
                      fire(384, 64, 256, 256),
                      fire(512, 64, 256, 256))
-    classifier = Chain(Dropout(0.5), Conv((1, 1), 512 => nclasses, relu),
+    classifier = Chain(Dropout(dropout_prob), Conv((1, 1), 512 => nclasses, relu),
                        AdaptiveMeanPool((1, 1)), MLUtils.flatten)
     return Chain(backbone, classifier)
 end
 
 """
     SqueezeNet(; pretrain::Bool = false, inchannels::Integer = 3,
-           nclasses::Integer = 1000)
+               nclasses::Integer = 1000)
 
 Create a SqueezeNet
 ([reference](https://arxiv.org/abs/1602.07360v4)).
@@ -62,7 +63,7 @@ Create a SqueezeNet
   - `inchannels`: number of input channels.
   - `nclasses`: the number of output classes.
 
-See also [`squeezenet`](#).
+See also [`Metalhead.squeezenet`](@ref).
 """
 struct SqueezeNet
     layers::Any

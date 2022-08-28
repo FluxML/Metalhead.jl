@@ -8,7 +8,7 @@ Creates a single block of ConvNeXt.
 
   - `planes`: number of input channels.
   - `stochastic_depth_prob`: Stochastic depth probability.
-  - `layerscale_init`: Initial value for [`LayerScale`](#)
+  - `layerscale_init`: Initial value for [`LayerScale`](@ref)
 """
 function convnextblock(planes::Integer, stochastic_depth_prob = 0.0,
                        layerscale_init = 1.0f-6)
@@ -35,7 +35,7 @@ Creates the layers for a ConvNeXt model.
   - `depths`: list with configuration for depth of each block
   - `planes`: list with configuration for number of output channels in each block
   - `stochastic_depth_prob`: Stochastic depth probability.
-  - `layerscale_init`: Initial value for [`LayerScale`](#)
+  - `layerscale_init`: Initial value for [`LayerScale`](@ref)
     ([reference](https://arxiv.org/abs/2103.17239))
   - `inchannels`: number of input channels.
   - `nclasses`: number of output classes
@@ -101,7 +101,7 @@ Creates a ConvNeXt model.
     
     `ConvNeXt` does not currently support pretrained weights.
 
-See also [`Metalhead.convnext`](#).
+See also [`Metalhead.convnext`](@ref).
 """
 struct ConvNeXt
     layers::Any

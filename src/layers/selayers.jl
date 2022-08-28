@@ -15,7 +15,7 @@ Creates a squeeze-and-excitation layer used in MobileNets, EfficientNets and SE-
   - `squeeze_planes`: The number of feature maps in the intermediate layers. Alternatively,
     specify the keyword arguments `reduction` and `rd_divisior`, which determine the number
     of feature maps in the intermediate layers from the number of input feature maps as:
-    `squeeze_planes = _round_channels(inplanes ÷ reduction)`. (See [`_round_channels`](#) for details.)
+    `squeeze_planes = _round_channels(inplanes ÷ reduction)`. (See [`_round_channels`](@ref) for details.)
   - `activation`: The activation function for the first convolution layer
   - `gate_activation`: The activation function for the gate layer
   - `norm_layer`: The normalization layer to be used after the convolution layers

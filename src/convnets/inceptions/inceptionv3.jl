@@ -160,7 +160,7 @@ end
     Inceptionv3(; pretrain::Bool = false, inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Create an Inception-v3 model ([reference](https://arxiv.org/abs/1512.00567v3)).
-See also [`inceptionv3`](#).
+See also [`inceptionv3`](@ref).
 
 # Arguments
 

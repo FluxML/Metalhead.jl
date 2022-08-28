@@ -45,7 +45,8 @@ const CONVMIXER_CONFIGS = Dict(:base => ((1536, 20),
                                            patch_size = (7, 7))))
 
 """
-    ConvMixer(config::Symbol; inchannels::Integer = 3, nclasses::Integer = 1000)
+    ConvMixer(config::Symbol; pretrain::Bool = false, inchannels::Integer = 3,
+              nclasses::Integer = 1000)
 
 Creates a ConvMixer model.
 ([reference](https://arxiv.org/abs/2201.09792))
@@ -53,18 +54,25 @@ Creates a ConvMixer model.
 # Arguments
 
   - `config`: the size of the model, either `:base`, `:small` or `:large`
+  - `pretrain`: whether to load the pre-trained weights for ImageNet
   - `inchannels`: number of input channels
   - `nclasses`: number of classes in the output
+
+See also [`Metalhead.convmixer`](@ref).
 """
 struct ConvMixer
     layers::Any
 end
 @functor ConvMixer
 
-function ConvMixer(config::Symbol; inchannels::Integer = 3, nclasses::Integer = 1000)
+function ConvMixer(config::Symbol; pretrain::Bool = false, inchannels::Integer = 3,
+                   nclasses::Integer = 1000)
     _checkconfig(config, keys(CONVMIXER_CONFIGS))
     layers = convmixer(CONVMIXER_CONFIGS[config][1]...; CONVMIXER_CONFIGS[config][2]...,
                        inchannels, nclasses)
+    if pretrain
+        loadpretrain!(layers, "convmixer$config")
+    end
     return ConvMixer(layers)
 end
 

@@ -65,7 +65,7 @@ Create a DenseNet model
 
   - `inplanes`: the number of input feature maps to the first dense block
   - `growth_rates`: the growth rates of output feature maps within each
-    [`dense_block`](#) (a vector of vectors)
+    [`dense_block`](@ref) (a vector of vectors)
   - `reduction`: the factor by which the number of feature maps is scaled across each transition
   - `dropout_prob`: the dropout probability for the classifier head. Set to `nothing` to disable dropout.
   - `nclasses`: the number of output classes
@@ -125,7 +125,7 @@ Set `pretrain = true` to load the model with pre-trained weights for ImageNet.
     
     `DenseNet` does not currently support pretrained weights.
 
-See also [`Metalhead.densenet`](#).
+See also [`Metalhead.densenet`](@ref).
 """
 struct DenseNet
     layers::Any

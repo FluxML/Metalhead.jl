@@ -28,7 +28,8 @@ regions of size `block_size` in the input. Otherwise, it simply returns the inpu
   - `gamma_scale`: multiplicative factor for `gamma` used. For the calculations,
     refer to [the paper](https://arxiv.org/abs/1810.12890).
 
-If you are an end-user, you do not want this function. Use [`DropBlock`](#) instead.
+If you are not a package developer, you most likely do not want this function. Use [`DropBlock`](@ref)
+instead.
 """
 function dropblock(rng::AbstractRNG, x::AbstractArray{T, 4}, drop_block_prob,
                    block_size::Integer, gamma_scale) where {T}
@@ -67,7 +68,8 @@ At test time, the `DropBlock` layer is equivalent to `identity`.
 # Arguments
 
   - `drop_block_prob`: probability of dropping a block. If `nothing` is passed, it returns
-    `identity`.
+    `identity`. Note that some literature uses the term "survival probability" instead,
+    which is equivalent to `1 - drop_block_prob`.
   - `block_size`: size of the block to drop
   - `gamma_scale`: multiplicative factor for `gamma` used. For the calculation of gamma,
     refer to [the paper](https://arxiv.org/abs/1810.12890).
@@ -134,8 +136,9 @@ equivalent to `identity`.
 
 # Arguments
 
-  - `p`: probability of Stochastic Depth.
-  - `mode`: Either `:batch` or `:row`. :batch randomly zeroes the entire input, `row` zeroes
+  - `p`: probability of Stochastic Depth. Note that some literature uses the term "survival
+    probability" instead, which is equivalent to `1 - p`.
+  - `mode`: Either `:batch` or `:row`. `:batch` randomly zeroes the entire input, `row` zeroes
     randomly selected rows from the batch. The default is `:row`.
   - `rng`: can be used to pass in a custom RNG instead of the default. See `Flux.Dropout`
     for more information on the behaviour of this argument. Custom RNGs are only supported

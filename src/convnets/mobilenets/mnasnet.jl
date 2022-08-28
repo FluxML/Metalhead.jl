@@ -39,6 +39,24 @@ const MNASNET_CONFIGS = Dict(:B1 => (32,
                                             (mbconv, 3, 144, 6, 1, 1, nothing, relu),
                                         ]))
 
+"""
+    mnasnet(config::Symbol; width_mult::Real = 1, max_width::Integer = 1280,
+            dropout_prob = 0.2, inchannels::Integer = 3, nclasses::Integer = 1000)
+
+Create an MNasNet model. ([reference](https://arxiv.org/abs/1807.11626))
+
+# Arguments
+
+  - `config`: configuration of the model. One of `B1`, `A1` or `small`. `B1` is without
+    squeeze-and-excite layers, `A1` is with squeeze-and-excite layers, and `small` is a smaller
+    version of `A1`.
+  - `width_mult`: Controls the number of output feature maps in each block
+    (with 1 being the default in the paper; this is usually a value between 0.1 and 1.4)
+  - `max_width`: Controls the maximum number of output feature maps in each block
+  - `dropout_prob`: Dropout probability for the classifier head. Set to `nothing` to disable dropout.
+  - `inchannels`: Number of input channels.
+  - `nclasses`: Number of output classes.
+"""
 function mnasnet(config::Symbol; width_mult::Real = 1, max_width::Integer = 1280,
                  dropout_prob = 0.2, inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(config, keys(MNASNET_CONFIGS))
@@ -59,8 +77,7 @@ Creates a MNASNet model with the specified configuration.
 # Arguments
 
   - `width_mult`: Controls the number of output feature maps in each block
-    (with 1 being the default in the paper;
-    this is usually a value between 0.1 and 1.4)
+    (with 1 being the default in the paper; this is usually a value between 0.1 and 1.4)
   - `pretrain`: Whether to load the pre-trained weights for ImageNet
   - `inchannels`: The number of input channels.
   - `nclasses`: The number of output classes
@@ -69,7 +86,7 @@ Creates a MNASNet model with the specified configuration.
     
     `MNASNet` does not currently support pretrained weights.
 
-See also [`mnasnet`](#).
+See also [`Metalhead.mnasnet`](@ref).
 """
 struct MNASNet
     layers::Any

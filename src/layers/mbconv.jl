@@ -30,7 +30,7 @@ See Fig. 3 in [reference](https://arxiv.org/abs/1704.04861v1).
     `use_norm[1] == true`.
   - `stride`: stride of the first convolution kernel
   - `pad`: padding of the first convolution kernel
-  - `weight`, `init`: initialization for the convolution kernel (see [`Flux.Conv`](#))
+  - `weight`, `init`: initialization for the convolution kernel (see [`Flux.Conv`](@ref))
 """
 function dwsep_conv_norm(kernel_size::Dims{2}, inplanes::Integer, outplanes::Integer,
                          activation = relu; norm_layer = BatchNorm, eps::Float32 = 1.0f-5,
@@ -75,7 +75,7 @@ First introduced in the MobileNetv2 paper.
   - `activation`: The activation function for the first two convolution layer
   - `stride`: The stride of the convolutional kernel, has to be either 1 or 2
   - `reduction`: The reduction factor for the number of hidden feature maps
-    in a squeeze and excite layer (see [`squeeze_excite`](#))
+    in a squeeze and excite layer (see [`squeeze_excite`](@ref))
   - `se_round_fn`: The function to round the number of reduced feature maps
     in the squeeze and excite layer
   - `norm_layer`: The normalization layer to use

@@ -45,7 +45,7 @@ Create a `AlexNet`.
     
     `AlexNet` does not currently support pretrained weights.
 
-See also [`alexnet`](#).
+See also [`Metalhead.alexnet`](@ref).
 """
 struct AlexNet
     layers::Any

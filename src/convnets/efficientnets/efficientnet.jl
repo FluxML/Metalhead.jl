@@ -31,6 +31,29 @@ const EFFICIENTNET_GLOBAL_CONFIGS = Dict(:b0 => (224, (1.0, 1.0)),
                                          :b7 => (600, (2.0, 3.1)),
                                          :b8 => (672, (2.2, 3.6)))
 
+"""
+    efficientnet(config::Symbol; norm_layer = BatchNorm, stochastic_depth_prob = 0.2,
+                 dropout_prob = nothing, inchannels::Integer = 3, nclasses::Integer = 1000)
+
+Create an EfficientNet model. ([reference](https://arxiv.org/abs/1905.11946v5)).
+
+# Arguments
+
+  - `config`: size of the model. Can be one of `[:b0, :b1, :b2, :b3, :b4, :b5, :b6, :b7, :b8]`.
+  - `norm_layer`: normalization layer to use.
+  - `stochastic_depth_prob`: probability of stochastic depth. Set to `nothing` to disable
+    stochastic depth.
+  - `dropout_prob`: probability of dropout in the classifier head. Set to `nothing` to disable
+    dropout.
+  - `inchannels`: number of input channels.
+  - `nclasses`: number of output classes.
+
+!!! warning
+    
+    EfficientNet does not currently support pretrained weights.
+
+See also [`Metalhead.efficientnet`](@ref).
+"""
 function efficientnet(config::Symbol; norm_layer = BatchNorm, stochastic_depth_prob = 0.2,
                       dropout_prob = nothing, inchannels::Integer = 3,
                       nclasses::Integer = 1000)
@@ -43,16 +66,22 @@ function efficientnet(config::Symbol; norm_layer = BatchNorm, stochastic_depth_p
 end
 
 """
-    EfficientNet(config::Symbol; pretrain::Bool = false)
+    EfficientNet(config::Symbol; pretrain::Bool = false, inchannels::Integer = 3,
+                 nclasses::Integer = 1000)
 
 Create an EfficientNet model ([reference](https://arxiv.org/abs/1905.11946v5)).
-See also [`efficientnet`](#).
+See also [`efficientnet`](@ref).
 
 # Arguments
 
-  - `config`: name of default configuration
-    (can be `:b0`, `:b1`, `:b2`, `:b3`, `:b4`, `:b5`, `:b6`, `:b7`, `:b8`)
+  - `config`: size of the model. Can be one of `[:b0, :b1, :b2, :b3, :b4, :b5, :b6, :b7, :b8]`.
   - `pretrain`: set to `true` to load the pre-trained weights for ImageNet
+
+!!! warning
+    
+    `EfficientNet` does not currently support pretrained weights.
+
+See also [`efficientnet`](#).
 """
 struct EfficientNet
     layers::Any

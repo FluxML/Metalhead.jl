@@ -5,7 +5,7 @@
 using Flux, Metalhead
 ```
 
-Using a model from Metalhead is as simple as selecting a model from the table of [available models](#). For example, below we use the pre-trained ResNet-18 model.
+Using a model from Metalhead is as simple as selecting a model from the table of [available models](@ref). For example, below we use the pre-trained ResNet-18 model.
 {cell=quickstart}
 ```julia
 using Flux, Metalhead

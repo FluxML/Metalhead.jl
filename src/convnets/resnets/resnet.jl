@@ -11,7 +11,7 @@ Creates a ResNet model with the specified depth.
   - `inchannels`: The number of input channels.
   - `nclasses`: the number of output classes
 
-Advanced users who want more configuration options will be better served by using [`resnet`](#).
+Advanced users who want more configuration options will be better served by using [`resnet`](@ref).
 """
 struct ResNet
     layers::Any
@@ -48,7 +48,7 @@ The number of channels in outer 1x1 convolutions is the same.
   - `inchannels`: The number of input channels.
   - `nclasses`: The number of output classes
 
-Advanced users who want more configuration options will be better served by using [`resnet`](#).
+Advanced users who want more configuration options will be better served by using [`resnet`](@ref).
 """
 struct WideResNet
     layers::Any

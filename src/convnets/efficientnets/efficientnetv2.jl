@@ -35,6 +35,23 @@ const EFFNETV2_CONFIGS = Dict(:small => [(fused_mbconv, 3, 24, 1, 1, 2, swish),
                                   (mbconv, 3, 512, 6, 2, 32, 4, swish),
                                   (mbconv, 3, 768, 6, 1, 8, 4, swish)])
 
+"""
+    efficientnet(config::Symbol; norm_layer = BatchNorm, stochastic_depth_prob = 0.2,
+                 dropout_prob = nothing, inchannels::Integer = 3, nclasses::Integer = 1000)
+
+Create an EfficientNetv2 model. ([reference](https://arxiv.org/abs/2104.00298)).
+
+# Arguments
+
+  - `config`: size of the model. Can be one of `[:b0, :b1, :b2, :b3, :b4, :b5, :b6, :b7, :b8]`.
+  - `norm_layer`: normalization layer to use.
+  - `stochastic_depth_prob`: probability of stochastic depth. Set to `nothing` to disable
+    stochastic depth.
+  - `dropout_prob`: probability of dropout in the classifier head. Set to `nothing` to disable
+    dropout.
+  - `inchannels`: number of input channels.
+  - `nclasses`: number of output classes.
+"""
 function efficientnetv2(config::Symbol; norm_layer = BatchNorm, stochastic_depth_prob = 0.2,
                         dropout_prob = nothing, inchannels::Integer = 3,
                         nclasses::Integer = 1000)
@@ -46,8 +63,8 @@ function efficientnetv2(config::Symbol; norm_layer = BatchNorm, stochastic_depth
 end
 
 """
-    EfficientNetv2(config::Symbol; pretrain::Bool = false, width_mult::Real = 1,
-                   inchannels::Integer = 3, nclasses::Integer = 1000)
+    EfficientNetv2(config::Symbol; pretrain::Bool = false, inchannels::Integer = 3,
+                   nclasses::Integer = 1000)
 
 Create an EfficientNetv2 model ([reference](https://arxiv.org/abs/2104.00298)).
 
@@ -55,10 +72,14 @@ Create an EfficientNetv2 model ([reference](https://arxiv.org/abs/2104.00298)).
 
   - `config`: size of the network (one of `[:small, :medium, :large, :xlarge]`)
   - `pretrain`: whether to load the pre-trained weights for ImageNet
-  - `width_mult`: Controls the number of output feature maps in each block (with 1
-    being the default in the paper)
   - `inchannels`: number of input channels
   - `nclasses`: number of output classes
+
+!!! warning
+    
+    `EfficientNetv2` does not currently support pretrained weights.
+
+See also [`efficientnet`](#).
 """
 struct EfficientNetv2
     layers::Any

@@ -36,7 +36,6 @@ function build_irmodel(scalings::NTuple{2, Real}, block_configs::AbstractVector{
     end
     return Chain(Chain(layers...), classifier)
 end
-
 function build_irmodel(width_mult::Real, block_configs::AbstractVector{<:Tuple}; kwargs...)
     return build_irmodel((width_mult, 1), block_configs; kwargs...)
 end

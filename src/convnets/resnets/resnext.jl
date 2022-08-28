@@ -20,7 +20,7 @@ Creates a ResNeXt model with the specified depth, cardinality, and base width.
   - `inchannels`: the number of input channels.
   - `nclasses`: the number of output classes
 
-Advanced users who want more configuration options will be better served by using [`resnet`](#).
+Advanced users who want more configuration options will be better served by using [`resnet`](@ref).
 """
 struct ResNeXt
     layers::Any

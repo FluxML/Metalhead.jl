@@ -34,6 +34,22 @@ const MOBILENETV3_CONFIGS = Dict(:small => (1024,
                                                 (mbconv, 5, 160, 6, 1, 3, 4, hardswish),
                                             ]))
 
+"""
+    mobilenetv3(config::Symbol; width_mult::Real = 1, dropout_prob = 0.2,
+                inchannels::Integer = 3, nclasses::Integer = 1000)
+
+Create a MobileNetv3 model with the specified configuration.
+([reference](https://arxiv.org/abs/1905.02244)).
+
+# Arguments
+
+    - `config`: The configuration of the model. Can be either `small` or `large`.
+    - `width_mult`: Controls the number of output feature maps in each block
+      (with 1 being the default in the paper; this is usually a value between 0.1 and 1.4)
+    - `dropout_prob`: Dropout probability for the classifier head. Set to `nothing` to disable dropout.
+    - `inchannels`: The number of input channels.
+    - `nclasses`: The number of output classes.
+"""
 function mobilenetv3(config::Symbol; width_mult::Real = 1, dropout_prob = 0.2,
                      inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(config, [:small, :large])
@@ -56,8 +72,7 @@ Set `pretrain = true` to load the model with pre-trained weights for ImageNet.
 
   - `config`: :small or :large for the size of the model (see paper).
   - `width_mult`: Controls the number of output feature maps in each block
-    (with 1 being the default in the paper;
-    this is usually a value between 0.1 and 1.4)
+    (with 1 being the default in the paper; this is usually a value between 0.1 and 1.4)
   - `pretrain`: whether to load the pre-trained weights for ImageNet
   - `inchannels`: number of input channels
   - `nclasses`: the number of output classes
@@ -66,7 +81,7 @@ Set `pretrain = true` to load the model with pre-trained weights for ImageNet.
     
     `MobileNetv3` does not currently support pretrained weights.
 
-See also [`mobilenetv3`](#).
+See also [`Metalhead.mobilenetv3`](@ref).
 """
 struct MobileNetv3
     layers::Any

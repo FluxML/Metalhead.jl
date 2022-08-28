@@ -87,7 +87,7 @@ Creates a model with the gMLP architecture.
   - `inchannels`: the number of input channels
   - `nclasses`: number of output classes
 
-See also [`Metalhead.mlpmixer`](#).
+See also [`Metalhead.mlpmixer`](@ref).
 """
 struct gMLP
     layers::Any

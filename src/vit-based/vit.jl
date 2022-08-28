@@ -92,7 +92,7 @@ Creates a Vision Transformer (ViT) model.
   - `pool`: pooling type, either :class or :mean
   - `nclasses`: number of classes in the output
 
-See also [`Metalhead.vit`](#).
+See also [`Metalhead.vit`](@ref).
 """
 struct ViT
     layers::Any

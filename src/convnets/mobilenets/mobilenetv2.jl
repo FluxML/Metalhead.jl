@@ -18,6 +18,23 @@ const MOBILENETV2_CONFIGS = [
     (mbconv, 3, 320, 6, 1, 1, nothing, relu6),
 ]
 
+"""
+    mobilenetv2(width_mult::Real = 1; max_width::Integer = 1280,
+                inplanes::Integer = 32, dropout_prob = 0.2,
+                inchannels::Integer = 3, nclasses::Integer = 1000)
+
+Create a MobileNetv2 model. ([reference](https://arxiv.org/abs/1801.04381v1)).
+
+# Arguments
+
+    - `width_mult`: Controls the number of output feature maps in each block
+    (with 1 being the default in the paper; this is usually a value between 0.1 and 1.4)
+    - `max_width`: The maximum width of the network.
+    - `inplanes`: Number of input channels to the first convolution layer
+    - `dropout_prob`: Dropout probability for the classifier head. Set to `nothing` to disable dropout.
+    - `inchannels`: Number of input channels.
+    - `nclasses`: Number of output classes.
+"""
 function mobilenetv2(width_mult::Real = 1; max_width::Integer = 1280,
                      inplanes::Integer = 32, dropout_prob = 0.2,
                      inchannels::Integer = 3, nclasses::Integer = 1000)
@@ -35,8 +52,7 @@ Create a MobileNetv2 model with the specified configuration.
 # Arguments
 
   - `width_mult`: Controls the number of output feature maps in each block
-    (with 1 being the default in the paper;
-    this is usually a value between 0.1 and 1.4)
+    (with 1 being the default in the paper; this is usually a value between 0.1 and 1.4)
   - `pretrain`: Whether to load the pre-trained weights for ImageNet
   - `inchannels`: The number of input channels.
   - `nclasses`: The number of output classes
@@ -45,7 +61,7 @@ Create a MobileNetv2 model with the specified configuration.
     
     `MobileNetv2` does not currently support pretrained weights.
 
-See also [`mobilenetv2`](#).
+See also [`Metalhead.mobilenetv2`](@ref).
 """
 struct MobileNetv2
     layers::Any

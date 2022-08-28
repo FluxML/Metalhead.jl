@@ -36,7 +36,7 @@ Create VGG convolution layers
 # Arguments
 
   - `config`: vector of tuples `(output_channels, num_convolutions)`
-    for each block (see [`Metalhead.vgg_block`](#))
+    for each block (see [`Metalhead.vgg_block`](@ref))
   - `batchnorm`: set to `true` to include batch normalization after each convolution
   - `inchannels`: number of input channels
 """
@@ -61,7 +61,7 @@ Create VGG classifier (fully connected) layers
 # Arguments
 
   - `imsize`: tuple `(width, height, channels)` indicating the size after
-    the convolution layers (see [`Metalhead.vgg_convolutional_layers`](#))
+    the convolution layers (see [`Metalhead.vgg_convolutional_layers`](@ref))
   - `nclasses`: number of output classes
   - `fcsize`: input and output size of the intermediate fully connected layer
   - `dropout_prob`: the dropout level between each fully connected layer
@@ -86,12 +86,12 @@ Create a VGG model
 
   - `imsize`: input image width and height as a tuple
   - `config`: the configuration for the convolution layers
-    (see [`Metalhead.vgg_convolutional_layers`](#))
+    (see [`Metalhead.vgg_convolutional_layers`](@ref))
   - `inchannels`: number of input channels
   - `batchnorm`: set to `true` to use batch normalization after each convolution
   - `nclasses`: number of output classes
   - `fcsize`: intermediate fully connected layer size
-    (see [`Metalhead.vgg_classifier_layers`](#))
+    (see [`Metalhead.vgg_classifier_layers`](@ref))
   - `dropout_prob`: dropout level between fully connected layers
 """
 function vgg(imsize::Dims{2}; config, batchnorm::Bool = false, fcsize::Integer = 4096,
@@ -122,7 +122,7 @@ Construct a VGG model with the specified input image size. Typically, the image 
   - `batchnorm`: set to `true` to use batch normalization after each convolution
   - `nclasses`: number of output classes
   - `fcsize`: intermediate fully connected layer size
-    (see [`Metalhead.vgg_classifier_layers`](#))
+    (see [`Metalhead.vgg_classifier_layers`](@ref))
   - `dropout_prob`: dropout level between fully connected layers
 """
 struct VGG
@@ -156,7 +156,7 @@ Create a VGG style model with specified `depth`.
   - `inchannels`: number of input channels
   - `nclasses`: number of output classes
 
-See also [`vgg`](#).
+See also [`vgg`](@ref).
 """
 function VGG(depth::Integer; pretrain::Bool = false, batchnorm::Bool = false,
              inchannels::Integer = 3, nclasses::Integer = 1000)

@@ -27,7 +27,7 @@ Create a convolution + normalisation layer pair with activation.
   - `groups`: groups for the convolution kernel
   - `bias`: bias for the convolution kernel. This is set to `false` by default if
     `use_norm = true`.
-  - `weight`, `init`: initialization for the convolution kernel (see [`Flux.Conv`](#))
+  - `weight`, `init`: initialization for the convolution kernel (see [`Flux.Conv`](@ref))
 """
 function conv_norm(kernel_size::Dims{2}, inplanes::Integer, outplanes::Integer,
                    activation = relu; norm_layer = BatchNorm, revnorm::Bool = false,

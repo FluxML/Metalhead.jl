@@ -71,7 +71,7 @@ Create an Inception-v1 model (commonly referred to as `GoogLeNet`)
     
     `GoogLeNet` does not currently support pretrained weights.
 
-See also [`googlenet`](#).
+See also [`googlenet`](@ref).
 """
 struct GoogLeNet
     layers::Any
