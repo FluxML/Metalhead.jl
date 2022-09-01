@@ -125,12 +125,14 @@ function inceptionv3_e(inplanes)
 end
 
 """
-    inceptionv3(; inchannels::Integer = 3, nclasses::Integer = 1000)
+    inceptionv3(; dropout_prob = 0.2, inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Create an Inception-v3 model ([reference](https://arxiv.org/abs/1512.00567v3)).
 
 # Arguments
 
+  - `dropout_prob`: the dropout probability in the classifier head. Set to `nothing` to disable dropout.
+  - `inchannels`: number of input feature maps
   - `nclasses`: the number of output classes
 """
 function inceptionv3(; dropout_prob = 0.2, inchannels::Integer = 3,
@@ -160,7 +162,6 @@ end
     Inceptionv3(; pretrain::Bool = false, inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Create an Inception-v3 model ([reference](https://arxiv.org/abs/1512.00567v3)).
-See also [`inceptionv3`](@ref).
 
 # Arguments
 
@@ -171,6 +172,8 @@ See also [`inceptionv3`](@ref).
 !!! warning
     
     `Inceptionv3` does not currently support pretrained weights.
+
+See also [`Metalhead.inceptionv3`](@ref).
 """
 struct Inceptionv3
     layers::Any

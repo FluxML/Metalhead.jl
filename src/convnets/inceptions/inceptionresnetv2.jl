@@ -71,8 +71,8 @@ Creates an InceptionResNetv2 model.
 
 # Arguments
 
-  - `inchannels`: number of input channels.
   - `dropout_prob`: probability of dropout in classifier head. Set to `nothing` to disable dropout.
+  - `inchannels`: number of input channels.
   - `nclasses`: the number of output classes.
 """
 function inceptionresnetv2(; dropout_prob = nothing, inchannels::Integer = 3,
@@ -111,6 +111,8 @@ Creates an InceptionResNetv2 model.
 !!! warning
     
     `InceptionResNetv2` does not currently support pretrained weights.
+
+See also [`Metalhead.inceptionresnetv2`](@ref).
 """
 struct InceptionResNetv2
     layers::Any

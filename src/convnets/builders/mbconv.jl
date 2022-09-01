@@ -8,12 +8,6 @@ Constructs a collection of inverted residual blocks for a given stage. Note that
 this function is not intended to be called directly, but rather by the [`mbconv_stage_builder`](@ref)
 function. This function must only be extended if the user wishes to extend a custom inverted
 residual block type.
-
-# Arguments
-
-  - `irblockfn`: the inverted residual block function to use in the block builder. Metalhead
-    defines methods for [`dwsep_conv_norm`](@ref), [`mbconv`](@ref) and [`fused_mbconv`](@ref)
-    as inverted residual blocks.
 """
 function irblockbuilder(::typeof(dwsep_conv_norm), block_configs::AbstractVector{<:Tuple},
                         inplanes::Integer, stage_idx::Integer, scalings::NTuple{2, Real};

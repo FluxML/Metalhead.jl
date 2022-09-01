@@ -72,16 +72,16 @@ export AlexNet, VGG, VGG11, VGG13, VGG16, VGG19,
        DenseNet, DenseNet121, DenseNet161, DenseNet169, DenseNet201,
        GoogLeNet, Inception3, Inceptionv3, Inceptionv4, InceptionResNetv2, Xception,
        SqueezeNet, MobileNetv1, MobileNetv2, MobileNetv3, MNASNet,
-       EfficientNet, EfficientNetv2,
-       MLPMixer, ResMLP, gMLP, ViT, ConvMixer, ConvNeXt
+       EfficientNet, EfficientNetv2, ConvMixer, ConvNeXt,
+       MLPMixer, ResMLP, gMLP, ViT
 
 # use Flux._big_show to pretty print large models
 for T in (:AlexNet, :VGG, :SqueezeNet, :ResNet, :WideResNet, :ResNeXt,
           :SEResNet, :SEResNeXt, :Res2Net, :Res2NeXt, :GoogLeNet, :DenseNet,
           :Inceptionv3, :Inceptionv4, :InceptionResNetv2, :Xception,
           :MobileNetv1, :MobileNetv2, :MobileNetv3, :MNASNet,
-          :EfficientNet, :EfficientNetv2,
-          :MLPMixer, :ResMLP, :gMLP, :ViT, :ConvMixer, :ConvNeXt)
+          :EfficientNet, :EfficientNetv2, :ConvMixer, :ConvNeXt,
+          :MLPMixer, :ResMLP, :gMLP, :ViT)
     @eval Base.show(io::IO, ::MIME"text/plain", model::$T) = _maybe_big_show(io, model)
 end
 

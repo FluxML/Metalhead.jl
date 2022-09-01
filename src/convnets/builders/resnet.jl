@@ -2,12 +2,12 @@
     build_resnet(img_dims, stem, get_layers, block_repeats::AbstractVector{<:Integer},
                  connection, classifier_fn)
 
-Creates a ResNet model.
+Creates a generic ResNet-like model.
 
 !!! info
     
-    This is a very generic, flexible but low level API that can be used to create any of the ResNet
-    variants. For a more user friendly API, see the other version of `resnet`.
+    This is a very generic, flexible but low level function that can be used to create any of the ResNet
+    variants. For a more user friendly function, see [`Metalhead.resnet`](@ref).
 
 # Arguments
 

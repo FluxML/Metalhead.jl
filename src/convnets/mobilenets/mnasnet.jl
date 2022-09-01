@@ -68,14 +68,17 @@ function mnasnet(config::Symbol; width_mult::Real = 1, max_width::Integer = 1280
 end
 
 """
-    MNASNet(width_mult = 1; inchannels::Integer = 3, pretrain::Bool = false,
-            nclasses::Integer = 1000)
+    MNASNet(config::Symbol; width_mult::Real = 1, pretrain::Bool = false,
+            inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Creates a MNASNet model with the specified configuration.
 ([reference](https://arxiv.org/abs/1807.11626))
 
 # Arguments
 
+  - `config`: configuration of the model. One of `B1`, `A1` or `small`. `B1` is without
+    squeeze-and-excite layers, `A1` is with squeeze-and-excite layers, and `small` is a smaller
+    version of `A1`.
   - `width_mult`: Controls the number of output feature maps in each block
     (with 1 being the default in the paper; this is usually a value between 0.1 and 1.4)
   - `pretrain`: Whether to load the pre-trained weights for ImageNet

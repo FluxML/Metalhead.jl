@@ -82,6 +82,8 @@ Creates an Xception model.
 !!! warning
     
     `Xception` does not currently support pretrained weights.
+
+See also [`Metalhead.xception`](@ref).
 """
 struct Xception
     layers::Any

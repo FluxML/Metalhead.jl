@@ -47,12 +47,6 @@ Create an EfficientNet model. ([reference](https://arxiv.org/abs/1905.11946v5)).
     dropout.
   - `inchannels`: number of input channels.
   - `nclasses`: number of output classes.
-
-!!! warning
-    
-    EfficientNet does not currently support pretrained weights.
-
-See also [`Metalhead.efficientnet`](@ref).
 """
 function efficientnet(config::Symbol; norm_layer = BatchNorm, stochastic_depth_prob = 0.2,
                       dropout_prob = nothing, inchannels::Integer = 3,
@@ -70,18 +64,19 @@ end
                  nclasses::Integer = 1000)
 
 Create an EfficientNet model ([reference](https://arxiv.org/abs/1905.11946v5)).
-See also [`efficientnet`](@ref).
 
 # Arguments
 
   - `config`: size of the model. Can be one of `[:b0, :b1, :b2, :b3, :b4, :b5, :b6, :b7, :b8]`.
   - `pretrain`: set to `true` to load the pre-trained weights for ImageNet
+  - `inchannels`: number of input channels.
+  - `nclasses`: number of output classes.
 
 !!! warning
     
-    `EfficientNet` does not currently support pretrained weights.
+    EfficientNet does not currently support pretrained weights.
 
-See also [`efficientnet`](#).
+See also [`Metalhead.efficientnet`](@ref).
 """
 struct EfficientNet
     layers::Any

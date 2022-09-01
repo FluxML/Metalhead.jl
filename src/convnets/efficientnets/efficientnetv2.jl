@@ -36,14 +36,14 @@ const EFFNETV2_CONFIGS = Dict(:small => [(fused_mbconv, 3, 24, 1, 1, 2, swish),
                                   (mbconv, 3, 768, 6, 1, 8, 4, swish)])
 
 """
-    efficientnet(config::Symbol; norm_layer = BatchNorm, stochastic_depth_prob = 0.2,
-                 dropout_prob = nothing, inchannels::Integer = 3, nclasses::Integer = 1000)
+    efficientnetv2(config::Symbol; norm_layer = BatchNorm, stochastic_depth_prob = 0.2,
+                   dropout_prob = nothing, inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Create an EfficientNetv2 model. ([reference](https://arxiv.org/abs/2104.00298)).
 
 # Arguments
 
-  - `config`: size of the model. Can be one of `[:b0, :b1, :b2, :b3, :b4, :b5, :b6, :b7, :b8]`.
+  - `config`: size of the network (one of `[:small, :medium, :large, :xlarge]`)
   - `norm_layer`: normalization layer to use.
   - `stochastic_depth_prob`: probability of stochastic depth. Set to `nothing` to disable
     stochastic depth.

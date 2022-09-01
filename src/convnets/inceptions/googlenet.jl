@@ -27,13 +27,15 @@ function inceptionblock(inplanes, out_1x1, red_3x3, out_3x3, red_5x5, out_5x5, p
 end
 
 """
-    googlenet(; nclasses::Integer = 1000)
+    googlenet(; dropout_prob = 0.4, inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Create an Inception-v1 model (commonly referred to as GoogLeNet)
 ([reference](https://arxiv.org/abs/1409.4842v1)).
 
 # Arguments
 
+  - `dropout_prob`: the dropout probability in the classifier head. Set to `nothing` to disable dropout.
+  - `inchannels`: the number of input channels
   - `nclasses`: the number of output classes
 """
 function googlenet(; dropout_prob = 0.4, inchannels::Integer = 3, nclasses::Integer = 1000)
@@ -71,7 +73,7 @@ Create an Inception-v1 model (commonly referred to as `GoogLeNet`)
     
     `GoogLeNet` does not currently support pretrained weights.
 
-See also [`googlenet`](@ref).
+See also [`Metalhead.googlenet`](@ref).
 """
 struct GoogLeNet
     layers::Any

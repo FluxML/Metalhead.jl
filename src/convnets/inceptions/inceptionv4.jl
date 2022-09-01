@@ -85,15 +85,15 @@ function inceptionv4_c()
 end
 
 """
-    inceptionv4(; inchannels::Integer = 3, dropout_prob = nothing, nclasses::Integer = 1000)
+    inceptionv4(; dropout_prob = nothing, inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Create an Inceptionv4 model.
 ([reference](https://arxiv.org/abs/1602.07261))
 
 # Arguments
 
-  - `inchannels`: number of input channels.
   - `dropout_prob`: probability of dropout in classifier head. Set to `nothing` to disable dropout.
+  - `inchannels`: number of input channels.
   - `nclasses`: the number of output classes.
 """
 function inceptionv4(; dropout_prob = nothing, inchannels::Integer = 3,
@@ -126,6 +126,8 @@ Creates an Inceptionv4 model.
 !!! warning
     
     `Inceptionv4` does not currently support pretrained weights.
+
+See also [`Metalhead.inceptionv4`](@ref).
 """
 struct Inceptionv4
     layers::Any

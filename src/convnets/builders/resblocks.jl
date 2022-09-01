@@ -22,10 +22,10 @@ Builder for creating a basic block for a ResNet model.
   - `revnorm`: set to `true` to place normalization layer before the convolution
   - `activation`: activation function to use
   - `attn_fn`: attention function to use
-  - `dropblock_prob`: dropblock probability. Set to `nothing` to disable DropBlock
-  - `stochastic_depth_prob`: stochastic depth probability. Set to `nothing` to disable StochasticDepth
-  - `stride_fn`: function to use to compute the stride of the block
-  - `planes_fn`: function to use to compute the number of channels in each block
+  - `dropblock_prob`: dropblock probability. Set to `nothing` to disable `DropBlock`
+  - `stochastic_depth_prob`: stochastic depth probability. Set to `nothing` to disable `StochasticDepth`
+  - `stride_fn`: callback for computing the stride of the block
+  - `planes_fn`: callback for computing the number of channels in each block
   - `downsample_tuple`: two-element tuple of downsample functions to use. The first one
     is used when the number of channels changes in the block, the second one is used
     when the number of channels stays the same.
@@ -90,10 +90,10 @@ Builder for creating a bottleneck block for a ResNet/ResNeXt model.
   - `revnorm`: set to `true` to place normalization layer before the convolution
   - `activation`: activation function to use
   - `attn_fn`: attention function to use
-  - `dropblock_prob`: dropblock probability. Set to `nothing` to disable DropBlock
-  - `stochastic_depth_prob`: stochastic depth probability. Set to `nothing` to disable StochasticDepth
-  - `stride_fn`: function to use to compute the stride of the block
-  - `planes_fn`: function to use to compute the number of channels in each block
+  - `dropblock_prob`: dropblock probability. Set to `nothing` to disable `DropBlock`
+  - `stochastic_depth_prob`: stochastic depth probability. Set to `nothing` to disable `StochasticDepth`
+  - `stride_fn`: callback for computing the stride of the block
+  - `planes_fn`: callback for computing the number of channels in each block
   - `downsample_tuple`: two-element tuple of downsample functions to use. The first one
     is used when the number of channels changes in the block, the second one is used
     when the number of channels stays the same.
@@ -157,8 +157,8 @@ Builder for creating a bottle2neck block for a Res2Net model.
   - `revnorm`: set to `true` to place normalization layer before the convolution
   - `activation`: activation function to use
   - `attn_fn`: attention function to use
-  - `stride_fn`: function to use to compute the stride of the block
-  - `planes_fn`: function to use to compute the number of channels in each block
+  - `stride_fn`: callback for computing the stride of the block
+  - `planes_fn`: callback for computing the number of channels in each block
   - `downsample_tuple`: two-element tuple of downsample functions to use. The first one
     is used when the number of channels changes in the block, the second one is used
     when the number of channels stays the same.

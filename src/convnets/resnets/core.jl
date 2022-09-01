@@ -8,6 +8,8 @@
                attn_fn = planes -> identity)
 
 Creates a basic residual block (see [reference](https://arxiv.org/abs/1512.03385v1)).
+This function creates the layers. For more configuration options and to see the function
+used to build the block for the model, see [`Metalhead.basicblock_builder`](@ref).
 
 # Arguments
 
@@ -47,6 +49,8 @@ end
                attn_fn = planes -> identity)
 
 Creates a bottleneck residual block (see [reference](https://arxiv.org/abs/1512.03385v1)).
+This function creates the layers. For more configuration options and to see the function
+used to build the block for the model, see [`Metalhead.bottleneck_builder`](@ref).
 
 # Arguments
 
@@ -89,8 +93,9 @@ end
                 scale::Integer = 4, activation = relu, norm_layer = BatchNorm,
                 revnorm::Bool = false, attn_fn = planes -> identity)
 
-Creates a bottleneck block as described in the Res2Net paper.
-([reference](https://arxiv.org/abs/1904.01169))
+Creates a bottleneck block as described in the Res2Net paper. ([reference](https://arxiv.org/abs/1904.01169))
+This function creates the layers. For more configuration options and to see the function
+used to build the block for the model, see [`Metalhead.bottle2neck_builder`](@ref).
 
 # Arguments
 
@@ -252,9 +257,16 @@ on how to use this function.
 function resnet_stem(stem_type::Symbol = :default; inchannels::Integer = 3,
                      replace_pool::Bool = false, activation = relu,
                      norm_layer = BatchNorm, revnorm::Bool = false)
-    _checkconfig(stem_type, [:default, :deep, :deep_tiered])
+    # Check for valid stem types
+    deep_stem = if stem_type === :deep || stem_type === :deep_tiered
+        true
+    elseif stem_type === :default
+        false
+    else
+        throw(ArgumentError("Unsupported stem type $stem_type. Must be one of 
+                             [:default, :deep, :deep_tiered]"))
+    end
     # Main stem
-    deep_stem = stem_type === :deep || stem_type === :deep_tiered
     inplanes = deep_stem ? stem_width * 2 : 64
     # Deep stem that uses three successive 3x3 convolutions instead of a single 7x7 convolution
     if deep_stem
@@ -315,6 +327,53 @@ function resnet_stride(stage_idx::Integer, block_idx::Integer)
     return stage_idx == 1 || block_idx != 1 ? 1 : 2
 end
 
+"""
+    resnet(block_type, block_repeats::AbstractVector{<:Integer},
+           downsample_opt::NTuple{2, Any} = (downsample_conv, downsample_identity);
+           cardinality::Integer = 1, base_width::Integer = 64,
+           inplanes::Integer = 64, reduction_factor::Integer = 1,
+           connection = addact, activation = relu,
+           norm_layer = BatchNorm, revnorm::Bool = false,
+           attn_fn = planes -> identity, pool_layer = AdaptiveMeanPool((1, 1)),
+           use_conv::Bool = false, dropblock_prob = nothing,
+           stochastic_depth_prob = nothing, dropout_prob = nothing,
+           imsize::Dims{2} = (256, 256), inchannels::Integer = 3,
+           nclasses::Integer = 1000, kwargs...)
+
+Creates a generic ResNet-like model that is used to create the higher level models like ResNet,
+Wide ResNet, ResNeXt and Res2Net. For an _even_ more generic model API, see [`Metalhead.build_resnet`](@ref).
+
+# Arguments
+
+    - `block_type`: The type of block to be used in the model. This can be one of [`Metalhead.basicblock`](@ref),
+    [`Metalhead.bottleneck`](@ref) and [`Metalhead.bottle2neck`](@ref). `basicblock` is used in the 
+    original ResNet paper for ResNet-18 and ResNet-34, and `bottleneck` is used in the original ResNet-50
+    and ResNet-101 models, as well as for the Wide ResNet and ResNeXt models. `bottle2neck` is introduced in
+    the `Res2Net` paper.
+    - `block_repeats`: A `Vector` of integers specifying the number of times each block is repeated
+    in each stage of the ResNet model. For example, `[3, 4, 6, 3]` is the configuration used in
+    ResNet-50, which has 3 blocks in the first stage, 4 blocks in the second stage, 6 blocks in the
+    third stage and 3 blocks in the fourth stage.
+    - `downsample_opt`: A `NTuple` of two callbacks that are used to determine the downsampling
+    operation to be used in the model. The first callback is used to determine the convolutional
+    operation to be used in the downsampling operation and the second callback is used to determine
+    the identity operation to be used in the downsampling operation.
+    - `cardinality`: The number of groups to be used in the 3x3 convolutional layer in the bottleneck
+    block. This is usually modified from the default value of `1` in the ResNet models to `32` or `64`
+    in the `ResNeXt` models.
+    - `base_width`: The base width of the convolutional layer in the blocks of the model.
+    - `inplanes`: The number of input channels in the first convolutional layer.
+    - `reduction_factor`: The reduction factor used in the model.
+    - `connection`: This is a function that determines the residual connection in the model. For
+    `resnets`, either of [`Metalhead.addact`](@ref) or [`Metalhead.actadd`](@ref) is recommended.
+    - `norm_layer`: The normalisation layer to be used in the model.
+    - `revnorm`: set to `true` to place the normalisation layers before the convolutions
+    - `attn_fn`: A callback that is used to determine the attention function to be used in the model.
+    See [`Metalhead.Layers.squeeze_excite`](@ref) for an example.
+    - `pool_layer`: A fully-insta
+    - `use_conv`: Set to true to use convolutions instead of identity operations in the model.
+    - `dropblock_prob`: The probability of using DropBlock in the model.
+"""
 function resnet(block_type, block_repeats::AbstractVector{<:Integer},
                 downsample_opt::NTuple{2, Any} = (downsample_conv, downsample_identity);
                 cardinality::Integer = 1, base_width::Integer = 64,

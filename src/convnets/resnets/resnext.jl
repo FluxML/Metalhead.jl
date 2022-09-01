@@ -27,8 +27,6 @@ struct ResNeXt
 end
 @functor ResNeXt
 
-(m::ResNeXt)(x) = m.layers(x)
-
 function ResNeXt(depth::Integer; pretrain::Bool = false, cardinality::Integer = 32,
                  base_width::Integer = 4, inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(depth, keys(LRESNET_CONFIGS))
@@ -40,6 +38,8 @@ function ResNeXt(depth::Integer; pretrain::Bool = false, cardinality::Integer = 
     end
     return ResNeXt(layers)
 end
+
+(m::ResNeXt)(x) = m.layers(x)
 
 backbone(m::ResNeXt) = m.layers[1]
 classifier(m::ResNeXt) = m.layers[2]
