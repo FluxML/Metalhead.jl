@@ -133,7 +133,7 @@ function bottle2neck(inplanes::Integer, planes::Integer; stride::Integer = 1,
                   norm_layer, revnorm)...,
         attn_fn(outplanes),
     ]
-    return Chain(filter(!=(identity), layers)...)
+    return Chain(filter!(!=(identity), layers)...)
 end
 
 ## Downsample layers
@@ -345,34 +345,42 @@ Wide ResNet, ResNeXt and Res2Net. For an _even_ more generic model API, see [`Me
 
 # Arguments
 
-    - `block_type`: The type of block to be used in the model. This can be one of [`Metalhead.basicblock`](@ref),
-    [`Metalhead.bottleneck`](@ref) and [`Metalhead.bottle2neck`](@ref). `basicblock` is used in the 
+  - `block_type`: The type of block to be used in the model. This can be one of [`Metalhead.basicblock`](@ref),
+    [`Metalhead.bottleneck`](@ref) and [`Metalhead.bottle2neck`](@ref). `basicblock` is used in the
     original ResNet paper for ResNet-18 and ResNet-34, and `bottleneck` is used in the original ResNet-50
     and ResNet-101 models, as well as for the Wide ResNet and ResNeXt models. `bottle2neck` is introduced in
     the `Res2Net` paper.
-    - `block_repeats`: A `Vector` of integers specifying the number of times each block is repeated
+  - `block_repeats`: A `Vector` of integers specifying the number of times each block is repeated
     in each stage of the ResNet model. For example, `[3, 4, 6, 3]` is the configuration used in
     ResNet-50, which has 3 blocks in the first stage, 4 blocks in the second stage, 6 blocks in the
     third stage and 3 blocks in the fourth stage.
-    - `downsample_opt`: A `NTuple` of two callbacks that are used to determine the downsampling
+  - `downsample_opt`: A `NTuple` of two callbacks that are used to determine the downsampling
     operation to be used in the model. The first callback is used to determine the convolutional
     operation to be used in the downsampling operation and the second callback is used to determine
     the identity operation to be used in the downsampling operation.
-    - `cardinality`: The number of groups to be used in the 3x3 convolutional layer in the bottleneck
+  - `cardinality`: The number of groups to be used in the 3x3 convolutional layer in the bottleneck
     block. This is usually modified from the default value of `1` in the ResNet models to `32` or `64`
     in the `ResNeXt` models.
-    - `base_width`: The base width of the convolutional layer in the blocks of the model.
-    - `inplanes`: The number of input channels in the first convolutional layer.
-    - `reduction_factor`: The reduction factor used in the model.
-    - `connection`: This is a function that determines the residual connection in the model. For
+  - `base_width`: The base width of the convolutional layer in the blocks of the model.
+  - `inplanes`: The number of input channels in the first convolutional layer.
+  - `reduction_factor`: The reduction factor used in the model.
+  - `connection`: This is a function that determines the residual connection in the model. For
     `resnets`, either of [`Metalhead.addact`](@ref) or [`Metalhead.actadd`](@ref) is recommended.
-    - `norm_layer`: The normalisation layer to be used in the model.
-    - `revnorm`: set to `true` to place the normalisation layers before the convolutions
-    - `attn_fn`: A callback that is used to determine the attention function to be used in the model.
+  - `norm_layer`: The normalisation layer to be used in the model.
+  - `revnorm`: set to `true` to place the normalisation layers before the convolutions
+  - `attn_fn`: A callback that is used to determine the attention function to be used in the model.
     See [`Metalhead.Layers.squeeze_excite`](@ref) for an example.
-    - `pool_layer`: A fully-insta
-    - `use_conv`: Set to true to use convolutions instead of identity operations in the model.
-    - `dropblock_prob`: The probability of using DropBlock in the model.
+  - `pool_layer`: A fully-instantiated pooling layer passed in to be used by the classifier head.
+    For example, `AdaptiveMeanPool((1, 1))` is used in the ResNet family by default, but something
+    like `MeanPool((3, 3))` should also work provided the dimensions after applying the pooling
+    layer are compatible with the rest of the classifier head.
+  - `use_conv`: Set to true to use convolutions instead of identity operations in the model.
+  - `dropblock_prob`: `DropBlock` probability to be used in the model. Set to `nothing` to disable
+    DropBlock. See [`Metalhead.DropBlock`](@ref) for more details.
+  - `stochastic_depth_prob`: `StochasticDepth` probability to be used in the model. Set to `nothing` to disable
+    StochasticDepth. See [`Metalhead.StochasticDepth`](@ref) for more details.
+  - `dropout_prob`: `Dropout` probability to be used in the classifier head. Set to `nothing` to
+    disable Dropout.
 """
 function resnet(block_type, block_repeats::AbstractVector{<:Integer},
                 downsample_opt::NTuple{2, Any} = (downsample_conv, downsample_identity);

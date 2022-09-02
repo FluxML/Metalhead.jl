@@ -34,7 +34,7 @@ function xception_block(inchannels::Integer, outchannels::Integer, nrepeats::Int
         end
         push!(layers, relu)
         append!(layers,
-                dwsep_conv_norm((3, 3), inc, outc; pad = 1, use_norm = (false, false)))
+                dwsep_conv_norm((3, 3), inc, outc; pad = 1, norm_layer = identity))
         push!(layers, BatchNorm(outc))
     end
     layers = start_with_relu ? layers : layers[2:end]
