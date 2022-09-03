@@ -20,7 +20,7 @@ using .Layers
 
 # CNN models
 ## Builders
-include("convnets/builders/irmodel.jl")
+include("convnets/builders/invresmodel.jl")
 include("convnets/builders/mbconv.jl")
 include("convnets/builders/resblocks.jl")
 include("convnets/builders/resnet.jl")

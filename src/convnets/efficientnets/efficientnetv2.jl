@@ -57,9 +57,9 @@ function efficientnetv2(config::Symbol; norm_layer = BatchNorm, stochastic_depth
                         nclasses::Integer = 1000)
     _checkconfig(config, keys(EFFNETV2_CONFIGS))
     block_configs = EFFNETV2_CONFIGS[config]
-    return build_irmodel((1, 1), block_configs; activation = swish, norm_layer,
-                         inplanes = block_configs[1][3], headplanes = 1280,
-                         stochastic_depth_prob, dropout_prob, inchannels, nclasses)
+    return build_invresmodel((1, 1), block_configs; activation = swish, norm_layer,
+                             inplanes = block_configs[1][3], headplanes = 1280,
+                             stochastic_depth_prob, dropout_prob, inchannels, nclasses)
 end
 
 """

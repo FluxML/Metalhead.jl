@@ -53,10 +53,10 @@ function efficientnet(config::Symbol; norm_layer = BatchNorm, stochastic_depth_p
                       nclasses::Integer = 1000)
     _checkconfig(config, keys(EFFICIENTNET_GLOBAL_CONFIGS))
     scalings = EFFICIENTNET_GLOBAL_CONFIGS[config][2]
-    return build_irmodel(scalings, EFFICIENTNET_BLOCK_CONFIGS; inplanes = 32,
-                         norm_layer, stochastic_depth_prob, activation = swish,
-                         headplanes = EFFICIENTNET_BLOCK_CONFIGS[end][3] * 4,
-                         dropout_prob, inchannels, nclasses)
+    return build_invresmodel(scalings, EFFICIENTNET_BLOCK_CONFIGS; inplanes = 32,
+                             norm_layer, stochastic_depth_prob, activation = swish,
+                             headplanes = EFFICIENTNET_BLOCK_CONFIGS[end][3] * 4,
+                             dropout_prob, inchannels, nclasses)
 end
 
 """

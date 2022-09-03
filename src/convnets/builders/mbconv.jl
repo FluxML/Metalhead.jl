@@ -1,18 +1,19 @@
 """
-    irblockbuilder(::typeof(irblockfn), block_configs::AbstractVector{<:Tuple},
+    invresbuilder(::typeof(irblockfn), block_configs::AbstractVector{<:Tuple},
                    inplanes::Integer, stage_idx::Integer, scalings::NTuple{2, Real};
                    stochastic_depth_prob = nothing, norm_layer = BatchNorm,
                    divisor::Integer = 8, kwargs...)
 
-Constructs a collection of inverted residual blocks for a given stage. Note that
-this function is not intended to be called directly, but rather by the [`mbconv_stage_builder`](@ref)
-function. This function must only be extended if the user wishes to extend a custom inverted
-residual block type.
+Creates a block builder for `irblockfn` within a given stage.
+Note that this function is not intended to be called directly, but instead passed to
+[`mbconv_stage_builder`](@ref) which will return a builder over all stages.
+Users wanting to provide a custom inverted residual block type can extend this
+function by defining `invresbuilder(::typeof(my_block), ...)`.
 """
-function irblockbuilder(::typeof(dwsep_conv_norm), block_configs::AbstractVector{<:Tuple},
-                        inplanes::Integer, stage_idx::Integer, scalings::NTuple{2, Real};
-                        stochastic_depth_prob = nothing, norm_layer = BatchNorm,
-                        divisor::Integer = 8, kwargs...)
+function invresbuilder(::typeof(dwsep_conv_norm), block_configs::AbstractVector{<:Tuple},
+                       inplanes::Integer, stage_idx::Integer, scalings::NTuple{2, Real};
+                       stochastic_depth_prob = nothing, norm_layer = BatchNorm,
+                       divisor::Integer = 8, kwargs...)
     width_mult, depth_mult = scalings
     block_fn, k, outplanes, stride, nrepeats, activation = block_configs[stage_idx]
     outplanes = _round_channels(outplanes * width_mult, divisor)
@@ -29,10 +30,10 @@ function irblockbuilder(::typeof(dwsep_conv_norm), block_configs::AbstractVector
     return get_layers, ceil(Int, nrepeats * depth_mult)
 end
 
-function irblockbuilder(::typeof(mbconv), block_configs::AbstractVector{<:Tuple},
-                        inplanes::Integer, stage_idx::Integer, scalings::NTuple{2, Real};
-                        stochastic_depth_prob = nothing, norm_layer = BatchNorm,
-                        divisor::Integer = 8, se_from_explanes::Bool = false, kwargs...)
+function invresbuilder(::typeof(mbconv), block_configs::AbstractVector{<:Tuple},
+                       inplanes::Integer, stage_idx::Integer, scalings::NTuple{2, Real};
+                       stochastic_depth_prob = nothing, norm_layer = BatchNorm,
+                       divisor::Integer = 8, se_from_explanes::Bool = false, kwargs...)
     width_mult, depth_mult = scalings
     block_repeats = [ceil(Int, block_configs[idx][end - 2] * depth_mult)
                      for idx in eachindex(block_configs)]
@@ -64,10 +65,10 @@ function irblockbuilder(::typeof(mbconv), block_configs::AbstractVector{<:Tuple}
     return get_layers, block_repeats[stage_idx]
 end
 
-function irblockbuilder(::typeof(fused_mbconv), block_configs::AbstractVector{<:Tuple},
-                        inplanes::Integer, stage_idx::Integer, scalings::NTuple{2, Real};
-                        stochastic_depth_prob = nothing, norm_layer = BatchNorm,
-                        divisor::Integer = 8, kwargs...)
+function invresbuilder(::typeof(fused_mbconv), block_configs::AbstractVector{<:Tuple},
+                       inplanes::Integer, stage_idx::Integer, scalings::NTuple{2, Real};
+                       stochastic_depth_prob = nothing, norm_layer = BatchNorm,
+                       divisor::Integer = 8, kwargs...)
     width_mult, depth_mult = scalings
     block_repeats = [ceil(Int, block_configs[idx][end - 1] * depth_mult)
                      for idx in eachindex(block_configs)]
@@ -90,7 +91,7 @@ end
 
 function mbconv_stage_builder(block_configs::AbstractVector{<:Tuple}, inplanes::Integer,
                               scalings::NTuple{2, Real}; kwargs...)
-    bxs = [irblockbuilder(block_configs[idx][1], block_configs, inplanes, idx, scalings;
-                          kwargs...) for idx in eachindex(block_configs)]
+    bxs = [invresbuilder(block_configs[idx][1], block_configs, inplanes, idx, scalings;
+                         kwargs...) for idx in eachindex(block_configs)]
     return (stage_idx, block_idx) -> first.(bxs)[stage_idx](block_idx), last.(bxs)
 end

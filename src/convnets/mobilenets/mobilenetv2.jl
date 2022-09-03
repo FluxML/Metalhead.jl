@@ -38,8 +38,8 @@ Create a MobileNetv2 model. ([reference](https://arxiv.org/abs/1801.04381v1)).
 function mobilenetv2(width_mult::Real = 1; max_width::Integer = 1280,
                      inplanes::Integer = 32, dropout_prob = 0.2,
                      inchannels::Integer = 3, nclasses::Integer = 1000)
-    return build_irmodel(width_mult, MOBILENETV2_CONFIGS; activation = relu6, inplanes,
-                         headplanes = max_width, dropout_prob, inchannels, nclasses)
+    return build_invresmodel(width_mult, MOBILENETV2_CONFIGS; activation = relu6, inplanes,
+                             headplanes = max_width, dropout_prob, inchannels, nclasses)
 end
 
 """

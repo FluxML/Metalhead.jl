@@ -54,10 +54,10 @@ function mobilenetv3(config::Symbol; width_mult::Real = 1, dropout_prob = 0.2,
                      inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(config, [:small, :large])
     max_width, block_configs = MOBILENETV3_CONFIGS[config]
-    return build_irmodel(width_mult, block_configs; inplanes = 16,
-                         headplanes = max_width, activation = relu,
-                         se_from_explanes = true, se_round_fn = _round_channels,
-                         expanded_classifier = true, dropout_prob, inchannels, nclasses)
+    return build_invresmodel(width_mult, block_configs; inplanes = 16,
+                             headplanes = max_width, activation = relu,
+                             se_from_explanes = true, se_round_fn = _round_channels,
+                             expanded_classifier = true, dropout_prob, inchannels, nclasses)
 end
 
 """

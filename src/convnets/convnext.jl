@@ -12,14 +12,13 @@ Creates a single block of ConvNeXt.
 """
 function convnextblock(planes::Integer, stochastic_depth_prob = 0.0,
                        layerscale_init = 1.0f-6)
-    layers = SkipConnection(Chain(DepthwiseConv((7, 7), planes => planes; pad = 3),
-                                  swapdims((3, 1, 2, 4)),
-                                  LayerNorm(planes; ϵ = 1.0f-6),
-                                  mlp_block(planes, 4 * planes),
-                                  LayerScale(planes, layerscale_init),
-                                  swapdims((2, 3, 1, 4)),
-                                  StochasticDepth(stochastic_depth_prob)), +)
-    return layers
+    return SkipConnection(Chain(DepthwiseConv((7, 7), planes => planes; pad = 3),
+                                swapdims((3, 1, 2, 4)),
+                                LayerNorm(planes; ϵ = 1.0f-6),
+                                mlp_block(planes, 4 * planes),
+                                LayerScale(planes, layerscale_init),
+                                swapdims((2, 3, 1, 4)),
+                                StochasticDepth(stochastic_depth_prob)), +)
 end
 
 """
