@@ -14,9 +14,9 @@ end
 
 Convenience function for applying an activation function to the output after
 summing up the input arrays. Useful as the `connection` argument for the block
-function in [`resnet`](#).
+function in [`resnet`](@ref).
 
-See also [`reluadd`](#).
+See also [`reluadd`](@ref).
 """
 addact(activation = relu, xs...) = activation(sum(xs))
 
@@ -25,9 +25,9 @@ addact(activation = relu, xs...) = activation(sum(xs))
 
 Convenience function for adding input arrays after applying an activation
 function to them. Useful as the `connection` argument for the block function in
-[`resnet`](#).
+[`resnet`](@ref).
 
-See also [`addrelu`](#).
+See also [`addrelu`](@ref).
 """
 actadd(activation = relu, xs...) = sum(activation.(x) for x in xs)
 
@@ -66,17 +66,18 @@ function _maybe_big_show(io, model)
 end
 
 """
-    linear_scheduler(drop_rate = 0.0; start_value = 0.0, depth)
-    linear_scheduler(drop_rate::Nothing; depth::Integer)
+    linear_scheduler(drop_prob = 0.0; start_value = 0.0, depth)
+    linear_scheduler(drop_prob::Nothing; depth::Integer)
 
-Returns the dropout rates for a given depth using the linear scaling rule. If the
-`drop_rate` is `nothing`, it returns a `Vector` of length `depth` with all values
-equal to `nothing`.
+Returns the dropout probabilities for a given depth using the linear scaling rule. Note
+that this returns evenly spaced values between `start_value` and `drop_prob`, not including
+`drop_prob`. If `drop_prob` is `nothing`, it returns a `Vector` of length `depth` with all
+values equal to `nothing`.
 """
-function linear_scheduler(drop_rate = 0.0; depth::Integer, start_value = 0.0)
-    return LinRange(start_value, drop_rate, depth)
+function linear_scheduler(drop_prob = 0.0; depth::Integer, start_value = 0.0)
+    return LinRange(start_value, drop_prob, depth + 1)[1:depth]
 end
-linear_scheduler(drop_rate::Nothing; depth::Integer) = fill(drop_rate, depth)
+linear_scheduler(drop_prob::Nothing; depth::Integer) = fill(drop_prob, depth)
 
 # Utility function for depth and configuration checks in models
 function _checkconfig(config, configs)

@@ -64,18 +64,18 @@ function block8(scale = 1.0f0; activation = identity)
 end
 
 """
-    inceptionresnetv2(; inchannels::Integer = 3, dropout_rate = nothing, nclasses::Integer = 1000)
+    inceptionresnetv2(; inchannels::Integer = 3, dropout_prob = nothing, nclasses::Integer = 1000)
 
 Creates an InceptionResNetv2 model.
 ([reference](https://arxiv.org/abs/1602.07261))
 
 # Arguments
 
+  - `dropout_prob`: probability of dropout in classifier head. Set to `nothing` to disable dropout.
   - `inchannels`: number of input channels.
-  - `dropout_rate`: rate of dropout in classifier head. Set to `nothing` to disable dropout.
   - `nclasses`: the number of output classes.
 """
-function inceptionresnetv2(; dropout_rate = nothing, inchannels::Integer = 3,
+function inceptionresnetv2(; dropout_prob = nothing, inchannels::Integer = 3,
                            nclasses::Integer = 1000)
     backbone = Chain(basic_conv_bn((3, 3), inchannels, 32; stride = 2)...,
                      basic_conv_bn((3, 3), 32, 32)...,
@@ -92,7 +92,7 @@ function inceptionresnetv2(; dropout_rate = nothing, inchannels::Integer = 3,
                      [block8(0.20f0) for _ in 1:9]...,
                      block8(; activation = relu),
                      basic_conv_bn((1, 1), 2080, 1536)...)
-    return Chain(backbone, create_classifier(1536, nclasses; dropout_rate))
+    return Chain(backbone, create_classifier(1536, nclasses; dropout_prob))
 end
 
 """
@@ -111,6 +111,8 @@ Creates an InceptionResNetv2 model.
 !!! warning
     
     `InceptionResNetv2` does not currently support pretrained weights.
+
+See also [`Metalhead.inceptionresnetv2`](@ref).
 """
 struct InceptionResNetv2
     layers::Any

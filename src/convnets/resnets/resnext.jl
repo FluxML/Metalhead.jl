@@ -20,14 +20,12 @@ Creates a ResNeXt model with the specified depth, cardinality, and base width.
   - `inchannels`: the number of input channels.
   - `nclasses`: the number of output classes
 
-Advanced users who want more configuration options will be better served by using [`resnet`](#).
+Advanced users who want more configuration options will be better served by using [`resnet`](@ref).
 """
 struct ResNeXt
     layers::Any
 end
 @functor ResNeXt
-
-(m::ResNeXt)(x) = m.layers(x)
 
 function ResNeXt(depth::Integer; pretrain::Bool = false, cardinality::Integer = 32,
                  base_width::Integer = 4, inchannels::Integer = 3, nclasses::Integer = 1000)
@@ -40,6 +38,8 @@ function ResNeXt(depth::Integer; pretrain::Bool = false, cardinality::Integer = 
     end
     return ResNeXt(layers)
 end
+
+(m::ResNeXt)(x) = m.layers(x)
 
 backbone(m::ResNeXt) = m.layers[1]
 classifier(m::ResNeXt) = m.layers[2]

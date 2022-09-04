@@ -1,15 +1,16 @@
 """
-    alexnet(; inchannels::Integer = 3, nclasses::Integer = 1000)
+    alexnet(; dropout_prob = 0.5, inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Create an AlexNet model
 ([reference](https://papers.nips.cc/paper/2012/file/c399862d3b9d6b76c8436e924a68c45b-Paper.pdf)).
 
 # Arguments
 
+  - `dropout_prob`: dropout probability for the classifier
   - `inchannels`: The number of input channels.
   - `nclasses`: the number of output classes
 """
-function alexnet(; inchannels::Integer = 3, nclasses::Integer = 1000)
+function alexnet(; dropout_prob = 0.5, inchannels::Integer = 3, nclasses::Integer = 1000)
     backbone = Chain(Conv((11, 11), inchannels => 64, relu; stride = 4, pad = 2),
                      MaxPool((3, 3); stride = 2),
                      Conv((5, 5), 64 => 192, relu; pad = 2),
@@ -19,9 +20,9 @@ function alexnet(; inchannels::Integer = 3, nclasses::Integer = 1000)
                      Conv((3, 3), 256 => 256, relu; pad = 1),
                      MaxPool((3, 3); stride = 2))
     classifier = Chain(AdaptiveMeanPool((6, 6)), MLUtils.flatten,
-                       Dropout(0.5),
+                       Dropout(dropout_prob),
                        Dense(256 * 6 * 6, 4096, relu),
-                       Dropout(0.5),
+                       Dropout(dropout_prob),
                        Dense(4096, 4096, relu),
                        Dense(4096, nclasses))
     return Chain(backbone, classifier)
@@ -44,7 +45,7 @@ Create a `AlexNet`.
     
     `AlexNet` does not currently support pretrained weights.
 
-See also [`alexnet`](#).
+See also [`Metalhead.alexnet`](@ref).
 """
 struct AlexNet
     layers::Any

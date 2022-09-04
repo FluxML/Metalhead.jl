@@ -1,17 +1,16 @@
 """
-    dwsep_conv_bn(kernel_size::Dims{2}, inplanes::Integer, outplanes::Integer,
-                  activation = relu; eps::Float32 = 1.0f-5, revnorm::Bool = false, 
-                  stride::Integer = 1, use_norm::NTuple{2, Bool} = (true, true),
-                  pad::Integer = 0, [bias, weight, init])
+    dwsep_conv_norm(kernel_size::Dims{2}, inplanes::Integer, outplanes::Integer,
+                    activation = relu; norm_layer = BatchNorm, stride::Integer = 1,
+                    bias::Bool = !(norm_layer !== identity), pad::Integer = 0, [bias, weight, init])
 
 Create a depthwise separable convolution chain as used in MobileNetv1.
 This is sequence of layers:
 
   - a `kernel_size` depthwise convolution from `inplanes => inplanes`
-  - a (batch) normalisation layer + `activation` (if `use_norm[1] == true`; otherwise
+  - a (batch) normalisation layer + `activation` (if `norm_layer !== identity`; otherwise
     `activation` is applied to the convolution output)
   - a `kernel_size` convolution from `inplanes => outplanes`
-  - a (batch) normalisation layer + `activation` (if `use_norm[2] == true`; otherwise
+  - a (batch) normalisation layer + `activation` (if `norm_layer !== identity`; otherwise
     `activation` is applied to the convolution output)
 
 See Fig. 3 in [reference](https://arxiv.org/abs/1704.04861v1).
@@ -22,28 +21,21 @@ See Fig. 3 in [reference](https://arxiv.org/abs/1704.04861v1).
   - `inplanes`: number of input feature maps
   - `outplanes`: number of output feature maps
   - `activation`: the activation function for the final layer
-  - `revnorm`: set to `true` to place the batch norm before the convolution
-  - `use_norm`: a tuple of two booleans to specify whether to use normalization for the first and
-    second convolution
-  - `bias`: a tuple of two booleans to specify whether to use bias for the first and second
-    convolution. This is set to `(false, false)` by default if `use_norm[0] == true` and
-    `use_norm[1] == true`.
+  - `norm_layer`: the normalisation layer used. Note that using `identity` as the normalisation
+    layer will result in no normalisation being applied.
+  - `bias`: whether to use bias in the convolution layers.
   - `stride`: stride of the first convolution kernel
   - `pad`: padding of the first convolution kernel
-  - `weight`, `init`: initialization for the convolution kernel (see [`Flux.Conv`](#))
+  - `weight`, `init`: initialization for the convolution kernel (see [`Flux.Conv`](@ref))
 """
-function dwsep_conv_bn(kernel_size::Dims{2}, inplanes::Integer, outplanes::Integer,
-                       activation = relu; eps::Float32 = 1.0f-5, revnorm::Bool = false,
-                       stride::Integer = 1, use_norm::NTuple{2, Bool} = (true, true),
-                       bias::NTuple{2, Bool} = (!use_norm[1], !use_norm[2]), kwargs...)
-    return vcat(conv_norm(kernel_size, inplanes, inplanes, activation; eps,
-                          revnorm, use_norm = use_norm[1], stride, bias = bias[1],
-                          groups = inplanes, kwargs...),
-                conv_norm((1, 1), inplanes, outplanes, activation; eps,
-                          revnorm, use_norm = use_norm[2], bias = bias[2]))
+function dwsep_conv_norm(kernel_size::Dims{2}, inplanes::Integer, outplanes::Integer,
+                         activation = relu; norm_layer = BatchNorm, stride::Integer = 1,
+                         bias::Bool = !(norm_layer !== identity), kwargs...)
+    return vcat(conv_norm(kernel_size, inplanes, inplanes, activation; norm_layer,
+                          stride, bias, groups = inplanes, kwargs...), # depthwise convolution
+                conv_norm((1, 1), inplanes, outplanes, activation; norm_layer, bias)) # pointwise convolution
 end
 
-# TODO add support for stochastic depth to mbconv and fused_mbconv
 """
     mbconv(kernel_size::Dims{2}, inplanes::Integer, explanes::Integer,
            outplanes::Integer, activation = relu; stride::Integer,
@@ -76,7 +68,7 @@ First introduced in the MobileNetv2 paper.
   - `activation`: The activation function for the first two convolution layer
   - `stride`: The stride of the convolutional kernel, has to be either 1 or 2
   - `reduction`: The reduction factor for the number of hidden feature maps
-    in a squeeze and excite layer (see [`squeeze_excite`](#))
+    in a squeeze and excite layer (see [`squeeze_excite`](@ref))
   - `se_round_fn`: The function to round the number of reduced feature maps
     in the squeeze and excite layer
   - `norm_layer`: The normalization layer to use

@@ -36,8 +36,35 @@ const EFFNETV2_CONFIGS = Dict(:small => [(fused_mbconv, 3, 24, 1, 1, 2, swish),
                                   (mbconv, 3, 768, 6, 1, 8, 4, swish)])
 
 """
-    EfficientNetv2(config::Symbol; pretrain::Bool = false, width_mult::Real = 1,
-                   inchannels::Integer = 3, nclasses::Integer = 1000)
+    efficientnetv2(config::Symbol; norm_layer = BatchNorm, stochastic_depth_prob = 0.2,
+                   dropout_prob = nothing, inchannels::Integer = 3, nclasses::Integer = 1000)
+
+Create an EfficientNetv2 model. ([reference](https://arxiv.org/abs/2104.00298)).
+
+# Arguments
+
+  - `config`: size of the network (one of `[:small, :medium, :large, :xlarge]`)
+  - `norm_layer`: normalization layer to use.
+  - `stochastic_depth_prob`: probability of stochastic depth. Set to `nothing` to disable
+    stochastic depth.
+  - `dropout_prob`: probability of dropout in the classifier head. Set to `nothing` to disable
+    dropout.
+  - `inchannels`: number of input channels.
+  - `nclasses`: number of output classes.
+"""
+function efficientnetv2(config::Symbol; norm_layer = BatchNorm, stochastic_depth_prob = 0.2,
+                        dropout_prob = nothing, inchannels::Integer = 3,
+                        nclasses::Integer = 1000)
+    _checkconfig(config, keys(EFFNETV2_CONFIGS))
+    block_configs = EFFNETV2_CONFIGS[config]
+    return build_invresmodel((1, 1), block_configs; activation = swish, norm_layer,
+                             inplanes = block_configs[1][3], headplanes = 1280,
+                             stochastic_depth_prob, dropout_prob, inchannels, nclasses)
+end
+
+"""
+    EfficientNetv2(config::Symbol; pretrain::Bool = false, inchannels::Integer = 3,
+                   nclasses::Integer = 1000)
 
 Create an EfficientNetv2 model ([reference](https://arxiv.org/abs/2104.00298)).
 
@@ -45,10 +72,14 @@ Create an EfficientNetv2 model ([reference](https://arxiv.org/abs/2104.00298)).
 
   - `config`: size of the network (one of `[:small, :medium, :large, :xlarge]`)
   - `pretrain`: whether to load the pre-trained weights for ImageNet
-  - `width_mult`: Controls the number of output feature maps in each block (with 1
-    being the default in the paper)
   - `inchannels`: number of input channels
   - `nclasses`: number of output classes
+
+!!! warning
+    
+    `EfficientNetv2` does not currently support pretrained weights.
+
+See also [`efficientnet`](#).
 """
 struct EfficientNetv2
     layers::Any
@@ -57,10 +88,7 @@ end
 
 function EfficientNetv2(config::Symbol; pretrain::Bool = false,
                         inchannels::Integer = 3, nclasses::Integer = 1000)
-    _checkconfig(config, sort(collect(keys(EFFNETV2_CONFIGS))))
-    block_configs = EFFNETV2_CONFIGS[config]
-    layers = efficientnet(block_configs; inplanes = block_configs[1][3],
-                          headplanes = 1280, inchannels, nclasses)
+    layers = efficientnetv2(config; inchannels, nclasses)
     if pretrain
         loadpretrain!(layers, string("efficientnetv2-", config))
     end

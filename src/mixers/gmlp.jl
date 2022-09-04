@@ -44,7 +44,7 @@ end
 """
     spatial_gating_block(planes::Integer, npatches::Integer; mlp_ratio = 4.0,
                          norm_layer = LayerNorm, mlp_layer = gated_mlp_block,
-                         dropout_rate = 0.0, drop_path_rate = 0.0, activation = gelu)
+                         dropout_prob = 0.0, stochastic_depth_prob = 0.0, activation = gelu)
 
 Creates a feedforward block based on the gMLP model architecture described in the paper.
 ([reference](https://arxiv.org/abs/2105.08050))
@@ -56,19 +56,20 @@ Creates a feedforward block based on the gMLP model architecture described in th
   - `mlp_ratio`: ratio of the number of hidden channels in the channel mixing MLP to the number
     of planes in the block
   - `norm_layer`: the normalisation layer to use
-  - `dropout_rate`: the dropout rate to use in the MLP blocks
-  - `drop_path_rate`: Stochastic depth rate
+  - `dropout_prob`: the dropout probability to use in the MLP blocks
+  - `stochastic_depth_prob`: Stochastic depth probability
   - `activation`: the activation function to use in the MLP blocks
 """
 function spatial_gating_block(planes::Integer, npatches::Integer; mlp_ratio = 4.0,
                               norm_layer = LayerNorm, mlp_layer = gated_mlp_block,
-                              dropout_rate = 0.0, drop_path_rate = 0.0, activation = gelu)
+                              dropout_prob = 0.0, stochastic_depth_prob = 0.0,
+                              activation = gelu)
     channelplanes = floor(Int, mlp_ratio * planes)
     sgu = inplanes -> SpatialGatingUnit(inplanes, npatches; norm_layer)
     return SkipConnection(Chain(norm_layer(planes),
                                 mlp_layer(sgu, planes, channelplanes; activation,
-                                          dropout_rate),
-                                DropPath(drop_path_rate)), +)
+                                          dropout_prob),
+                                StochasticDepth(stochastic_depth_prob)), +)
 end
 
 """
@@ -86,7 +87,7 @@ Creates a model with the gMLP architecture.
   - `inchannels`: the number of input channels
   - `nclasses`: number of output classes
 
-See also [`Metalhead.mlpmixer`](#).
+See also [`Metalhead.mlpmixer`](@ref).
 """
 struct gMLP
     layers::Any
@@ -94,10 +95,13 @@ end
 @functor gMLP
 
 function gMLP(config::Symbol; imsize::Dims{2} = (224, 224), patch_size::Dims{2} = (16, 16),
-              inchannels::Integer = 3, nclasses::Integer = 1000)
+              pretrain::Bool = false, inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(config, keys(MIXER_CONFIGS))
     layers = mlpmixer(spatial_gating_block, imsize; mlp_layer = gated_mlp_block, patch_size,
                       MIXER_CONFIGS[config]..., inchannels, nclasses)
+    if pretrain
+        loadpretrain!(layers, string("gmlp", config))
+    end
     return gMLP(layers)
 end
 

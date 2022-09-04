@@ -8,6 +8,8 @@
 end
 ChainRulesCore.@non_differentiable _dropblock_mask(rng, x, gamma, clipped_block_size)
 
+# TODO add experimental `DropBlock` options from timm such as gaussian noise and
+# more precise `DropBlock` to deal with edges (#188)
 """
     dropblock([rng = rng_from_array(x)], x::AbstractArray{T, 4}, drop_block_prob, block_size,
               gamma_scale, active::Bool = true)
@@ -20,16 +22,15 @@ regions of size `block_size` in the input. Otherwise, it simply returns the inpu
   - `rng`: can be used to pass in a custom RNG instead of the default. Custom RNGs are only
     supported on the CPU.
   - `x`: input array
-  - `drop_block_prob`: probability of dropping a block. If `nothing` is passed, it returns 
+  - `drop_block_prob`: probability of dropping a block. If `nothing` is passed, it returns
     `identity`.
   - `block_size`: size of the block to drop
   - `gamma_scale`: multiplicative factor for `gamma` used. For the calculations,
     refer to [the paper](https://arxiv.org/abs/1810.12890).
 
-If you are an end-user, you do not want this function. Use [`DropBlock`](#) instead.
+If you are not a package developer, you most likely do not want this function. Use [`DropBlock`](@ref)
+instead.
 """
-# TODO add experimental `DropBlock` options from timm such as gaussian noise and
-# more precise `DropBlock` to deal with edges (#188)
 function dropblock(rng::AbstractRNG, x::AbstractArray{T, 4}, drop_block_prob,
                    block_size::Integer, gamma_scale) where {T}
     H, W, _, _ = size(x)
@@ -46,7 +47,8 @@ end
 # Dispatch for GPU
 dropblock_mask(rng::CUDA.RNG, x::CuArray, gamma, bs) = _dropblock_mask(rng, x, gamma, bs)
 function dropblock_mask(rng, x::CuArray, gamma, bs)
-    throw(ArgumentError("x isa CuArray, but rng isa $(typeof(rng)). dropblock only supports CUDA.RNG for CuArrays."))
+    throw(ArgumentError("x isa CuArray, but rng isa $(typeof(rng)). dropblock only supports
+                        CUDA.RNG for CuArrays."))
 end
 # Dispatch for CPU
 dropblock_mask(rng, x, gamma, bs) = _dropblock_mask(rng, x, gamma, bs)
@@ -61,21 +63,13 @@ It can be used in two ways: either with all blocks having the same survival prob
 or with a linear scaling rule across the blocks. This is performed only at training time.
 At test time, the `DropBlock` layer is equivalent to `identity`.
 
-!!! warning
-    
-    In the case of the linear scaling rule, the calculations of survival probabilities for each
-    block may lead to a survival probability > 1 for a given block. This will lead to
-    `DropBlock` erroring. This usually happens with a low number of blocks and a high base
-    survival probability, so in such cases it is recommended to use a fixed base survival
-    probability across blocks. If this is not desired, then a lower base survival probability
-    is recommended.
-
 ([reference](https://arxiv.org/abs/1810.12890))
 
 # Arguments
 
   - `drop_block_prob`: probability of dropping a block. If `nothing` is passed, it returns
-    `identity`.
+    `identity`. Note that some literature uses the term "survival probability" instead,
+    which is equivalent to `1 - drop_block_prob`.
   - `block_size`: size of the block to drop
   - `gamma_scale`: multiplicative factor for `gamma` used. For the calculation of gamma,
     refer to [the paper](https://arxiv.org/abs/1810.12890).
@@ -93,7 +87,8 @@ end
 trainable(a::DropBlock) = (;)
 
 function _dropblock_checks(x::AbstractArray{<:Any, 4}, drop_block_prob, gamma_scale)
-    @assert 0≤drop_block_prob≤1 "drop_block_prob must be between 0 and 1, got $drop_block_prob"
+    @assert 0≤drop_block_prob≤1 "drop_block_prob must be between 0 and 1, got
+    $drop_block_prob"
     @assert 0≤gamma_scale≤1 "gamma_scale must be between 0 and 1, got $gamma_scale"
 end
 function _dropblock_checks(x, drop_block_prob, gamma_scale)
@@ -108,7 +103,7 @@ function (m::DropBlock)(x)
 end
 
 function Flux.testmode!(m::DropBlock, mode = true)
-    return (m.active = (isnothing(mode) || mode == :auto) ? nothing : !mode; m)
+    return (m.active = (isnothing(mode) || mode === :auto) ? nothing : !mode; m)
 end
 
 function DropBlock(drop_block_prob = 0.1, block_size::Integer = 7, gamma_scale = 1.0,
@@ -126,36 +121,39 @@ function Base.show(io::IO, d::DropBlock)
     return print(io, ")")
 end
 
-# TODO look into "row" mode for stochastic depth
 """
-    DropPath(p; [rng = rng_from_array(x)])
+    StochasticDepth(p, mode = :row; rng = rng_from_array())
 
-Implements Stochastic Depth - equivalent to `Dropout(p; dims = 4)` when `0 ≤ p ≤ 1` and
-`identity` if p is `nothing`.
+Implements Stochastic Depth. This is a `Dropout` layer from Flux that drops values
+with probability `p`.
 ([reference](https://arxiv.org/abs/1603.09382))
 
 This layer can be used to drop certain blocks in a residual structure and allow them to
 propagate completely through the skip connection. It can be used in two ways: either with
 all blocks having the same survival probability or with a linear scaling rule across the
-blocks. This is performed only at training time. At test time, the `DropPath` layer is
+blocks. This is performed only at training time. At test time, the `StochasticDepth` layer is
 equivalent to `identity`.
-
-!!! warning
-    
-    In the case of the linear scaling rule, the calculations of survival probabilities for each
-    block may lead to a survival probability > 1 for a given block. This will lead to
-    `DropPath` erroring. This usually happens with a low number of blocks and a high base
-    survival probability, so in such cases it is recommended to use a fixed base survival
-    probability across  blocks. If this is not desired, then a lower base survival probability
-    is recommended.
 
 # Arguments
 
-  - `p`: rate of Stochastic Depth.
+  - `p`: probability of Stochastic Depth. Note that some literature uses the term "survival
+    probability" instead, which is equivalent to `1 - p`.
+  - `mode`: Either `:batch` or `:row`. `:batch` randomly zeroes the entire input, `row` zeroes
+    randomly selected rows from the batch. The default is `:row`.
   - `rng`: can be used to pass in a custom RNG instead of the default. See `Flux.Dropout`
     for more information on the behaviour of this argument. Custom RNGs are only supported
     on the CPU.
 """
-function DropPath(p; rng = rng_from_array())
-    return isnothing(p) ? identity : Dropout(p; dims = 4, rng)
+function StochasticDepth(p, mode = :row; rng = rng_from_array())
+    if isnothing(p)
+        return identity
+    else
+        if mode === :batch
+            return Dropout(p; dims = 5, rng)
+        elseif mode === :row
+            return Dropout(p; dims = 4, rng)
+        else
+            throw(ArgumentError("mode must be either `:batch` or `:row`, got $mode"))
+        end
+    end
 end

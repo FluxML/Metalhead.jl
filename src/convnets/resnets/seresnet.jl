@@ -15,7 +15,7 @@ Creates a SEResNet model with the specified depth.
     
     `SEResNet` does not currently support pretrained weights.
 
-Advanced users who want more configuration options will be better served by using [`resnet`](#).
+Advanced users who want more configuration options will be better served by using [`resnet`](@ref).
 """
 struct SEResNet
     layers::Any
@@ -58,7 +58,7 @@ Creates a SEResNeXt model with the specified depth, cardinality, and base width.
     
     `SEResNeXt` does not currently support pretrained weights.
 
-Advanced users who want more configuration options will be better served by using [`resnet`](#).
+Advanced users who want more configuration options will be better served by using [`resnet`](@ref).
 """
 struct SEResNeXt
     layers::Any

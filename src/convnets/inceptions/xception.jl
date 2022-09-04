@@ -34,7 +34,7 @@ function xception_block(inchannels::Integer, outchannels::Integer, nrepeats::Int
         end
         push!(layers, relu)
         append!(layers,
-                dwsep_conv_bn((3, 3), inc, outc; pad = 1, use_norm = (false, false)))
+                dwsep_conv_norm((3, 3), inc, outc; pad = 1, norm_layer = identity))
         push!(layers, BatchNorm(outc))
     end
     layers = start_with_relu ? layers : layers[2:end]
@@ -43,18 +43,18 @@ function xception_block(inchannels::Integer, outchannels::Integer, nrepeats::Int
 end
 
 """
-    xception(; dropout_rate = nothing, inchannels::Integer = 3, nclasses::Integer = 1000)
+    xception(; dropout_prob = nothing, inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Creates an Xception model.
 ([reference](https://arxiv.org/abs/1610.02357))
 
 # Arguments
 
-  - `dropout_rate`: rate of dropout in classifier head. Set to `nothing` to disable dropout.
+  - `dropout_prob`: probability of dropout in classifier head. Set to `nothing` to disable dropout.
   - `inchannels`: number of input channels.
   - `nclasses`: the number of output classes.
 """
-function xception(; dropout_rate = 0.0, inchannels::Integer = 3, nclasses::Integer = 1000)
+function xception(; dropout_prob = 0.0, inchannels::Integer = 3, nclasses::Integer = 1000)
     backbone = Chain(conv_norm((3, 3), inchannels, 32; stride = 2)...,
                      conv_norm((3, 3), 32, 64)...,
                      xception_block(64, 128, 2; stride = 2, start_with_relu = false),
@@ -62,9 +62,9 @@ function xception(; dropout_rate = 0.0, inchannels::Integer = 3, nclasses::Integ
                      xception_block(256, 728, 2; stride = 2),
                      [xception_block(728, 728, 3) for _ in 1:8]...,
                      xception_block(728, 1024, 2; stride = 2, grow_at_start = false),
-                     dwsep_conv_bn((3, 3), 1024, 1536; pad = 1)...,
-                     dwsep_conv_bn((3, 3), 1536, 2048; pad = 1)...)
-    return Chain(backbone, create_classifier(2048, nclasses; dropout_rate))
+                     dwsep_conv_norm((3, 3), 1024, 1536; pad = 1)...,
+                     dwsep_conv_norm((3, 3), 1536, 2048; pad = 1)...)
+    return Chain(backbone, create_classifier(2048, nclasses; dropout_prob))
 end
 
 """
@@ -82,6 +82,8 @@ Creates an Xception model.
 !!! warning
     
     `Xception` does not currently support pretrained weights.
+
+See also [`Metalhead.xception`](@ref).
 """
 struct Xception
     layers::Any

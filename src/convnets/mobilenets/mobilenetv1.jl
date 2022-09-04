@@ -1,57 +1,40 @@
-"""
-    mobilenetv1(width_mult::Real, config::AbstractVector{<:Tuple}; 
-                activation = relu, dropout_rate = nothing,
-                inchannels::Integer = 3, nclasses::Integer = 1000)
-
-Create a MobileNetv1 model ([reference](https://arxiv.org/abs/1704.04861v1)).
-
-# Arguments
-
-  - `width_mult`: Controls the number of output feature maps in each block
-    (with 1 being the default in the paper)
-
-  - `configs`: A "list of tuples" configuration for each layer that details:
-    
-      + `dw`: Set true to use a depthwise separable convolution or false for regular convolution
-      + `o`: The number of output feature maps
-      + `s`: The stride of the convolutional kernel
-      + `r`: The number of time this configuration block is repeated
-  - `activate`: The activation function to use throughout the network
-  - `dropout_rate`: The dropout rate to use in the classifier head. Set to `nothing` to disable.
-  - `inchannels`: The number of input channels. The default value is 3.
-  - `nclasses`: The number of output classes
-"""
-function mobilenetv1(config::AbstractVector{<:Tuple}; width_mult::Real = 1,
-                     activation = relu, dropout_rate = nothing,
-                     inplanes::Integer = 32, inchannels::Integer = 3,
-                     nclasses::Integer = 1000)
-    layers = []
-    # stem of the model
-    inplanes = _round_channels(inplanes * width_mult)
-    append!(layers,
-            conv_norm((3, 3), inchannels, inplanes, activation; stride = 2, pad = 1))
-    # building inverted residual blocks
-    get_layers, block_repeats = mbconv_stack_builder(config, inplanes; width_mult)
-    append!(layers, cnn_stages(get_layers, block_repeats))
-    outplanes = _round_channels(config[end][3] * width_mult)
-    return Chain(Chain(layers...), create_classifier(outplanes, nclasses; dropout_rate))
-end
-
 # Layer configurations for MobileNetv1
-# f: block function - we use `dwsep_conv_bn` for all blocks
+# f: block function - we use `dwsep_conv_norm` for all blocks
 # k: kernel size
 # c: output channels
 # s: stride
 # n: number of repeats
 # a: activation function
+# Data is organised as (f, k, c, s, n, a)
 const MOBILENETV1_CONFIGS = [
-    # f, k, c, s, n, a
-    (dwsep_conv_bn, 3, 64, 1, 1, relu6),
-    (dwsep_conv_bn, 3, 128, 2, 2, relu6),
-    (dwsep_conv_bn, 3, 256, 2, 2, relu6),
-    (dwsep_conv_bn, 3, 512, 2, 6, relu6),
-    (dwsep_conv_bn, 3, 1024, 2, 2, relu6),
+    (dwsep_conv_norm, 3, 64, 1, 1, relu6),
+    (dwsep_conv_norm, 3, 128, 2, 2, relu6),
+    (dwsep_conv_norm, 3, 256, 2, 2, relu6),
+    (dwsep_conv_norm, 3, 512, 2, 6, relu6),
+    (dwsep_conv_norm, 3, 1024, 2, 2, relu6),
 ]
+
+"""
+    mobilenetv1(width_mult::Real = 1; inplanes::Integer = 32, dropout_prob = nothing,
+                inchannels::Integer = 3, nclasses::Integer = 1000)
+
+Create a MobileNetv1 model. ([reference](https://arxiv.org/abs/1704.04861v1)).
+
+# Arguments
+
+  - `width_mult`: Controls the number of output feature maps in each block
+    (with 1 being the default in the paper; this is usually a value between 0.1 and 1.4)
+  - `inplanes`: Number of input channels to the first convolution layer
+  - `dropout_prob`: Dropout probability for the classifier head. Set to `nothing` to disable dropout.
+  - `inchannels`: Number of input channels.
+  - `nclasses`: Number of output classes.
+"""
+function mobilenetv1(width_mult::Real = 1; inplanes::Integer = 32, dropout_prob = nothing,
+                     inchannels::Integer = 3, nclasses::Integer = 1000)
+    return build_invresmodel(width_mult, MOBILENETV1_CONFIGS; inplanes, inchannels,
+                             activation = relu6, connection = nothing, tail_conv = false,
+                             headplanes = 1024, dropout_prob, nclasses)
+end
 
 """
     MobileNetv1(width_mult::Real = 1; pretrain::Bool = false,
@@ -63,8 +46,7 @@ Create a MobileNetv1 model with the baseline configuration
 # Arguments
 
   - `width_mult`: Controls the number of output feature maps in each block
-    (with 1 being the default in the paper;
-    this is usually a value between 0.1 and 1.4)
+    (with 1 being the default in the paper; this is usually a value between 0.1 and 1.4)
   - `pretrain`: Whether to load the pre-trained weights for ImageNet
   - `inchannels`: The number of input channels.
   - `nclasses`: The number of output classes
@@ -73,7 +55,7 @@ Create a MobileNetv1 model with the baseline configuration
     
     `MobileNetv1` does not currently support pretrained weights.
 
-See also [`mobilenetv1`](#).
+See also [`Metalhead.mobilenetv1`](@ref).
 """
 struct MobileNetv1
     layers::Any
@@ -82,7 +64,7 @@ end
 
 function MobileNetv1(width_mult::Real = 1; pretrain::Bool = false,
                      inchannels::Integer = 3, nclasses::Integer = 1000)
-    layers = mobilenetv1(MOBILENETV1_CONFIGS; width_mult, inchannels, nclasses)
+    layers = mobilenetv1(width_mult; inchannels, nclasses)
     if pretrain
         loadpretrain!(layers, string("MobileNetv1"))
     end
