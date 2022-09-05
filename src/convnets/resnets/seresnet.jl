@@ -58,11 +58,7 @@ Creates a SEResNeXt model with the specified depth, cardinality, and base width.
     
     `SEResNeXt` does not currently support pretrained weights.
 
-<<<<<<< HEAD
 Advanced users who want more configuration options will be better served by using [`resnet`](@ref).
-=======
-Advanced users who want more configuration options will be better served by using [`Metalhead.resnet`](@ref).
->>>>>>> 5ac81ce (Use `@autodocs` and fix references)
 """
 struct SEResNeXt
     layers::Any

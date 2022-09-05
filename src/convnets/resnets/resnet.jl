@@ -48,11 +48,7 @@ The number of channels in outer 1x1 convolutions is the same.
   - `inchannels`: The number of input channels.
   - `nclasses`: The number of output classes
 
-<<<<<<< HEAD
 Advanced users who want more configuration options will be better served by using [`resnet`](@ref).
-=======
-Advanced users who want more configuration options will be better served by using [`Metalhead.resnet`](@ref).
->>>>>>> 5ac81ce (Use `@autodocs` and fix references)
 """
 struct WideResNet
     layers::Any
