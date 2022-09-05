@@ -6,7 +6,7 @@
 
 Creates a block builder for `irblockfn` within a given stage.
 Note that this function is not intended to be called directly, but instead passed to
-[`mbconv_stage_builder`](@ref) which will return a builder over all stages.
+[`Metalhead.mbconv_stage_builder`](@ref) which will return a builder over all stages.
 Users wanting to provide a custom inverted residual block type can extend this
 function by defining `invresbuilder(::typeof(my_block), ...)`.
 """

@@ -9,6 +9,9 @@ Modules = [Metalhead]
 ```
 
 ```@docs
+Metalhead.create_classifier
 Metalhead.squeeze_excite
 Metalhead.LayerScale
+Metalhead.DropBlock
+Metalhead.StochasticDepth
 ```
