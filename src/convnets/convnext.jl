@@ -8,7 +8,7 @@ Creates a single block of ConvNeXt.
 
   - `planes`: number of input channels.
   - `stochastic_depth_prob`: Stochastic depth probability.
-  - `layerscale_init`: Initial value for [`LayerScale`](@ref)
+  - `layerscale_init`: Initial value for [`Metalhead.LayerScale`](@ref)
 """
 function convnextblock(planes::Integer, stochastic_depth_prob = 0.0,
                        layerscale_init = 1.0f-6)

@@ -1,17 +1,26 @@
-using Pkg
+using Documenter, Metalhead, Artifacts, LazyArtifacts, Images, OneHotArrays, DataAugmentation, Flux
 
-Pkg.develop(; path = "..")
+DocMeta.setdocmeta!(Metalhead, :DocTestSetup, :(using Metalhead); recursive = true)
 
-using Publish
-using Artifacts, LazyArtifacts
-using Metalhead
+makedocs(modules = [Metalhead, Artifacts, LazyArtifacts, Images, OneHotArrays, DataAugmentation, Flux],
+         sitename = "Metalhead.jl",
+         doctest = false,
+         pages = ["Home" => "index.md",
+                  "Tutorials" => [
+                      "tutorials/quickstart.md",
+                   ],
+                  "Developer guide" => "contributing.md",
+                  "API reference" => [
+                      "api/reference.md",
+                   ],
+                 ],
+         format = Documenter.HTML(
+              canonical = "https://fluxml.ai/Metalhead.jl/stable/",
+            #   analytics = "UA-36890222-9",
+              assets = ["assets/flux.css"],
+              prettyurls = get(ENV, "CI", nothing) == "true"),
+        )
 
-# override default theme
-cp(artifact"flux-theme", "../_flux-theme"; force = true)
-
-p = Publish.Project(Metalhead)
-
-function build_and_deploy(label)
-    rm(label; recursive = true, force = true)
-    return deploy(Metalhead; root = "/Metalhead.jl", label = label)
-end
+deploydocs(repo = "github.com/FluxML/Metalhead.jl.git",
+           target = "build",
+           push_preview = true)
