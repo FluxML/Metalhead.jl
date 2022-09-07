@@ -10,7 +10,7 @@ steps:
     agents:
       queue: "juliagpu"
       cuda: "*"
-    timeout_in_minutes: 60
+    timeout_in_minutes: 120
 
   - label: "GPU integration with julia v1"
     plugins:
@@ -24,7 +24,7 @@ steps:
       cuda: "*"
     env:
       JULIA_CUDA_USE_BINARYBUILDER: "true"
-    timeout_in_minutes: 60
+    timeout_in_minutes: 120
 
   # - label: "GPU nightly"
   #   plugins:
