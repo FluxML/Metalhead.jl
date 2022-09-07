@@ -8,10 +8,12 @@ makedocs(modules = [Metalhead, Artifacts, LazyArtifacts, Images, OneHotArrays, D
          pages = ["Home" => "index.md",
                   "Tutorials" => [
                       "tutorials/quickstart.md",
+                       "tutorials/pretrained.md",
                    ],
                   "Developer guide" => "contributing.md",
                   "API reference" => [
-                      "api/reference.md",
+                      "api/models.md",
+                      "api/layers.md"
                    ],
                  ],
          format = Documenter.HTML(

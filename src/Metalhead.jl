@@ -66,6 +66,7 @@ include("vit-based/vit.jl")
 # Load pretrained weights
 include("pretrain.jl")
 
+# export model functions
 export AlexNet, VGG, VGG11, VGG13, VGG16, VGG19,
        ResNet, ResNet18, ResNet34, ResNet50, ResNet101, ResNet152,
        WideResNet, ResNeXt, SEResNet, SEResNeXt, Res2Net, Res2NeXt,
@@ -74,6 +75,12 @@ export AlexNet, VGG, VGG11, VGG13, VGG16, VGG19,
        SqueezeNet, MobileNetv1, MobileNetv2, MobileNetv3, MNASNet,
        EfficientNet, EfficientNetv2, ConvMixer, ConvNeXt,
        MLPMixer, ResMLP, gMLP, ViT
+
+# useful for feature extraction
+export backbone, classifier
+
+# export layers
+export StochasticDepth, DropBlock, AdaptiveMeanMaxPool, LayerScale
 
 # use Flux._big_show to pretty print large models
 for T in (:AlexNet, :VGG, :SqueezeNet, :ResNet, :WideResNet, :ResNeXt,
