@@ -1,4 +1,4 @@
-# Contributing to Metalhead.jl
+# [Contributing to Metalhead.jl](@id contributing)
 
 We welcome contributions from anyone to Metalhead.jl! Thank you for taking the time to make our ecosystem better.
 
@@ -31,7 +31,7 @@ All Metalhead.jl model artifacts are hosted using HuggingFace. You can find the 
 2. Save the model using [BSON.jl](https://github.com/JuliaIO/BSON.jl) with `BSON.@save "modelname.bson" model`. It is important that your model is saved under the key `model`.
 3. Compress the saved model as a tarball using `tar -cvzf modelname.tar.gz modelname.bson`.
 4. Obtain the SHAs (see the [Pkg docs](https://pkgdocs.julialang.org/v1/artifacts/#Basic-Usage)). Edit the `Artifacts.toml` file in the Metalhead.jl repository and add entry for your model. You can leave the URL empty for now.
-5. Open a PR on Metalhead.jl. Be sure to ping a maintainer (e.g. `@darsnack`) to let us know that you are adding a pre-trained weight. We will create a model repository on HuggingFace if it does not already exist.
+5. Open a PR on Metalhead.jl. Be sure to ping a maintainer (e.g. `@darsnack` or `@theabhirath`) to let us know that you are adding a pre-trained weight. We will create a model repository on HuggingFace if it does not already exist.
 6. Open a PR to the [corresponding HuggingFace repo](https://huggingface.co/FluxML). Do this by going to the "Community" tab in the HuggingFace repository. PRs and discussions are shown as the same thing in the HuggingFace web app. You can use your local Git program to make clone the repo and make PRs if you wish. Check out the [guide on PRs to HuggingFace](https://huggingface.co/docs/hub/repositories-pull-requests-discussions) for more information.
 7. Copy the download URL for the model file that you added to HuggingFace. Make sure to grab the URL for a specific commit and not for the `main` branch.
 8. Update your Metalhead.jl PR by adding the URL to the Artifacts.toml.

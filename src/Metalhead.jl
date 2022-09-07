@@ -77,6 +77,12 @@ export AlexNet,
        EfficientNet, EfficientNetv2, ConvMixer, ConvNeXt,
        MLPMixer, ResMLP, gMLP, ViT, UNet
 
+# useful for feature extraction
+export backbone, classifier
+
+# export layers
+export StochasticDepth, DropBlock, AdaptiveMeanMaxPool, LayerScale
+
 # use Flux._big_show to pretty print large models
 for T in (:AlexNet, :VGG, :SqueezeNet, :ResNet, :WideResNet, :ResNeXt,
           :SEResNet, :SEResNeXt, :Res2Net, :Res2NeXt, :GoogLeNet, :DenseNet,
