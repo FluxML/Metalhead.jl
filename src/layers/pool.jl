@@ -1,6 +1,5 @@
 """
-    AdaptiveMeanMaxPool(connection = +, output_size::Tuple = (1, 1))
-    AdaptiveMeanMaxPool(output_size::Tuple = (1, 1))
+    AdaptiveMeanMaxPool([connection = +], output_size::Tuple = (1, 1))
 
 A type of adaptive pooling layer which uses both mean and max pooling and combines them to
 produce a single output. Note that this is equivalent to

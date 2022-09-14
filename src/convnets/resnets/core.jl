@@ -307,8 +307,8 @@ ResNet-50, which has 3 blocks in the first stage, 4 blocks in the second stage, 
 third stage and 3 blocks in the fourth stage.
 """
 function resnet_planes(block_repeats::AbstractVector{<:Integer})
-    return Iterators.flatten((64 * 2^(stage_idx - 1) for _ in 1:stages)
-                             for (stage_idx, stages) in enumerate(block_repeats))
+    return collect(Iterators.flatten((64 * 2^(stage_idx - 1) for _ in 1:stages)
+                                     for (stage_idx, stages) in enumerate(block_repeats)))
 end
 
 """
@@ -377,8 +377,8 @@ Wide ResNet, ResNeXt and Res2Net. For an _even_ more generic model API, see [`Me
   - `use_conv`: Set to true to use convolutions instead of identity operations in the model.
   - `dropblock_prob`: `DropBlock` probability to be used in the model. Set to `nothing` to disable
     DropBlock. See [`Metalhead.DropBlock`](@ref) for more details.
-  - `stochastic_depth_prob`: `StochasticDepth` probability to be used in the model. Set to `nothing` to disable
-    StochasticDepth. See [`Metalhead.StochasticDepth`](@ref) for more details.
+  - `stochastic_depth_prob`: `StochasticDepth` probability to be used in the model. Set to `nothing`
+    to disable StochasticDepth. See [`Metalhead.StochasticDepth`](@ref) for more details.
   - `dropout_prob`: `Dropout` probability to be used in the classifier head. Set to `nothing` to
     disable Dropout.
 """
