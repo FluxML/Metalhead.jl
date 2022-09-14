@@ -1,7 +1,7 @@
 module Layers
 
 using Flux
-using Flux: rng_from_array
+using Flux: default_rng_value
 using CUDA
 using NNlib, NNlibCUDA
 using Functors

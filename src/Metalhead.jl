@@ -25,21 +25,24 @@ include("convnets/builders/mbconv.jl")
 include("convnets/builders/resblocks.jl")
 include("convnets/builders/resnet.jl")
 include("convnets/builders/stages.jl")
-## AlexNet and VGG
+## Older CNN models
 include("convnets/alexnet.jl")
 include("convnets/vgg.jl")
-## ResNets
-include("convnets/resnets/core.jl")
-include("convnets/resnets/res2net.jl")
-include("convnets/resnets/resnet.jl")
-include("convnets/resnets/resnext.jl")
-include("convnets/resnets/seresnet.jl")
+include("convnets/squeezenet.jl")
 ## Inceptions
 include("convnets/inceptions/googlenet.jl")
 include("convnets/inceptions/inceptionv3.jl")
 include("convnets/inceptions/inceptionv4.jl")
 include("convnets/inceptions/inceptionresnetv2.jl")
 include("convnets/inceptions/xception.jl")
+## ResNets
+include("convnets/resnets/core.jl")
+include("convnets/resnets/res2net.jl")
+include("convnets/resnets/resnet.jl")
+include("convnets/resnets/resnext.jl")
+include("convnets/resnets/seresnet.jl")
+## DenseNet
+include("convnets/densenet.jl")
 ## EfficientNets
 include("convnets/efficientnets/efficientnet.jl")
 include("convnets/efficientnets/efficientnetv2.jl")
@@ -51,9 +54,10 @@ include("convnets/mobilenets/mnasnet.jl")
 ## Others
 include("convnets/densenet.jl")
 include("convnets/squeezenet.jl")
-include("convnets/convnext.jl")
-include("convnets/convmixer.jl")
 include("convnets/unet.jl")
+## Hybrid models
+include("convnets/hybrid/convnext.jl")
+include("convnets/hybrid/convmixer.jl")
 
 # Mixers
 include("mixers/core.jl")
