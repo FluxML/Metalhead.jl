@@ -340,7 +340,7 @@ end
            imsize::Dims{2} = (256, 256), inchannels::Integer = 3,
            nclasses::Integer = 1000, kwargs...)
 
-Creates a generic ResNet-like model that is used to create the higher level models like ResNet,
+Creates a generic ResNet-like model that is used to create The higher-level model constructors like ResNet,
 Wide ResNet, ResNeXt and Res2Net. For an _even_ more generic model API, see [`Metalhead.build_resnet`](@ref).
 
 # Arguments
@@ -381,6 +381,13 @@ Wide ResNet, ResNeXt and Res2Net. For an _even_ more generic model API, see [`Me
     to disable StochasticDepth. See [`Metalhead.StochasticDepth`](@ref) for more details.
   - `dropout_prob`: `Dropout` probability to be used in the classifier head. Set to `nothing` to
     disable Dropout.
+  - `imsize`: The size of the input (height, width).
+  - `inchannels`: The number of input channels.
+  - `nclasses`: The number of output classes.
+  - `kwargs`: Additional keyword arguments to be passed to the block builder (note: ignore this
+    argument if you are not sure what it does. To know more about how this works, check out the
+    section of the documentation that talks about builders in Metalhead and specifically for the
+    ResNet block functions).
 """
 function resnet(block_type, block_repeats::AbstractVector{<:Integer},
                 downsample_opt::NTuple{2, Any} = (downsample_conv, downsample_identity);

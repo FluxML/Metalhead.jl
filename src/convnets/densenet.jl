@@ -11,12 +11,10 @@ Create a Densenet bottleneck layer
     (and scaling factor for inner feature maps; see ref)
 """
 function dense_bottleneck(inplanes::Integer, outplanes::Integer; expansion::Integer = 4)
-    inner_channels = expansion * outplanes
-    return SkipConnection(Chain(conv_norm((1, 1), inplanes, inner_channels;
+    return SkipConnection(Chain(conv_norm((1, 1), inplanes, expansion * outplanes;
                                           revnorm = true)...,
-                                conv_norm((3, 3), inner_channels, outplanes; pad = 1,
-                                          revnorm = true)...),
-                          cat_channels)
+                                conv_norm((3, 3), expansion * outplanes, outplanes;
+                                          pad = 1, revnorm = true)...), cat_channels)
 end
 
 """
@@ -70,8 +68,9 @@ Create a DenseNet model
   - `dropout_prob`: the dropout probability for the classifier head. Set to `nothing` to disable dropout.
   - `nclasses`: the number of output classes
 """
-function densenet(inplanes::Integer, growth_rates; reduction = 0.5, dropout_prob = nothing,
-                  inchannels::Integer = 3, nclasses::Integer = 1000)
+function build_densenet(inplanes::Integer, growth_rates; reduction = 0.5,
+                        dropout_prob = nothing,
+                        inchannels::Integer = 3, nclasses::Integer = 1000)
     layers = []
     append!(layers,
             conv_norm((7, 7), inchannels, inplanes; stride = 2, pad = (3, 3)))
@@ -89,7 +88,9 @@ function densenet(inplanes::Integer, growth_rates; reduction = 0.5, dropout_prob
 end
 
 """
-    densenet(nblocks; growth_rate = 32, reduction = 0.5, nclasses::Integer = 1000)
+    densenet(nblocks::AbstractVector{<:Integer}; growth_rate::Integer = 32,
+             reduction = 0.5, dropout_prob = nothing, inchannels::Integer = 3,
+             nclasses::Integer = 1000)
 
 Create a DenseNet model
 ([reference](https://arxiv.org/abs/1608.06993)).
@@ -99,13 +100,15 @@ Create a DenseNet model
   - `nblocks`: number of dense blocks between transitions
   - `growth_rate`: the output feature map growth probability of dense blocks (i.e. `k` in the ref)
   - `reduction`: the factor by which the number of feature maps is scaled across each transition
+  - `dropout_prob`: the dropout probability for the classifier head. Set to `nothing` to disable dropout
+  - `inchannels`: the number of input channels
   - `nclasses`: the number of output classes
 """
 function densenet(nblocks::AbstractVector{<:Integer}; growth_rate::Integer = 32,
                   reduction = 0.5, dropout_prob = nothing, inchannels::Integer = 3,
                   nclasses::Integer = 1000)
-    return densenet(2 * growth_rate, [fill(growth_rate, n) for n in nblocks];
-                    reduction, dropout_prob, inchannels, nclasses)
+    return build_densenet(2 * growth_rate, [fill(growth_rate, n) for n in nblocks];
+                          reduction, dropout_prob, inchannels, nclasses)
 end
 
 const DENSENET_CONFIGS = Dict(121 => [6, 12, 24, 16],
@@ -114,12 +117,20 @@ const DENSENET_CONFIGS = Dict(121 => [6, 12, 24, 16],
                               201 => [6, 12, 48, 32])
 
 """
-    DenseNet(config::Integer; pretrain::Bool = false, nclasses::Integer = 1000)
-    DenseNet(transition_configs::NTuple{N,Integer})
+    DenseNet(config::Integer; pretrain::Bool = false, growth_rate::Integer = 32,
+             reduction = 0.5, inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Create a DenseNet model with specified configuration. Currently supported values are (121, 161, 169, 201)
 ([reference](https://arxiv.org/abs/1608.06993)).
-Set `pretrain = true` to load the model with pre-trained weights for ImageNet.
+
+# Arguments
+
+    - `config`: the configuration of the model
+    - `pretrain`: whether to load the model with pre-trained weights for ImageNet.
+    - `growth_rate`: the output feature map growth probability of dense blocks (i.e. `k` in the ref)
+    - `reduction`: the factor by which the number of feature maps is scaled across each transition
+    - `inchannels`: the number of input channels
+    - `nclasses`: the number of output classes
 
 !!! warning
     

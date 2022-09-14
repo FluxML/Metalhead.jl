@@ -10,21 +10,26 @@ makedocs(; modules = [Metalhead, Artifacts, LazyArtifacts, Images, DataAugmentat
                  "tutorials/quickstart.md",
                  "tutorials/pretrained.md",
              ],
-             "Developer guide" => "contributing.md",
              "API reference" => [
+                 "api/others.md",
+                 "api/inception.md",
                  "api/resnet.md",
+                 "api/densenet.md",
+                 "api/hybrid.md",
+                 "api/mixers.md",
+                 "api/vit.md",
                  "api/layers.md",
                  "api/utilities.md",
              ],
              "How To" => [
                  "howto/resnet.md",
              ],
+             "Contributing to Metalhead" => "contributing.md",
          ],
          format = Documenter.HTML(; canonical = "https://fluxml.ai/Metalhead.jl/stable/",
                                   #   analytics = "UA-36890222-9",
                                   assets = ["assets/flux.css"],
                                   prettyurls = get(ENV, "CI", nothing) == "true"))
 
-deploydocs(; repo = "github.com/FluxML/Metalhead.jl.git",
-           target = "build",
+deploydocs(; repo = "github.com/FluxML/Metalhead.jl.git", target = "build",
            push_preview = true)
