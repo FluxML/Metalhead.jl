@@ -1,6 +1,10 @@
 # Layers
 
-Metalhead also defines a module called `Layers` which contains some more modern layers that are not available in Flux. Some of these, like [`StochasticDepth`](@ref) and [`DropBlock`](@ref), are exported from Metalhead as well. Others, like [`conv_norm`](@ref) or [`create_classifier`](@ref) are not exported and are only available by explicitly importing them from `Metalhead.Layers`.
+Metalhead also defines a module called `Layers` which contains some more modern layers that are not available in Flux. To use the functions defined in the `Layers` module, you need to import it.
+
+```julia
+using Metalhead: Layers
+```
 
 This page contains the API reference for the `Layers` module.
 

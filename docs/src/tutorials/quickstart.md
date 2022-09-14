@@ -21,3 +21,9 @@ model = ResNet(18; pretrain = true);
 Refer to the pretraining guide for more details on how to use pre-trained models.
 
 ## More model configuration options
+
+For users who want to use more options for model configuration, Metalhead provides a "mid-level" API for models. The model functions that are in lowercase such as [`resnet`](@ref) or [`mobilenetv3`](@ref) are the "lower" level API for models. These are the functions that end-users who want to experiment with model architectures should use. These models do not support the option for loading pre-trained weights from ImageNet out of the box.
+
+To use any of these models, check out the docstrings for the model functions. Note that these functions typically require more configuration options to be passed in, but offer a lot more flexibility in terms of model architecture.
+
+##
