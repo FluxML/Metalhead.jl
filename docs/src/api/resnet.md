@@ -14,19 +14,13 @@ Res2Net
 Res2NeXt
 ```
 
-## The core ResNet function
+## The mid-level function
 
 ```@docs
 Metalhead.resnet
 ```
 
-## The ResNet model
-
-```@docs
-Metalhead.build_resnet
-```
-
-## Blocks and their builders
+## Lower-level functions and builders
 
 ### Block functions
 
@@ -50,6 +44,12 @@ Metalhead.downsample_pool
 Metalhead.basicblock_builder
 Metalhead.bottleneck_builder
 Metalhead.bottle2neck_builder
+```
+
+### Generic ResNet model builder
+
+```@docs
+Metalhead.build_resnet
 ```
 
 ## Utility callbacks

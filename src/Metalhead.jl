@@ -12,7 +12,9 @@ using Random
 
 import Functors
 
+# Utilities
 include("utilities.jl")
+include("core.jl")
 
 # Custom Layers
 include("layers/Layers.jl")

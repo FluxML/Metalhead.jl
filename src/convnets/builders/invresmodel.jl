@@ -16,7 +16,9 @@ Creates a generic inverted residual model structure with the specified configura
     - `block_configs`: This is a `Vector` of `Tuple`s that specifies the configuration of the
     inverted residual blocks. This can take several forms:
         + for `dwsep_conv_norm`, or depthwise separable convolutional blocks, the tuple
-        should be of the form `(dwsep_conv_norm, kernel_size, )`, where `dwsep_conv_norm`
+        should be of the form `(dwsep_conv_norm, kernel size, output channels, stride,
+        number of repeats, activation function)`. For example, the following configuration
+        is valid: `(dwsep_conv_norm, 3, 64, 1, 1, relu6)`.
 """
 function build_invresmodel(scalings::NTuple{2, Real},
                            block_configs::AbstractVector{<:Tuple};

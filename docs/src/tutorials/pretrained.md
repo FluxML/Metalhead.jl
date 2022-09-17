@@ -49,7 +49,7 @@ data = apply(augmentations, Image(img)) |> itemdata
 # ImageNet labels
 labels = readlines(download("https://raw.githubusercontent.com/pytorch/hub/master/imagenet_classes.txt"))
 
-onecold(model(Flux.unsqueeze(data, 4)), labels);
+println(onecold(model(Flux.unsqueeze(data, 4)), labels))
 ```
 
 That is fairly accurate! Below, we train the model on some randomly generated data:
