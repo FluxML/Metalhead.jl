@@ -55,6 +55,11 @@ This is a sequence of layers:
   - a 1x1 convolution from `explanes => outplanes`
   - a (batch) normalisation layer + `activation`
 
+!!! warning
+    This function does not handle the residual connection by default. The user must add
+    this manually to use this block as a standalone. To construct a model, check out the
+    builders, which handle the residual connection and other details.
+
 First introduced in the MobileNetv2 paper.
 (See Fig. 3 in [reference](https://arxiv.org/abs/1801.04381v4).)
 
@@ -112,6 +117,11 @@ This is a sequence of layers:
   - a (batch) normalisation layer
   - a 1x1 convolution from `explanes => outplanes` followed by a (batch) normalisation
     layer + `activation` if `inplanes != explanes`
+
+!!! warning
+    This function does not handle the residual connection by default. The user must add
+    this manually to use this block as a standalone. To construct a model, check out the
+    builders, which handle the residual connection and other details.
 
 Originally introduced by Google in [EfficientNet-EdgeTPU: Creating Accelerator-Optimized Neural Networks with AutoML](https://ai.googleblog.com/2019/08/efficientnet-edgetpu-creating.html).
 Later used in the EfficientNetv2 paper.

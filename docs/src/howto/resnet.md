@@ -19,5 +19,3 @@ model = ResNet(50; pretrain=true)
 ```
 
 To check out more about using pretrained models, check out the [pretrained models guide](@ref pretrained).
-
-## More configuration options

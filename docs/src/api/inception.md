@@ -1,4 +1,4 @@
-# The Inception family of models
+# Inception models
 
 This is the API reference for the Inception family of models supported by Metalhead.jl.
 

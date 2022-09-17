@@ -11,15 +11,21 @@ makedocs(; modules = [Metalhead, Artifacts, LazyArtifacts, Images, DataAugmentat
                  "tutorials/pretrained.md",
              ],
              "API reference" => [
-                 "api/others.md",
-                 "api/inception.md",
-                 "api/resnet.md",
-                 "api/densenet.md",
-                 "api/hybrid.md",
-                 "api/mixers.md",
-                 "api/vit.md",
-                 "api/layers.md",
-                 "api/utilities.md",
+                "Convolutional Neural Networks" => [
+                    "api/others.md",
+                    "api/inception.md",
+                    "api/resnet.md",
+                    "api/densenet.md",
+                    "api/hybrid.md",
+                    "api/layers.md",
+                ],
+                "Mixers" => [
+                    "api/mixers.md",
+                ],
+                "Vision Transformers" => [
+                    "api/vit.md",
+                ],
+                "api/utilities.md"
              ],
              "How To" => [
                  "howto/resnet.md",
