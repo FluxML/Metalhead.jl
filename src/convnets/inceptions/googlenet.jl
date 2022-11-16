@@ -38,7 +38,7 @@ Create an Inception-v1 model (commonly referred to as GoogLeNet)
   - `inchannels`: the number of input channels
   - `nclasses`: the number of output classes
 """
-function googlenet(; dropout_prob = 0.4, inchannels::Integer = 3, nclasses::Integer = 1000, batchnorm::Bool=false, bias::Bool=false)
+function googlenet(; dropout_prob = 0.4, inchannels::Integer = 3, nclasses::Integer = 1000, batchnorm::Bool=false, bias::Bool=true)
     norm_layer = batchnorm ? BatchNorm : identity
     backbone = Chain(conv_norm((7, 7), inchannels, 64, identity; norm_layer = norm_layer, stride = 2, pad = 3, bias = bias)...,
                      MaxPool((3, 3); stride = 2, pad = 1),
@@ -82,7 +82,7 @@ end
 @functor GoogLeNet
 
 function GoogLeNet(; pretrain::Bool = false, inchannels::Integer = 3,
-                   nclasses::Integer = 1000, batchnorm::Bool = false)
+                   nclasses::Integer = 1000, batchnorm::Bool = false, bias::Bool=true)
     layers = googlenet(; inchannels, nclasses)
     if pretrain
         loadpretrain!(layers, "GoogLeNet")
