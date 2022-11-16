@@ -13,6 +13,9 @@ Create an inception module for use in GoogLeNet
   - `red_5x5`: the number of output feature maps for the 5x5 reduction convolution (branch 3)
   - `out_5x5`: the number of output feature maps for the 5x5 convolution (branch 3)
   - `pool_proj`: the number of output feature maps for the pooling projection (branch 4)
+  - `norm_layer`: the normalisation layer used. Note that using `identity` as the normalisation
+  layer will result in no normalisation being applied.
+  - `bias`: set to `true` to use bias in the convolution layers.
 """
 function inceptionblock(inplanes, out_1x1, red_3x3, out_3x3, red_5x5, out_5x5, pool_proj, norm_layer, bias)
     branch1 = Chain(conv_norm((1, 1), inplanes, out_1x1, identity; norm_layer = norm_layer, bias = bias)...)
@@ -37,6 +40,8 @@ Create an Inception-v1 model (commonly referred to as GoogLeNet)
   - `dropout_prob`: the dropout probability in the classifier head. Set to `nothing` to disable dropout.
   - `inchannels`: the number of input channels
   - `nclasses`: the number of output classes
+  - `batchnorm`: set to `true` to include batch normalization after each convolution
+  - `bias`: set to `true` to use bias in the convolution layers
 """
 function googlenet(; dropout_prob = 0.4, inchannels::Integer = 3, nclasses::Integer = 1000, batchnorm::Bool=false, bias::Bool=true)
     norm_layer = batchnorm ? BatchNorm : identity
@@ -69,6 +74,8 @@ Create an Inception-v1 model (commonly referred to as `GoogLeNet`)
 
   - `pretrain`: set to `true` to load the model with pre-trained weights for ImageNet
   - `nclasses`: the number of output classes
+  - `batchnorm`: set to `true` to use batch normalization after each convolution
+  - `bias`: set to `true` to use bias in the convolution layers
 
 !!! warning
     
