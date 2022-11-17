@@ -44,8 +44,8 @@ Create an Inception-v1 model (commonly referred to as GoogLeNet)
   - `bias`: set to `true` to use bias in the convolution layers
 """
 function googlenet(; dropout_prob = 0.4, inchannels::Integer = 3, nclasses::Integer = 1000, batchnorm::Bool=false, bias::Bool=true)
-    norm_layer = batchnorm ? BatchNorm : identity
-    backbone = Chain(conv_norm((7, 7), inchannels, 64, identity; norm_layer = norm_layer, stride = 2, pad = 3, bias = bias)...,
+    norm_layer = batchnorm ? (args...; kwargs...) -> BatchNorm(args...; ϵ = 1.0f-3) : identity
+    backbone = Chain(conv_norm((7, 7), inchannels, 64; norm_layer = norm_layer, stride = 2, pad = 3, bias = bias)...,
                      MaxPool((3, 3); stride = 2, pad = 1),
                      conv_norm((1, 1), 64, 64, identity; norm_layer = norm_layer, bias = bias)...,
                      conv_norm((3, 3), 64, 192, identity; norm_layer = norm_layer, pad = 1, bias = bias)...,
@@ -90,7 +90,7 @@ end
 
 function GoogLeNet(; pretrain::Bool = false, inchannels::Integer = 3,
                    nclasses::Integer = 1000, batchnorm::Bool = false, bias::Bool=true)
-    layers = googlenet(; inchannels, nclasses)
+    layers = googlenet(; inchannels, nclasses, batchnorm, bias)
     if pretrain
         loadpretrain!(layers, "GoogLeNet")
     end
