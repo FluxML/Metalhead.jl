@@ -81,6 +81,8 @@ TensorFlow implementation.
 function basic_conv_bn(kernel_size::Dims{2}, inplanes, outplanes, activation = relu;
                        batchnorm::Bool = true, kwargs...)
     # TensorFlow uses a default epsilon of 1e-3 for BatchNorm
-    norm_layer = batchnorm ? (args...; kwargs...) -> BatchNorm(args...; ϵ = 1.0f-3, kwargs...) : identity
+    norm_layer = batchnorm ?
+                 (args...; kwargs...) -> BatchNorm(args...; ϵ = 1.0f-3, kwargs...) :
+                 identity
     return conv_norm(kernel_size, inplanes, outplanes, activation; norm_layer, kwargs...)
 end
