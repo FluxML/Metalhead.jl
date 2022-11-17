@@ -195,10 +195,10 @@ end
     @testset for bn in [true, false]
         m = GoogLeNet(batchnorm = bn)
         @test size(m(x_224)) == (1000, 1)
-        if GoogLeNet in PRETRAINED_MODELS
-            @test acctest(GoogLeNet(pretrain = true))
+        if (GoogLeNet, bn) in PRETRAINED_MODELS
+            @test acctest(GoogLeNet(batchnorm = bn, pretrain = true))
         else
-            @test_throws ArgumentError GoogLeNet(pretrain = true)
+            @test_throws ArgumentError GoogLeNet(batchnorm = bn, pretrain = true)
         end
         @test gradtest(m, x_224)
         _gc()
