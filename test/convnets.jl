@@ -192,7 +192,7 @@ end
 end
 
 @testset "GoogLeNet" begin
-    @testset bn in [true, false]
+    @testset for bn in [true, false]
         m = GoogLeNet(batchnorm = bn)
         @test size(m(x_224)) == (1000, 1)
         if GoogLeNet in PRETRAINED_MODELS
