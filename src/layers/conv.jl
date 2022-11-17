@@ -75,11 +75,12 @@ TensorFlow implementation.
   - `inplanes`: number of input feature maps
   - `outplanes`: number of output feature maps
   - `activation`: the activation function for the final layer
+  - `batchnorm`: set to `true` to include batch normalization after each convolution
   - `kwargs`: keyword arguments passed to [`conv_norm`](@ref)
 """
 function basic_conv_bn(kernel_size::Dims{2}, inplanes, outplanes, activation = relu;
-                       kwargs...)
+                       batchnorm::Bool = true, kwargs...)
     # TensorFlow uses a default epsilon of 1e-3 for BatchNorm
-    norm_layer = (args...; kwargs...) -> BatchNorm(args...; ϵ = 1.0f-3, kwargs...)
+    norm_layer = batchnorm ? (args...; kwargs...) -> BatchNorm(args...; ϵ = 1.0f-3, kwargs...) : identity
     return conv_norm(kernel_size, inplanes, outplanes, activation; norm_layer, kwargs...)
 end

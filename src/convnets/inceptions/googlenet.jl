@@ -13,18 +13,17 @@ Create an inception module for use in GoogLeNet
   - `red_5x5`: the number of output feature maps for the 5x5 reduction convolution (branch 3)
   - `out_5x5`: the number of output feature maps for the 5x5 convolution (branch 3)
   - `pool_proj`: the number of output feature maps for the pooling projection (branch 4)
-  - `norm_layer`: the normalisation layer used. Note that using `identity` as the normalisation
-  layer will result in no normalisation being applied.
+  - `batchnorm`: set to `true` to include batch normalization after each convolution
   - `bias`: set to `true` to use bias in the convolution layers.
 """
-function inceptionblock(inplanes, out_1x1, red_3x3, out_3x3, red_5x5, out_5x5, pool_proj, norm_layer, bias)
-    branch1 = Chain(conv_norm((1, 1), inplanes, out_1x1, identity; norm_layer = norm_layer, bias = bias)...)
-    branch2 = Chain(conv_norm((1, 1), inplanes, red_3x3, identity; norm_layer = norm_layer, bias = bias)...,
-                    conv_norm((3, 3), red_3x3, out_3x3, identity; norm_layer = norm_layer, bias = bias, pad = 1)...)
-    branch3 = Chain(conv_norm((1, 1), inplanes, red_5x5, identity; norm_layer = norm_layer, bias = bias)...,
-                    conv_norm((5, 5), red_5x5, out_5x5, identity; norm_layer = norm_layer, bias = bias, pad = 2)...)
+function inceptionblock(inplanes, out_1x1, red_3x3, out_3x3, red_5x5, out_5x5, pool_proj, batchnorm, bias)
+    branch1 = Chain(basic_conv_bn((1, 1), inplanes, out_1x1; batchnorm = batchnorm, bias = bias)...)
+    branch2 = Chain(basic_conv_bn((1, 1), inplanes, red_3x3; batchnorm = batchnorm, bias = bias)...,
+                    basic_conv_bn((3, 3), red_3x3, out_3x3; batchnorm = batchnorm, bias = bias, pad = 1)...)
+    branch3 = Chain(basic_conv_bn((1, 1), inplanes, red_5x5; batchnorm = batchnorm, bias = bias)...,
+                    basic_conv_bn((5, 5), red_5x5, out_5x5; batchnorm = batchnorm, bias = bias, pad = 2)...)
     branch4 = Chain(MaxPool((3, 3); stride = 1, pad = 1),
-                    conv_norm((1, 1), inplanes, pool_proj, identity; norm_layer = norm_layer, bias = bias)...)
+                    basic_conv_bn((1, 1), inplanes, pool_proj; batchnorm = batchnorm, bias = bias)...)
     return Parallel(cat_channels,
                     branch1, branch2, branch3, branch4)
 end
@@ -44,23 +43,22 @@ Create an Inception-v1 model (commonly referred to as GoogLeNet)
   - `bias`: set to `true` to use bias in the convolution layers
 """
 function googlenet(; dropout_prob = 0.4, inchannels::Integer = 3, nclasses::Integer = 1000, batchnorm::Bool=false, bias::Bool=true)
-    norm_layer = batchnorm ? (args...; kwargs...) -> BatchNorm(args...; ϵ = 1.0f-3) : identity
-    backbone = Chain(conv_norm((7, 7), inchannels, 64, identity; norm_layer = norm_layer, stride = 2, pad = 3, bias = bias)...,
+    backbone = Chain(basic_conv_bn((7, 7), inchannels, 64; batchnorm = batchnorm, stride = 2, pad = 3, bias = bias)...,
                      MaxPool((3, 3); stride = 2, pad = 1),
-                     conv_norm((1, 1), 64, 64, identity; norm_layer = norm_layer, bias = bias)...,
-                     conv_norm((3, 3), 64, 192, identity; norm_layer = norm_layer, pad = 1, bias = bias)...,
+                     basic_conv_bn((1, 1), 64, 64; batchnorm = batchnorm, bias = bias)...,
+                     basic_conv_bn((3, 3), 64, 192; batchnorm = batchnorm, pad = 1, bias = bias)...,
                      MaxPool((3, 3); stride = 2, pad = 1),
-                     inceptionblock(192, 64, 96, 128, 16, 32, 32, norm_layer, bias),
-                     inceptionblock(256, 128, 128, 192, 32, 96, 64, norm_layer, bias),
+                     inceptionblock(192, 64, 96, 128, 16, 32, 32, batchnorm, bias),
+                     inceptionblock(256, 128, 128, 192, 32, 96, 64, batchnorm, bias),
                      MaxPool((3, 3); stride = 2, pad = 1),
-                     inceptionblock(480, 192, 96, 208, 16, 48, 64, norm_layer, bias),
-                     inceptionblock(512, 160, 112, 224, 24, 64, 64, norm_layer, bias),
-                     inceptionblock(512, 128, 128, 256, 24, 64, 64, norm_layer, bias),
-                     inceptionblock(512, 112, 144, 288, 32, 64, 64, norm_layer, bias),
-                     inceptionblock(528, 256, 160, 320, 32, 128, 128, norm_layer, bias),
+                     inceptionblock(480, 192, 96, 208, 16, 48, 64, batchnorm, bias),
+                     inceptionblock(512, 160, 112, 224, 24, 64, 64, batchnorm, bias),
+                     inceptionblock(512, 128, 128, 256, 24, 64, 64, batchnorm, bias),
+                     inceptionblock(512, 112, 144, 288, 32, 64, 64, batchnorm, bias),
+                     inceptionblock(528, 256, 160, 320, 32, 128, 128, batchnorm, bias),
                      MaxPool((3, 3); stride = 2, pad = 1),
-                     inceptionblock(832, 256, 160, 320, 32, 128, 128, norm_layer, bias),
-                     inceptionblock(832, 384, 192, 384, 48, 128, 128, norm_layer, bias))
+                     inceptionblock(832, 256, 160, 320, 32, 128, 128, batchnorm, bias),
+                     inceptionblock(832, 384, 192, 384, 48, 128, 128, batchnorm, bias))
     return Chain(backbone, create_classifier(1024, nclasses; dropout_prob))
 end
 
