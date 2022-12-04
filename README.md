@@ -37,8 +37,8 @@ julia> ]add Metalhead
 | [ConvNeXt](https://arxiv.org/abs/2201.03545)     | [`ConvNeXt`](https://fluxml.ai/Metalhead.jl/stable/api/reference.html#Metalhead.ConvNeXt)         | N            |
 | [ConvMixer](https://arxiv.org/abs/2201.09792)    | [`ConvMixer`](https://fluxml.ai/Metalhead.jl/stable/api/reference.html#Metalhead.ConvMixer)       | N            |
 
-To contribute new models, see our [contributing docs](https://fluxml.ai/Metalhead.jl/latest/contributing/).
+To contribute new models, see our [contributing docs](https://fluxml.ai/Metalhead.jl/dev/contributing/).
 
 ## Getting Started
 
-You can find the Metalhead.jl getting started guide [here](https://fluxml.ai/Metalhead.jl/latest/tutorials/quickstart/).
+You can find the Metalhead.jl getting started guide [here](https://fluxml.ai/Metalhead.jl/dev/tutorials/quickstart/).
