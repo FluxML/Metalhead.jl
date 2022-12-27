@@ -10,7 +10,22 @@ function UpConvBlock(in_chs::Int, out_chs::Int, kernel = (2, 2))
 		norm = BatchNorm(out_chs, relu))
 end
 
-struct Unet
+"""
+	UNet(inplanes::Integer = 3, outplanes::Integer = 1, init_features::Integer = 32)
+
+	Create a UNet model
+	([reference](https://arxiv.org/abs/1505.04597v1))
+
+	# Arguments
+	- `in_channels`: The number of input channels
+	- `inplanes`: The number of input planes to the network
+	- `outplanes`: The number of output features
+
+!!! warning
+	
+	`UNet` does not currently support pretrained weights.
+"""
+struct UNet
 	encoder::Any
 	decoder::Any
 	upconv::Any
@@ -18,15 +33,14 @@ struct Unet
 	bottleneck::Any
 	final_conv::Any
 end
+@functor UNet
 
-@functor Unet
+function UNet(in_channels::Integer = 3, inplanes::Integer = 32, outplanes::Integer = 1)
 
-function Unet(inplanes::Int = 3, outplanes::Int = 1, init_features::Int = 32)
-
-	features = init_features
+	features = inplanes
 
 	encoder_layers = []
-	append!(encoder_layers, [unet_block(inplanes, features)])
+	append!(encoder_layers, [unet_block(in_channels, features)])
 	append!(encoder_layers, [unet_block(features * 2^i, features * 2^(i + 1)) for i ∈ 0:2])
 
 	encoder = Chain(encoder_layers)
@@ -41,10 +55,10 @@ function Unet(inplanes::Int = 3, outplanes::Int = 1, init_features::Int = 32)
 
 	final_conv = Conv((1, 1), features => outplanes)
 
-	Unet(encoder, decoder, upconv, pool, bottleneck, final_conv)
+	UNet(encoder, decoder, upconv, pool, bottleneck, final_conv)
 end
 
-function (u::Unet)(x::AbstractArray)
+function (u::UNet)(x::AbstractArray)
 	enc_out = []
 
 	out = x
