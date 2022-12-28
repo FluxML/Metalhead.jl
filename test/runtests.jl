@@ -18,12 +18,12 @@ const PRETRAINED_MODELS = [
     (WideResNet, 101),
     (ResNeXt, 50, 32, 4),
     (ResNeXt, 101, 64, 4),
-    (ResNeXt, 101, 32, 8)
+    (ResNeXt, 101, 32, 8),
 ]
 
 function _gc()
     GC.safepoint()
-    GC.gc(true)
+    return GC.gc(true)
 end
 
 function gradtest(model, input)
@@ -43,7 +43,8 @@ end
 const TEST_PATH = download("https://cdn.pixabay.com/photo/2015/05/07/11/02/guitar-756326_960_720.jpg")
 const TEST_IMG = imresize(Images.load(TEST_PATH), (224, 224))
 # CHW -> WHC
-const TEST_X = permutedims(convert(Array{Float32}, channelview(TEST_IMG)), (3, 2, 1)) |> normalize_imagenet
+const TEST_X = permutedims(convert(Array{Float32}, channelview(TEST_IMG)), (3, 2, 1)) |>
+               normalize_imagenet
 
 # ImageNet labels
 const TEST_LBLS = readlines(download("https://raw.githubusercontent.com/pytorch/hub/master/imagenet_classes.txt"))
@@ -58,16 +59,10 @@ x_224 = rand(Float32, 224, 224, 3, 1)
 x_256 = rand(Float32, 256, 256, 3, 1)
 
 # CNN tests
-@testset verbose = true "ConvNets" begin
-    include("convnets.jl")
-end
+@testset verbose=true "ConvNets" begin include("convnets.jl") end
 
 # Mixer tests
-@testset verbose = true "Mixers" begin
-    include("mixers.jl")
-end
+@testset verbose=true "Mixers" begin include("mixers.jl") end
 
 # ViT tests
-@testset verbose = true "ViTs" begin
-    include("vits.jl")
-end
+@testset verbose=true "ViTs" begin include("vits.jl") end

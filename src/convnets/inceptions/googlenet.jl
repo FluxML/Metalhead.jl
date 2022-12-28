@@ -86,7 +86,7 @@ Create an Inception-v1 model (commonly referred to as `GoogLeNet`)
   - `bias`: set to `true` to use bias in the convolution layers
 
 !!! warning
-    
+
     `GoogLeNet` does not currently support pretrained weights.
 
 See also [`Metalhead.googlenet`](@ref).

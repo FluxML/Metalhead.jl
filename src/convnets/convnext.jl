@@ -97,7 +97,7 @@ Creates a ConvNeXt model.
   - `nclasses`: number of output classes
 
 !!! warning
-    
+
     `ConvNeXt` does not currently support pretrained weights.
 
 See also [`Metalhead.convnext`](@ref).

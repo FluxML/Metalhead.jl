@@ -191,7 +191,7 @@ If `outplanes > inplanes`, it maps the input to `outplanes` channels using a 1x1
 layer and zero padding.
 
 !!! warning
-    
+
     This does not currently support the scenario where `inplanes > outplanes`.
 
 # Arguments
@@ -237,7 +237,7 @@ on how to use this function.
 # Arguments
 
   - `stem_type`: The type of stem to be built. One of `[:default, :deep, :deep_tiered]`.
-    
+
       + `:default`: Builds a stem based on the default ResNet stem, which consists of a single
         7x7 convolution with stride 2 and a normalisation layer followed by a 3x3 max pooling
         layer with stride 2.

@@ -2,6 +2,7 @@ module Metalhead
 
 using Flux
 using Flux: Zygote, outputsize
+using Distributions: Normal
 using Functors
 using BSON
 using Artifacts, LazyArtifacts
@@ -10,7 +11,7 @@ using MLUtils
 using PartialFunctions
 using Random
 
-import Functors
+using Functors: Functors
 
 include("utilities.jl")
 
@@ -28,6 +29,8 @@ include("convnets/builders/stages.jl")
 ## AlexNet and VGG
 include("convnets/alexnet.jl")
 include("convnets/vgg.jl")
+## Unet
+include("convnets/unet.jl")
 ## ResNets
 include("convnets/resnets/core.jl")
 include("convnets/resnets/res2net.jl")
@@ -66,7 +69,7 @@ include("vit-based/vit.jl")
 # Load pretrained weights
 include("pretrain.jl")
 
-export AlexNet, VGG, VGG11, VGG13, VGG16, VGG19,
+export AlexNet, VGG, VGG11, VGG13, VGG16, VGG19, UNet,
        ResNet, ResNet18, ResNet34, ResNet50, ResNet101, ResNet152,
        WideResNet, ResNeXt, SEResNet, SEResNeXt, Res2Net, Res2NeXt,
        DenseNet, DenseNet121, DenseNet161, DenseNet169, DenseNet201,
@@ -76,7 +79,7 @@ export AlexNet, VGG, VGG11, VGG13, VGG16, VGG19,
        MLPMixer, ResMLP, gMLP, ViT
 
 # use Flux._big_show to pretty print large models
-for T in (:AlexNet, :VGG, :SqueezeNet, :ResNet, :WideResNet, :ResNeXt,
+for T in (:AlexNet, :VGG, :UNet, :SqueezeNet, :ResNet, :WideResNet, :ResNeXt,
           :SEResNet, :SEResNeXt, :Res2Net, :Res2NeXt, :GoogLeNet, :DenseNet,
           :Inceptionv3, :Inceptionv4, :InceptionResNetv2, :Xception,
           :MobileNetv1, :MobileNetv2, :MobileNetv3, :MNASNet,
