@@ -79,9 +79,3 @@ linear_scheduler(drop_prob::Nothing; depth::Integer) = fill(drop_prob, depth)
 function _checkconfig(config, configs)
     @assert config in configs "Invalid configuration. Must be one of $(sort(collect(configs)))."
 end
-
-# Utility function to be used for generating random normal distribution used for 
-# initializing layer parameters
-function _random_normal(shape...)
-    return Float64.(rand(Normal(0.0f0, 0.02f0), shape...))
-end
