@@ -1,15 +1,56 @@
 function unet_block(in_chs::Int, out_chs::Int, kernel = (3, 3))
     return Chain(;
-                 conv1 = Conv(kernel, in_chs => out_chs; pad = (1, 1),
-                              init = _random_normal),
+                 conv1 = Conv(kernel, in_chs => out_chs; pad = (1, 1)),
                  norm1 = BatchNorm(out_chs, relu),
-                 conv2 = Conv(kernel, out_chs => out_chs; pad = (1, 1),
-                              init = _random_normal),
+                 conv2 = Conv(kernel, out_chs => out_chs; pad = (1, 1)),
                  norm2 = BatchNorm(out_chs, relu))
 end
 
 function upconv_block(in_chs::Int, out_chs::Int, kernel = (2, 2))
-    return ConvTranspose(kernel, in_chs => out_chs; stride = (2, 2), init = _random_normal)
+    return ConvTranspose(kernel, in_chs => out_chs; stride = (2, 2))
+end
+
+function cat_fn(layers...)
+    return cat(layers...; dims = 3)
+end
+
+function unet(in_channels::Integer = 3, out_channels::Integer = in_channels,
+              features::Integer = 32)
+    encoder_conv_layers = []
+    append!(encoder_conv_layers,
+            [unet_block(in_channels, features)])
+
+    append!(encoder_conv_layers,
+            [unet_block(features * 2^i, features * 2^(i + 1)) for i in 0:2])
+
+    encoder_conv = Chain(encoder_conv_layers)
+    encoder_pool = [Chain(encoder_conv[i], MaxPool((2, 2); stride = (2, 2))) for i in 1:4]
+
+    bottleneck = unet_block(features * 8, features * 16)
+    layers = Chain(encoder_conv, bottleneck)
+
+    upconv = Chain([upconv_block(features * 2^(i + 1), features * 2^i)
+                    for i in 0:3])
+
+    concat_layer = Chain([Parallel(cat_fn,
+                                   encoder_pool[i],
+                                   upconv[i])
+                          for i in 1:4])
+
+    decoder_layer = Chain([unet_block(features * 2^(i + 1), features * 2^i) for i in 3:-1:0])
+
+    layers = Chain(layers, decoder_layer)
+
+    decoder = Chain([Chain([
+                               concat_layer[i],
+                               decoder_layer[5 - i]])
+                     for i in 4:-1:1])
+
+    final_conv = Conv((1, 1), features => out_channels, σ)
+
+    decoder = Chain(decoder, final_conv)
+
+    return layers
 end
 
 """
@@ -28,56 +69,14 @@ end
     `UNet` does not currently support pretrained weights.
 """
 struct UNet
-    encoder::Any
-    decoder::Any
-    upconv::Any
-    pool::Any
-    bottleneck::Any
-    final_conv::Any
+    layers::Any
 end
 @functor UNet
 
 function UNet(in_channels::Integer = 3, inplanes::Integer = 32,
               outplanes::Integer = inplanes)
-    features = inplanes
-
-    encoder_layers = []
-    append!(encoder_layers, [unet_block(in_channels, features)])
-    append!(encoder_layers, [unet_block(features * 2^i, features * 2^(i + 1)) for i in 0:2])
-
-    encoder = Chain(encoder_layers)
-
-    decoder = Chain([unet_block(features * 2^(i + 1), features * 2^i) for i in 0:3])
-
-    pool = Chain([MaxPool((2, 2); stride = (2, 2)) for _ in 1:4])
-
-    upconv = Chain([upconv_block(features * 2^(i + 1), features * 2^i) for i in 3:-1:0])
-
-    bottleneck = unet_block(features * 8, features * 16)
-
-    final_conv = Conv((1, 1), features => outplanes)
-
-    return UNet(encoder, decoder, upconv, pool, bottleneck, final_conv)
+    layers = unet(in_channels, inplanes, outplanes)
+    return UNet(layers)
 end
 
-function (u::UNet)(x::AbstractArray)
-    enc_out = []
-
-    out = x
-    for i in 1:4
-        out = u.encoder[i](out)
-        push!(enc_out, out)
-
-        out = u.pool[i](out)
-    end
-
-    out = u.bottleneck(out)
-
-    for i in 4:-1:1
-        out = u.upconv[5 - i](out)
-        out = cat(out, enc_out[i]; dims = 3)
-        out = u.decoder[i](out)
-    end
-
-    return σ(u.final_conv(out))
-end
+(m::UNet)(x::AbstractArray) = m.layers(x)
