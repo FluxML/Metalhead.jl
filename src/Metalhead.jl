@@ -2,7 +2,6 @@ module Metalhead
 
 using Flux
 using Flux: Zygote, outputsize
-using Distributions: Normal
 using Functors
 using BSON
 using Artifacts, LazyArtifacts
