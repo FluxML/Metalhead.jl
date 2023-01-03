@@ -124,7 +124,7 @@ Creates an Inceptionv4 model.
   - `nclasses`: the number of output classes.
 
 !!! warning
-
+    
     `Inceptionv4` does not currently support pretrained weights.
 
 See also [`Metalhead.inceptionv4`](@ref).

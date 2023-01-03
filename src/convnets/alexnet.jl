@@ -42,7 +42,7 @@ Create a `AlexNet`.
   - `nclasses`: the number of output classes
 
 !!! warning
-
+    
     `AlexNet` does not currently support pretrained weights.
 
 See also [`alexnet`](@ref).

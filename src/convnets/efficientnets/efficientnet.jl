@@ -73,7 +73,7 @@ Create an EfficientNet model ([reference](https://arxiv.org/abs/1905.11946v5)).
   - `nclasses`: number of output classes.
 
 !!! warning
-
+    
     EfficientNet does not currently support pretrained weights.
 
 See also [`Metalhead.efficientnet`](@ref).

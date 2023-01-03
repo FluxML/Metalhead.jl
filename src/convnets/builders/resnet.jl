@@ -5,7 +5,7 @@
 Creates a generic ResNet-like model.
 
 !!! info
-
+    
     This is a very generic, flexible but low level function that can be used to create any of the ResNet
     variants. For a more user friendly function, see [`Metalhead.resnet`](@ref).
 

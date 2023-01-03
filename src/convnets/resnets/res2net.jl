@@ -17,7 +17,7 @@ Creates a Res2Net model with the specified depth, scale, and base width.
   - `nclasses`: the number of output classes
 
 !!! warning
-
+    
     `Res2Net` does not currently support pretrained weights.
 
 Advanced users who want more configuration options will be better served by using [`resnet`](@ref).
@@ -64,7 +64,7 @@ Creates a Res2NeXt model with the specified depth, scale, base width and cardina
   - `nclasses`: the number of output classes
 
 !!! warning
-
+    
     `Res2NeXt` does not currently support pretrained weights.
 
 Advanced users who want more configuration options will be better served by using [`resnet`](@ref).

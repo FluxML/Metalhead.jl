@@ -12,7 +12,7 @@ Creates a SEResNet model with the specified depth.
   - `nclasses`: the number of output classes
 
 !!! warning
-
+    
     `SEResNet` does not currently support pretrained weights.
 
 Advanced users who want more configuration options will be better served by using [`resnet`](@ref).
@@ -55,7 +55,7 @@ Creates a SEResNeXt model with the specified depth, cardinality, and base width.
   - `nclasses`: the number of output classes
 
 !!! warning
-
+    
     `SEResNeXt` does not currently support pretrained weights.
 
 Advanced users who want more configuration options will be better served by using [`resnet`](@ref).

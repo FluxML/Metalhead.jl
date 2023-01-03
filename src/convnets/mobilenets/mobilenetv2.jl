@@ -58,7 +58,7 @@ Create a MobileNetv2 model with the specified configuration.
   - `nclasses`: The number of output classes
 
 !!! warning
-
+    
     `MobileNetv2` does not currently support pretrained weights.
 
 See also [`Metalhead.mobilenetv2`](@ref).

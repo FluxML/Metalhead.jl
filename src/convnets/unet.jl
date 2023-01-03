@@ -1,5 +1,5 @@
 function unet_block(in_chs::Int, out_chs::Int, kernel = (3, 3))
-	return Chain(; conv1 = Conv(kernel, in_chs => out_chs; pad = (1, 1)),
+	return Chain(conv1 = Conv(kernel, in_chs => out_chs; pad = (1, 1)),
 		norm1 = BatchNorm(out_chs, relu),
 		conv2 = Conv(kernel, out_chs => out_chs; pad = (1, 1)),
 		norm2 = BatchNorm(out_chs, relu))
@@ -50,17 +50,13 @@ end
 
 """
 	UNet(in_channels::Integer = 3, inplanes::Integer = 32, outplanes::Integer = inplanes)
-
 	Create a UNet model
 	([reference](https://arxiv.org/abs/1505.04597v1))
-
 	# Arguments
 	- `in_channels`: The number of input channels
 	- `inplanes`: The number of input features to the network
 	- `outplanes`: The number of output features
-
 !!! warning
-
 	`UNet` does not currently support pretrained weights.
 """
 struct UNet

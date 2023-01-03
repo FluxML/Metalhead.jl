@@ -76,7 +76,7 @@ Create an EfficientNetv2 model ([reference](https://arxiv.org/abs/2104.00298)).
   - `nclasses`: number of output classes
 
 !!! warning
-
+    
     `EfficientNetv2` does not currently support pretrained weights.
 
 See also [`efficientnet`](#).

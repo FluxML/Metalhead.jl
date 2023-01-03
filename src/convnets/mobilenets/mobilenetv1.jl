@@ -52,7 +52,7 @@ Create a MobileNetv1 model with the baseline configuration
   - `nclasses`: The number of output classes
 
 !!! warning
-
+    
     `MobileNetv1` does not currently support pretrained weights.
 
 See also [`Metalhead.mobilenetv1`](@ref).
