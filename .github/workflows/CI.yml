@@ -33,6 +33,7 @@ jobs:
           - x64
         suite:
           - '["AlexNet", "VGG"]'
+          - '["UNet"]'
           - '["GoogLeNet", "SqueezeNet", "MobileNets"]'
           - '"EfficientNet"'
           - 'r"/*/ResNet*"'
