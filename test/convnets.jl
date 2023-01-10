@@ -347,3 +347,12 @@ end
         _gc()
     end
 end
+
+@testset "UNet" begin
+    encoder = backbone(ResNet(18))
+    model = UNet(encoder; inputsize = (256, 256, 3, 1), outplanes = 10)
+    @test size(model(x_256)) == (256, 256, 10, 1)
+    @test_throws ArgumentError AlexNet(pretrain = true)
+    @test gradtest(model, x_256)
+    _gc()
+end
