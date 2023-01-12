@@ -1,21 +1,21 @@
 function PixelShuffleICNR(inplanes, outplanes; r = 2)
-    return Chain(basic_conv_bn((1, 1), inplanes, outplanes * (r^2)),
+    return Chain(Chain(basic_conv_bn((1, 1), inplanes, outplanes * (r^2)...)),
                  Flux.PixelShuffle(r))
 end
 
 function UNetCombineLayer(inplanes, outplanes)
-    return Chain(basic_conv_bn((3, 3), inplanes, outplanes; pad = 1),
-                 basic_conv_bn((3, 3), outplanes, outplanes; pad = 1))
+    return Chain(Chain(basic_conv_bn((3, 3), inplanes, outplanes; pad = 1)...),
+                 Chain(basic_conv_bn((3, 3), outplanes, outplanes; pad = 1)...))
 end
 
 function UNetMiddleBlock(inplanes)
-    return Chain(basic_conv_bn((3, 3), inplanes, 2 * inplanes; pad = 1),
-                 basic_conv_bn((3, 3), 2 * inplanes, inplanes; pad = 1))
+    return Chain(Chain(basic_conv_bn((3, 3), inplanes, 2 * inplanes; pad = 1)...),
+                 Chain(basic_conv_bn((3, 3), 2 * inplanes, inplanes; pad = 1)...))
 end
 
 function UNetFinalBlock(inplanes, outplanes)
     return Chain(basicblock(inplanes, inplanes; reduction_factor = 1),
-                 basic_conv_bn((1, 1), inplanes, outplanes))
+                 Chain(basic_conv_bn((1, 1), inplanes, outplanes)...))
 end
 
 function unetlayers(layers, sz; outplanes = nothing, skip_upscale = 0,
