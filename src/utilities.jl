@@ -82,3 +82,4 @@ end
 
 # Utility function to return Iterator over layers, adopted from FastAI.jl
 iterlayers(m::Chain) = Iterators.flatten(iterlayers(l) for l in m.layers)
+iterlayers(m) = (m,)
