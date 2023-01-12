@@ -350,7 +350,7 @@ end
 
 @testset "UNet" begin
     encoder = Metalhead.backbone(ResNet(18))
-    model = UNet(encoder; inputsize = (256, 256, 3, 1), outchannels = 10)
+    model = UNet(encoder, (256, 256, 3, 1), 10)
     @test size(model(x_256)) == (256, 256, 10, 1)
     @test gradtest(model, x_256)
     _gc()

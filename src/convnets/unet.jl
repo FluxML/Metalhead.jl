@@ -111,9 +111,9 @@ struct UNet
 end
 @functor UNet
 
-function UNet(backbone::Vector{Any}; pretrain::Bool = false, inputsize::NTuple{4, Integer},
-              outchannels::Integer = 3)
-    layers = unet(backbone, inputsize, outchannels)
+function UNet(backbone, inputsize::NTuple{4, Integer}, outplanes::Integer = 3;
+              pretrain::Bool = false)
+    layers = unet(backbone, inputsize, outplanes)
     if pretrain
         loadpretrain!(layers, string("UNet"))
     end
