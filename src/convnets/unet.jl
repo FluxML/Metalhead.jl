@@ -54,7 +54,7 @@ function UNetBlock(m_child, inplanes, midplanes, outplanes = 2 * inplanes)
 end
 
 """
-    unet(backbone::Vector{Any}; inputsize, outplanes::Integer = 3,
+    unet(backbone; inputsize::NTuple{4, Integer}, outplanes::Integer = 3,
     	final::Any = UNetFinalBlock, fdownscale::Integer = 0, kwargs...)
 
 Creates a UNet model with specified backbone. Backbone of Any Metalhead model
@@ -71,7 +71,7 @@ can be used as encoder.
     - `final`: final block as described in original paper
     - `fdownscale`: downscale factor
 """
-function unet(backbone::Vector{Any}, inputsize, outplanes::Integer,
+function unet(backbone, inputsize::NTuple{4, Integer}, outplanes::Integer,
               final::Any = UNetFinalBlock, fdownscale::Integer = 0, kwargs...)
     backbonelayers = collect(iterlayers(backbone))
     layers = unetlayers(backbonelayers, inputsize; m_middle = UNetMiddleBlock,
@@ -84,8 +84,8 @@ function unet(backbone::Vector{Any}, inputsize, outplanes::Integer,
 end
 
 """
-    UNet(backbone::Vector{Any}; pretrain::Bool = false, inputsize::NTuple{4, Integer}, 
-    outchannels::Integer = 3)
+    UNet(backbone, inputsize::NTuple{4, Integer}, outplanes::Integer = 3;
+        pretrain::Bool = false)
 
 Creates a UNet model with specified backbone. Backbone of Any Metalhead model can be used as
 encoder.
@@ -96,9 +96,9 @@ encoder.
     - `backbone`: The backbone layers to be used in encoder. 
     	For example, `Metalhead.backbone(Metalhead.ResNet(18))` can be passed to instantiate a UNet with layers of
     	resnet18 as encoder.
-    - `pretrain`: Whether to load the pre-trained weights for ImageNet
     - `inputsize`: size of input image
-    - `outchannels`: number of output channels.
+    - `outplanes`: number of output feature planes.
+    - `pretrain`: Whether to load the pre-trained weights for ImageNet
 
 !!! warning
 
