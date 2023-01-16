@@ -1,19 +1,19 @@
-function PixelShuffleICNR(inplanes, outplanes; r = 2)
+function pixel_shuffle_icnr(inplanes, outplanes; r = 2)
     return Chain(Chain(basic_conv_bn((1, 1), inplanes, outplanes * (r^2)...)),
                  Flux.PixelShuffle(r))
 end
 
-function UNetCombineLayer(inplanes, outplanes)
+function unet_combine_layer(inplanes, outplanes)
     return Chain(Chain(basic_conv_bn((3, 3), inplanes, outplanes; pad = 1)...),
                  Chain(basic_conv_bn((3, 3), outplanes, outplanes; pad = 1)...))
 end
 
-function UNetMiddleBlock(inplanes)
+function unet_middle_block(inplanes)
     return Chain(Chain(basic_conv_bn((3, 3), inplanes, 2 * inplanes; pad = 1)...),
                  Chain(basic_conv_bn((3, 3), 2 * inplanes, inplanes; pad = 1)...))
 end
 
-function UNetFinalBlock(inplanes, outplanes)
+function unet_final_block(inplanes, outplanes)
     return Chain(basicblock(inplanes, inplanes; reduction_factor = 1),
                  Chain(basic_conv_bn((1, 1), inplanes, outplanes)...))
 end
@@ -40,22 +40,22 @@ function unetlayers(layers, sz; outplanes = nothing, skip_upscale = 0,
         midplanes = outsz[end - 1]
         outplanes = isnothing(outplanes) ? inplanes : outplanes
 
-        return UNetBlock(Chain(layer, childunet),
-                         inplanes, midplanes, outplanes)
+        return unet_block(Chain(layer, childunet),
+                          inplanes, midplanes, outplanes)
     end
 end
 
-function UNetBlock(m_child, inplanes, midplanes, outplanes = 2 * inplanes)
+function unet_block(m_child, inplanes, midplanes, outplanes = 2 * inplanes)
     return Chain(SkipConnection(Chain(m_child,
-                                      PixelShuffleICNR(midplanes, midplanes)),
+                                      pixel_shuffle_icnr(midplanes, midplanes)),
                                 Parallel(cat_channels, identity, BatchNorm(inplanes))),
-                 xs -> relu.(xs),
-                 UNetCombineLayer(inplanes + midplanes, outplanes))
+                 relu,
+                 unet_combine_layer(inplanes + midplanes, outplanes))
 end
 
 """
-    unet(backbone; inputsize::NTuple{4, Integer}, outplanes::Integer = 3,
-    	final::Any = UNetFinalBlock, fdownscale::Integer = 0, kwargs...)
+    build_unet(backbone, imgdims, outplanes::Integer,
+    final::Any = unet_final_block, fdownscale::Integer = 0, kwargs...)
 
 Creates a UNet model with specified backbone. Backbone of Any Metalhead model
 can be used as encoder.
@@ -71,21 +71,21 @@ can be used as encoder.
     - `final`: final block as described in original paper
     - `fdownscale`: downscale factor
 """
-function unet(backbone, inputsize::NTuple{4, Integer}, outplanes::Integer,
-              final::Any = UNetFinalBlock, fdownscale::Integer = 0, kwargs...)
-    backbonelayers = collect(iterlayers(backbone))
-    layers = unetlayers(backbonelayers, inputsize; m_middle = UNetMiddleBlock,
+function build_unet(backbone, imgdims, outplanes::Integer,
+                    final::Any = unet_final_block, fdownscale::Integer = 0, kwargs...)
+    backbonelayers = collect(flatten_chains(backbone))
+    layers = unetlayers(backbonelayers, imgdims; m_middle = unet_middle_block,
                         skip_upscale = fdownscale, kwargs...)
 
-    outsz = Flux.outputsize(layers, inputsize)
+    outsz = Flux.outputsize(layers, imgdims)
     layers = Chain(layers, final(outsz[end - 1], outplanes))
 
     return layers
 end
 
 """
-    UNet(backbone, inputsize::NTuple{4, Integer}, outplanes::Integer = 3;
-        pretrain::Bool = false)
+UNet(backbone = Metalhead.backbone(DenseNet(122)), imsize::Dims{2} = (256, 256),
+inchannels::Integer = 3, outplanes::Integer = 3; pretrain::Bool = false)
 
 Creates a UNet model with specified backbone. Backbone of Any Metalhead model can be used as
 encoder.
@@ -96,7 +96,8 @@ encoder.
     - `backbone`: The backbone layers to be used in encoder. 
     	For example, `Metalhead.backbone(Metalhead.ResNet(18))` can be passed to instantiate a UNet with layers of
     	resnet18 as encoder.
-    - `inputsize`: size of input image
+    - `imsize`: size of input image
+    - `inchannels`: number of channels in input image
     - `outplanes`: number of output feature planes.
     - `pretrain`: Whether to load the pre-trained weights for ImageNet
 
@@ -111,9 +112,9 @@ struct UNet
 end
 @functor UNet
 
-function UNet(backbone, inputsize::NTuple{4, Integer}, outplanes::Integer = 3;
-              pretrain::Bool = false)
-    layers = unet(backbone, inputsize, outplanes)
+function UNet(backbone = Metalhead.backbone(DenseNet(122)), imsize::Dims{2} = (256, 256),
+              inchannels::Integer = 3, outplanes::Integer = 3; pretrain::Bool = false)
+    layers = build_unet(backbone, (imsize..., inchannels, 1), outplanes)
     if pretrain
         loadpretrain!(layers, string("UNet"))
     end

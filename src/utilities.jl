@@ -80,6 +80,18 @@ function _checkconfig(config, configs)
     @assert config in configs "Invalid configuration. Must be one of $(sort(collect(configs)))."
 end
 
-# Utility function to return Iterator over layers, adopted from FastAI.jl
-iterlayers(m::Chain) = Iterators.flatten(iterlayers(l) for l in m.layers)
-iterlayers(m) = (m,)
+
+# adopted from FastAI.jl
+"""
+The flatten_chains function takes in a single argument m, which can be of `Any` type.
+If the input m is of type `Chain`, the function returns an iterator that recursively flattens 
+the layers of the input Chain object and all its sub-layers. 
+It does this by calling the flatten_chains function on each element of m.layers and 
+passing it into the Iterators.flatten function, which flatten the layers into a single iterator.
+If the input m is not of type Chain, the function returns a tuple containing the single input m.
+This function can be useful when you want to traverse nested layers of a Chain object and flatten 
+them into a single iterator.
+"""
+flatten_chains(m::Chain) = Iterators.flatten(flatten_chains(l) for l in m.layers)
+flatten_chains(m) = (m,)
+
