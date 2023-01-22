@@ -55,7 +55,7 @@ end
 
 """
     unet(encoder_backbone, imgdims, outplanes::Integer, final::Any = unet_final_block,
-         fdownscale::Integer = 0, kwargs...)
+         fdownscale::Integer = 0)
 
 Creates a UNet model with specified convolutional backbone. 
 Backbone of any Metalhead ResNet-like model can be used as encoder 
