@@ -54,8 +54,8 @@ function unetlayers(layers, sz; outplanes = nothing, skip_upscale = 0,
 end
 
 """
-    build_unet(backbone, imgdims, outplanes::Integer,
-    final::Any = unet_final_block, fdownscale::Integer = 0, kwargs...)
+    unet(encoder_backbone, imgdims, outplanes::Integer, final::Any = unet_final_block,
+         fdownscale::Integer = 0, kwargs...)
 
 Creates a UNet model with specified convolutional backbone. 
 Backbone of any Metalhead ResNet-like model can be used as encoder 
@@ -63,7 +63,7 @@ Backbone of any Metalhead ResNet-like model can be used as encoder
 
 # Arguments
 
-    - `backbone`: The backbone layers to be used in encoder. 
+    - `encoder_backbone`: The backbone layers of specified model to be used as encoder.
     	For example, `Metalhead.backbone(Metalhead.ResNet(18))` can be passed 
     	to instantiate a UNet with layers of resnet18 as encoder.
     - `inputsize`: size of input image
@@ -71,11 +71,11 @@ Backbone of any Metalhead ResNet-like model can be used as encoder
     - `final`: final block as described in original paper
     - `fdownscale`: downscale factor
 """
-function build_unet(backbone, imgdims, outplanes::Integer,
-                    final::Any = unet_final_block, fdownscale::Integer = 0, kwargs...)
-    backbonelayers = collect(flatten_chains(backbone))
+function unet(encoder_backbone, imgdims, outplanes::Integer,
+              final::Any = unet_final_block, fdownscale::Integer = 0)
+    backbonelayers = collect(flatten_chains(encoder_backbone))
     layers = unetlayers(backbonelayers, imgdims; m_middle = unet_middle_block,
-                        skip_upscale = fdownscale, kwargs...)
+                        skip_upscale = fdownscale)
 
     outsz = Flux.outputsize(layers, imgdims)
     layers = Chain(layers, final(outsz[end - 1], outplanes))
@@ -84,8 +84,8 @@ function build_unet(backbone, imgdims, outplanes::Integer,
 end
 
 """
-UNet(imsize::Dims{2} = (256, 256), inchannels::Integer = 3, outplanes::Integer = 3,
-backbone = Metalhead.backbone(DenseNet(121)); pretrain::Bool = false)
+    UNet(imsize::Dims{2} = (256, 256), inchannels::Integer = 3, outplanes::Integer = 3,
+         encoder_backbone = Metalhead.backbone(DenseNet(121)); pretrain::Bool = false)
 
 Creates a UNet model with an encoder built of specified backbone. 
 By default it uses [`DenseNet`](@ref) backbone, but any ResNet-like Metalhead model can be used for the encoder
@@ -96,7 +96,7 @@ By default it uses [`DenseNet`](@ref) backbone, but any ResNet-like Metalhead mo
     - `imsize`: size of input image
     - `inchannels`: number of channels in input image
     - `outplanes`: number of output feature planes.
-    - `backbone`: The backbone layers to be used in encoder. 
+    - `encoder_backbone`: The backbone layers of specified model to be used as encoder. 
     	For example, `Metalhead.backbone(Metalhead.ResNet(18))` can be passed to instantiate a UNet with layers of
     	resnet18 as encoder.
     - `pretrain`: Whether to load the pre-trained weights for ImageNet
@@ -113,8 +113,8 @@ end
 @functor UNet
 
 function UNet(imsize::Dims{2} = (256, 256), inchannels::Integer = 3, outplanes::Integer = 3,
-              backbone = Metalhead.backbone(DenseNet(121)); pretrain::Bool = false)
-    layers = build_unet(backbone, (imsize..., inchannels, 1), outplanes)
+              encoder_backbone = Metalhead.backbone(DenseNet(121)); pretrain::Bool = false)
+    layers = unet(encoder_backbone, (imsize..., inchannels, 1), outplanes)
     
     if pretrain
         loadpretrain!(layers, string("UNet"))
