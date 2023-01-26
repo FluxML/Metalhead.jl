@@ -105,7 +105,7 @@ Creates a UNet model with an encoder built of specified backbone. By default it 
 
     `UNet` does not currently support pretrained weights.
 
-See also [`Metalhead.UNet`](@ref).
+See also [`Metalhead.unet`](@ref).
 """
 struct UNet
     layers::Any
