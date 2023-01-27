@@ -40,6 +40,7 @@ jobs:
           - '[r"Res2Net", r"Res2NeXt"]'
           - '"Inception"'
           - '"DenseNet"'
+          - '"UNet"'
           - '["ConvNeXt", "ConvMixer"]'
           - 'r"Mixers"'
           - 'r"ViTs"'

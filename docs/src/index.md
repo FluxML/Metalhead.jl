@@ -36,6 +36,7 @@ julia> ]add Metalhead
 | [ViT](https://arxiv.org/abs/2010.11929)                | [`ViT`](@ref)               | N            |
 | [ConvNeXt](https://arxiv.org/abs/2201.03545)           | [`ConvNeXt`](@ref)          | N            |
 | [ConvMixer](https://arxiv.org/abs/2201.09792)          | [`ConvMixer`](@ref)         | N            |
+| [UNet](https://arxiv.org/abs/1505.04597v1)             | [`UNet`](@ref)              | N            |
 
 To contribute new models, see our [contributing docs](@ref Contributing-to-Metalhead.jl).
 

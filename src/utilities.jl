@@ -79,3 +79,14 @@ linear_scheduler(drop_prob::Nothing; depth::Integer) = fill(drop_prob, depth)
 function _checkconfig(config, configs)
     @assert config in configs "Invalid configuration. Must be one of $(sort(collect(configs)))."
 end
+
+"""
+    flatten_chains(m::Chain)
+    flatten_chains(m)
+    
+Convenience function for traversing nested layers of a Chain object and flatten them 
+into a single iterator.
+"""
+flatten_chains(m::Chain) = Iterators.flatten(flatten_chains(l) for l in m.layers)
+flatten_chains(m) = (m,)
+

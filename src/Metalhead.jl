@@ -53,6 +53,7 @@ include("convnets/densenet.jl")
 include("convnets/squeezenet.jl")
 include("convnets/convnext.jl")
 include("convnets/convmixer.jl")
+include("convnets/unet.jl")
 
 # Mixers
 include("mixers/core.jl")
@@ -73,7 +74,7 @@ export AlexNet, VGG, VGG11, VGG13, VGG16, VGG19,
        GoogLeNet, Inception3, Inceptionv3, Inceptionv4, InceptionResNetv2, Xception,
        SqueezeNet, MobileNetv1, MobileNetv2, MobileNetv3, MNASNet,
        EfficientNet, EfficientNetv2, ConvMixer, ConvNeXt,
-       MLPMixer, ResMLP, gMLP, ViT
+       MLPMixer, ResMLP, gMLP, ViT, UNet
 
 # use Flux._big_show to pretty print large models
 for T in (:AlexNet, :VGG, :SqueezeNet, :ResNet, :WideResNet, :ResNeXt,
@@ -81,7 +82,7 @@ for T in (:AlexNet, :VGG, :SqueezeNet, :ResNet, :WideResNet, :ResNeXt,
           :Inceptionv3, :Inceptionv4, :InceptionResNetv2, :Xception,
           :MobileNetv1, :MobileNetv2, :MobileNetv3, :MNASNet,
           :EfficientNet, :EfficientNetv2, :ConvMixer, :ConvNeXt,
-          :MLPMixer, :ResMLP, :gMLP, :ViT)
+          :MLPMixer, :ResMLP, :gMLP, :ViT, :UNet)
     @eval Base.show(io::IO, ::MIME"text/plain", model::$T) = _maybe_big_show(io, model)
 end
 
