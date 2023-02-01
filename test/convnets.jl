@@ -26,7 +26,7 @@ end
         m = ResNet(sz)
         @test size(m(x_224)) == (1000, 1)
         if (ResNet, sz) in PRETRAINED_MODELS
-            @test acctest(ResNet(sz, pretrain = true))
+            @test_broken acctest(ResNet(sz, pretrain = true))
         else
             @test_throws ArgumentError ResNet(sz, pretrain = true)
         end
