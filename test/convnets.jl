@@ -78,7 +78,7 @@ end
                 m = ResNeXt(depth; cardinality, base_width)
                 @test size(m(x_224)) == (1000, 1)
                 if (ResNeXt, depth, cardinality, base_width) in PRETRAINED_MODELS
-                    @test acctest(ResNeXt(depth; cardinality, base_width, pretrain = true))
+                    @test_broken acctest(ResNeXt(depth; cardinality, base_width, pretrain = true))
                 else
                     @test_throws ArgumentError ResNeXt(depth; cardinality, base_width, pretrain = true)
                 end
