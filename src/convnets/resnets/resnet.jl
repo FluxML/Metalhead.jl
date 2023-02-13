@@ -60,7 +60,7 @@ function WideResNet(depth::Integer; pretrain::Bool = false, inchannels::Integer 
     _checkconfig(depth, keys(LRESNET_CONFIGS))
     layers = resnet(LRESNET_CONFIGS[depth]...; base_width = 128, inchannels, nclasses)
     if pretrain
-        loadpretrain!(layers, string("WideResNet", depth))
+        loadpretrain!(layers, string("wideresnet", depth))
     end
     return WideResNet(layers)
 end
