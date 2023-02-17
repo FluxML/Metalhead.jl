@@ -1,6 +1,6 @@
 name = "Metalhead"
 uuid = "dbeba491-748d-5e0e-a39e-b530a07fa0cc"
-version = "0.7.3"
+version = "0.7.4"
 
 [deps]
 Artifacts = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
@@ -16,8 +16,8 @@ Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 [compat]
 BSON = "0.3.2"
 Flux = "0.13"
-Functors = "0.2"
-MLUtils = "0.2.6"
+Functors = "0.2, 0.3, 0.4"
+MLUtils = "0.2.10, 0.3, 0.4"
 NNlib = "0.7.34, 0.8"
 julia = "1.6"
 
