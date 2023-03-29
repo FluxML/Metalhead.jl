@@ -67,11 +67,12 @@ include("vit-based/vit.jl")
 # Load pretrained weights
 include("pretrain.jl")
 
-export AlexNet, VGG, VGG11, VGG13, VGG16, VGG19,
-       ResNet, ResNet18, ResNet34, ResNet50, ResNet101, ResNet152,
+export AlexNet, 
+       VGG,
+       ResNet,
        WideResNet, ResNeXt, SEResNet, SEResNeXt, Res2Net, Res2NeXt,
-       DenseNet, DenseNet121, DenseNet161, DenseNet169, DenseNet201,
-       GoogLeNet, Inception3, Inceptionv3, Inceptionv4, InceptionResNetv2, Xception,
+       DenseNet,
+       GoogLeNet, Inceptionv3, Inceptionv4, InceptionResNetv2, Xception,
        SqueezeNet, MobileNetv1, MobileNetv2, MobileNetv3, MNASNet,
        EfficientNet, EfficientNetv2, ConvMixer, ConvNeXt,
        MLPMixer, ResMLP, gMLP, ViT, UNet
