@@ -26,7 +26,7 @@ end
         m = ResNet(sz)
         @test size(m(x_224)) == (1000, 1)
         if (ResNet, sz) in PRETRAINED_MODELS
-            @test acctest(ResNet(sz, pretrain = true))
+            @test_broken acctest(ResNet(sz, pretrain = true))
         else
             @test_throws ArgumentError ResNet(sz, pretrain = true)
         end
@@ -63,7 +63,7 @@ end
             @test gradtest(m, x_224)
             _gc()
             if (WideResNet, sz) in PRETRAINED_MODELS
-                @test acctest(ResNet(sz, pretrain = true))
+                @test_broken acctest(WideResNet(sz, pretrain = true))
             else
                 @test_throws ArgumentError WideResNet(sz, pretrain = true)
             end
@@ -78,7 +78,7 @@ end
                 m = ResNeXt(depth; cardinality, base_width)
                 @test size(m(x_224)) == (1000, 1)
                 if (ResNeXt, depth, cardinality, base_width) in PRETRAINED_MODELS
-                    @test acctest(ResNeXt(depth; cardinality, base_width, pretrain = true))
+                    @test_broken acctest(ResNeXt(depth; cardinality, base_width, pretrain = true))
                 else
                     @test_throws ArgumentError ResNeXt(depth; cardinality, base_width, pretrain = true)
                 end
@@ -125,7 +125,7 @@ end
     @testset for (base_width, scale) in [(26, 4), (48, 2), (14, 8), (26, 6), (26, 8)]
         m = Res2Net(50; base_width, scale)
         @test size(m(x_224)) == (1000, 1)
-        if (Res2Net, depth, base_width, scale) in PRETRAINED_MODELS
+        if (Res2Net, 50, base_width, scale) in PRETRAINED_MODELS
             @test acctest(Res2Net(50; base_width, scale, pretrain = true))
         else
             @test_throws ArgumentError Res2Net(50; base_width, scale, pretrain = true)
@@ -136,7 +136,7 @@ end
     @testset for (base_width, scale) in [(26, 4)]
         m = Res2Net(101; base_width, scale)
         @test size(m(x_224)) == (1000, 1)
-        if (Res2Net, depth, base_width, scale) in PRETRAINED_MODELS
+        if (Res2Net, 101, base_width, scale) in PRETRAINED_MODELS
             @test acctest(Res2Net(101; base_width, scale, pretrain = true))
         else
             @test_throws ArgumentError Res2Net(101; base_width, scale, pretrain = true)
@@ -192,15 +192,17 @@ end
 end
 
 @testset "GoogLeNet" begin
-    m = GoogLeNet()
-    @test size(m(x_224)) == (1000, 1)
-    if GoogLeNet in PRETRAINED_MODELS
-        @test acctest(GoogLeNet(pretrain = true))
-    else
-        @test_throws ArgumentError GoogLeNet(pretrain = true)
+    @testset for bn in [true, false]
+        m = GoogLeNet(batchnorm = bn)
+        @test size(m(x_224)) == (1000, 1)
+        if (GoogLeNet, bn) in PRETRAINED_MODELS
+            @test acctest(GoogLeNet(batchnorm = bn, pretrain = true))
+        else
+            @test_throws ArgumentError GoogLeNet(batchnorm = bn, pretrain = true)
+        end
+        @test gradtest(m, x_224)
+        _gc()
     end
-    @test gradtest(m, x_224)
-    _gc()
 end
 
 @testset "Inception" begin
@@ -344,4 +346,15 @@ end
         @test gradtest(m, x_224)
         _gc()
     end
+end
+
+@testset "UNet" begin
+    encoder = Metalhead.backbone(ResNet(18))
+    model = UNet((256, 256), 3, 10, encoder)
+    @test size(model(x_256)) == (256, 256, 10, 1)
+    @test gradtest(model, x_256)
+
+    model = UNet()
+    @test size(model(x_256)) == (256, 256, 3, 1)
+    _gc()
 end

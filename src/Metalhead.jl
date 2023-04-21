@@ -53,6 +53,7 @@ include("convnets/densenet.jl")
 include("convnets/squeezenet.jl")
 include("convnets/convnext.jl")
 include("convnets/convmixer.jl")
+include("convnets/unet.jl")
 
 # Mixers
 include("mixers/core.jl")
@@ -66,14 +67,15 @@ include("vit-based/vit.jl")
 # Load pretrained weights
 include("pretrain.jl")
 
-export AlexNet, VGG, VGG11, VGG13, VGG16, VGG19,
-       ResNet, ResNet18, ResNet34, ResNet50, ResNet101, ResNet152,
+export AlexNet, 
+       VGG,
+       ResNet,
        WideResNet, ResNeXt, SEResNet, SEResNeXt, Res2Net, Res2NeXt,
-       DenseNet, DenseNet121, DenseNet161, DenseNet169, DenseNet201,
-       GoogLeNet, Inception3, Inceptionv3, Inceptionv4, InceptionResNetv2, Xception,
+       DenseNet,
+       GoogLeNet, Inceptionv3, Inceptionv4, InceptionResNetv2, Xception,
        SqueezeNet, MobileNetv1, MobileNetv2, MobileNetv3, MNASNet,
        EfficientNet, EfficientNetv2, ConvMixer, ConvNeXt,
-       MLPMixer, ResMLP, gMLP, ViT
+       MLPMixer, ResMLP, gMLP, ViT, UNet
 
 # use Flux._big_show to pretty print large models
 for T in (:AlexNet, :VGG, :SqueezeNet, :ResNet, :WideResNet, :ResNeXt,
@@ -81,7 +83,7 @@ for T in (:AlexNet, :VGG, :SqueezeNet, :ResNet, :WideResNet, :ResNeXt,
           :Inceptionv3, :Inceptionv4, :InceptionResNetv2, :Xception,
           :MobileNetv1, :MobileNetv2, :MobileNetv3, :MNASNet,
           :EfficientNet, :EfficientNetv2, :ConvMixer, :ConvNeXt,
-          :MLPMixer, :ResMLP, :gMLP, :ViT)
+          :MLPMixer, :ResMLP, :gMLP, :ViT, :UNet)
     @eval Base.show(io::IO, ::MIME"text/plain", model::$T) = _maybe_big_show(io, model)
 end
 
