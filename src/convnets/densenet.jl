@@ -1,5 +1,5 @@
 """
-    dense_bottleneck(inplanes, outplanes; expansion=4)
+    dense_bottleneck(inplanes, growth_rate)
 
 Create a Densenet bottleneck layer
 ([reference](https://arxiv.org/abs/1608.06993)).
@@ -10,7 +10,7 @@ Create a Densenet bottleneck layer
   - `outplanes`: number of output feature maps on bottleneck branch
     (and scaling factor for inner feature maps; see ref)
 """
-function dense_bottleneck(inplanes::Int, outplanes::Int; expansion::Int = 4)
+function dense_bottleneck(inplanes::Integer, outplanes::Integer; expansion::Integer = 4)
     return SkipConnection(Chain(conv_norm((1, 1), inplanes, expansion * outplanes;
                                           revnorm = true)...,
                                 conv_norm((3, 3), expansion * outplanes, outplanes;
@@ -28,7 +28,7 @@ Create a DenseNet transition sequence
   - `inplanes`: number of input feature maps
   - `outplanes`: number of output feature maps
 """
-function transition(inplanes::Int, outplanes::Int)
+function transition(inplanes::Integer, outplanes::Integer)
     return Chain(conv_norm((1, 1), inplanes, outplanes; revnorm = true)...,
                  MeanPool((2, 2)))
 end
@@ -46,7 +46,7 @@ the number of output feature maps by `growth_rates` with each block
   - `growth_rates`: the growth (additive) rates of output feature maps
     after each block (a vector of `k`s from the ref)
 """
-function dense_block(inplanes::Int, growth_rates)
+function dense_block(inplanes::Integer, growth_rates)
     return [dense_bottleneck(i, o)
             for (i, o) in zip(inplanes .+ cumsum([0, growth_rates[1:(end - 1)]...]),
                               growth_rates)]
@@ -54,7 +54,7 @@ end
 
 """
     densenet(inplanes, growth_rates; reduction = 0.5, dropout_prob = nothing, 
-             inchannels = 3, nclasses = 1000)
+             inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Create a DenseNet model
 ([reference](https://arxiv.org/abs/1608.06993)).
@@ -68,9 +68,9 @@ Create a DenseNet model
   - `dropout_prob`: the dropout probability for the classifier head. Set to `nothing` to disable dropout.
   - `nclasses`: the number of output classes
 """
-function build_densenet(inplanes::Int, growth_rates; reduction = 0.5,
+function build_densenet(inplanes::Integer, growth_rates; reduction = 0.5,
                         dropout_prob = nothing,
-                        inchannels::Int = 3, nclasses::Int = 1000)
+                        inchannels::Integer = 3, nclasses::Integer = 1000)
     layers = []
     append!(layers,
             conv_norm((7, 7), inchannels, inplanes; stride = 2, pad = (3, 3)))
@@ -88,9 +88,9 @@ function build_densenet(inplanes::Int, growth_rates; reduction = 0.5,
 end
 
 """
-    densenet(nblocks::AbstractVector{Int}; growth_rate = 32,
-             reduction = 0.5, dropout_prob = nothing, inchannels = 3,
-             nclasses = 1000)
+    densenet(nblocks::AbstractVector{<:Integer}; growth_rate::Integer = 32,
+             reduction = 0.5, dropout_prob = nothing, inchannels::Integer = 3,
+             nclasses::Integer = 1000)
 
 Create a DenseNet model
 ([reference](https://arxiv.org/abs/1608.06993)).
@@ -104,9 +104,9 @@ Create a DenseNet model
   - `inchannels`: the number of input channels
   - `nclasses`: the number of output classes
 """
-function densenet(nblocks::AbstractVector{Int}; growth_rate::Int = 32,
-                  reduction = 0.5, dropout_prob = nothing, inchannels::Int = 3,
-                  nclasses::Int = 1000)
+function densenet(nblocks::AbstractVector{<:Integer}; growth_rate::Integer = 32,
+                  reduction = 0.5, dropout_prob = nothing, inchannels::Integer = 3,
+                  nclasses::Integer = 1000)
     return build_densenet(2 * growth_rate, [fill(growth_rate, n) for n in nblocks];
                           reduction, dropout_prob, inchannels, nclasses)
 end
@@ -117,8 +117,8 @@ const DENSENET_CONFIGS = Dict(121 => [6, 12, 24, 16],
                               201 => [6, 12, 48, 32])
 
 """
-    DenseNet(config::Int; pretrain = false, growth_rate = 32,
-             reduction = 0.5, inchannels = 3, nclasses = 1000)
+    DenseNet(config::Integer; pretrain::Bool = false, growth_rate::Integer = 32,
+             reduction = 0.5, inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Create a DenseNet model with specified configuration. Currently supported values are (121, 161, 169, 201)
 ([reference](https://arxiv.org/abs/1608.06993)).
@@ -143,8 +143,8 @@ struct DenseNet
 end
 @functor DenseNet
 
-function DenseNet(config::Int; pretrain::Bool = false, growth_rate::Int = 32,
-                  reduction = 0.5, inchannels::Int = 3, nclasses::Int = 1000)
+function DenseNet(config::Integer; pretrain::Bool = false, growth_rate::Integer = 32,
+                  reduction = 0.5, inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(config, keys(DENSENET_CONFIGS))
     layers = densenet(DENSENET_CONFIGS[config]; growth_rate, reduction, inchannels,
                       nclasses)
