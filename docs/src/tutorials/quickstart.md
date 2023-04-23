@@ -1,57 +1,29 @@
-# Quickstart
+# A guide to getting started with Metalhead
+
+Metalhead.jl is a library written in Flux.jl that is a collection of image models, layers and utilities for deep learning in computer vision.
+
+## Pre-trained models
+
+In Metalhead.jl, camel-cased functions mimicking the naming style followed in the paper such as [`ResNet`](@ref) or [`ResNeXt`](@ref) are considered the "higher" level API for models. These are the functions that end-users who do not want to experiment much with model architectures should use. These models also support the option for loading pre-trained weights from ImageNet.
+
+!!! note
+
+	Metalhead is still under active development and thus not all models have pre-trained weights supported. While we are working on expanding the footprint of the pre-trained models, if you would like to help contribute model weights yourself, please check out the [contributing guide](@ref contributing) guide.
+
+To use a pre-trained model, just instantiate the model with the `pretrain` keyword argument set to `true`:
 
 ```julia
-using Flux, Metalhead
+using Metalhead
+  
+model = ResNet(18; pretrain = true);
 ```
 
-Using a model from Metalhead is as simple as selecting a model from the table of [available models](@ref API-Reference). For example, below we use the pre-trained ResNet-18 model.
-```julia
-using Flux, Metalhead
+Refer to the pretraining guide for more details on how to use pre-trained models.
 
-model = ResNet(18; pretrain = true)
-```
+## More model configuration options
 
-Now, we can use this model with Flux like any other model.
+For users who want to use more options for model configuration, Metalhead provides a "mid-level" API for models. The model functions that are in lowercase such as [`resnet`](@ref) or [`mobilenetv3`](@ref) are the "lower" level API for models. These are the functions that end-users who want to experiment with model architectures should use. These models do not support the option for loading pre-trained weights from ImageNet out of the box.
 
-First, let's check the accuracy on a test image from ImageNet.
-```julia
-using Images
+To use any of these models, check out the docstrings for the model functions. Note that these functions typically require more configuration options to be passed in, but offer a lot more flexibility in terms of model architecture.
 
-# test image
-img = Images.load(download("https://cdn.pixabay.com/photo/2015/05/07/11/02/guitar-756326_960_720.jpg"));
-```
-We'll use the popular [DataAugmentation.jl](https://github.com/lorenzoh/DataAugmentation.jl) library to crop our input image, convert it to a plain array, and normalize the pixels.
-```julia
-using DataAugmentation, OneHotArrays
-
-DATA_MEAN = (0.485, 0.456, 0.406)
-DATA_STD = (0.229, 0.224, 0.225)
-
-augmentations = CenterCrop((224, 224)) |>
-                ImageToTensor() |>
-                Normalize(DATA_MEAN, DATA_STD)
-data = apply(augmentations, Image(img)) |> itemdata
-
-# image net labels
-labels = readlines(download("https://raw.githubusercontent.com/pytorch/hub/master/imagenet_classes.txt"))
-
-onecold(model(Flux.unsqueeze(data, 4)), labels)
-```
-
-Below, we train it on some randomly generated data.
-
-```julia
-using OneHotArrays: onehotbatch
-
-batchsize = 1
-data = [(rand(Float32, 224, 224, 3, batchsize), onehotbatch(rand(1:1000, batchsize), 1:1000))
-        for _ in 1:3]
-opt = ADAM()
-ps = Flux.params(model)
-loss(x, y, m) = Flux.Losses.logitcrossentropy(m(x), y)
-for (i, (x, y)) in enumerate(data)
-    @info "Starting batch $i ..."
-    gs = gradient(() -> loss(x, y, model), ps)
-    Flux.update!(opt, ps, gs)
-end
-```
+##

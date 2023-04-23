@@ -42,7 +42,7 @@ function basicblock_builder(block_repeats::AbstractVector{<:Integer};
     # Also get `planes_vec` needed for block `inplanes` and `planes` calculations
     sdschedule = linear_scheduler(stochastic_depth_prob; depth = sum(block_repeats))
     dbschedule = linear_scheduler(dropblock_prob; depth = sum(block_repeats))
-    planes_vec = collect(planes_fn(block_repeats))
+    planes_vec = planes_fn(block_repeats)
     # closure over `idxs`
     function get_layers(stage_idx::Integer, block_idx::Integer)
         # DropBlock, StochasticDepth both take in probabilities based on a linear scaling schedule
@@ -109,7 +109,7 @@ function bottleneck_builder(block_repeats::AbstractVector{<:Integer};
                             downsample_tuple = (downsample_conv, downsample_identity))
     sdschedule = linear_scheduler(stochastic_depth_prob; depth = sum(block_repeats))
     dbschedule = linear_scheduler(dropblock_prob; depth = sum(block_repeats))
-    planes_vec = collect(planes_fn(block_repeats))
+    planes_vec = planes_fn(block_repeats)
     # closure over `idxs`
     function get_layers(stage_idx::Integer, block_idx::Integer)
         # DropBlock, StochasticDepth both take in rates based on a linear scaling schedule

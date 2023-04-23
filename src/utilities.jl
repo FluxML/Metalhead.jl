@@ -42,24 +42,11 @@ cat_channels(x::Tuple) = cat_channels(x...)
 """
     swapdims(perm)
 
-Convenience function for permuting the dimensions of an array.
+Convenience function that returns a closure which permutes the dimensions of an array.
 `perm` is a vector or tuple specifying a permutation of the input dimensions.
 Equivalent to `permutedims(x, perm)`.
 """
 swapdims(perm) = Base.Fix2(permutedims, perm)
-
-# Utility function for pretty printing large models
-function _maybe_big_show(io, model)
-    if isdefined(Flux, :_big_show)
-        if isnothing(get(io, :typeinfo, nothing)) # e.g. top level in REPL
-            Flux._big_show(io, model)
-        else
-            show(io, model)
-        end
-    else
-        show(io, model)
-    end
-end
 
 """
     linear_scheduler(drop_prob = 0.0; start_value = 0.0, depth)
@@ -90,3 +77,15 @@ into a single iterator.
 flatten_chains(m::Chain) = Iterators.flatten(flatten_chains(l) for l in m.layers)
 flatten_chains(m) = (m,)
 
+# Utility function for pretty printing large models
+function _maybe_big_show(io, model)
+    if isdefined(Flux, :_big_show)
+        if isnothing(get(io, :typeinfo, nothing)) # e.g. top level in REPL
+            Flux._big_show(io, model)
+        else
+            show(io, model)
+        end
+    else
+        show(io, model)
+    end
+end

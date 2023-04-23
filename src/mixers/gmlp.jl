@@ -1,21 +1,4 @@
 """
-    SpatialGatingUnit(norm, proj)
-
-Creates a spatial gating unit as described in the gMLP paper.
-([reference](https://arxiv.org/abs/2105.08050))
-
-# Arguments
-
-  - `norm`: the normalisation layer to use
-  - `proj`: the projection layer to use
-"""
-struct SpatialGatingUnit{T, F}
-    norm::T
-    proj::F
-end
-@functor SpatialGatingUnit
-
-"""
     SpatialGatingUnit(planes::Integer, npatches::Integer; norm_layer = LayerNorm)
 
 Creates a spatial gating unit as described in the gMLP paper.
@@ -27,6 +10,12 @@ Creates a spatial gating unit as described in the gMLP paper.
   - `npatches`: the number of patches of the input
   - `norm_layer`: the normalisation layer to use
 """
+struct SpatialGatingUnit{T, F}
+    norm::T
+    proj::F
+end
+@functor SpatialGatingUnit
+
 function SpatialGatingUnit(planes::Integer, npatches::Integer; norm_layer = LayerNorm)
     gateplanes = planes ÷ 2
     norm = norm_layer(gateplanes)
@@ -42,9 +31,10 @@ function (m::SpatialGatingUnit)(x)
 end
 
 """
-    spatial_gating_block(planes::Integer, npatches::Integer; mlp_ratio = 4.0,
-                         norm_layer = LayerNorm, mlp_layer = gated_mlp_block,
-                         dropout_prob = 0.0, stochastic_depth_prob = 0.0, activation = gelu)
+    spatialgatingblock(planes::Integer, npatches::Integer; mlp_ratio = 4.0,
+                       norm_layer = LayerNorm, mlp_layer = gated_mlp_block,
+                       dropout_prob = 0.0, stochastic_depth_prob = 0.0,
+                       activation = gelu)
 
 Creates a feedforward block based on the gMLP model architecture described in the paper.
 ([reference](https://arxiv.org/abs/2105.08050))
@@ -60,10 +50,10 @@ Creates a feedforward block based on the gMLP model architecture described in th
   - `stochastic_depth_prob`: Stochastic depth probability
   - `activation`: the activation function to use in the MLP blocks
 """
-function spatial_gating_block(planes::Integer, npatches::Integer; mlp_ratio = 4.0,
-                              norm_layer = LayerNorm, mlp_layer = gated_mlp_block,
-                              dropout_prob = 0.0, stochastic_depth_prob = 0.0,
-                              activation = gelu)
+function spatialgatingblock(planes::Integer, npatches::Integer; mlp_ratio = 4.0,
+                            norm_layer = LayerNorm, mlp_layer = gated_mlp_block,
+                            dropout_prob = 0.0, stochastic_depth_prob = 0.0,
+                            activation = gelu)
     channelplanes = floor(Int, mlp_ratio * planes)
     sgu = inplanes -> SpatialGatingUnit(inplanes, npatches; norm_layer)
     return SkipConnection(Chain(norm_layer(planes),
@@ -97,7 +87,7 @@ end
 function gMLP(config::Symbol; imsize::Dims{2} = (224, 224), patch_size::Dims{2} = (16, 16),
               pretrain::Bool = false, inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(config, keys(MIXER_CONFIGS))
-    layers = mlpmixer(spatial_gating_block, imsize; mlp_layer = gated_mlp_block, patch_size,
+    layers = mlpmixer(spatialgatingblock, imsize; mlp_layer = gated_mlp_block, patch_size,
                       MIXER_CONFIGS[config]..., inchannels, nclasses)
     if pretrain
         loadpretrain!(layers, string("gmlp", config))

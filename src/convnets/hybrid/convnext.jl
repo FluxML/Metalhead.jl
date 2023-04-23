@@ -22,9 +22,9 @@ function convnextblock(planes::Integer, stochastic_depth_prob = 0.0,
 end
 
 """
-    convnext(depths::AbstractVector{<:Integer}, planes::AbstractVector{<:Integer};
-             stochastic_depth_prob = 0.0, layerscale_init = 1.0f-6, inchannels::Integer = 3,
-             nclasses::Integer = 1000)
+    build_convnext(depths::AbstractVector{<:Integer}, planes::AbstractVector{<:Integer};
+                   stochastic_depth_prob = 0.0, layerscale_init = 1.0f-6,
+                   inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Creates the layers for a ConvNeXt model.
 ([reference](https://arxiv.org/abs/2201.03545))
@@ -39,10 +39,10 @@ Creates the layers for a ConvNeXt model.
   - `inchannels`: number of input channels.
   - `nclasses`: number of output classes
 """
-function convnext(depths::AbstractVector{<:Integer}, planes::AbstractVector{<:Integer};
-                  stochastic_depth_prob = 0.0, layerscale_init = 1.0f-6,
-                  inchannels::Integer = 3,
-                  nclasses::Integer = 1000)
+function build_convnext(depths::AbstractVector{<:Integer},
+                        planes::AbstractVector{<:Integer};
+                        stochastic_depth_prob = 0.0, layerscale_init = 1.0f-6,
+                        inchannels::Integer = 3, nclasses::Integer = 1000)
     @assert length(depths) == length(planes)
     "`planes` should have exactly one value for each block"
     downsample_layers = []
@@ -69,10 +69,26 @@ function convnext(depths::AbstractVector{<:Integer}, planes::AbstractVector{<:In
     return Chain(Chain(backbone...), classifier)
 end
 
+"""
+    convnext(config::Symbol; stochastic_depth_prob = 0.0, layerscale_init = 1.0f-6,
+             inchannels::Integer = 3, nclasses::Integer = 1000)
+
+Creates a ConvNeXt model.
+([reference](https://arxiv.org/abs/2201.03545))
+
+# Arguments
+
+  - `config`: The size of the model, one of `tiny`, `small`, `base`, `large` or `xlarge`.
+  - `stochastic_depth_prob`: Stochastic depth probability.
+  - `layerscale_init`: Initial value for [`LayerScale`](@ref)
+    ([reference](https://arxiv.org/abs/2103.17239))
+  - `inchannels`: number of input channels.
+  - `nclasses`: number of output classes
+"""
 function convnext(config::Symbol; stochastic_depth_prob = 0.0, layerscale_init = 1.0f-6,
                   inchannels::Integer = 3, nclasses::Integer = 1000)
-    return convnext(CONVNEXT_CONFIGS[config]...; stochastic_depth_prob, layerscale_init,
-                    inchannels, nclasses)
+    return build_convnext(CONVNEXT_CONFIGS[config]...; stochastic_depth_prob,
+                          layerscale_init, inchannels, nclasses)
 end
 
 # Configurations for ConvNeXt models
