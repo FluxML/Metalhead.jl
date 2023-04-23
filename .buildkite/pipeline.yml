@@ -9,7 +9,6 @@ steps:
           codecov: true
           dirs:
             - src
-            - ext
     agents:
       queue: "juliagpu"
       cuda: "*"
