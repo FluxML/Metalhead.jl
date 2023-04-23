@@ -54,7 +54,6 @@ include("convnets/mobilenets/mobilenetv2.jl")
 include("convnets/mobilenets/mobilenetv3.jl")
 include("convnets/mobilenets/mnasnet.jl")
 ## Others
-include("convnets/densenet.jl")
 include("convnets/squeezenet.jl")
 include("convnets/unet.jl")
 ## Hybrid models

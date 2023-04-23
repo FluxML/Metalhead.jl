@@ -29,7 +29,3 @@ NNlibCUDA = "0.2"
 PartialFunctions = "1"
 julia = "1.6"
 
-[publish]
-ignore = ["^(gh-pages|juliamnt|julia.dmg)$"]
-theme = "_flux-theme"
-title = "Metalhead.jl"
