@@ -28,6 +28,7 @@ To add pre-trained weights for an existing model or new model, you can [open a P
 All Metalhead.jl model artifacts are hosted using HuggingFace. You can find the FluxML account [here](https://huggingface.co/FluxML). This [documentation from HuggingFace](https://huggingface.co/docs/hub/models) will provide you with an introduction to their ModelHub. In short, the Model Hub is a collection of Git repositories, similar to Julia packages on GitHub. This means you can [make a pull request to our HuggingFace repositories](https://huggingface.co/docs/hub/repositories-pull-requests-discussions) to upload updated weight artifacts just like you would make a PR on GitHub to upload code.
 
 1. Train your model or port the weights from another framework.
+    - In the `scripts/` folder you can find some code to help you port weights from other frameworks.
 2. Save the model using [BSON.jl](https://github.com/JuliaIO/BSON.jl) with `BSON.@save "modelname.bson" model`. It is important that your model is saved under the key `model`. Note that due to the way this
 process works, to maintain compatibility with different Julia versions, the model must be saved using the LTS version of Julia (currently 1.6).
 3. Compress the saved model as a tarball using `tar -cvzf modelname.tar.gz modelname.bson`.
