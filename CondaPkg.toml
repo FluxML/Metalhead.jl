@@ -1,0 +1,5 @@
+channels = ["nvidia", "torch"]
+
+[deps]
+pytorch = ""
+torchvision = ""
