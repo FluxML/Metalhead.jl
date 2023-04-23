@@ -2,8 +2,6 @@
 *.jl.*.cov
 *.jl.mem
 *.bson
-.vscode/
-.DS_Store
 
 # manifests
 docs/Manifest.toml
@@ -11,4 +9,3 @@ Manifest.toml
 
 # docs theme
 _flux-theme
-

@@ -11,7 +11,7 @@ ChainRulesCore.@non_differentiable _dropblock_mask(rng, x, gamma, clipped_block_
 # TODO add experimental `DropBlock` options from timm such as gaussian noise and
 # more precise `DropBlock` to deal with edges (#188)
 """
-    dropblock([rng], x::AbstractArray{T, 4}, drop_block_prob, block_size,
+    dropblock([rng = default_rng_value(x)], x::AbstractArray{T, 4}, drop_block_prob, block_size,
               gamma_scale, active::Bool = true)
 
 The dropblock function. If `active` is `true`, for each input, it zeroes out continguous
@@ -54,7 +54,8 @@ end
 dropblock_mask(rng, x, gamma, bs) = _dropblock_mask(rng, x, gamma, bs)
 
 """
-    DropBlock(drop_block_prob = 0.1, block_size = 7, gamma_scale = 1.0, [rng])
+    DropBlock(drop_block_prob = 0.1, block_size = 7, gamma_scale = 1.0,
+              rng = default_rng_value())
 
 The `DropBlock` layer. While training, it zeroes out continguous regions of
 size `block_size` in the input. During inference, it simply returns the input `x`.
@@ -121,7 +122,7 @@ function Base.show(io::IO, d::DropBlock)
 end
 
 """
-    StochasticDepth(p, mode = :row; [rng])
+    StochasticDepth(p, mode = :row; rng = default_rng_value())
 
 Implements Stochastic Depth. This is a `Dropout` layer from Flux that drops values
 with probability `p`.
