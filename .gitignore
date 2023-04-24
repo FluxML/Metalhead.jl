@@ -4,7 +4,8 @@
 *.bson
 .vscode/
 .DS_Store
-
+.CondaPkg/
+ 
 # manifests
 docs/Manifest.toml
 Manifest.toml
