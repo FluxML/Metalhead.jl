@@ -25,13 +25,13 @@ model_list = [
             ]
 
 
-# name, weights, jlconstructor, pyconstructor  = first(model_list)
-for (name, weights, jlconstructor, pyconstructor) in model_list
+name, weights, jlconstructor, pyconstructor  = first(model_list)
+# for (name, weights, jlconstructor, pyconstructor) in model_list
     jlmodel = jlconstructor()
     pymodel = pyconstructor(weights)
-    pytorch2flux!(jlmodel, pymodel, verb=false)
+    pytorch2flux!(jlmodel, pymodel)
     compare_pytorch(jlmodel, pymodel)
     BSON.@save joinpath(@__DIR__,"$(name)_$weights.bson") model=jlmodel
     println("Saved $(name)_$weights.bson")
-end
+# end
 

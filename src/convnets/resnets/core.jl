@@ -13,23 +13,29 @@ used to build the block for the model, see [`Metalhead.basicblock_builder`](@ref
 
 # Arguments
 
-  - `inplanes`: number of input feature maps
-  - `planes`: number of feature maps for the block
-  - `stride`: the stride of the block
-  - `reduction_factor`: the factor by which the input feature maps are reduced before
-    the first convolution.
-  - `activation`: the activation function to use.
-  - `norm_layer`: the normalization layer to use.
-  - `revnorm`: set to `true` to place the normalisation layer before the convolution
-  - `drop_block`: the drop block layer
-  - `drop_path`: the drop path layer
-  - `attn_fn`: the attention function to use. See [`squeeze_excite`](@ref) for an example.
+- `inplanes`: number of input feature maps
+- `planes`: number of feature maps for the block
+- `stride`: the stride of the block
+- `reduction_factor`: the factor by which the input feature maps are reduced before
+the first convolution.
+- `activation`: the activation function to use.
+- `norm_layer`: the normalization layer to use.
+- `revnorm`: set to `true` to place the normalisation layer before the convolution
+- `drop_block`: the drop block layer
+- `drop_path`: the drop path layer
+- `attn_fn`: the attention function to use. See [`squeeze_excite`](@ref) for an example.
 """
-function basicblock(inplanes::Integer, planes::Integer; stride::Integer = 1,
-                    reduction_factor::Integer = 1, activation = relu,
-                    norm_layer = BatchNorm, revnorm::Bool = false,
-                    drop_block = identity, drop_path = identity,
+function basicblock(inplanes::Integer, 
+                    planes::Integer; 
+                    stride::Integer = 1,
+                    reduction_factor::Integer = 1, 
+                    activation = relu,
+                    norm_layer = BatchNorm, 
+                    revnorm::Bool = false,
+                    drop_block = identity, 
+                    drop_path = identity,
                     attn_fn = planes -> identity)
+  
     first_planes = planes ÷ reduction_factor
     conv_bn1 = conv_norm((3, 3), inplanes, first_planes, identity; norm_layer, revnorm,
                          stride, pad = 1)
@@ -54,19 +60,19 @@ used to build the block for the model, see [`Metalhead.bottleneck_builder`](@ref
 
 # Arguments
 
-  - `inplanes`: number of input feature maps
-  - `planes`: number of feature maps for the block
-  - `stride`: the stride of the block
-  - `cardinality`: the number of groups in the convolution.
-  - `base_width`: the number of output feature maps for each convolutional group.
-  - `reduction_factor`: the factor by which the input feature maps are reduced before the first
-    convolution.
-  - `activation`: the activation function to use.
-  - `norm_layer`: the normalization layer to use.
-  - `revnorm`: set to `true` to place the normalisation layer before the convolution
-  - `drop_block`: the drop block layer
-  - `drop_path`: the drop path layer
-  - `attn_fn`: the attention function to use. See [`squeeze_excite`](@ref) for an example.
+- `inplanes`: number of input feature maps
+- `planes`: number of feature maps for the block
+- `stride`: the stride of the block
+- `cardinality`: the number of groups in the convolution.
+- `base_width`: the number of output feature maps for each convolutional group.
+- `reduction_factor`: the factor by which the input feature maps are reduced before the first
+  convolution.
+- `activation`: the activation function to use.
+- `norm_layer`: the normalization layer to use.
+- `revnorm`: set to `true` to place the normalisation layer before the convolution
+- `drop_block`: the drop block layer
+- `drop_path`: the drop path layer
+- `attn_fn`: the attention function to use. See [`squeeze_excite`](@ref) for an example.
 """
 function bottleneck(inplanes::Integer, planes::Integer; stride::Integer,
                     cardinality::Integer = 1, base_width::Integer = 64,
@@ -99,17 +105,17 @@ used to build the block for the model, see [`Metalhead.bottle2neck_builder`](@re
 
 # Arguments
 
-  - `inplanes`: number of input feature maps
-  - `planes`: number of feature maps for the block
-  - `stride`: the stride of the block
-  - `cardinality`: the number of groups in the 3x3 convolutions.
-  - `base_width`: the number of output feature maps for each convolutional group.
-  - `scale`: the number of feature groups in the block. See the [paper](https://arxiv.org/abs/1904.01169)
-    for more details.
-  - `activation`: the activation function to use.
-  - `norm_layer`: the normalization layer to use.
-  - `revnorm`: set to `true` to place the batch norm before the convolution
-  - `attn_fn`: the attention function to use. See [`squeeze_excite`](@ref) for an example.
+- `inplanes`: number of input feature maps
+- `planes`: number of feature maps for the block
+- `stride`: the stride of the block
+- `cardinality`: the number of groups in the 3x3 convolutions.
+- `base_width`: the number of output feature maps for each convolutional group.
+- `scale`: the number of feature groups in the block. See the [paper](https://arxiv.org/abs/1904.01169)
+  for more details.
+- `activation`: the activation function to use.
+- `norm_layer`: the normalization layer to use.
+- `revnorm`: set to `true` to place the batch norm before the convolution
+- `attn_fn`: the attention function to use. See [`squeeze_excite`](@ref) for an example.
 """
 function bottle2neck(inplanes::Integer, planes::Integer; stride::Integer = 1,
                      cardinality::Integer = 1, base_width::Integer = 26,
@@ -146,11 +152,11 @@ Creates a 1x1 convolutional downsample layer as used in ResNet.
 
 # Arguments
 
-  - `inplanes`: number of input feature maps
-  - `outplanes`: number of output feature maps
-  - `stride`: the stride of the convolution
-  - `norm_layer`: the normalization layer to use.
-  - `revnorm`: set to `true` to place the normalisation layer before the convolution
+- `inplanes`: number of input feature maps
+- `outplanes`: number of output feature maps
+- `stride`: the stride of the convolution
+- `norm_layer`: the normalization layer to use.
+- `revnorm`: set to `true` to place the normalisation layer before the convolution
 """
 function downsample_conv(inplanes::Integer, outplanes::Integer; stride::Integer = 1,
                          norm_layer = BatchNorm, revnorm::Bool = false)
@@ -168,11 +174,11 @@ of size `(2, 2)` with `stride` followed by a 1x1 convolution.
 
 # Arguments
 
-  - `inplanes`: number of input feature maps
-  - `outplanes`: number of output feature maps
-  - `stride`: the stride of the convolution
-  - `norm_layer`: the normalization layer to use.
-  - `revnorm`: set to `true` to place the normalisation layer before the convolution
+- `inplanes`: number of input feature maps
+- `outplanes`: number of output feature maps
+- `stride`: the stride of the convolution
+- `norm_layer`: the normalization layer to use.
+- `revnorm`: set to `true` to place the normalisation layer before the convolution
 """
 function downsample_pool(inplanes::Integer, outplanes::Integer; stride::Integer = 1,
                          norm_layer = BatchNorm, revnorm::Bool = false)
@@ -196,8 +202,8 @@ layer and zero padding.
 
 # Arguments
 
-  - `inplanes`: number of input feature maps
-  - `outplanes`: number of output feature maps
+- `inplanes`: number of input feature maps
+- `outplanes`: number of output feature maps
 
 Note that kwargs are ignored and only included for compatibility with other downsample layers.
 """
@@ -236,23 +242,23 @@ on how to use this function.
 
 # Arguments
 
-  - `stem_type`: The type of stem to be built. One of `[:default, :deep, :deep_tiered]`.
-    
-      + `:default`: Builds a stem based on the default ResNet stem, which consists of a single
-        7x7 convolution with stride 2 and a normalisation layer followed by a 3x3 max pooling
-        layer with stride 2.
-      + `:deep`: This borrows ideas from other papers ([InceptionResNetv2](https://arxiv.org/abs/1602.07261),
-        for example) in using a deeper stem with 3 successive 3x3 convolutions having normalisation
-        layers after each one. This is followed by a 3x3 max pooling layer with stride 2.
-      + `:deep_tiered`: A variant of the `:deep` stem that has a larger width in the second
-        convolution. This is an experimental variant from the `timm` library in Python that
-        shows peformance improvements over the `:deep` stem in some cases.
+- `stem_type`: The type of stem to be built. One of `[:default, :deep, :deep_tiered]`.
+  
+    + `:default`: Builds a stem based on the default ResNet stem, which consists of a single
+      7x7 convolution with stride 2 and a normalisation layer followed by a 3x3 max pooling
+      layer with stride 2.
+    + `:deep`: This borrows ideas from other papers ([InceptionResNetv2](https://arxiv.org/abs/1602.07261),
+      for example) in using a deeper stem with 3 successive 3x3 convolutions having normalisation
+      layers after each one. This is followed by a 3x3 max pooling layer with stride 2.
+    + `:deep_tiered`: A variant of the `:deep` stem that has a larger width in the second
+      convolution. This is an experimental variant from the `timm` library in Python that
+      shows peformance improvements over the `:deep` stem in some cases.
 
-  - `inchannels`: number of input channels
-  - `replace_pool`: Set to true to replace the max pooling layers with a 3x3 convolution +
-    normalization with a stride of two.
-  - `norm_layer`: The normalisation layer used in the stem.
-  - `activation`: The activation function used in the stem.
+- `inchannels`: number of input channels
+- `replace_pool`: Set to true to replace the max pooling layers with a 3x3 convolution +
+  normalization with a stride of two.
+- `norm_layer`: The normalisation layer used in the stem.
+- `activation`: The activation function used in the stem.
 """
 function resnet_stem(stem_type::Symbol = :default; inchannels::Integer = 3,
                      replace_pool::Bool = false, activation = relu,
@@ -345,49 +351,49 @@ Wide ResNet, ResNeXt and Res2Net. For an _even_ more generic model API, see [`Me
 
 # Arguments
 
-  - `block_type`: The type of block to be used in the model. This can be one of [`Metalhead.basicblock`](@ref),
-    [`Metalhead.bottleneck`](@ref) and [`Metalhead.bottle2neck`](@ref). `basicblock` is used in the
-    original ResNet paper for ResNet-18 and ResNet-34, and `bottleneck` is used in the original ResNet-50
-    and ResNet-101 models, as well as for the Wide ResNet and ResNeXt models. `bottle2neck` is introduced in
-    the `Res2Net` paper.
-  - `block_repeats`: A `Vector` of integers specifying the number of times each block is repeated
-    in each stage of the ResNet model. For example, `[3, 4, 6, 3]` is the configuration used in
-    ResNet-50, which has 3 blocks in the first stage, 4 blocks in the second stage, 6 blocks in the
-    third stage and 3 blocks in the fourth stage.
-  - `downsample_opt`: A `NTuple` of two callbacks that are used to determine the downsampling
-    operation to be used in the model. The first callback is used to determine the convolutional
-    operation to be used in the downsampling operation and the second callback is used to determine
-    the identity operation to be used in the downsampling operation.
-  - `cardinality`: The number of groups to be used in the 3x3 convolutional layer in the bottleneck
-    block. This is usually modified from the default value of `1` in the ResNet models to `32` or `64`
-    in the `ResNeXt` models.
-  - `base_width`: The base width of the convolutional layer in the blocks of the model.
-  - `inplanes`: The number of input channels in the first convolutional layer.
-  - `reduction_factor`: The reduction factor used in the model.
-  - `connection`: This is a function that determines the residual connection in the model. For
-    `resnets`, either of [`Metalhead.addact`](@ref) or [`Metalhead.actadd`](@ref) is recommended.
-  - `norm_layer`: The normalisation layer to be used in the model.
-  - `revnorm`: set to `true` to place the normalisation layers before the convolutions
-  - `attn_fn`: A callback that is used to determine the attention function to be used in the model.
-    See [`Metalhead.Layers.squeeze_excite`](@ref) for an example.
-  - `pool_layer`: A fully-instantiated pooling layer passed in to be used by the classifier head.
-    For example, `AdaptiveMeanPool((1, 1))` is used in the ResNet family by default, but something
-    like `MeanPool((3, 3))` should also work provided the dimensions after applying the pooling
-    layer are compatible with the rest of the classifier head.
-  - `use_conv`: Set to true to use convolutions instead of identity operations in the model.
-  - `dropblock_prob`: `DropBlock` probability to be used in the model. Set to `nothing` to disable
-    DropBlock. See [`Metalhead.DropBlock`](@ref) for more details.
-  - `stochastic_depth_prob`: `StochasticDepth` probability to be used in the model. Set to `nothing`
-    to disable StochasticDepth. See [`Metalhead.StochasticDepth`](@ref) for more details.
-  - `dropout_prob`: `Dropout` probability to be used in the classifier head. Set to `nothing` to
-    disable Dropout.
-  - `imsize`: The size of the input (height, width).
-  - `inchannels`: The number of input channels.
-  - `nclasses`: The number of output classes.
-  - `kwargs`: Additional keyword arguments to be passed to the block builder (note: ignore this
-    argument if you are not sure what it does. To know more about how this works, check out the
-    section of the documentation that talks about builders in Metalhead and specifically for the
-    ResNet block functions).
+- `block_type`: The type of block to be used in the model. This can be one of [`Metalhead.basicblock`](@ref),
+  [`Metalhead.bottleneck`](@ref) and [`Metalhead.bottle2neck`](@ref). `basicblock` is used in the
+  original ResNet paper for ResNet-18 and ResNet-34, and `bottleneck` is used in the original ResNet-50
+  and ResNet-101 models, as well as for the Wide ResNet and ResNeXt models. `bottle2neck` is introduced in
+  the `Res2Net` paper.
+- `block_repeats`: A `Vector` of integers specifying the number of times each block is repeated
+  in each stage of the ResNet model. For example, `[3, 4, 6, 3]` is the configuration used in
+  ResNet-50, which has 3 blocks in the first stage, 4 blocks in the second stage, 6 blocks in the
+  third stage and 3 blocks in the fourth stage.
+- `downsample_opt`: A `NTuple` of two callbacks that are used to determine the downsampling
+  operation to be used in the model. The first callback is used to determine the convolutional
+  operation to be used in the downsampling operation and the second callback is used to determine
+  the identity operation to be used in the downsampling operation.
+- `cardinality`: The number of groups to be used in the 3x3 convolutional layer in the bottleneck
+  block. This is usually modified from the default value of `1` in the ResNet models to `32` or `64`
+  in the `ResNeXt` models.
+- `base_width`: The base width of the convolutional layer in the blocks of the model.
+- `inplanes`: The number of input channels in the first convolutional layer.
+- `reduction_factor`: The reduction factor used in the model.
+- `connection`: This is a function that determines the residual connection in the model. For
+  `resnets`, either of [`Metalhead.addact`](@ref) or [`Metalhead.actadd`](@ref) is recommended.
+- `norm_layer`: The normalisation layer to be used in the model.
+- `revnorm`: set to `true` to place the normalisation layers before the convolutions
+- `attn_fn`: A callback that is used to determine the attention function to be used in the model.
+  See [`Metalhead.Layers.squeeze_excite`](@ref) for an example.
+- `pool_layer`: A fully-instantiated pooling layer passed in to be used by the classifier head.
+  For example, `AdaptiveMeanPool((1, 1))` is used in the ResNet family by default, but something
+  like `MeanPool((3, 3))` should also work provided the dimensions after applying the pooling
+  layer are compatible with the rest of the classifier head.
+- `use_conv`: Set to true to use convolutions instead of identity operations in the model.
+- `dropblock_prob`: `DropBlock` probability to be used in the model. Set to `nothing` to disable
+  DropBlock. See [`Metalhead.DropBlock`](@ref) for more details.
+- `stochastic_depth_prob`: `StochasticDepth` probability to be used in the model. Set to `nothing`
+  to disable StochasticDepth. See [`Metalhead.StochasticDepth`](@ref) for more details.
+- `dropout_prob`: `Dropout` probability to be used in the classifier head. Set to `nothing` to
+  disable Dropout.
+- `imsize`: The size of the input (height, width).
+- `inchannels`: The number of input channels.
+- `nclasses`: The number of output classes.
+- `kwargs`: Additional keyword arguments to be passed to the block builder (note: ignore this
+  argument if you are not sure what it does. To know more about how this works, check out the
+  section of the documentation that talks about builders in Metalhead and specifically for the
+  ResNet block functions).
 """
 function resnet(block_type, block_repeats::AbstractVector{<:Integer},
                 downsample_opt::NTuple{2, Any} = (downsample_conv, downsample_identity);
@@ -440,6 +446,7 @@ function resnet(block_type, block_repeats::AbstractVector{<:Integer},
     return build_resnet((imsize..., inchannels), stem, get_layers, block_repeats,
                         connection$activation, classifier_fn)
 end
+
 function resnet(block_fn, block_repeats, downsample_opt::Symbol = :B; kwargs...)
     return resnet(block_fn, block_repeats, RESNET_SHORTCUTS[downsample_opt]; kwargs...)
 end

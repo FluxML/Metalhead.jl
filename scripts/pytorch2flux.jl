@@ -98,19 +98,28 @@ function pytorch2flux!(jlmodel, pymodel; verb=false)
 
     # loop over all parameters
     for ((flux_key, flux_param), (pytorch_key, pytorch_param)) in zip(jlstate, pystate)
-        if verb 
-            @show flux_key size(flux_param) pytorch_key size(pytorch_param)
-            @show size(flux_param) == size(pytorch_param)
+        @show flux_key size(flux_param) pytorch_key size(pytorch_param)
+        @show size(flux_param) == size(pytorch_param)
+
+        param_name = split(flux_key, ".")[end]
+        
+        if startswith(param_name, "dense")
+            @assert occursin("fc", pytorch_key)
+        elseif startswith(param_name, "conv")
+            @assert occursin("conv", pytorch_key)
+        elseif startswith(param_name, "batchnorm")
+            @assert occursin("bn", pytorch_key)
         else
-            param_name = split(flux_key, ".")[end]
-            if param_name == "dense_weight"
-                flux_param .= permutedims(pytorch_param, (2,1))
-            elseif  param_name == "conv_weight"
-                flux_param .= reverse(pytorch_param, dims=(1, 2))
-            else
-                flux_param .= pytorch_param
-            end
+            @assert false
         end
+
+        # if param_name == "dense_weight"
+        #     flux_param .= permutedims(pytorch_param, (2,1))
+        # elseif  param_name == "conv_weight"
+        #     flux_param .= reverse(pytorch_param, dims=(1, 2))
+        # else
+        #     flux_param .= pytorch_param
+        # end
     end
 end
 
