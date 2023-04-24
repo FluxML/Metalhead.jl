@@ -24,10 +24,12 @@ model_list = [
             #   ("squeezenet", "IMAGENET1K_V1", () -> SqueezeNet(), weights -> tvmodels.squeezenet1_0(weights=weights)),
             ]
 
+
+# name, weights, jlconstructor, pyconstructor  = first(model_list)
 for (name, weights, jlconstructor, pyconstructor) in model_list
     jlmodel = jlconstructor()
     pymodel = pyconstructor(weights)
-    pytorch2flux!(jlmodel, pymodel)
+    pytorch2flux!(jlmodel, pymodel, verb=false)
     compare_pytorch(jlmodel, pymodel)
     BSON.@save joinpath(@__DIR__,"$(name)_$weights.bson") model=jlmodel
     println("Saved $(name)_$weights.bson")

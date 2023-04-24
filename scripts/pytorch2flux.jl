@@ -75,13 +75,13 @@ function _list_state(node::Dense, channel, prefix)
     end
 end
 
-_list_state(node, channel, prefix) = nothing
-
 function _list_state(node::Union{Chain,Parallel}, channel, prefix)
     for (i, n) in enumerate(node.layers)
         _list_state(n, channel, prefix * ".layers[$i]")
     end
 end
+
+_list_state(node, channel, prefix) = nothing
 
 function list_state(node; prefix = "model")
     Channel() do channel
@@ -89,22 +89,27 @@ function list_state(node; prefix = "model")
     end
 end
 
-function pytorch2flux!(jlmodel, pymodel)
-    state = OrderedDict(list_state(jlmodel.layers))
+function pytorch2flux!(jlmodel, pymodel; verb=false)
+    jlstate = OrderedDict(list_state(jlmodel.layers))
 
     state_dict = pymodel.state_dict()
-    # pytorch_pp = OrderedDict((k, v.numpy()) for (k, v) in state_dict if !occursin("num_batches_tracked", convert(Any,k)))
-    pytorch_pp = OrderedDict((py2jl(k), th2jl(v)) for (k, v) in state_dict.items())
+    pystate = OrderedDict((py2jl(k), th2jl(v)) for (k, v) in state_dict.items() if
+                !occursin("num_batches_tracked", py2jl(k)))
 
     # loop over all parameters
-    for ((flux_key, flux_param), (pytorch_key, pytorch_param)) in zip(state, pytorch_pp)
-        param_name = split(flux_key, ".")[end]
-        if param_name == "dense_weight"
-            flux_param .= permutedims(pytorch_param, (2,1))
-        elseif  param_name == "conv_weight"
-            flux_param .= reverse(pytorch_param, dims=(1, 2))
+    for ((flux_key, flux_param), (pytorch_key, pytorch_param)) in zip(jlstate, pystate)
+        if verb 
+            @show flux_key size(flux_param) pytorch_key size(pytorch_param)
+            @show size(flux_param) == size(pytorch_param)
         else
-            flux_param .= pytorch_param
+            param_name = split(flux_key, ".")[end]
+            if param_name == "dense_weight"
+                flux_param .= permutedims(pytorch_param, (2,1))
+            elseif  param_name == "conv_weight"
+                flux_param .= reverse(pytorch_param, dims=(1, 2))
+            else
+                flux_param .= pytorch_param
+            end
         end
     end
 end
