@@ -27,7 +27,7 @@ function compare_pytorch(jlmodel, pymodel)
     data = permutedims(convert(Array{Float32}, channelview(img)), (3,2,1))
     data = imagenet_normalize(data[:,:,:,1:1])
     
-    println("  Flux:")
+    println("Flux:")
     Flux.testmode!(jlmodel)
     out = jlmodel(data)
     jlprobs = softmax(out)[:,1]
@@ -35,7 +35,7 @@ function compare_pytorch(jlmodel, pymodel)
         println("    $(IMAGENET_LABELS[i]): $(jlprobs[i])")
     end
 
-    println("  PyTorch:")
+    println("PyTorch:")
     pymodel.eval()
     out = pymodel(jl2th(data))
     pyprobs = torch.nn.functional.softmax(out[0], dim=0).detach().numpy()
@@ -75,9 +75,16 @@ function _list_state(node::Dense, channel, prefix)
     end
 end
 
-function _list_state(node::Union{Chain,Parallel}, channel, prefix)
+function _list_state(node::Chain, channel, prefix)
     for (i, n) in enumerate(node.layers)
         _list_state(n, channel, prefix * ".layers[$i]")
+    end
+end
+
+function _list_state(node::Parallel, channel, prefix)
+    # reverse to match PyTorch order, see https://github.com/FluxML/Metalhead.jl/issues/228
+    for (i, n) in enumerate(reverse(node.layers))
+        _list_state(n, channel, prefix * ".parallel[$i]")
     end
 end
 
@@ -96,30 +103,19 @@ function pytorch2flux!(jlmodel, pymodel; verb=false)
     pystate = OrderedDict((py2jl(k), th2jl(v)) for (k, v) in state_dict.items() if
                 !occursin("num_batches_tracked", py2jl(k)))
 
-    # loop over all parameters
     for ((flux_key, flux_param), (pytorch_key, pytorch_param)) in zip(jlstate, pystate)
-        @show flux_key size(flux_param) pytorch_key size(pytorch_param)
-        @show size(flux_param) == size(pytorch_param)
+        # @show flux_key size(flux_param) pytorch_key size(pytorch_param)
+        # @show size(flux_param) == size(pytorch_param)
 
         param_name = split(flux_key, ".")[end]
         
-        if startswith(param_name, "dense")
-            @assert occursin("fc", pytorch_key)
-        elseif startswith(param_name, "conv")
-            @assert occursin("conv", pytorch_key)
-        elseif startswith(param_name, "batchnorm")
-            @assert occursin("bn", pytorch_key)
+        if param_name == "dense_weight"
+            flux_param .= permutedims(pytorch_param, (2,1))
+        elseif  param_name == "conv_weight"
+            flux_param .= reverse(pytorch_param, dims=(1, 2))
         else
-            @assert false
+            flux_param .= pytorch_param
         end
-
-        # if param_name == "dense_weight"
-        #     flux_param .= permutedims(pytorch_param, (2,1))
-        # elseif  param_name == "conv_weight"
-        #     flux_param .= reverse(pytorch_param, dims=(1, 2))
-        # else
-        #     flux_param .= pytorch_param
-        # end
     end
 end
 
