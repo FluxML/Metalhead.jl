@@ -1,6 +1,8 @@
 [deps]
 BSON = "fbb218c0-5317-5bc6-957e-2ee96dd4b1f0"
+DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
+Images = "916415d5-f1e6-5110-898d-aaa5f9f070e0"
 MLUtils = "f1d291b0-491e-4a28-83b9-f70985020b54"
 Metalhead = "dbeba491-748d-5e0e-a39e-b530a07fa0cc"
 PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"

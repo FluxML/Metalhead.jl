@@ -31,3 +31,8 @@ function th2jl(x::Py)
 end
 
 py2jl(x::Py) = pyconvert(Any, x)
+
+
+## SAVE STATE 
+using Functors
+state_arrays(x) = fmapstructure(x -> x isa AbstractArray ? x : missing, x)

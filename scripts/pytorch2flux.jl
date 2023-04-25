@@ -75,7 +75,31 @@ function _list_state(node::Dense, channel, prefix)
     end
 end
 
+function _list_state(node::Metalhead.Layers.ClassTokens, channel, prefix)
+    put!(channel, (prefix * ".classtoken", node.token)) 
+end
+
+function _list_state(node::Metalhead.Layers.ViPosEmbedding, channel, prefix)
+    put!(channel, (prefix * ".posembedding", node.vectors))
+end
+
+function _list_state(node::LayerNorm, channel, prefix)
+    put!(channel, (prefix * ".layernorm_scale", node.diag.scale))
+    put!(channel, (prefix * ".layernorm_bias", node.diag.bias))
+end
+
+function _list_state(node::Metalhead.Layers.MHAttention, channel, prefix)
+    _list_state(node.qkv_layer, channel, prefix * ".qkv")
+    _list_state(node.projection, channel, prefix * ".proj")
+end
+
 function _list_state(node::Chain, channel, prefix)
+    for (i, n) in enumerate(node.layers)
+        _list_state(n, channel, prefix * ".layers[$i]")
+    end
+end
+
+function _list_state(node::SkipConnection, channel, prefix)
     for (i, n) in enumerate(node.layers)
         _list_state(n, channel, prefix * ".layers[$i]")
     end
@@ -102,6 +126,18 @@ function pytorch2flux!(jlmodel, pymodel; verb=false)
     state_dict = pymodel.state_dict()
     pystate = OrderedDict((py2jl(k), th2jl(v)) for (k, v) in state_dict.items() if
                 !occursin("num_batches_tracked", py2jl(k)))
+   
+    jlkeys = collect(keys(jlstate))
+    pykeys = collect(keys(pystate))
+
+    ## handle class_token since it is not in the same order
+    jl_k = findfirst(k -> occursin("classtoken", k), jlkeys)
+    py_k = findfirst(k -> occursin("class_token", k), pykeys)
+    if jl_k !== nothing && py_k !== nothing
+        jlstate[jlkeys[jl_k]] .= pystate[pykeys[py_k]]
+        delete!(pystate, pykeys[py_k])
+        delete!(jlstate, jlkeys[jl_k])
+    end
 
     for ((flux_key, flux_param), (pytorch_key, pytorch_param)) in zip(jlstate, pystate)
         # @show flux_key size(flux_param) pytorch_key size(pytorch_param)

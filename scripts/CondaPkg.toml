@@ -1,5 +1,5 @@
-channels = ["nvidia", "torch"]
+channels = ["pytorch"]
 
 [deps]
-pytorch = ""
-torchvision = ""
+pytorch = ">=2,<3"
+torchvision = ">=0.15"

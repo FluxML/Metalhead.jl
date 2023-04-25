@@ -13,9 +13,10 @@ Transformer as used in the base ViT architecture.
   - `dropout_prob`: dropout probability
 """
 function transformer_encoder(planes::Integer, depth::Integer, nheads::Integer;
-                             mlp_ratio = 4.0, dropout_prob = 0.0)
+                             mlp_ratio = 4.0, dropout_prob = 0.0, qkv_bias=false)
     layers = [Chain(SkipConnection(prenorm(planes,
                                            MHAttention(planes, nheads;
+                                                       qkv_bias,
                                                        attn_dropout_prob = dropout_prob,
                                                        proj_dropout_prob = dropout_prob)),
                                    +),
@@ -51,7 +52,8 @@ Creates a Vision Transformer (ViT) model.
 function vit(imsize::Dims{2} = (256, 256); inchannels::Integer = 3,
              patch_size::Dims{2} = (16, 16), embedplanes::Integer = 768,
              depth::Integer = 6, nheads::Integer = 16, mlp_ratio = 4.0, dropout_prob = 0.1,
-             emb_dropout_prob = 0.1, pool::Symbol = :class, nclasses::Integer = 1000)
+             emb_dropout_prob = 0.1, pool::Symbol = :class, nclasses::Integer = 1000, 
+             qkv_bias = false)
     @assert pool in [:class, :mean]
     "Pool type must be either `:class` (class token) or `:mean` (mean pooling)"
     npatches = prod(imsize .÷ patch_size)
@@ -60,7 +62,7 @@ function vit(imsize::Dims{2} = (256, 256); inchannels::Integer = 3,
                        ViPosEmbedding(embedplanes, npatches + 1),
                        Dropout(emb_dropout_prob),
                        transformer_encoder(embedplanes, depth, nheads; mlp_ratio,
-                                           dropout_prob),
+                                           dropout_prob, qkv_bias),
                        pool === :class ? x -> x[:, 1, :] : seconddimmean),
                  Chain(LayerNorm(embedplanes), Dense(embedplanes, nclasses, tanh_fast)))
 end
@@ -100,9 +102,10 @@ end
 @functor ViT
 
 function ViT(config::Symbol; imsize::Dims{2} = (256, 256), patch_size::Dims{2} = (16, 16),
-             pretrain::Bool = false, inchannels::Integer = 3, nclasses::Integer = 1000)
+             pretrain::Bool = false, inchannels::Integer = 3, nclasses::Integer = 1000, 
+             qkv_bias=false)
     _checkconfig(config, keys(VIT_CONFIGS))
-    layers = vit(imsize; inchannels, patch_size, nclasses, VIT_CONFIGS[config]...)
+    layers = vit(imsize; inchannels, patch_size, nclasses, qkv_bias, VIT_CONFIGS[config]...)
     if pretrain
         loadpretrain!(layers, string("vit", config))
     end
