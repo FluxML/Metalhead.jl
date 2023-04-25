@@ -13,17 +13,17 @@ used to build the block for the model, see [`Metalhead.basicblock_builder`](@ref
 
 # Arguments
 
-- `inplanes`: number of input feature maps
-- `planes`: number of feature maps for the block
-- `stride`: the stride of the block
-- `reduction_factor`: the factor by which the input feature maps are reduced before
-the first convolution.
-- `activation`: the activation function to use.
-- `norm_layer`: the normalization layer to use.
-- `revnorm`: set to `true` to place the normalisation layer before the convolution
-- `drop_block`: the drop block layer
-- `drop_path`: the drop path layer
-- `attn_fn`: the attention function to use. See [`squeeze_excite`](@ref) for an example.
+  - `inplanes`: number of input feature maps
+  - `planes`: number of feature maps for the block
+  - `stride`: the stride of the block
+  - `reduction_factor`: the factor by which the input feature maps are reduced before
+  the first convolution.
+  - `activation`: the activation function to use.
+  - `norm_layer`: the normalization layer to use.
+  - `revnorm`: set to `true` to place the normalisation layer before the convolution
+  - `drop_block`: the drop block layer
+  - `drop_path`: the drop path layer
+  - `attn_fn`: the attention function to use. See [`squeeze_excite`](@ref) for an example.
 """
 function basicblock(inplanes::Integer, 
                     planes::Integer; 
@@ -202,8 +202,8 @@ layer and zero padding.
 
 # Arguments
 
-- `inplanes`: number of input feature maps
-- `outplanes`: number of output feature maps
+  - `inplanes`: number of input feature maps
+  - `outplanes`: number of output feature maps
 
 Note that kwargs are ignored and only included for compatibility with other downsample layers.
 """
