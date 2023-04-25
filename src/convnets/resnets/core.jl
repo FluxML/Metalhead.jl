@@ -17,7 +17,7 @@ used to build the block for the model, see [`Metalhead.basicblock_builder`](@ref
   - `planes`: number of feature maps for the block
   - `stride`: the stride of the block
   - `reduction_factor`: the factor by which the input feature maps are reduced before
-    the first convolution.
+  the first convolution.
   - `activation`: the activation function to use.
   - `norm_layer`: the normalization layer to use.
   - `revnorm`: set to `true` to place the normalisation layer before the convolution
@@ -25,11 +25,17 @@ used to build the block for the model, see [`Metalhead.basicblock_builder`](@ref
   - `drop_path`: the drop path layer
   - `attn_fn`: the attention function to use. See [`squeeze_excite`](@ref) for an example.
 """
-function basicblock(inplanes::Integer, planes::Integer; stride::Integer = 1,
-                    reduction_factor::Integer = 1, activation = relu,
-                    norm_layer = BatchNorm, revnorm::Bool = false,
-                    drop_block = identity, drop_path = identity,
+function basicblock(inplanes::Integer, 
+                    planes::Integer; 
+                    stride::Integer = 1,
+                    reduction_factor::Integer = 1, 
+                    activation = relu,
+                    norm_layer = BatchNorm, 
+                    revnorm::Bool = false,
+                    drop_block = identity, 
+                    drop_path = identity,
                     attn_fn = planes -> identity)
+  
     first_planes = planes ÷ reduction_factor
     conv_bn1 = conv_norm((3, 3), inplanes, first_planes, identity; norm_layer, revnorm,
                          stride, pad = 1)
@@ -440,6 +446,7 @@ function resnet(block_type, block_repeats::AbstractVector{<:Integer},
     return build_resnet((imsize..., inchannels), stem, get_layers, block_repeats,
                         connection$activation, classifier_fn)
 end
+
 function resnet(block_fn, block_repeats, downsample_opt::Symbol = :B; kwargs...)
     return resnet(block_fn, block_repeats, RESNET_SHORTCUTS[downsample_opt]; kwargs...)
 end
