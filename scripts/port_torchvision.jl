@@ -45,3 +45,56 @@ name, weights, jlconstructor, pyconstructor  = first(model_list)
     println("Saved $(name)_$weights.bson")
 # end
 
+using PythonCall
+
+function vit_out_compare(jlmodel, pymodel)
+  x = rand(Float32, 224, 224, 3, 1)
+
+  conv16_class = jlmodel.layers[1][1:2]
+  h = conv16_class(x)
+  
+  pymodel.eval()
+  z = pymodel._process_input(jl2th(x))
+  n = z.shape[0]
+  batch_class_token = pymodel.class_token.expand(n, -1, -1)
+  z = torch.cat(pylist([batch_class_token, z]), dim=1)
+  
+  @assert h ≈ np2jl(z.detach().numpy())
+  
+  encoder = jlmodel.layers[1][3:5]
+  
+  h = encoder[1](h)
+  z = z + pymodel.encoder.pos_embedding
+  @assert h ≈ np2jl(z.detach().numpy())
+  
+  h = encoder[2](h)
+  z = pymodel.encoder.dropout(z)
+  @assert h ≈ np2jl(z.detach().numpy())
+ 
+  ###
+  block = encoder[3][1]
+  ln_1 = block[1].layers[1]
+  hres = h
+  h = ln_1(h)
+  
+
+  pyblock = pymodel.encoder.layers[0]
+  zres = z
+  z = pyblock.ln_1(z)
+  @assert h ≈ np2jl(z.detach().numpy())
+  ####
+  mha = block[1].layers[2]
+  h = mha(h)
+  h = h + hres
+
+  z, _ = pyblock.self_attention(z, z, z, need_weights=false)
+  z = z + zres
+  @assert h ≈ np2jl(z.detach().numpy())
+  
+  
+  @assert h ≈ np2jl(z.detach().numpy())
+end
+  
+vit_out_compare(jlmodel, pymodel)
+  
+

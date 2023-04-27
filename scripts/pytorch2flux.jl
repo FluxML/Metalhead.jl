@@ -151,6 +151,12 @@ function pytorch2flux!(jlmodel, pymodel; verb=false)
             flux_param .= reverse(pytorch_param, dims=(1, 2))
         else
             flux_param .= pytorch_param
+            # if startswith(param_name, "layernorm")
+            #     @show flux_key pytorch_key
+            #     @show flux_param[1:2]
+            #     @show pytorch_param[1:2]
+            # end
+
         end
     end
 end
