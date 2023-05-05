@@ -25,7 +25,7 @@ function np2jl(x::Py)
 end
 
 function th2jl(x::Py)
-    x_jl = pyconvert(Array, x)
+    x_jl = pyconvert(Array, x.detach().numpy())
     x_jl = permutedims(x_jl, ndims(x_jl):-1:1)
     return x_jl
 end

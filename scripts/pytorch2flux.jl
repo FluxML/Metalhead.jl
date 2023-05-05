@@ -88,7 +88,7 @@ function _list_state(node::LayerNorm, channel, prefix)
     put!(channel, (prefix * ".layernorm_bias", node.diag.bias))
 end
 
-function _list_state(node::Metalhead.Layers.MHAttention, channel, prefix)
+function _list_state(node::Metalhead.Layers.MultiHeadSelfAttention, channel, prefix)
     _list_state(node.qkv_layer, channel, prefix * ".qkv")
     _list_state(node.projection, channel, prefix * ".proj")
 end

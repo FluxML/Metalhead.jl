@@ -15,7 +15,7 @@ Transformer as used in the base ViT architecture.
 function transformer_encoder(planes::Integer, depth::Integer, nheads::Integer;
                              mlp_ratio = 4.0, dropout_prob = 0.0, qkv_bias=false)
     layers = [Chain(SkipConnection(prenorm(planes,
-                                           MHAttention(planes, nheads;
+                                            MultiHeadSelfAttention(planes, nheads;
                                                        qkv_bias,
                                                        attn_dropout_prob = dropout_prob,
                                                        proj_dropout_prob = dropout_prob)),
@@ -64,7 +64,7 @@ function vit(imsize::Dims{2} = (256, 256); inchannels::Integer = 3,
                        transformer_encoder(embedplanes, depth, nheads; mlp_ratio,
                                            dropout_prob, qkv_bias),
                        pool === :class ? x -> x[:, 1, :] : seconddimmean),
-                 Chain(LayerNorm(embedplanes), Dense(embedplanes, nclasses, tanh_fast)))
+                 Chain(LayerNorm(embedplanes), Dense(embedplanes, nclasses)))
 end
 
 const VIT_CONFIGS = Dict(:tiny => (depth = 12, embedplanes = 192, nheads = 3),

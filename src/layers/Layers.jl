@@ -16,7 +16,7 @@ import Flux.testmode!
 include("../utilities.jl")
 
 include("attention.jl")
-export MHAttention
+export MultiHeadSelfAttention
 
 include("conv.jl")
 export conv_norm, basic_conv_bn, dwsep_conv_norm
