@@ -88,6 +88,11 @@ function _list_state(node::LayerNorm, channel, prefix)
     put!(channel, (prefix * ".layernorm_bias", node.diag.bias))
 end
 
+function _list_state(node::Metalhead.Layers.LayerNormV2, channel, prefix)
+    put!(channel, (prefix * ".layernorm_scale", node.diag.scale))
+    put!(channel, (prefix * ".layernorm_bias", node.diag.bias))
+end
+
 function _list_state(node::Metalhead.Layers.MultiHeadSelfAttention, channel, prefix)
     _list_state(node.qkv_layer, channel, prefix * ".qkv")
     _list_state(node.projection, channel, prefix * ".proj")
@@ -151,12 +156,6 @@ function pytorch2flux!(jlmodel, pymodel; verb=false)
             flux_param .= reverse(pytorch_param, dims=(1, 2))
         else
             flux_param .= pytorch_param
-            # if startswith(param_name, "layernorm")
-            #     @show flux_key pytorch_key
-            #     @show flux_param[1:2]
-            #     @show pytorch_param[1:2]
-            # end
-
         end
     end
 end
