@@ -25,9 +25,14 @@ function np2jl(x::Py)
 end
 
 function th2jl(x::Py)
-    x_jl = pyconvert(Array, x)
+    x_jl = pyconvert(Array, x.detach().numpy())
     x_jl = permutedims(x_jl, ndims(x_jl):-1:1)
     return x_jl
 end
 
 py2jl(x::Py) = pyconvert(Any, x)
+
+
+## SAVE STATE 
+using Functors
+state_arrays(x) = fmapstructure(x -> x isa AbstractArray ? x : missing, x)
