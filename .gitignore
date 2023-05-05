@@ -5,7 +5,7 @@
 .vscode/
 .DS_Store
 .CondaPkg/
- 
+ scripts/weights/
 # manifests
 docs/Manifest.toml
 Manifest.toml
