@@ -37,7 +37,7 @@ include("classifier.jl")
 export create_classifier
 
 include("normalise.jl")
-export prenorm, ChannelLayerNorm, LayerNormV2
+export prenorm, ChannelLayerNorm
 
 include("pool.jl")
 export AdaptiveMeanMaxPool

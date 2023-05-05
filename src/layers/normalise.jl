@@ -1,5 +1,5 @@
 # Utility function for applying LayerNorm before a block
-prenorm(planes, fn) = Chain(LayerNormV2(planes), fn)
+prenorm(planes, fn) = Chain(LayerNorm(planes), fn)
 
 """
     ChannelLayerNorm(sz::Integer, λ = identity; ϵ = 1.0f-6)
