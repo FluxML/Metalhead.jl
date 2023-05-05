@@ -41,26 +41,30 @@ model_list = [
             ]
 
 
-# name, weights, jlconstructor, pyconstructor  = first(model_list)
-for (name, weights, jlconstructor, pyconstructor) in model_list
-    # CONSTRUCT MODELS
-    jlmodel = jlconstructor()
-    pymodel = pyconstructor(weights)
+function convert_models()
+  # name, weights, jlconstructor, pyconstructor  = first(model_list)
+  for (name, weights, jlconstructor, pyconstructor) in model_list
+      # CONSTRUCT MODELS
+      jlmodel = jlconstructor()
+      pymodel = pyconstructor(weights)
 
-    # LOAD WEIGHTS FROM PYTORCH TO JULIA
-    pytorch2flux!(jlmodel, pymodel)
-    rtol = startswith(name, "vit") ? 1e-2 : 1e-4 # TODO investigate why ViT is less accurate
-    compare_pytorch(jlmodel, pymodel; rtol)
-    
-    # SAVE WEIGHTS
-    filename = joinpath(@__DIR__, "weights", "$(name)_$weights.jld2")
-    mkpath(dirname(filename))
-    JLD2.jldsave(filename, model_state = Flux.state(jlmodel))
-    println("Saved $filename")
+      # LOAD WEIGHTS FROM PYTORCH TO JULIA
+      pytorch2flux!(jlmodel, pymodel)
+      rtol = startswith(name, "vit") ? 1e-2 : 1e-4 # TODO investigate why ViT is less accurate
+      compare_pytorch(jlmodel, pymodel; rtol)
+      
+      # SAVE WEIGHTS
+      filename = joinpath(@__DIR__, "weights", name, "$(name)_$weights.jld2")
+      mkpath(dirname(filename))
+      JLD2.jldsave(filename, model_state = Flux.state(jlmodel))
+      println("Saved $filename")
 
-    # LOAD WEIGHTS AND TEST AGAIN
-    jlmodel2 = jlconstructor()
-    model_state = JLD2.load(filename, "model_state")
-    Flux.loadmodel!(jlmodel2, model_state)
-    compare_pytorch(jlmodel2, pymodel; rtol)
+      # LOAD WEIGHTS AND TEST AGAIN
+      jlmodel2 = jlconstructor()
+      model_state = JLD2.load(filename, "model_state")
+      Flux.loadmodel!(jlmodel2, model_state)
+      compare_pytorch(jlmodel2, pymodel; rtol)
+  end
 end
+
+convert_models()
