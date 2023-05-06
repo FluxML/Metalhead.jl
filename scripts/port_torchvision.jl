@@ -23,10 +23,10 @@ model_list = [
               ("resnext101_32x8d", "IMAGENET1K_V1", () -> ResNeXt(101; cardinality=32, base_width=8), weights -> tvmodels.resnext101_32x8d(; weights)),
               ("resnext101_32x8d", "IMAGENET1K_V2", () -> ResNeXt(101; cardinality=32, base_width=8), weights -> tvmodels.resnext101_32x8d(; weights)),
               ("resnext101_64x4d", "IMAGENET1K_V1", () -> ResNeXt(101; cardinality=64, base_width=4), weights -> tvmodels.resnext101_64x4d(; weights)),
-              ("wide_resnet50_2", "IMAGENET1K_V1", () -> WideResNet(50), weights -> tvmodels.wide_resnet50_2(; weights)),
-              ("wide_resnet50_2", "IMAGENET1K_V2", () -> WideResNet(50), weights -> tvmodels.wide_resnet50_2(; weights)),
-              ("wide_resnet101_2", "IMAGENET1K_V1", () -> WideResNet(101), weights -> tvmodels.wide_resnet101_2(; weights)),
-              ("wide_resnet101_2", "IMAGENET1K_V2", () -> WideResNet(101), weights -> tvmodels.wide_resnet101_2(; weights)),
+              ("wideresnet50", "IMAGENET1K_V1", () -> WideResNet(50), weights -> tvmodels.wide_resnet50_2(; weights)),
+              ("wideresnet50", "IMAGENET1K_V2", () -> WideResNet(50), weights -> tvmodels.wide_resnet50_2(; weights)),
+              ("wideresnet101", "IMAGENET1K_V1", () -> WideResNet(101), weights -> tvmodels.wide_resnet101_2(; weights)),
+              ("wideresnet101", "IMAGENET1K_V2", () -> WideResNet(101), weights -> tvmodels.wide_resnet101_2(; weights)),
               ("vit_b_16", "IMAGENET1K_V1", () -> ViT(:base), weights -> tvmodels.vit_b_16(; weights)),
               ("vit_b_32", "IMAGENET1K_V1", () -> ViT(:base, patch_size=(32,32)), weights -> tvmodels.vit_b_32(; weights)),
               ("vit_l_16", "IMAGENET1K_V1", () -> ViT(:large), weights -> tvmodels.vit_l_16(; weights)),
@@ -54,7 +54,8 @@ function convert_models()
       compare_pytorch(jlmodel, pymodel; rtol)
       
       # SAVE WEIGHTS
-      filename = joinpath(@__DIR__, "weights", name, "$(name)_$weights.jld2")
+      artifact_name = "$(name)-$weights"
+      filename = joinpath(@__DIR__, "weights", name, artifact_name, "$(artifact_name).jld2")
       mkpath(dirname(filename))
       JLD2.jldsave(filename, model_state = Flux.state(jlmodel))
       println("Saved $filename")

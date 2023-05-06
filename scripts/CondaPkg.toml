@@ -1,5 +1,6 @@
 channels = ["pytorch"]
 
 [deps]
+huggingface_hub = ""
 pytorch = ">=2,<3"
 torchvision = ">=0.15"
