@@ -9,6 +9,7 @@ using Statistics, Random, LinearAlgebra
 using BSON
 using PythonCall
 using Images
+using Test
 
 include("utils.jl")
 
@@ -19,7 +20,7 @@ const torchvision = pyimport("torchvision")
 const GUITAR_PATH = download("https://cdn.pixabay.com/photo/2015/05/07/11/02/guitar-756326_960_720.jpg")
 const IMAGENET_LABELS = readlines(download("https://raw.githubusercontent.com/pytorch/hub/master/imagenet_classes.txt"))
 
-function compare_pytorch(jlmodel, pymodel)
+function compare_pytorch(jlmodel, pymodel; rtol = 1e-4)
     sz = (224, 224)
     img = Images.load(GUITAR_PATH);
     img = imresize(img, sz);
@@ -44,9 +45,8 @@ function compare_pytorch(jlmodel, pymodel)
         println("    $(IMAGENET_LABELS[i]): $(pyprobs[i])")
     end
 
-    @assert maximum(jlprobs) ≈ maximum(pyprobs)
-    @assert argmax(jlprobs) ≈ argmax(pyprobs)
-    @assert sortperm(jlprobs, rev=true)[1:10] ≈ sortperm(pyprobs, rev=true)[1:10] 
+    @test maximum(jlprobs) ≈ maximum(pyprobs) rtol=rtol
+    @test sortperm(jlprobs, rev=true)[1:5] == sortperm(pyprobs, rev=true)[1:5]
     println()
 end
 

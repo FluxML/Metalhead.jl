@@ -13,7 +13,7 @@ Transformer as used in the base ViT architecture.
   - `dropout_prob`: dropout probability
 """
 function transformer_encoder(planes::Integer, depth::Integer, nheads::Integer;
-                             mlp_ratio = 4.0, dropout_prob = 0.0, qkv_bias=false)
+                             mlp_ratio = 4.0, dropout_prob = 0.0, qkv_bias=true)
     layers = [Chain(SkipConnection(prenorm(planes,
                                             MultiHeadSelfAttention(planes, nheads;
                                                        qkv_bias,
@@ -53,7 +53,7 @@ function vit(imsize::Dims{2} = (256, 256); inchannels::Integer = 3,
              patch_size::Dims{2} = (16, 16), embedplanes::Integer = 768,
              depth::Integer = 6, nheads::Integer = 16, mlp_ratio = 4.0, dropout_prob = 0.1,
              emb_dropout_prob = 0.1, pool::Symbol = :class, nclasses::Integer = 1000, 
-             qkv_bias = false)
+             qkv_bias = true)
     @assert pool in [:class, :mean]
     "Pool type must be either `:class` (class token) or `:mean` (mean pooling)"
     npatches = prod(imsize .÷ patch_size)
@@ -78,7 +78,7 @@ const VIT_CONFIGS = Dict(:tiny => (depth = 12, embedplanes = 192, nheads = 3),
                                        mlp_ratio = 64 // 13))
 
 """
-    ViT(config::Symbol = base; imsize::Dims{2} = (256, 256), inchannels::Integer = 3,
+    ViT(config::Symbol = base; imsize::Dims{2} = (224, 224), inchannels::Integer = 3,
         patch_size::Dims{2} = (16, 16), pool = :class, nclasses::Integer = 1000)
 
 Creates a Vision Transformer (ViT) model.
@@ -101,11 +101,10 @@ struct ViT
 end
 @functor ViT
 
-function ViT(config::Symbol; imsize::Dims{2} = (256, 256), patch_size::Dims{2} = (16, 16),
-             pretrain::Bool = false, inchannels::Integer = 3, nclasses::Integer = 1000, 
-             qkv_bias=false)
+function ViT(config::Symbol; imsize::Dims{2} = (224, 224), patch_size::Dims{2} = (16, 16),
+             pretrain::Bool = false, inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(config, keys(VIT_CONFIGS))
-    layers = vit(imsize; inchannels, patch_size, nclasses, qkv_bias, VIT_CONFIGS[config]...)
+    layers = vit(imsize; inchannels, patch_size, nclasses, VIT_CONFIGS[config]...)
     if pretrain
         loadpretrain!(layers, string("vit", config))
     end
