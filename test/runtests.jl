@@ -18,7 +18,11 @@ const PRETRAINED_MODELS = [
     (WideResNet, 101),
     (ResNeXt, 50, 32, 4),
     (ResNeXt, 101, 64, 4),
-    (ResNeXt, 101, 32, 8)
+    (ResNeXt, 101, 32, 8),
+    (ViT, :base, (16, 16)),
+    (ViT, :base, (32, 32)),
+    (ViT, :large, (16, 16)),
+    (ViT, :large, (32, 32)),
 ]
 
 function _gc()

@@ -27,7 +27,7 @@ function ResNet(depth::Integer; pretrain::Bool = false, inchannels::Integer = 3,
         artifact_name = "resnet$(depth)"
         if depth ∈ [18, 34]
             artifact_name *= "-IMAGENET1K_V1"
-        elseif depth ∈ [50, 101]
+        elseif depth ∈ [50, 101, 152]
             artifact_name *= "-IMAGENET1K_V2"
         end
         loadpretrain!(model, artifact_name)

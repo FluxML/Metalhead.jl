@@ -75,14 +75,14 @@ end
 # hfhub.login(ENV["HUGGINGFACE_TOKEN"])
 # model_artifacts = create_model_artifacts(force=false)
 # model_artifacts = filter(model_artifacts) do x
-#     !startswith(x[1], "resnet") && !startswith(x[1], "resnext")
+#     startswith(x[1], "resnet152")
 # end
 # upload_artifacts_to_hf(model_artifacts)
 
 ### Generate Artifacts.toml from HuggingFace repos #############
 fluxml_model_repos = list_fluxml_models()
-# fluxml_model_repos = filter(fluxml_model_repos) do repo
-#     name = split(repo[:id], "/")[2]
-#     startswith(name, "resnet")
-# end
+fluxml_model_repos = filter(fluxml_model_repos) do repo
+    name = split(repo[:id], "/")[2]
+    startswith(name, "resnet152")
+end
 generate_artifacts_toml(fluxml_model_repos)

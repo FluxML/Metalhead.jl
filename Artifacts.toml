@@ -62,6 +62,22 @@ lazy = true
     sha256 = "a8d30a735ef5649ec40a74a0515ee3d6774499267be06f5f2b372259c5ced8d6"
     url = "https://huggingface.co/FluxML/resnet152/resolve/main/resnet152.tar.gz"
 
+[resnet152-IMAGENET1K_V1]
+git-tree-sha1 = "e03bd8f6ae55ec3fa854b8c987d44801cbd832bc"
+lazy = true
+
+    [[resnet152-IMAGENET1K_V1.download]]
+    sha256 = "01f3f9b30e9ef240885a5e369d4435e47c1c4da0c083af6d96f29ff4e5b5a722"
+    url = "https://huggingface.co/FluxML/resnet152/resolve/main/resnet152-IMAGENET1K_V1.tar.gz"
+
+[resnet152-IMAGENET1K_V2]
+git-tree-sha1 = "64af7840cd730142074e95bd978acf1f2d99bf2a"
+lazy = true
+
+    [[resnet152-IMAGENET1K_V2.download]]
+    sha256 = "0e3a9ca6b5b48dae81f6e5bab49dba2c0d92e9b2800f041f3767315862e18b3c"
+    url = "https://huggingface.co/FluxML/resnet152/resolve/main/resnet152-IMAGENET1K_V2.tar.gz"
+
 [resnet18]
 git-tree-sha1 = "4ced5a0338c0f0293940f1deb63e1c463125a6ff"
 lazy = true
