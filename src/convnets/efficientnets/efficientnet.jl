@@ -86,10 +86,11 @@ end
 function EfficientNet(config::Symbol; pretrain::Bool = false, inchannels::Integer = 3,
                       nclasses::Integer = 1000)
     layers = efficientnet(config; inchannels, nclasses)
+    model = EfficientNet(layers)
     if pretrain
-        loadpretrain!(layers, string("efficientnet-", config))
+        loadpretrain!(model, string("efficientnet_", config))
     end
-    return EfficientNet(layers)
+    return model
 end
 
 (m::EfficientNet)(x) = m.layers(x)

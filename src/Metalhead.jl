@@ -4,6 +4,7 @@ using Flux
 using Flux: Zygote, outputsize
 using Functors
 using BSON
+using JLD2
 using Artifacts, LazyArtifacts
 using Statistics
 using MLUtils

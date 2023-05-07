@@ -115,11 +115,12 @@ end
 function UNet(imsize::Dims{2} = (256, 256), inchannels::Integer = 3, outplanes::Integer = 3,
               encoder_backbone = Metalhead.backbone(DenseNet(121)); pretrain::Bool = false)
     layers = unet(encoder_backbone, (imsize..., inchannels, 1), outplanes)
-    
+    model = UNet(layers)
     if pretrain
-        loadpretrain!(layers, string("UNet"))
+        artifact_name = "UNet"
+        loadpretrain!(model, artifact_name)
     end
-    return UNet(layers)
+    return model
 end
 
 (m::UNet)(x::AbstractArray) = m.layers(x)

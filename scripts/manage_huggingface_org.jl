@@ -44,7 +44,7 @@ function create_model_artifacts(; force=false)
             weight_name = basename(weight_folder)
             artifact_path = joinpath(model_folder, "$(weight_name).tar.gz")
             if !isfile(artifact_path) || force
-                run(`tar -czvf $(artifact_path) $(weight_folder)`)
+                run(`tar -czvf $(artifact_path) -C $(weight_folder) .`)
             end
             push!(artifacts, (model_name, weight_name, artifact_path))
         end
@@ -74,10 +74,15 @@ end
 ### Create artifacts and upload to HuggingFace repos ############
 # hfhub.login(ENV["HUGGINGFACE_TOKEN"])
 # model_artifacts = create_model_artifacts(force=false)
-# # model_artifacts = filter(x -> startswith(x[1], "wideresnet"), model_artifacts)
+# model_artifacts = filter(model_artifacts) do x
+#     !startswith(x[1], "resnet") && !startswith(x[1], "resnext")
+# end
 # upload_artifacts_to_hf(model_artifacts)
 
 ### Generate Artifacts.toml from HuggingFace repos #############
 fluxml_model_repos = list_fluxml_models()
-# # fluxml_model_repos = filter(x -> true, fluxml_model_repos)
+# fluxml_model_repos = filter(fluxml_model_repos) do repo
+#     name = split(repo[:id], "/")[2]
+#     startswith(name, "resnet")
+# end
 generate_artifacts_toml(fluxml_model_repos)

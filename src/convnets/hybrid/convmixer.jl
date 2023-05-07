@@ -70,10 +70,11 @@ function ConvMixer(config::Symbol; pretrain::Bool = false, inchannels::Integer =
     _checkconfig(config, keys(CONVMIXER_CONFIGS))
     layers = convmixer(CONVMIXER_CONFIGS[config][1]...; CONVMIXER_CONFIGS[config][2]...,
                        inchannels, nclasses)
+    model = ConvMixer(layers)
     if pretrain
-        loadpretrain!(layers, "convmixer$config")
+        loadpretrain!(model, "convmixer_$config")
     end
-    return ConvMixer(layers)
+    return model
 end
 
 (m::ConvMixer)(x) = m.layers(x)

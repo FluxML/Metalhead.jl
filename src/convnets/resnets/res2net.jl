@@ -33,10 +33,13 @@ function Res2Net(depth::Integer; pretrain::Bool = false, scale::Integer = 4,
     _checkconfig(depth, keys(LRESNET_CONFIGS))
     layers = resnet(bottle2neck, LRESNET_CONFIGS[depth][2]; base_width, scale,
                     inchannels, nclasses)
+
+    model = Res2Net(layers)
     if pretrain
-        loadpretrain!(layers, string("Res2Net", depth, "_", base_width, "x", scale))
+        artifact_name = string("res2net", depth, "_", base_width, "x", scale)
+        loadpretrain!(layers, artifact_name)
     end
-    return Res2Net(layers)
+    return model
 end
 
 (m::Res2Net)(x) = m.layers(x)
@@ -80,12 +83,12 @@ function Res2NeXt(depth::Integer; pretrain::Bool = false, scale::Integer = 4,
     _checkconfig(depth, keys(LRESNET_CONFIGS))
     layers = resnet(bottle2neck, LRESNET_CONFIGS[depth][2]; base_width, scale,
                     cardinality, inchannels, nclasses)
+    model = Res2NeXt(layers)
     if pretrain
-        loadpretrain!(layers,
-                      string("Res2NeXt", depth, "_", base_width, "x", cardinality,
-                             "x", scale))
+        artifact_name = string("res2next", depth, "_", base_width, "x", scale, "x", cardinality)
+        loadpretrain!(layers, artifact_name)
     end
-    return Res2NeXt(layers)
+    return model
 end
 
 (m::Res2NeXt)(x) = m.layers(x)

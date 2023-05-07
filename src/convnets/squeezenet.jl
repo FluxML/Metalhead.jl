@@ -73,10 +73,11 @@ end
 function SqueezeNet(; pretrain::Bool = false, inchannels::Integer = 3,
                     nclasses::Integer = 1000)
     layers = squeezenet(; inchannels, nclasses)
+    model = SqueezeNet(layers)
     if pretrain
-        loadpretrain!(layers, "squeezenet")
+        loadpretrain!(model, "squeezenet")
     end
-    return SqueezeNet(layers)
+    return model
 end
 
 (m::SqueezeNet)(x) = m.layers(x)

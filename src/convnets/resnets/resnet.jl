@@ -22,10 +22,17 @@ function ResNet(depth::Integer; pretrain::Bool = false, inchannels::Integer = 3,
                 nclasses::Integer = 1000)
     _checkconfig(depth, keys(RESNET_CONFIGS))
     layers = resnet(RESNET_CONFIGS[depth]...; inchannels, nclasses)
+    model = ResNet(layers)
     if pretrain
-        loadpretrain!(layers, string("resnet", depth))
+        artifact_name = "resnet$(depth)"
+        if depth ∈ [18, 34]
+            artifact_name *= "-IMAGENET1K_V1"
+        elseif depth ∈ [50, 101]
+            artifact_name *= "-IMAGENET1K_V2"
+        end
+        loadpretrain!(model, artifact_name)
     end
-    return ResNet(layers)
+    return model
 end
 
 (m::ResNet)(x) = m.layers(x)
@@ -59,10 +66,15 @@ function WideResNet(depth::Integer; pretrain::Bool = false, inchannels::Integer 
                     nclasses::Integer = 1000)
     _checkconfig(depth, keys(LRESNET_CONFIGS))
     layers = resnet(LRESNET_CONFIGS[depth]...; base_width = 128, inchannels, nclasses)
+    model = WideResNet(layers)
     if pretrain
-        loadpretrain!(layers, string("wideresnet", depth))
+        artifact_name = "wideresnet$(depth)"
+        if depth ∈ [50, 101]
+            artifact_name *= "-IMAGENET1K_V2"
+        end        
+        loadpretrain!(layers, artifact_name)
     end
-    return WideResNet(layers)
+    return model
 end
 
 (m::WideResNet)(x) = m.layers(x)

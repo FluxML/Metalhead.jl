@@ -148,10 +148,12 @@ function DenseNet(config::Int; pretrain::Bool = false, growth_rate::Int = 32,
     _checkconfig(config, keys(DENSENET_CONFIGS))
     layers = densenet(DENSENET_CONFIGS[config]; growth_rate, reduction, inchannels,
                       nclasses)
+    model = DenseNet(layers)
     if pretrain
-        loadpretrain!(layers, string("densenet", config))
+        artifact_name = string("densenet", config)
+        loadpretrain!(model, artifact_name)
     end
-    return DenseNet(layers)
+    return model
 end
 
 (m::DenseNet)(x) = m.layers(x)
