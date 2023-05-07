@@ -42,3 +42,4 @@ To contribute new models, see our [contributing docs](https://fluxml.ai/Metalhea
 ## Getting Started
 
 You can find the Metalhead.jl getting started guide [here](https://fluxml.ai/Metalhead.jl/dev/tutorials/quickstart/).
+;
