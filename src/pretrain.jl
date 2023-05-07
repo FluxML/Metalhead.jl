@@ -9,7 +9,19 @@ function loadweights(artifact_name)
     catch e
         throw(ArgumentError("No pre-trained weights available for $artifact_name."))
     end
-    file_name = readdir(artifact_dir)[1]
+    if length(readdir(artifact_dir)) > 1
+        # @warn("Found multiple files in $artifact_dir.")
+        files = readdir(artifact_dir)
+        files = filter!(x -> endswith(x, ".bson") || endswith(x, ".jld2"), files)
+        files = filter!(x -> !startswith(x, "."), files)
+        if length(files) > 1
+            throw(ErrorException("Found multiple weight artifacts for $artifact_name."))
+        end
+        file_name = files[1]
+    else
+        file_name = readdir(artifact_dir)[1]
+    end
+
     file_path = joinpath(artifact_dir, file_name)
     
     if endswith(file_name, ".bson")

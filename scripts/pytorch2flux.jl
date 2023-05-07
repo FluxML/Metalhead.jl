@@ -145,8 +145,9 @@ function pytorch2flux!(jlmodel, pymodel; verb=false)
     end
 
     for ((flux_key, flux_param), (pytorch_key, pytorch_param)) in zip(jlstate, pystate)
-        # @show flux_key size(flux_param) pytorch_key size(pytorch_param)
-        # @show size(flux_param) == size(pytorch_param)
+        println("##")
+        @show flux_key size(flux_param) pytorch_key size(pytorch_param)
+        @show size(flux_param) == size(pytorch_param)
 
         param_name = split(flux_key, ".")[end]
         
