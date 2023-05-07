@@ -12,7 +12,13 @@
 julia> ]add Metalhead
 ```
 
+## Getting Started
+
+You can find the Metalhead.jl getting started guide [here](https://fluxml.ai/Metalhead.jl/dev/tutorials/quickstart/).
+
 ## Available models
+
+To contribute new models, see our [contributing docs](https://fluxml.ai/Metalhead.jl/dev/contributing/).
 
 ### Image Classification
 
@@ -43,9 +49,8 @@ julia> ]add Metalhead
 | [VGG](https://arxiv.org/abs/1409.1556)           | [`VGG`](https://fluxml.ai/Metalhead.jl/dev/api/others/#Metalhead.VGG)                   | Y            |
 | [Vision Transformer](https://arxiv.org/abs/2010.11929) | [`ViT`](https://fluxml.ai/Metalhead.jl/dev/api/vit/#Metalhead.ViT)             | Y            |
 
-To contribute new models, see our [contributing docs](https://fluxml.ai/Metalhead.jl/dev/contributing/).
+### Other Models
 
-## Getting Started
-
-You can find the Metalhead.jl getting started guide [here](https://fluxml.ai/Metalhead.jl/dev/tutorials/quickstart/).
-;
+| Model Name                                       | Constructor                                                                                       | Pre-trained? |
+|:-------------------------------------------------|:-----------------------------------------------------------------------------------------------|:------------:|
+| [UNet](https://arxiv.org/abs/1505.04597)         | [`UNet`](https://fluxml.ai/Metalhead.jl/dev/api/others/#Metalhead.UNet)                         | N            |
