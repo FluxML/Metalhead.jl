@@ -37,7 +37,7 @@ function Res2Net(depth::Integer; pretrain::Bool = false, scale::Integer = 4,
     model = Res2Net(layers)
     if pretrain
         artifact_name = string("res2net", depth, "_", base_width, "x", scale)
-        loadpretrain!(layers, artifact_name)
+        loadpretrain!(model, artifact_name)
     end
     return model
 end
@@ -86,7 +86,7 @@ function Res2NeXt(depth::Integer; pretrain::Bool = false, scale::Integer = 4,
     model = Res2NeXt(layers)
     if pretrain
         artifact_name = string("res2next", depth, "_", base_width, "x", scale, "x", cardinality)
-        loadpretrain!(layers, artifact_name)
+        loadpretrain!(model, artifact_name)
     end
     return model
 end

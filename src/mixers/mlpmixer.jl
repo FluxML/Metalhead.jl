@@ -62,10 +62,11 @@ function MLPMixer(config::Symbol; imsize::Dims{2} = (224, 224),
     _checkconfig(config, keys(MIXER_CONFIGS))
     layers = mlpmixer(mixerblock, imsize; patch_size, MIXER_CONFIGS[config]..., inchannels,
                       nclasses)
+    model = MLPMixer(layers)
     if pretrain
-        loadpretrain!(layers, string("mlpmixer", config))
+        loadpretrain!(model, string("mlpmixer", config))
     end
-    return MLPMixer(layers)
+    return model
 end
 
 (m::MLPMixer)(x) = m.layers(x)

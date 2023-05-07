@@ -93,10 +93,11 @@ end
 function Xception(; pretrain::Bool = false, inchannels::Integer = 3,
                   nclasses::Integer = 1000)
     layers = xception(; inchannels, nclasses)
+    model = Xception(layers)
     if pretrain
-        loadpretrain!(layers, "xception")
+        loadpretrain!(model, "xception")
     end
-    return Xception(layers)
+    return model
 end
 
 (m::Xception)(x) = m.layers(x)

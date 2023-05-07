@@ -99,10 +99,11 @@ end
 function GoogLeNet(; pretrain::Bool = false, inchannels::Integer = 3,
                    nclasses::Integer = 1000, batchnorm::Bool = false, bias::Bool = true)
     layers = googlenet(; inchannels, nclasses, batchnorm, bias)
+    model = GoogLeNet(layers)
     if pretrain
-        loadpretrain!(layers, "GoogLeNet")
+        loadpretrain!(model, "GoogLeNet")
     end
-    return GoogLeNet(layers)
+    return model
 end
 
 (m::GoogLeNet)(x) = m.layers(x)

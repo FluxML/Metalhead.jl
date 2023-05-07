@@ -30,7 +30,7 @@ function SEResNet(depth::Integer; pretrain::Bool = false, inchannels::Integer = 
     model = SEResNet(layers)
     if pretrain
         artifact_name = "seresnet$(depth)"
-        loadpretrain!(layers, artifact_name)
+        loadpretrain!(model, artifact_name)
     end
     return model
 end
@@ -74,10 +74,11 @@ function SEResNeXt(depth::Integer; pretrain::Bool = false, cardinality::Integer 
     layers = resnet(LRESNET_CONFIGS[depth]...; inchannels, nclasses, cardinality,
                     base_width,
                     attn_fn = squeeze_excite)
+    model = SEResNeXt(layers)
     if pretrain
-        loadpretrain!(layers, string("seresnext", depth, "_", cardinality, "x", base_width))
+        loadpretrain!(model, string("seresnext", depth, "_", cardinality, "x", base_width))
     end
-    return SEResNeXt(layers)
+    return model
 end
 
 (m::SEResNeXt)(x) = m.layers(x)

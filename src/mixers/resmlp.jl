@@ -61,10 +61,11 @@ function ResMLP(config::Symbol; imsize::Dims{2} = (224, 224),
     _checkconfig(config, keys(MIXER_CONFIGS))
     layers = mlpmixer(resmixerblock, imsize; mlp_ratio = 4.0, patch_size,
                       MIXER_CONFIGS[config]..., inchannels, nclasses)
+    model = ResMLP(layers)
     if pretrain
-        loadpretrain!(layers, string(resmlp, config))
+        loadpretrain!(model, string(resmlp, config))
     end
-    return ResMLP(layers)
+    return model
 end
 
 (m::ResMLP)(x) = m.layers(x)

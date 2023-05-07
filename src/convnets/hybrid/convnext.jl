@@ -129,7 +129,7 @@ function ConvNeXt(config::Symbol; pretrain::Bool = false, inchannels::Integer = 
     layers = convnext(config; inchannels, nclasses)
     model = ConvNeXt(layers)
     if pretrain
-        loadpretrain!(layers, "convnext_$config")
+        loadpretrain!(model, "convnext_$config")
     end
     return model
 end

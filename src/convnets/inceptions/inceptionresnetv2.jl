@@ -122,10 +122,11 @@ end
 function InceptionResNetv2(; pretrain::Bool = false, inchannels::Integer = 3,
                            nclasses::Integer = 1000)
     layers = inceptionresnetv2(; inchannels, nclasses)
+    model = InceptionResNetv2(layers)
     if pretrain
-        loadpretrain!(layers, "InceptionResNetv2")
+        loadpretrain!(model, "InceptionResNetv2")
     end
-    return InceptionResNetv2(layers)
+    return model
 end
 
 (m::InceptionResNetv2)(x) = m.layers(x)

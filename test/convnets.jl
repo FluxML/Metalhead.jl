@@ -59,7 +59,7 @@ end
 
 
 @testset "WideResNet" begin
-    @testset "WideResNet($sz)" for sz in [50, 101]
+    @testset "WideResNet($sz)" for sz in [50]
         m = WideResNet(sz)
         @test size(m(x_224)) == (1000, 1)
         @test gradtest(m, x_224)

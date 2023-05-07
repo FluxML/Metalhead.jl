@@ -72,7 +72,7 @@ function WideResNet(depth::Integer; pretrain::Bool = false, inchannels::Integer 
         if depth ∈ [50, 101]
             artifact_name *= "-IMAGENET1K_V2"
         end        
-        loadpretrain!(layers, artifact_name)
+        loadpretrain!(model, artifact_name)
     end
     return model
 end
