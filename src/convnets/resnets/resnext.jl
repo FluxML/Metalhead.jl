@@ -40,7 +40,7 @@ function ResNeXt(depth::Integer; pretrain::Bool = false, cardinality::Integer = 
         elseif depth == 101 && cardinality == 32 && base_width == 8
           artifact_name *= "-IMAGENET1K_V2"
         elseif depth == 101 && cardinality == 64 && base_width == 4
-          artifact_name *= "-IMAGENET1K_V2"
+          artifact_name *= "-IMAGENET1K_V1"
         end
         loadpretrain!(model, artifact_name)
     end
