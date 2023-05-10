@@ -137,10 +137,11 @@ end
 function Inceptionv4(; pretrain::Bool = false, inchannels::Integer = 3,
                      nclasses::Integer = 1000)
     layers = inceptionv4(; inchannels, nclasses)
+    model = Inceptionv4(layers)
     if pretrain
-        loadpretrain!(layers, "Inceptionv4")
+        loadpretrain!(model, "Inceptionv4")
     end
-    return Inceptionv4(layers)
+    return model
 end
 
 (m::Inceptionv4)(x) = m.layers(x)

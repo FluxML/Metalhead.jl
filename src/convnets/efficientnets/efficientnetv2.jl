@@ -89,10 +89,11 @@ end
 function EfficientNetv2(config::Symbol; pretrain::Bool = false,
                         inchannels::Integer = 3, nclasses::Integer = 1000)
     layers = efficientnetv2(config; inchannels, nclasses)
+    model = EfficientNetv2(layers)
     if pretrain
-        loadpretrain!(layers, string("efficientnetv2-", config))
+        loadpretrain!(model, string("efficientnet_v2_", config))
     end
-    return EfficientNetv2(layers)
+    return model
 end
 
 (m::EfficientNetv2)(x) = m.layers(x)

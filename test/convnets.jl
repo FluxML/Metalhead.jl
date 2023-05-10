@@ -26,7 +26,7 @@ end
         m = ResNet(sz)
         @test size(m(x_224)) == (1000, 1)
         if (ResNet, sz) in PRETRAINED_MODELS
-            @test_broken acctest(ResNet(sz, pretrain = true))
+            @test acctest(ResNet(sz, pretrain = true))
         else
             @test_throws ArgumentError ResNet(sz, pretrain = true)
         end
@@ -55,18 +55,19 @@ end
             end
         end
     end
+end
 
-    @testset "WideResNet" begin
-        @testset "WideResNet($sz)" for sz in [50, 101]
-            m = WideResNet(sz)
-            @test size(m(x_224)) == (1000, 1)
-            @test gradtest(m, x_224)
-            _gc()
-            if (WideResNet, sz) in PRETRAINED_MODELS
-                @test_broken acctest(WideResNet(sz, pretrain = true))
-            else
-                @test_throws ArgumentError WideResNet(sz, pretrain = true)
-            end
+
+@testset "WideResNet" begin
+    @testset "WideResNet($sz)" for sz in [50, 101]
+        m = WideResNet(sz)
+        @test size(m(x_224)) == (1000, 1)
+        @test gradtest(m, x_224)
+        _gc()
+        if (WideResNet, sz) in PRETRAINED_MODELS
+            @test acctest(WideResNet(sz, pretrain = true))
+        else
+            @test_throws ArgumentError WideResNet(sz, pretrain = true)
         end
     end
 end
@@ -78,7 +79,7 @@ end
                 m = ResNeXt(depth; cardinality, base_width)
                 @test size(m(x_224)) == (1000, 1)
                 if (ResNeXt, depth, cardinality, base_width) in PRETRAINED_MODELS
-                    @test_broken acctest(ResNeXt(depth; cardinality, base_width, pretrain = true))
+                    @test acctest(ResNeXt(depth; cardinality, base_width, pretrain = true))
                 else
                     @test_throws ArgumentError ResNeXt(depth; cardinality, base_width, pretrain = true)
                 end

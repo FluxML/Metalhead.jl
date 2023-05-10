@@ -73,13 +73,19 @@ end
 function SqueezeNet(; pretrain::Bool = false, inchannels::Integer = 3,
                     nclasses::Integer = 1000)
     layers = squeezenet(; inchannels, nclasses)
+    model = SqueezeNet(layers)
     if pretrain
-        loadpretrain!(layers, "squeezenet")
+        loadpretrain!(model, "squeezenet")
     end
-    return SqueezeNet(layers)
+    return model
 end
 
 (m::SqueezeNet)(x) = m.layers(x)
 
 backbone(m::SqueezeNet) = m.layers[1]
 classifier(m::SqueezeNet) = m.layers[2:end]
+
+function Flux.loadmodel!(model::SqueezeNet, w)
+    Flux.loadmodel!(model.layers[1], w.layers[1])
+    Flux.loadmodel!(model.layers[2], w.layers[2])
+end

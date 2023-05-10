@@ -100,10 +100,11 @@ function MNASNet(config::Symbol; width_mult::Real = 1, pretrain::Bool = false,
                  inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(config, keys(MNASNET_CONFIGS))
     layers = mnasnet(config; width_mult, inchannels, nclasses)
+    model = MNASNet(layers)
     if pretrain
-        loadpretrain!(layers, "mnasnet$(width_mult)")
+        loadpretrain!(model, "mnasnet$(width_mult)")
     end
-    return MNASNet(layers)
+    return model
 end
 
 (m::MNASNet)(x) = m.layers(x)

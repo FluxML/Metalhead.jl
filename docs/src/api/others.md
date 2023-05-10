@@ -8,6 +8,7 @@ This is the API reference for some of the other models supported by Metalhead.jl
 AlexNet
 VGG
 SqueezeNet
+UNet
 ```
 
 ## The mid-level functions
@@ -16,4 +17,5 @@ SqueezeNet
 Metalhead.alexnet
 Metalhead.vgg
 Metalhead.squeezenet
+Metalhead.unet
 ```

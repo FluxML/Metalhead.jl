@@ -105,10 +105,12 @@ function ViT(config::Symbol; imsize::Dims{2} = (224, 224), patch_size::Dims{2} =
              pretrain::Bool = false, inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(config, keys(VIT_CONFIGS))
     layers = vit(imsize; inchannels, patch_size, nclasses, VIT_CONFIGS[config]...)
+    model = ViT(layers)
     if pretrain
-        loadpretrain!(layers, string("vit", config))
+        artifact_name = "vit_$(string(config)[1])_$(patch_size[1])-IMAGENET1K_V1"
+        loadpretrain!(model, artifact_name)
     end
-    return ViT(layers)
+    return model
 end
 
 (m::ViT)(x) = m.layers(x)

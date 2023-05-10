@@ -6,6 +6,10 @@
 .DS_Store
 .CondaPkg/
 scripts/weights/
+scripts/Artifacts.toml
+# copied from README.md
+docs/src/index.md 
+
 # manifests
 docs/Manifest.toml
 Manifest.toml

@@ -89,10 +89,11 @@ function gMLP(config::Symbol; imsize::Dims{2} = (224, 224), patch_size::Dims{2} 
     _checkconfig(config, keys(MIXER_CONFIGS))
     layers = mlpmixer(spatialgatingblock, imsize; mlp_layer = gated_mlp_block, patch_size,
                       MIXER_CONFIGS[config]..., inchannels, nclasses)
+    model = gMLP(layers)
     if pretrain
-        loadpretrain!(layers, string("gmlp", config))
+        loadpretrain!(model, string("gmlp", config))
     end
-    return gMLP(layers)
+    return model
 end
 
 (m::gMLP)(x) = m.layers(x)

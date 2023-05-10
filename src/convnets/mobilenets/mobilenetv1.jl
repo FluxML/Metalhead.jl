@@ -65,10 +65,11 @@ end
 function MobileNetv1(width_mult::Real = 1; pretrain::Bool = false,
                      inchannels::Integer = 3, nclasses::Integer = 1000)
     layers = mobilenetv1(width_mult; inchannels, nclasses)
+    model = MobileNetv1(layers)
     if pretrain
-        loadpretrain!(layers, string("MobileNetv1"))
+        loadpretrain!(model, "mobilenet_v1")
     end
-    return MobileNetv1(layers)
+    return model
 end
 
 (m::MobileNetv1)(x) = m.layers(x)

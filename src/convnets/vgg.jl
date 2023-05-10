@@ -163,10 +163,14 @@ function VGG(depth::Integer; pretrain::Bool = false, batchnorm::Bool = false,
     _checkconfig(depth, keys(VGG_CONFIGS))
     model = VGG((224, 224); config = VGG_CONV_CONFIGS[VGG_CONFIGS[depth]], batchnorm,
                 inchannels, nclasses)
-    if pretrain && !batchnorm
-        loadpretrain!(model, string("vgg", depth))
-    elseif pretrain
-        loadpretrain!(model, "vgg$(depth)-bn)")
+    if pretrain
+        artifact_name = string("vgg", depth)
+        if batchnorm
+            artifact_name *= "_bn"
+        else
+            artifact_name *= "-IMAGENET1K_V1"
+        end
+        loadpretrain!(model, artifact_name)
     end
     return model
 end

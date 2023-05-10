@@ -55,10 +55,11 @@ end
 function AlexNet(; pretrain::Bool = false, inchannels::Integer = 3,
                  nclasses::Integer = 1000)
     layers = alexnet(; inchannels, nclasses)
+    model = AlexNet(layers)
     if pretrain
-        loadpretrain!(layers, "AlexNet")
+        loadpretrain!(model, "alexnet")
     end
-    return AlexNet(layers)
+    return model
 end
 
 (m::AlexNet)(x) = m.layers(x)

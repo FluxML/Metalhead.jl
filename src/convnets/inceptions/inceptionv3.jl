@@ -183,10 +183,11 @@ end
 function Inceptionv3(; pretrain::Bool = false, inchannels::Integer = 3,
                      nclasses::Integer = 1000)
     layers = inceptionv3(; inchannels, nclasses)
+    model = Inceptionv3(layers)
     if pretrain
-        loadpretrain!(layers, "Inceptionv3")
+        loadpretrain!(model, "Inceptionv3")
     end
-    return Inceptionv3(layers)
+    return model
 end
 
 (m::Inceptionv3)(x) = m.layers(x)

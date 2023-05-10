@@ -4,21 +4,29 @@ using Flux: Zygote
 using Images
 
 const PRETRAINED_MODELS = [
-    (VGG, 11, false),
-    (VGG, 13, false),
-    (VGG, 16, false),
-    (VGG, 19, false),
-    SqueezeNet,
+    (DenseNet, 121),
+    (DenseNet, 161),
+    (DenseNet, 169),
+    (DenseNet, 201),
     (ResNet, 18),
     (ResNet, 34),
     (ResNet, 50),
     (ResNet, 101),
     (ResNet, 152),
-    (WideResNet, 50),
-    (WideResNet, 101),
     (ResNeXt, 50, 32, 4),
     (ResNeXt, 101, 64, 4),
-    (ResNeXt, 101, 32, 8)
+    (ResNeXt, 101, 32, 8),
+    SqueezeNet,
+    (WideResNet, 50),
+    (WideResNet, 101),
+    (ViT, :base, (16, 16)),
+    (ViT, :base, (32, 32)),
+    (ViT, :large, (16, 16)),
+    (ViT, :large, (32, 32)),
+    (VGG, 11, false),
+    (VGG, 13, false),
+    (VGG, 16, false),
+    (VGG, 19, false),
 ]
 
 function _gc()

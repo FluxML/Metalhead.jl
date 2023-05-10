@@ -127,10 +127,11 @@ function ConvNeXt(config::Symbol; pretrain::Bool = false, inchannels::Integer = 
                   nclasses::Integer = 1000)
     _checkconfig(config, keys(CONVNEXT_CONFIGS))
     layers = convnext(config; inchannels, nclasses)
+    model = ConvNeXt(layers)
     if pretrain
-        layers = loadpretrain!(layers, "convnext_$config")
+        loadpretrain!(model, "convnext_$config")
     end
-    return ConvNeXt(layers)
+    return model
 end
 
 (m::ConvNeXt)(x) = m.layers(x)
