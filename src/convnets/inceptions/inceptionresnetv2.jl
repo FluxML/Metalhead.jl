@@ -109,7 +109,7 @@ Creates an InceptionResNetv2 model.
   - `nclasses`: the number of output classes.
 
 !!! warning
-    
+
     `InceptionResNetv2` does not currently support pretrained weights.
 
 See also [`Metalhead.inceptionresnetv2`](@ref).

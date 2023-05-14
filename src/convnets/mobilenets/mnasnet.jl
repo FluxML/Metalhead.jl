@@ -86,7 +86,7 @@ Creates a MNASNet model with the specified configuration.
   - `nclasses`: The number of output classes
 
 !!! warning
-    
+
     `MNASNet` does not currently support pretrained weights.
 
 See also [`Metalhead.mnasnet`](@ref).

@@ -56,6 +56,7 @@ This is a sequence of layers:
   - a (batch) normalisation layer + `activation`
 
 !!! warning
+
     This function does not handle the residual connection by default. The user must add
     this manually to use this block as a standalone. To construct a model, check out the
     builders, which handle the residual connection and other details.
@@ -119,6 +120,7 @@ This is a sequence of layers:
     layer + `activation` if `inplanes != explanes`
 
 !!! warning
+
     This function does not handle the residual connection by default. The user must add
     this manually to use this block as a standalone. To construct a model, check out the
     builders, which handle the residual connection and other details.

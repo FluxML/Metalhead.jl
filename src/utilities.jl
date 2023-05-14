@@ -70,8 +70,8 @@ end
 """
     flatten_chains(m::Chain)
     flatten_chains(m)
-    
-Convenience function for traversing nested layers of a Chain object and flatten them 
+
+Convenience function for traversing nested layers of a Chain object and flatten them
 into a single iterator.
 """
 flatten_chains(m::Chain) = Iterators.flatten(flatten_chains(l) for l in m.layers)

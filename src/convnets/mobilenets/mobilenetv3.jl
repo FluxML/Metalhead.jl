@@ -78,7 +78,7 @@ Set `pretrain = true` to load the model with pre-trained weights for ImageNet.
   - `nclasses`: the number of output classes
 
 !!! warning
-    
+
     `MobileNetv3` does not currently support pretrained weights.
 
 See also [`Metalhead.mobilenetv3`](@ref).

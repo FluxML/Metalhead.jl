@@ -57,8 +57,8 @@ end
     unet(encoder_backbone, imgdims, outplanes::Integer, final::Any = unet_final_block,
          fdownscale::Integer = 0)
 
-Creates a UNet model with specified convolutional backbone. 
-Backbone of any Metalhead ResNet-like model can be used as encoder 
+Creates a UNet model with specified convolutional backbone.
+Backbone of any Metalhead ResNet-like model can be used as encoder
 ([reference](https://arxiv.org/abs/1505.04597)).
 
 # Arguments
@@ -87,7 +87,7 @@ end
     UNet(imsize::Dims{2} = (256, 256), inchannels::Integer = 3, outplanes::Integer = 3,
          encoder_backbone = Metalhead.backbone(DenseNet(121)); pretrain::Bool = false)
 
-Creates a UNet model with an encoder built of specified backbone. By default it uses 
+Creates a UNet model with an encoder built of specified backbone. By default it uses
 [`DenseNet`](@ref) backbone, but any ResNet-like Metalhead model can be used for the encoder.
 ([reference](https://arxiv.org/abs/1505.04597)).
 

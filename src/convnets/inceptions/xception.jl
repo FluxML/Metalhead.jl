@@ -80,7 +80,7 @@ Creates an Xception model.
   - `nclasses`: the number of output classes.
 
 !!! warning
-    
+
     `Xception` does not currently support pretrained weights.
 
 See also [`Metalhead.xception`](@ref).

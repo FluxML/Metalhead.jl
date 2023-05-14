@@ -170,7 +170,7 @@ Create an Inception-v3 model ([reference](https://arxiv.org/abs/1512.00567v3)).
   - `nclasses`: the number of output classes
 
 !!! warning
-    
+
     `Inceptionv3` does not currently support pretrained weights.
 
 See also [`Metalhead.inceptionv3`](@ref).

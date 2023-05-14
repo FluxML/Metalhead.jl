@@ -17,7 +17,7 @@ used to build the block for the model, see [`Metalhead.basicblock_builder`](@ref
   - `planes`: number of feature maps for the block
   - `stride`: the stride of the block
   - `reduction_factor`: the factor by which the input feature maps are reduced before
-  the first convolution.
+    the first convolution.
   - `activation`: the activation function to use.
   - `norm_layer`: the normalization layer to use.
   - `revnorm`: set to `true` to place the normalisation layer before the convolution
@@ -25,17 +25,16 @@ used to build the block for the model, see [`Metalhead.basicblock_builder`](@ref
   - `drop_path`: the drop path layer
   - `attn_fn`: the attention function to use. See [`squeeze_excite`](@ref) for an example.
 """
-function basicblock(inplanes::Integer, 
-                    planes::Integer; 
+function basicblock(inplanes::Integer,
+                    planes::Integer;
                     stride::Integer = 1,
-                    reduction_factor::Integer = 1, 
+                    reduction_factor::Integer = 1,
                     activation = relu,
-                    norm_layer = BatchNorm, 
+                    norm_layer = BatchNorm,
                     revnorm::Bool = false,
-                    drop_block = identity, 
+                    drop_block = identity,
                     drop_path = identity,
                     attn_fn = planes -> identity)
-  
     first_planes = planes ÷ reduction_factor
     conv_bn1 = conv_norm((3, 3), inplanes, first_planes, identity; norm_layer, revnorm,
                          stride, pad = 1)
@@ -197,7 +196,7 @@ If `outplanes > inplanes`, it maps the input to `outplanes` channels using a 1x1
 layer and zero padding.
 
 !!! warning
-    
+
     This does not currently support the scenario where `inplanes > outplanes`.
 
 # Arguments
@@ -243,7 +242,7 @@ on how to use this function.
 # Arguments
 
   - `stem_type`: The type of stem to be built. One of `[:default, :deep, :deep_tiered]`.
-    
+
       + `:default`: Builds a stem based on the default ResNet stem, which consists of a single
         7x7 convolution with stride 2 and a normalisation layer followed by a 3x3 max pooling
         layer with stride 2.
