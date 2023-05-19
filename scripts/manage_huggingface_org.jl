@@ -9,11 +9,21 @@ and add them to the Artifacts.toml file.
 function generate_artifacts_toml(model_repos)
     for model_repo in model_repos
         model_files = HuggingFaceApi.list_model_files(model_repo[:id])
-        artifact_urls = [HuggingFaceURL(model_repo[:id], file) |> string for file in model_files]
-        artifact_urls = [url for url in artifact_urls if endswith(url, ".tar") || endswith(url, ".tar.gz")]
+        git_refs = hfhub.list_repo_refs(model_repo[:id])
+        commit = git_refs.branches[0].target_commit |> string
+        artifact_urls = String[]
+        for file in model_files
+            if endswith(file, ".tar") || endswith(file, ".tar.gz")
+                url = HuggingFaceURL(model_repo[:id], file) |> string
+                url = replace(url, "main" => commit) # pinpoint to commit instead of branch so that a specific metalhead version
+                                                     # points to a specific weights version
+                push!(artifact_urls, url)
+            end
+        end
 
         for artifact_url in artifact_urls
-            artifact_name = split(basename(artifact_url), ".")[1] |> string
+            artifact_name = split(basename(artifact_url), ".")[1]
+            artifact_name = string(artifact_name) # substring to string
             @info "Adding artifact $artifact_name from $artifact_url"
             add_artifact!(joinpath(@__DIR__, "Artifacts.toml"),
                             artifact_name,
@@ -81,8 +91,8 @@ end
 
 ### Generate Artifacts.toml from HuggingFace repos #############
 fluxml_model_repos = list_fluxml_models()
-fluxml_model_repos = filter(fluxml_model_repos) do repo
-    name = split(repo[:id], "/")[2]
-    startswith(name, "resnet152")
-end
+# fluxml_model_repos = filter(fluxml_model_repos) do repo
+#     name = split(repo[:id], "/")[2]
+#     startswith(name, "resnet152")
+# end
 generate_artifacts_toml(fluxml_model_repos)
