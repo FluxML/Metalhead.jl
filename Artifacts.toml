@@ -4,7 +4,7 @@ lazy = true
 
     [[densenet121.download]]
     sha256 = "0e9259a45097ded4d79a7b30d41ded7d799c7b08134ca65c84635b92100ce440"
-    url = "https://huggingface.co/FluxML/densenet121/resolve/main/densenet121.tar.gz"
+    url = "https://huggingface.co/FluxML/densenet121/resolve/442cd2e85d63b3aa7340deb786a02c2ccffa1590/densenet121.tar.gz"
 
 [densenet161]
 git-tree-sha1 = "d780a8eb8667bb2a840ed0685d937d311490aa1e"
@@ -12,7 +12,7 @@ lazy = true
 
     [[densenet161.download]]
     sha256 = "5eb8a7c69c353a7e5756dfc041850e59b34b97821789fea8f73f1eff2d7c10d8"
-    url = "https://huggingface.co/FluxML/densenet161/resolve/main/densenet161.tar.gz"
+    url = "https://huggingface.co/FluxML/densenet161/resolve/dd02e5e0562620d187b2fd9b3a0994b0e2d85054/densenet161.tar.gz"
 
 [densenet169]
 git-tree-sha1 = "b8cc68d9554f8274d0c3e0385e04d2ee41090831"
@@ -20,7 +20,7 @@ lazy = true
 
     [[densenet169.download]]
     sha256 = "8b9b182670ea6053f51db1542c133f183b4c0aa45f56e635598994a2f77fa39a"
-    url = "https://huggingface.co/FluxML/densenet169/resolve/main/densenet169.tar.gz"
+    url = "https://huggingface.co/FluxML/densenet169/resolve/9868bf1fb24592b6d7ee9aca70844eda859a3d3a/densenet169.tar.gz"
 
 [densenet201]
 git-tree-sha1 = "8d581b667da3e64a557a251876ebde6ee115a504"
@@ -28,7 +28,7 @@ lazy = true
 
     [[densenet201.download]]
     sha256 = "4d6c6bae58ff586a82c8a4941cfba1709d1b1aec013fa3b188ce60df3e23e2aa"
-    url = "https://huggingface.co/FluxML/densenet201/resolve/main/densenet201.tar.gz"
+    url = "https://huggingface.co/FluxML/densenet201/resolve/4a39454fa8039b8d0546d8e60e2c98aa58e7a421/densenet201.tar.gz"
 
 [resnet101]
 git-tree-sha1 = "68d563526ab34d3e5aa66b7d96278d2acde212f9"
@@ -36,7 +36,7 @@ lazy = true
 
     [[resnet101.download]]
     sha256 = "0725f05db5772cfab1024b8d0d6c85ac1fc5a83eb6f0fe02b67b1e689d5a28db"
-    url = "https://huggingface.co/FluxML/resnet101/resolve/main/resnet101.tar.gz"
+    url = "https://huggingface.co/FluxML/resnet101/resolve/4bacf43242aa6afa7788ae14e7b96b3f98f1d63b/resnet101.tar.gz"
 
 [resnet101-IMAGENET1K_V1]
 git-tree-sha1 = "2447af36b981f5136e7e3985e4ac97e8521e6b91"
@@ -44,7 +44,7 @@ lazy = true
 
     [[resnet101-IMAGENET1K_V1.download]]
     sha256 = "5c0ddad654a26ef2cd6e567b8939a06c67044cbf331c3c81c7ee5f5bd2ad5e5e"
-    url = "https://huggingface.co/FluxML/resnet101/resolve/main/resnet101-IMAGENET1K_V1.tar.gz"
+    url = "https://huggingface.co/FluxML/resnet101/resolve/4bacf43242aa6afa7788ae14e7b96b3f98f1d63b/resnet101-IMAGENET1K_V1.tar.gz"
 
 [resnet101-IMAGENET1K_V2]
 git-tree-sha1 = "5ca085c5d85b8cb239bb0960ba719c3ad04d4177"
@@ -52,7 +52,7 @@ lazy = true
 
     [[resnet101-IMAGENET1K_V2.download]]
     sha256 = "7d3b98e2f5f9f89751b2dc93d10e34e55dfd5122938dfd16df2d8ac6071576c8"
-    url = "https://huggingface.co/FluxML/resnet101/resolve/main/resnet101-IMAGENET1K_V2.tar.gz"
+    url = "https://huggingface.co/FluxML/resnet101/resolve/4bacf43242aa6afa7788ae14e7b96b3f98f1d63b/resnet101-IMAGENET1K_V2.tar.gz"
 
 [resnet152]
 git-tree-sha1 = "85a97464b6cef66e1217ae829d3620651cffab47"
@@ -60,7 +60,7 @@ lazy = true
 
     [[resnet152.download]]
     sha256 = "a8d30a735ef5649ec40a74a0515ee3d6774499267be06f5f2b372259c5ced8d6"
-    url = "https://huggingface.co/FluxML/resnet152/resolve/main/resnet152.tar.gz"
+    url = "https://huggingface.co/FluxML/resnet152/resolve/5f73eff2486ce03ff00a6a19acf3a25e12dd1196/resnet152.tar.gz"
 
 [resnet152-IMAGENET1K_V1]
 git-tree-sha1 = "e03bd8f6ae55ec3fa854b8c987d44801cbd832bc"
@@ -68,7 +68,7 @@ lazy = true
 
     [[resnet152-IMAGENET1K_V1.download]]
     sha256 = "01f3f9b30e9ef240885a5e369d4435e47c1c4da0c083af6d96f29ff4e5b5a722"
-    url = "https://huggingface.co/FluxML/resnet152/resolve/main/resnet152-IMAGENET1K_V1.tar.gz"
+    url = "https://huggingface.co/FluxML/resnet152/resolve/5f73eff2486ce03ff00a6a19acf3a25e12dd1196/resnet152-IMAGENET1K_V1.tar.gz"
 
 [resnet152-IMAGENET1K_V2]
 git-tree-sha1 = "64af7840cd730142074e95bd978acf1f2d99bf2a"
@@ -76,7 +76,7 @@ lazy = true
 
     [[resnet152-IMAGENET1K_V2.download]]
     sha256 = "0e3a9ca6b5b48dae81f6e5bab49dba2c0d92e9b2800f041f3767315862e18b3c"
-    url = "https://huggingface.co/FluxML/resnet152/resolve/main/resnet152-IMAGENET1K_V2.tar.gz"
+    url = "https://huggingface.co/FluxML/resnet152/resolve/5f73eff2486ce03ff00a6a19acf3a25e12dd1196/resnet152-IMAGENET1K_V2.tar.gz"
 
 [resnet18]
 git-tree-sha1 = "4ced5a0338c0f0293940f1deb63e1c463125a6ff"
@@ -84,7 +84,7 @@ lazy = true
 
     [[resnet18.download]]
     sha256 = "9444ef2285f507bd890d2ca852d663749f079110ed19b544e8d91f67f3cc6b83"
-    url = "https://huggingface.co/FluxML/resnet18/resolve/main/resnet18.tar.gz"
+    url = "https://huggingface.co/FluxML/resnet18/resolve/a33cfe1b807ce30676659e8bcc02b59815b25775/resnet18.tar.gz"
 
 [resnet18-IMAGENET1K_V1]
 git-tree-sha1 = "7401801a43ad8b1a7525849bd56d0ab7a7fd30ca"
@@ -92,7 +92,7 @@ lazy = true
 
     [[resnet18-IMAGENET1K_V1.download]]
     sha256 = "4036b99872d8124294e555140be0bd3dedeeb48ec5a9b9242bcca30c2fa8ddd8"
-    url = "https://huggingface.co/FluxML/resnet18/resolve/main/resnet18-IMAGENET1K_V1.tar.gz"
+    url = "https://huggingface.co/FluxML/resnet18/resolve/a33cfe1b807ce30676659e8bcc02b59815b25775/resnet18-IMAGENET1K_V1.tar.gz"
 
 [resnet34]
 git-tree-sha1 = "485519977f375ca1770b3ff3971f61e438823f5a"
@@ -100,7 +100,7 @@ lazy = true
 
     [[resnet34.download]]
     sha256 = "71ed75be6db0160af7f30be33e2f4a44836310949d1374267510e5803b1fb313"
-    url = "https://huggingface.co/FluxML/resnet34/resolve/main/resnet34.tar.gz"
+    url = "https://huggingface.co/FluxML/resnet34/resolve/61a5a313f1e996bc789753e444e26c03e0862237/resnet34.tar.gz"
 
 [resnet34-IMAGENET1K_V1]
 git-tree-sha1 = "1c5e4b20afb3f9ed37ec8c9aefec80d90ad171b9"
@@ -108,7 +108,7 @@ lazy = true
 
     [[resnet34-IMAGENET1K_V1.download]]
     sha256 = "1871e8aba336d7aac491b8fdafc28d6c0d4cebe2e7fe79b2832e183bc3a72dd0"
-    url = "https://huggingface.co/FluxML/resnet34/resolve/main/resnet34-IMAGENET1K_V1.tar.gz"
+    url = "https://huggingface.co/FluxML/resnet34/resolve/61a5a313f1e996bc789753e444e26c03e0862237/resnet34-IMAGENET1K_V1.tar.gz"
 
 [resnet50]
 git-tree-sha1 = "2973be0da60544080105756ecb3951cca2e007da"
@@ -116,7 +116,7 @@ lazy = true
 
     [[resnet50.download]]
     sha256 = "60ad32eaf160444f3bfdb6f6d81ec1e5c36a3769be7df22aaa75127b16bb1501"
-    url = "https://huggingface.co/FluxML/resnet50/resolve/main/resnet50.tar.gz"
+    url = "https://huggingface.co/FluxML/resnet50/resolve/46aba55d9a785e938be832eae02999be21306561/resnet50.tar.gz"
 
 [resnet50-IMAGENET1K_V1]
 git-tree-sha1 = "d53fc9a15c08b47229b05e40f171e61a90d77219"
@@ -124,7 +124,7 @@ lazy = true
 
     [[resnet50-IMAGENET1K_V1.download]]
     sha256 = "70279fdf0292f36de83ba04917b25e3a42ee20a9a36e510740ccc86058e94558"
-    url = "https://huggingface.co/FluxML/resnet50/resolve/main/resnet50-IMAGENET1K_V1.tar.gz"
+    url = "https://huggingface.co/FluxML/resnet50/resolve/46aba55d9a785e938be832eae02999be21306561/resnet50-IMAGENET1K_V1.tar.gz"
 
 [resnet50-IMAGENET1K_V2]
 git-tree-sha1 = "053257695200a6a5dddddc048b3355ef8376705c"
@@ -132,7 +132,7 @@ lazy = true
 
     [[resnet50-IMAGENET1K_V2.download]]
     sha256 = "fc10822cfa8a43fa21fe44370808e94598ed6f97c4b1e7c2bebea59e895b3fc0"
-    url = "https://huggingface.co/FluxML/resnet50/resolve/main/resnet50-IMAGENET1K_V2.tar.gz"
+    url = "https://huggingface.co/FluxML/resnet50/resolve/46aba55d9a785e938be832eae02999be21306561/resnet50-IMAGENET1K_V2.tar.gz"
 
 [resnext101_32x8d]
 git-tree-sha1 = "d13a85131b2c0c62ef2af79a09137d4e0760a685"
@@ -140,7 +140,7 @@ lazy = true
 
     [[resnext101_32x8d.download]]
     sha256 = "aeb48f86f50ee8b0ca7dc01ca0ff5a2d2b2163e43c524203c4a8bd589db9bcc6"
-    url = "https://huggingface.co/FluxML/resnext101_32x8d/resolve/main/resnext101_32x8d.tar.gz"
+    url = "https://huggingface.co/FluxML/resnext101_32x8d/resolve/cdccda66e834606fa8056b773dc050783e8b1da0/resnext101_32x8d.tar.gz"
 
 [resnext101_32x8d-IMAGENET1K_V1]
 git-tree-sha1 = "22b6e6abc7a2d6d7044ab55f8e770f1af504b50e"
@@ -148,7 +148,7 @@ lazy = true
 
     [[resnext101_32x8d-IMAGENET1K_V1.download]]
     sha256 = "779b532780b1f81d290ff5064873cf0aa75285cf3fc30f533b8c4695139348b7"
-    url = "https://huggingface.co/FluxML/resnext101_32x8d/resolve/main/resnext101_32x8d-IMAGENET1K_V1.tar.gz"
+    url = "https://huggingface.co/FluxML/resnext101_32x8d/resolve/cdccda66e834606fa8056b773dc050783e8b1da0/resnext101_32x8d-IMAGENET1K_V1.tar.gz"
 
 [resnext101_32x8d-IMAGENET1K_V2]
 git-tree-sha1 = "61ce835d27a72b53d074deb241cc198dbc4efdcf"
@@ -156,7 +156,7 @@ lazy = true
 
     [[resnext101_32x8d-IMAGENET1K_V2.download]]
     sha256 = "39aa9153aff5ed0b96072be643f331964c81190654a8694e4b01f512e6590ab1"
-    url = "https://huggingface.co/FluxML/resnext101_32x8d/resolve/main/resnext101_32x8d-IMAGENET1K_V2.tar.gz"
+    url = "https://huggingface.co/FluxML/resnext101_32x8d/resolve/cdccda66e834606fa8056b773dc050783e8b1da0/resnext101_32x8d-IMAGENET1K_V2.tar.gz"
 
 [resnext101_64x4d]
 git-tree-sha1 = "db50f48614e673a40f98fb80a17688b34f42067a"
@@ -164,7 +164,7 @@ lazy = true
 
     [[resnext101_64x4d.download]]
     sha256 = "89764dd7dc3b3432f0424cb592cec5d9db2fb802ab1646f0e3c2cca2b2e5386b"
-    url = "https://huggingface.co/FluxML/resnext101_64x4d/resolve/main/resnext101_64x4d.tar.gz"
+    url = "https://huggingface.co/FluxML/resnext101_64x4d/resolve/9ab97677b8eafe39570b728186b0f1954c9ac586/resnext101_64x4d.tar.gz"
 
 [resnext101_64x4d-IMAGENET1K_V1]
 git-tree-sha1 = "950ad2fe08acb3c6e0a130d13ef59fd573d71d7f"
@@ -172,7 +172,7 @@ lazy = true
 
     [[resnext101_64x4d-IMAGENET1K_V1.download]]
     sha256 = "660a1559f2849df27407e65d6d50e694dbc6f3e32b90fd4eb2854b8bc647c2c8"
-    url = "https://huggingface.co/FluxML/resnext101_64x4d/resolve/main/resnext101_64x4d-IMAGENET1K_V1.tar.gz"
+    url = "https://huggingface.co/FluxML/resnext101_64x4d/resolve/9ab97677b8eafe39570b728186b0f1954c9ac586/resnext101_64x4d-IMAGENET1K_V1.tar.gz"
 
 [resnext50_32x4d]
 git-tree-sha1 = "1e7a08a4acae690b635e8d1caa06e75eeb2dd2fe"
@@ -180,7 +180,7 @@ lazy = true
 
     [[resnext50_32x4d.download]]
     sha256 = "084ccbc40fde07496c401ee2bc389b9cd1d60b1ac3b7ccbfde05479ea91ca707"
-    url = "https://huggingface.co/FluxML/resnext50_32x4d/resolve/main/resnext50_32x4d.tar.gz"
+    url = "https://huggingface.co/FluxML/resnext50_32x4d/resolve/c8f6368d2511ca58e7f65c368de28ad7dffb61b2/resnext50_32x4d.tar.gz"
 
 [resnext50_32x4d-IMAGENET1K_V1]
 git-tree-sha1 = "a44be12b302a21e0f8db4155b054e2a4b9df79c2"
@@ -188,7 +188,7 @@ lazy = true
 
     [[resnext50_32x4d-IMAGENET1K_V1.download]]
     sha256 = "6647ea4264da1e09fa5b459aa5b1cf5db11e0427ae254919ed0589d18b4ab355"
-    url = "https://huggingface.co/FluxML/resnext50_32x4d/resolve/main/resnext50_32x4d-IMAGENET1K_V1.tar.gz"
+    url = "https://huggingface.co/FluxML/resnext50_32x4d/resolve/c8f6368d2511ca58e7f65c368de28ad7dffb61b2/resnext50_32x4d-IMAGENET1K_V1.tar.gz"
 
 [resnext50_32x4d-IMAGENET1K_V2]
 git-tree-sha1 = "2686dc6dbe6fa19ae154fa6779596bb0b76101cd"
@@ -196,7 +196,7 @@ lazy = true
 
     [[resnext50_32x4d-IMAGENET1K_V2.download]]
     sha256 = "1d604c8fddd9a3f0af059ea4a616a3f4e04e27e54141a63a9ab6252d0799239d"
-    url = "https://huggingface.co/FluxML/resnext50_32x4d/resolve/main/resnext50_32x4d-IMAGENET1K_V2.tar.gz"
+    url = "https://huggingface.co/FluxML/resnext50_32x4d/resolve/c8f6368d2511ca58e7f65c368de28ad7dffb61b2/resnext50_32x4d-IMAGENET1K_V2.tar.gz"
 
 [squeezenet]
 git-tree-sha1 = "e2eeee109fda46470d657b13669cca09d5ef2f8c"
@@ -204,7 +204,7 @@ lazy = true
 
     [[squeezenet.download]]
     sha256 = "aebfa06f44767e5ff728b7b67b2d01352b4618bd5d305c26e603aabcd5ba593d"
-    url = "https://huggingface.co/FluxML/squeezenet/resolve/main/squeezenet.tar.gz"
+    url = "https://huggingface.co/FluxML/squeezenet/resolve/01ef4221df5260bd992c669ab587eed74df0c39f/squeezenet.tar.gz"
 
 [vgg11]
 git-tree-sha1 = "78ffe7d74c475cc28175f9e23a545ce2f17b1520"
@@ -212,7 +212,7 @@ lazy = true
 
     [[vgg11.download]]
     sha256 = "9703268c19ca2ae34036ca3588664a96dc0ca8d9d6458db78657299c6879880c"
-    url = "https://huggingface.co/FluxML/vgg11/resolve/main/vgg11.tar.gz"
+    url = "https://huggingface.co/FluxML/vgg11/resolve/b2fe23452f620e9538373a9423067ef9cf10f699/vgg11.tar.gz"
 
 [vgg11-IMAGENET1K_V1]
 git-tree-sha1 = "73fdc2303007b062ec632fe870ee7ca73262c3f5"
@@ -220,7 +220,7 @@ lazy = true
 
     [[vgg11-IMAGENET1K_V1.download]]
     sha256 = "b0159696a0878cf25b2c4310e41330241c174b407fbb6a7d0398fddef4a8ba93"
-    url = "https://huggingface.co/FluxML/vgg11/resolve/main/vgg11-IMAGENET1K_V1.tar.gz"
+    url = "https://huggingface.co/FluxML/vgg11/resolve/b2fe23452f620e9538373a9423067ef9cf10f699/vgg11-IMAGENET1K_V1.tar.gz"
 
 [vgg13]
 git-tree-sha1 = "ed006dd09cc24342d4dcd9e2cfaa8c84f063c27a"
@@ -228,7 +228,7 @@ lazy = true
 
     [[vgg13.download]]
     sha256 = "ef27949024f5716f7656b3318b06964d76587851f15d9a9127c2b55e5faee288"
-    url = "https://huggingface.co/FluxML/vgg13/resolve/main/vgg13.tar.gz"
+    url = "https://huggingface.co/FluxML/vgg13/resolve/ff6f9b7f98b689c28c6574643ca03a42f2cd5903/vgg13.tar.gz"
 
 [vgg13-IMAGENET1K_V1]
 git-tree-sha1 = "9ccb470a3ec9e56352e5c7f7944c13bedb825945"
@@ -236,7 +236,7 @@ lazy = true
 
     [[vgg13-IMAGENET1K_V1.download]]
     sha256 = "8109cccc14b31cb79846a32f002dbb7ad9322f336daa882aeab2c825def8fd97"
-    url = "https://huggingface.co/FluxML/vgg13/resolve/main/vgg13-IMAGENET1K_V1.tar.gz"
+    url = "https://huggingface.co/FluxML/vgg13/resolve/ff6f9b7f98b689c28c6574643ca03a42f2cd5903/vgg13-IMAGENET1K_V1.tar.gz"
 
 [vgg16]
 git-tree-sha1 = "759df92ca502324d8624e1c5a940db227908fb9e"
@@ -244,7 +244,7 @@ lazy = true
 
     [[vgg16.download]]
     sha256 = "f9bad8d9d2c79bc4ebab840f2faded2a0c26c6b2a84f979525964eebcd1886ab"
-    url = "https://huggingface.co/FluxML/vgg16/resolve/main/vgg16.tar.gz"
+    url = "https://huggingface.co/FluxML/vgg16/resolve/0ce5b6186526dd6a4823b81395a9d199e94431aa/vgg16.tar.gz"
 
 [vgg16-IMAGENET1K_V1]
 git-tree-sha1 = "0af8d0d61097020bec4438892af9efe658ae239c"
@@ -252,7 +252,7 @@ lazy = true
 
     [[vgg16-IMAGENET1K_V1.download]]
     sha256 = "3c1d99577345def358f25cabb747aff0f42f660cd998456ec419f7a82d426779"
-    url = "https://huggingface.co/FluxML/vgg16/resolve/main/vgg16-IMAGENET1K_V1.tar.gz"
+    url = "https://huggingface.co/FluxML/vgg16/resolve/0ce5b6186526dd6a4823b81395a9d199e94431aa/vgg16-IMAGENET1K_V1.tar.gz"
 
 [vgg19]
 git-tree-sha1 = "67f5e867f297086cc911c2cb7985bec8ac1ab23d"
@@ -260,7 +260,7 @@ lazy = true
 
     [[vgg19.download]]
     sha256 = "5fe26391572b9f6ac84eaa0541d27e959f673f82e6515026cdcd3262cbd93ceb"
-    url = "https://huggingface.co/FluxML/vgg19/resolve/main/vgg19.tar.gz"
+    url = "https://huggingface.co/FluxML/vgg19/resolve/d8dd4b1d94ee3766a8a4a48e8de098066757f9f5/vgg19.tar.gz"
 
 [vgg19-IMAGENET1K_V1]
 git-tree-sha1 = "85f19750c0caa35c47e3e376b72424cd324663cb"
@@ -268,7 +268,7 @@ lazy = true
 
     [[vgg19-IMAGENET1K_V1.download]]
     sha256 = "ecbfbd59a8b9545e8d5116f968f4e409a0c42264220376e346920ca110a61eb1"
-    url = "https://huggingface.co/FluxML/vgg19/resolve/main/vgg19-IMAGENET1K_V1.tar.gz"
+    url = "https://huggingface.co/FluxML/vgg19/resolve/d8dd4b1d94ee3766a8a4a48e8de098066757f9f5/vgg19-IMAGENET1K_V1.tar.gz"
 
 [vit_b_16-IMAGENET1K_V1]
 git-tree-sha1 = "f8e2e75cf329cd24da4f092dfb76036f4e24402b"
@@ -276,7 +276,7 @@ lazy = true
 
     [[vit_b_16-IMAGENET1K_V1.download]]
     sha256 = "8543956979591e83aa98d6cd7d2370cc3325fb70c79913d27a1187c331c101e6"
-    url = "https://huggingface.co/FluxML/vit_b_16/resolve/main/vit_b_16-IMAGENET1K_V1.tar.gz"
+    url = "https://huggingface.co/FluxML/vit_b_16/resolve/4dece0f83d4c8c8d2daf643d332c25de6c4eb4e3/vit_b_16-IMAGENET1K_V1.tar.gz"
 
 [vit_b_32-IMAGENET1K_V1]
 git-tree-sha1 = "5d638ff94c5f763025ad3118adf1101faa2ec86e"
@@ -284,7 +284,7 @@ lazy = true
 
     [[vit_b_32-IMAGENET1K_V1.download]]
     sha256 = "694d9d4e5d012f31c4108af3b35cb450bc4adb40a4a669788d7bc569450c9620"
-    url = "https://huggingface.co/FluxML/vit_b_32/resolve/main/vit_b_32-IMAGENET1K_V1.tar.gz"
+    url = "https://huggingface.co/FluxML/vit_b_32/resolve/cb2f9e6526141a6c19b9767655ed7d5715444758/vit_b_32-IMAGENET1K_V1.tar.gz"
 
 [vit_l_16-IMAGENET1K_V1]
 git-tree-sha1 = "6246a41e497334a1f0aebfd9364f4fc4d6dac98f"
@@ -292,7 +292,7 @@ lazy = true
 
     [[vit_l_16-IMAGENET1K_V1.download]]
     sha256 = "6ab996ac74e1c9677153058d7f24ee46c2e1fccc27a2a1dd1679b60416cf0275"
-    url = "https://huggingface.co/FluxML/vit_l_16/resolve/main/vit_l_16-IMAGENET1K_V1.tar.gz"
+    url = "https://huggingface.co/FluxML/vit_l_16/resolve/122e8f1b4d4b417f4d957e7cd0a532c7a6cc7c7a/vit_l_16-IMAGENET1K_V1.tar.gz"
 
 [vit_l_32-IMAGENET1K_V1]
 git-tree-sha1 = "edb9e37ecc210446824e1590b47a9d8fea8a71ce"
@@ -300,7 +300,7 @@ lazy = true
 
     [[vit_l_32-IMAGENET1K_V1.download]]
     sha256 = "d552a4489e106ccd1cce53e2b8f0151d9d791b5963527f63d7e979abded2d473"
-    url = "https://huggingface.co/FluxML/vit_l_32/resolve/main/vit_l_32-IMAGENET1K_V1.tar.gz"
+    url = "https://huggingface.co/FluxML/vit_l_32/resolve/49a235e1e8627559fd74cf2e6453245bdb34b2de/vit_l_32-IMAGENET1K_V1.tar.gz"
 
 [wideresnet101]
 git-tree-sha1 = "b881a9469fb230faff414ce9f983bc113061ab1c"
@@ -308,7 +308,7 @@ lazy = true
 
     [[wideresnet101.download]]
     sha256 = "defa61fd80a988bb07bb9db00c692d8d0a30d95e6276add1413fb7f1f3aa2607"
-    url = "https://huggingface.co/FluxML/wideresnet101/resolve/main/wideresnet101.tar.gz"
+    url = "https://huggingface.co/FluxML/wideresnet101/resolve/f86b37ad08366ca672060c3bfe485e725658c80a/wideresnet101.tar.gz"
 
 [wideresnet101-IMAGENET1K_V1]
 git-tree-sha1 = "3547e50e95e2323de760706569342cb7e7ca9730"
@@ -316,7 +316,7 @@ lazy = true
 
     [[wideresnet101-IMAGENET1K_V1.download]]
     sha256 = "7db16af88b0fb6b10dd50c88380bac9d0a94b88a127099ca5630c74bafa462cb"
-    url = "https://huggingface.co/FluxML/wideresnet101/resolve/main/wideresnet101-IMAGENET1K_V1.tar.gz"
+    url = "https://huggingface.co/FluxML/wideresnet101/resolve/f86b37ad08366ca672060c3bfe485e725658c80a/wideresnet101-IMAGENET1K_V1.tar.gz"
 
 [wideresnet101-IMAGENET1K_V2]
 git-tree-sha1 = "eefc23da10b3efb737f6bc8af96463ee1f850acd"
@@ -324,7 +324,7 @@ lazy = true
 
     [[wideresnet101-IMAGENET1K_V2.download]]
     sha256 = "93fe311bbdc16d5e21d4e8a513de9b617b872b6ba2c10344903275badef8a0fa"
-    url = "https://huggingface.co/FluxML/wideresnet101/resolve/main/wideresnet101-IMAGENET1K_V2.tar.gz"
+    url = "https://huggingface.co/FluxML/wideresnet101/resolve/f86b37ad08366ca672060c3bfe485e725658c80a/wideresnet101-IMAGENET1K_V2.tar.gz"
 
 [wideresnet50]
 git-tree-sha1 = "bbc6bc632e743c992784b5121dcb0f6082c66b1f"
@@ -332,7 +332,7 @@ lazy = true
 
     [[wideresnet50.download]]
     sha256 = "7596a67b7aba762c2bfce8367055da79a8a3c117bd79ce11124c9f1f5a96c4e3"
-    url = "https://huggingface.co/FluxML/wideresnet50/resolve/main/wideresnet50.tar.gz"
+    url = "https://huggingface.co/FluxML/wideresnet50/resolve/79cc87b85156d9681dd2c4d576578c3915f8c67f/wideresnet50.tar.gz"
 
 [wideresnet50-IMAGENET1K_V1]
 git-tree-sha1 = "7b60fe69709f6b4ec419cf84e5626b97b2511681"
@@ -340,7 +340,7 @@ lazy = true
 
     [[wideresnet50-IMAGENET1K_V1.download]]
     sha256 = "3ad68fc8a8f9fb7d9f3cfcd892ceda4f2f123d0a78ff521b305f53d3b39773aa"
-    url = "https://huggingface.co/FluxML/wideresnet50/resolve/main/wideresnet50-IMAGENET1K_V1.tar.gz"
+    url = "https://huggingface.co/FluxML/wideresnet50/resolve/79cc87b85156d9681dd2c4d576578c3915f8c67f/wideresnet50-IMAGENET1K_V1.tar.gz"
 
 [wideresnet50-IMAGENET1K_V2]
 git-tree-sha1 = "49b624a932935c426b75dcf3b2446b6d1051de22"
@@ -348,4 +348,4 @@ lazy = true
 
     [[wideresnet50-IMAGENET1K_V2.download]]
     sha256 = "b273f62a28f54e7d94f15aba4fbbf219fb313b3613afef07dac672808fff7232"
-    url = "https://huggingface.co/FluxML/wideresnet50/resolve/main/wideresnet50-IMAGENET1K_V2.tar.gz"
+    url = "https://huggingface.co/FluxML/wideresnet50/resolve/79cc87b85156d9681dd2c4d576578c3915f8c67f/wideresnet50-IMAGENET1K_V2.tar.gz"
