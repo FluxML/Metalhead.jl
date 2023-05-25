@@ -77,7 +77,7 @@ function convert_models()
         pytorch2flux!(jlmodel, pymodel)
         rtol = startswith(name, "vit") ? 1e-2 : 1e-4 # TODO investigate why ViT is less accurate
         compare_pytorch(jlmodel, pymodel; rtol)
-        
+
         # SAVE WEIGHTS
         artifact_name = "$(name)-$weights"
         filename = joinpath(@__DIR__, "weights", name, artifact_name, "$(artifact_name)")

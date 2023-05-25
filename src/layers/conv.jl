@@ -6,6 +6,11 @@
 
 Create a convolution + normalisation layer pair with activation.
 
+!!! Note
+
+    This function returns a `Vector` with the desired layers, which can be splatted into a
+    `Chain` as per the requirement of the user.
+
 # Arguments
 
   - `kernel_size`: size of the convolution kernel (tuple)
@@ -13,11 +18,11 @@ Create a convolution + normalisation layer pair with activation.
   - `outplanes`: number of output feature maps
   - `activation`: the activation function for the final layer
   - `norm_layer`: the normalisation layer used. Note that using `identity` as the normalisation
-    layer will result in no normalisation being applied. (This is only compatible with `preact`
-    and `revnorm` both set to `false`.)
+    layer will result in no normalisation being applied - this is only compatible with `preact`
+    and `revnorm` both set to `false`.
   - `revnorm`: set to `true` to place the normalisation layer before the convolution
   - `preact`: set to `true` to place the activation function before the normalisation layer
-    (only compatible with `revnorm = false`)
+    (only compatible with `revnorm = false`. `revnorm = true` overrides `preact = true`).
   - `bias`: bias for the convolution kernel. This is set to `false` by default if
     `norm_layer` is not `identity` and `true` otherwise.
   - `stride`: stride of the convolution kernel
@@ -39,26 +44,18 @@ function conv_norm(kernel_size::Dims{2}, inplanes::Integer, outplanes::Integer,
             return [Conv(kernel_size, inplanes => outplanes, activation; kwargs...)]
         end
     end
-    # channels for norm layer and activation functions for both conv and norm
-    if revnorm
-        activations = (conv = activation, norm = identity)
-        normplanes = inplanes
-    else
-        activations = (conv = identity, norm = activation)
-        normplanes = outplanes
-    end
-    # handle pre-activation
-    if preact
-        if revnorm
-            throw(ArgumentError("`preact` and `revnorm` cannot be set at the same time"))
-        else
-            activations = (conv = activation, norm = identity)
-        end
-    end
     # layers
-    layers = [Conv(kernel_size, inplanes => outplanes, activations.conv; bias, kwargs...),
-        norm_layer(normplanes, activations.norm)]
-    return revnorm ? reverse(layers) : layers
+    if revnorm
+        layers = [norm_layer(inplanes, activation),
+                  Conv(kernel_size, inplanes => outplanes, identity; bias, kwargs...)]
+    elseif preact
+        layers = [Conv(kernel_size, inplanes => outplanes, activation; bias, kwargs...),
+                  norm_layer(outplanes, identity)]
+    else
+        layers = [Conv(kernel_size, inplanes => outplanes, identity; bias, kwargs...),
+                  norm_layer(outplanes, activation)]
+    end
+    return layers
 end
 
 """
