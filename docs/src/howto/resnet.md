@@ -19,3 +19,45 @@ model = ResNet(50; pretrain=true)
 ```
 
 To check out more about using pretrained models, check out the [pretrained models guide](@ref pretrained).
+
+## The mid-level function
+
+Metalhead also provides a function for users looking to customise the ResNet family of models further. This function is named [`Metalhead.resnet`](@ref) and has a detailed docstring that describes all the various customisation options.
+
+```@docs
+Metalhead.resnet
+```
+
+But how do we use this to build a ResNet-like model of our liking? First, let's take a peek at how we would write the vanilla ResNet-18 model using this function. We know from the docstring that we want to use `Metalhead.basicblock` for the block, since the paper uses bottleneck blocks for depths 50 and above. We also know that the number of block repeats in each stage of the model as per the paper - 2 for each. For all other options, the default values work well. So we can write the ResNet-18 model as follows:
+
+```julia
+resnet18 = Metalhead.resnet(Metalhead.basicblock, [2, 2, 2, 2])
+```
+
+What if we want to customise the number of output classes? That's easy; the model has several keyword arguments, one of which allows this. The docstring tells us that it is `nclasses`, and so we can write:
+
+```julia
+resnet18 = Metalhead.resnet(Metalhead.basicblock, [2, 2, 2, 2]; nclasses = 10)
+```
+
+Let's try customising this further. Say I want to make a ResNet-50-like model, but with [`StochasticDepth`](https://arxiv.org/abs/1603.09382) to provide even more regularisation, and also a custom pooling layer such as `AdaptiveMeanMaxPool`. Both of these options are provided by Metalhead out of the box, and so we can write:
+
+```julia
+using Metalhead: Layers # AdaptiveMeanMaxPool is exported by the Layers module in Metalhead
+
+custom_resnet = Metalhead.resnet(Metalhead.bottleneck, [3, 4, 6, 3];
+                                 pool_layer = AdaptiveMeanMaxPool((1, 1)),
+                                 stochastic_depth_prob = 0.2)
+```
+
+To make this a ResNeXt-like model, all we need to do is configure the cardinality and the 
+base width:
+
+```julia
+custom_resnet = Metalhead.resnet(Metalhead.bottleneck, [3, 4, 6, 3];
+                                 cardinality = 32, base_width = 4,
+                                 pool_layer = Layers.AdaptiveMeanMaxPool((1, 1)),
+                                 stochastic_depth_prob = 0.2)
+```
+
+And we have a custom model, built with minimal effort! The documentation for `Metalhead.resnet` has been written with extensive care and in as much detail as possible to facilitate user ease. However, if you find anything difficult to understand, feel free to open an issue and we will be happy to help you out, and to improve the documentation where necessary.

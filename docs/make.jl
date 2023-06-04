@@ -24,6 +24,7 @@ makedocs(; modules = [Metalhead, Artifacts, LazyArtifacts, Images, DataAugmentat
                     "api/resnet.md",
                     "api/densenet.md",
                     "api/efficientnet.md",
+                    "api/mobilenet.md",
                     "api/inception.md",
                     "api/hybrid.md",
                     "api/others.md",

@@ -25,9 +25,9 @@ function ResNet(depth::Integer; pretrain::Bool = false, inchannels::Integer = 3,
     model = ResNet(layers)
     if pretrain
         artifact_name = "resnet$(depth)"
-        if depth ∈ [18, 34]
+        if depth in [18, 34]
             artifact_name *= "-IMAGENET1K_V1"
-        elseif depth ∈ [50, 101, 152]
+        elseif depth in [50, 101, 152]
             artifact_name *= "-IMAGENET1K_V2"
         end
         loadpretrain!(model, artifact_name)
@@ -69,7 +69,7 @@ function WideResNet(depth::Integer; pretrain::Bool = false, inchannels::Integer 
     model = WideResNet(layers)
     if pretrain
         artifact_name = "wideresnet$(depth)"
-        if depth ∈ [50, 101]
+        if depth in [50, 101]
             artifact_name *= "-IMAGENET1K_V2"
         end        
         loadpretrain!(model, artifact_name)
