@@ -2,7 +2,7 @@
 prenorm(planes, fn) = Chain(LayerNorm(planes), fn)
 
 """
-    ChannelLayerNorm(sz::Integer, λ = identity; ϵ = 1.0f-6)
+    ChannelLayerNorm(sz::Integer, λ = identity; eps = 1.0f-6)
 
 A variant of LayerNorm where the input is normalised along the
 channel dimension. The input is expected to have channel dimension with size
@@ -14,16 +14,16 @@ of channels, and N is the batch size.
 """
 struct ChannelLayerNorm{D, T}
     diag::D
-    ϵ::T
+    eps::T
 end
 @functor ChannelLayerNorm
 
-function ChannelLayerNorm(sz::Integer, λ = identity; ϵ = 1.0f-6)
+function ChannelLayerNorm(sz::Integer, λ = identity; eps = 1.0f-6)
     diag = Flux.Scale(1, 1, sz, λ)
-    return ChannelLayerNorm(diag, ϵ)
+    return ChannelLayerNorm(diag, eps)
 end
 
-(m::ChannelLayerNorm)(x) = m.diag(Flux.normalise(x; dims = ndims(x) - 1, ϵ = m.ϵ))
+(m::ChannelLayerNorm)(x) = m.diag(Flux.normalise(x; dims = ndims(x) - 1, eps = m.eps))
 
 """
     LayerNormV2(size..., λ=identity; affine=true, eps=1f-5)
@@ -34,7 +34,7 @@ Therefore, LayerNormV2 matches pytorch's LayerNorm.
 struct LayerNormV2{F,D,T,N}
 	λ::F
 	diag::D
-	ϵ::T
+	eps::T
 	size::NTuple{N,Int}
 	affine::Bool
 end
@@ -49,7 +49,7 @@ LayerNormV2(size_act...; kw...) = LayerNormV2(Int.(size_act[1:end-1]), size_act[
 @functor LayerNormV2
 
 function (a::LayerNormV2)(x::AbstractArray)
-	eps = convert(float(eltype(x)), a.ϵ)  # avoids promotion for Float16 data, but should ε chage too?
+	eps = convert(float(eltype(x)), a.eps)  # avoids promotion for Float16 data, but should eps change too?
 	a.diag(_normalise(x; dims=1:length(a.size), eps))
 end
 
