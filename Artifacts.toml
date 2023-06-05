@@ -1,35 +1,3 @@
-[densenet121]
-git-tree-sha1 = "e929cd4de9255f65fe85e9365a0223e5876e7fb0"
-lazy = true
-
-    [[densenet121.download]]
-    sha256 = "0e9259a45097ded4d79a7b30d41ded7d799c7b08134ca65c84635b92100ce440"
-    url = "https://huggingface.co/FluxML/densenet121/resolve/442cd2e85d63b3aa7340deb786a02c2ccffa1590/densenet121.tar.gz"
-
-[densenet161]
-git-tree-sha1 = "d780a8eb8667bb2a840ed0685d937d311490aa1e"
-lazy = true
-
-    [[densenet161.download]]
-    sha256 = "5eb8a7c69c353a7e5756dfc041850e59b34b97821789fea8f73f1eff2d7c10d8"
-    url = "https://huggingface.co/FluxML/densenet161/resolve/dd02e5e0562620d187b2fd9b3a0994b0e2d85054/densenet161.tar.gz"
-
-[densenet169]
-git-tree-sha1 = "b8cc68d9554f8274d0c3e0385e04d2ee41090831"
-lazy = true
-
-    [[densenet169.download]]
-    sha256 = "8b9b182670ea6053f51db1542c133f183b4c0aa45f56e635598994a2f77fa39a"
-    url = "https://huggingface.co/FluxML/densenet169/resolve/9868bf1fb24592b6d7ee9aca70844eda859a3d3a/densenet169.tar.gz"
-
-[densenet201]
-git-tree-sha1 = "8d581b667da3e64a557a251876ebde6ee115a504"
-lazy = true
-
-    [[densenet201.download]]
-    sha256 = "4d6c6bae58ff586a82c8a4941cfba1709d1b1aec013fa3b188ce60df3e23e2aa"
-    url = "https://huggingface.co/FluxML/densenet201/resolve/4a39454fa8039b8d0546d8e60e2c98aa58e7a421/densenet201.tar.gz"
-
 [resnet101]
 git-tree-sha1 = "68d563526ab34d3e5aa66b7d96278d2acde212f9"
 lazy = true

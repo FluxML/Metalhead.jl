@@ -150,8 +150,7 @@ function DenseNet(config::Int; pretrain::Bool = false, growth_rate::Int = 32,
                       nclasses)
     model = DenseNet(layers)
     if pretrain
-        artifact_name = string("densenet", config)
-        loadpretrain!(model, artifact_name) # see also HACK below
+        loadpretrain!(model, string("densenet", config))
     end
     return model
 end
@@ -160,9 +159,3 @@ end
 
 backbone(m::DenseNet) = m.layers[1]
 classifier(m::DenseNet) = m.layers[2]
-
-## HACK TO LOAD OLD WEIGHTS, remove when we have a new artifact
-function Flux.loadmodel!(m::DenseNet, src)
-    Flux.loadmodel!(m.layers[1], src.layers[1])
-    Flux.loadmodel!(m.layers[2], src.layers[2])
-end

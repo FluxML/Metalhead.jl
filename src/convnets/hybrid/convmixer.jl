@@ -58,6 +58,10 @@ Creates a ConvMixer model.
   - `inchannels`: number of input channels
   - `nclasses`: number of classes in the output
 
+!!! warning
+  
+  `ConvMixer` does not currently support pretrained weights.
+
 See also [`Metalhead.convmixer`](@ref).
 """
 struct ConvMixer
