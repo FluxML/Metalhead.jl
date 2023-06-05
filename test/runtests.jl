@@ -4,10 +4,10 @@ using Flux: Zygote
 using Images
 
 const PRETRAINED_MODELS = [
-    (DenseNet, 121),
-    (DenseNet, 161),
-    (DenseNet, 169),
-    (DenseNet, 201),
+    # (DenseNet, 121),
+    # (DenseNet, 161),
+    # (DenseNet, 169),
+    # (DenseNet, 201),
     (ResNet, 18),
     (ResNet, 34),
     (ResNet, 50),

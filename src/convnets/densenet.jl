@@ -124,13 +124,12 @@ Create a DenseNet model with specified configuration. Currently supported values
 ([reference](https://arxiv.org/abs/1608.06993)).
 
 # Arguments
-
-    - `config`: the configuration of the model
-    - `pretrain`: whether to load the model with pre-trained weights for ImageNet.
-    - `growth_rate`: the output feature map growth probability of dense blocks (i.e. `k` in the ref)
-    - `reduction`: the factor by which the number of feature maps is scaled across each transition
-    - `inchannels`: the number of input channels
-    - `nclasses`: the number of output classes
+  - `config`: the configuration of the model
+  - `pretrain`: whether to load the model with pre-trained weights for ImageNet.
+  - `growth_rate`: the output feature map growth probability of dense blocks (i.e. `k` in the ref)
+  - `reduction`: the factor by which the number of feature maps is scaled across each transition
+  - `inchannels`: the number of input channels
+  - `nclasses`: the number of output classes
 
 !!! warning
     

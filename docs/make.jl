@@ -36,7 +36,7 @@ makedocs(; modules = [Metalhead, Artifacts, LazyArtifacts, Images, DataAugmentat
                     "api/vit.md",
                     ],
                 "Layers" => "api/layers.md",
-                "Utilities" => "api/utilities.md",
+                "Model Utilities" => "api/utilities.md",
              ],
          ],
          format = Documenter.HTML(; canonical = "https://fluxml.ai/Metalhead.jl/stable/",
