@@ -27,7 +27,7 @@ To contribute new models, see our [contributing docs](https://fluxml.ai/Metalhea
 | [AlexNet](https://papers.nips.cc/paper/2012/file/c399862d3b9d6b76c8436e924a68c45b-Paper.pdf)    | [`AlexNet`](https://fluxml.ai/Metalhead.jl/dev/api/other/#Metalhead.AlexNet)       | N            |
 | [ConvMixer](https://arxiv.org/abs/2201.09792)    | [`ConvMixer`](https://fluxml.ai/Metalhead.jl/dev/api/hybrid/#Metalhead.ConvMixer)       | N            |
 | [ConvNeXt](https://arxiv.org/abs/2201.03545)     | [`ConvNeXt`](https://fluxml.ai/Metalhead.jl/dev/api/hybrid/#Metalhead.ConvNeXt)         | N            |
-| [DenseNet](https://arxiv.org/abs/1608.06993)     | [`DenseNet`](https://fluxml.ai/Metalhead.jl/dev/api/densenet/#Metalhead.DenseNet)         | Y            |
+| [DenseNet](https://arxiv.org/abs/1608.06993)     | [`DenseNet`](https://fluxml.ai/Metalhead.jl/dev/api/densenet/#Metalhead.DenseNet)         | N            |
 | [EfficientNet](https://arxiv.org/abs/1905.11946) | [`EfficientNet`](https://fluxml.ai/Metalhead.jl/dev/api/efficientnet/#Metalhead.EfficientNet) | N            |
 | [EfficientNetv2](https://arxiv.org/abs/2104.00298) | [`EfficientNetv2`](https://fluxml.ai/Metalhead.jl/dev/api/efficientnet/#Metalhead.EfficientNetv2) | N            |
 | [gMLP](https://arxiv.org/abs/2105.08050)         | [`gMLP`](https://fluxml.ai/Metalhead.jl/dev/api/mixers/#Metalhead.gMLP)                 | N            |

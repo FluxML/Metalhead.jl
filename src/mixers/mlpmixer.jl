@@ -42,7 +42,7 @@ Creates a model with the MLPMixer architecture.
 
 # Arguments
 
-  - `config`: the size of the model - one of `small`, `base`, `large` or `huge`
+  - `config`: the size of the model - one of `:small`, `:base`, `:large` or `:huge`
   - `patch_size`: the size of the patches
   - `imsize`: the size of the input image
   - `stochastic_depth_prob`: Stochastic depth probability

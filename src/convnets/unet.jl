@@ -93,13 +93,13 @@ Creates a UNet model with an encoder built of specified backbone. By default it 
 
 # Arguments
 
-    - `imsize`: size of input image
-    - `inchannels`: number of channels in input image
-    - `outplanes`: number of output feature planes.
-    - `encoder_backbone`: The backbone layers of specified model to be used as encoder. 
-    	For example, `Metalhead.backbone(Metalhead.ResNet(18))` can be passed to instantiate a UNet with layers of
-    	resnet18 as encoder.
-    - `pretrain`: Whether to load the pre-trained weights for ImageNet
+  - `imsize`: size of input image
+  - `inchannels`: number of channels in input image
+  - `outplanes`: number of output feature planes.
+  - `encoder_backbone`: The backbone layers of specified model to be used as encoder. For
+    example, `Metalhead.backbone(Metalhead.ResNet(18))` can be passed to instantiate a UNet with layers of
+    resnet18 as encoder.
+  - `pretrain`: Whether to load the pre-trained weights for ImageNet
 
 !!! warning
 

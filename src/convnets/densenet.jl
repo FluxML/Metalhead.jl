@@ -124,13 +124,12 @@ Create a DenseNet model with specified configuration. Currently supported values
 ([reference](https://arxiv.org/abs/1608.06993)).
 
 # Arguments
-
-    - `config`: the configuration of the model
-    - `pretrain`: whether to load the model with pre-trained weights for ImageNet.
-    - `growth_rate`: the output feature map growth probability of dense blocks (i.e. `k` in the ref)
-    - `reduction`: the factor by which the number of feature maps is scaled across each transition
-    - `inchannels`: the number of input channels
-    - `nclasses`: the number of output classes
+  - `config`: the configuration of the model
+  - `pretrain`: whether to load the model with pre-trained weights for ImageNet.
+  - `growth_rate`: the output feature map growth probability of dense blocks (i.e. `k` in the ref)
+  - `reduction`: the factor by which the number of feature maps is scaled across each transition
+  - `inchannels`: the number of input channels
+  - `nclasses`: the number of output classes
 
 !!! warning
     
@@ -150,8 +149,7 @@ function DenseNet(config::Int; pretrain::Bool = false, growth_rate::Int = 32,
                       nclasses)
     model = DenseNet(layers)
     if pretrain
-        artifact_name = string("densenet", config)
-        loadpretrain!(model, artifact_name) # see also HACK below
+        loadpretrain!(model, string("densenet", config))
     end
     return model
 end
@@ -160,9 +158,3 @@ end
 
 backbone(m::DenseNet) = m.layers[1]
 classifier(m::DenseNet) = m.layers[2]
-
-## HACK TO LOAD OLD WEIGHTS, remove when we have a new artifact
-function Flux.loadmodel!(m::DenseNet, src)
-    Flux.loadmodel!(m.layers[1], src.layers[1])
-    Flux.loadmodel!(m.layers[2], src.layers[2])
-end

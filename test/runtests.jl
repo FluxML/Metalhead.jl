@@ -4,10 +4,10 @@ using Flux: Zygote
 using Images
 
 const PRETRAINED_MODELS = [
-    (DenseNet, 121),
-    (DenseNet, 161),
-    (DenseNet, 169),
-    (DenseNet, 201),
+    # (DenseNet, 121),
+    # (DenseNet, 161),
+    # (DenseNet, 169),
+    # (DenseNet, 201),
     (ResNet, 18),
     (ResNet, 34),
     (ResNet, 50),
@@ -59,7 +59,7 @@ const TEST_LBLS = readlines(download("https://raw.githubusercontent.com/pytorch/
 function acctest(model)
     ypred = model(TEST_X) |> vec
     top5 = TEST_LBLS[sortperm(ypred; rev = true)]
-    return "acoustic guitar" ∈ top5
+    return "acoustic guitar" in top5
 end
 
 x_224 = rand(Float32, 224, 224, 3, 1)

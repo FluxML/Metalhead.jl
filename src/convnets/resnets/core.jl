@@ -372,6 +372,7 @@ Wide ResNet, ResNeXt and Res2Net. For an _even_ more generic model API, see [`Me
   - `reduction_factor`: The reduction factor used in the model.
   - `connection`: This is a function that determines the residual connection in the model. For
     `resnets`, either of [`Metalhead.addact`](@ref) or [`Metalhead.actadd`](@ref) is recommended.
+    These decide whether the residual connection is added before or after the activation function.
   - `norm_layer`: The normalisation layer to be used in the model.
   - `revnorm`: set to `true` to place the normalisation layers before the convolutions
   - `attn_fn`: A callback that is used to determine the attention function to be used in the model.
