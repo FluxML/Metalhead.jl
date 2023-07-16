@@ -3,7 +3,7 @@ module Layers
 using Flux
 using Flux: default_rng_value
 using CUDA
-using NNlib, NNlibCUDA
+using NNlib
 using Functors
 using ChainRulesCore
 using Statistics
