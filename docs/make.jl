@@ -35,7 +35,9 @@ makedocs(; modules = [Metalhead, Artifacts, LazyArtifacts, Images, DataAugmentat
                 "Vision Transformers" => [
                     "api/vit.md",
                     ],
-                "Layers" => "api/layers.md",
+                "Layers" => [
+                    "api/layers_intro.md",
+                    "api/layers_adv.md"],
                 "Model Utilities" => "api/utilities.md",
              ],
          ],
