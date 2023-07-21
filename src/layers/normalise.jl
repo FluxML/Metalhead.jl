@@ -1,5 +1,15 @@
-# Utility function for applying LayerNorm before a block
-prenorm(planes, fn) = Chain(LayerNorm(planes), fn)
+"""
+    prenorm(planes, block; norm_layer = LayerNorm)
+
+Utility function to apply a normalization layer before a block.
+
+# Arguments
+    
+  - `planes`: Size of dimension to normalize.
+  - `block`: The block before which the normalization layer is applied.
+  - `norm_layer`: The normalization layer to use.
+"""
+prenorm(planes, block; norm_layer = LayerNorm) = Chain(norm_layer(planes), block)
 
 """
     ChannelLayerNorm(sz::Integer, λ = identity; eps = 1.0f-6)
