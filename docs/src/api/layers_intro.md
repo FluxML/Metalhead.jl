@@ -21,11 +21,6 @@ One of the most common patterns in modern neural networks is to have a convoluti
 Metalhead.Layers.conv_norm
 ```
 
-!!! warning
-    This function returns a `Vector` , which can be splatted into a 
-    `Chain` as per the requirement of the user. Using it directly in a model may
-    result in unexpected behaviour.
-
 To know more about the exact details of each of these parameters, you can refer to the documentation for this function. For now, we will focus on some common use cases. For example, if you want to create a convolutional layer with a kernel size of 3x3, with 32 input channels and 64 output channels, along with a `BatchNorm` layer, you can do the following:
 
 ```julia
@@ -82,6 +77,11 @@ The `Layers` module provides some custom normalisation functions that are not pr
 Metalhead.Layers.LayerScale
 Metalhead.Layers.LayerNormV2
 Metalhead.Layers.ChannelLayerNorm
+```
+
+There is also a utility function, `prenorm`, which applies a normalisation layer before a given block and simply returns a `Chain` with the normalisation layer and the block. This is useful for creating Vision Transformers (ViT)-like models.
+
+```@docs
 Metalhead.Layers.prenorm
 ```
 
@@ -100,7 +100,7 @@ Metalhead.Layers.StochasticDepth
 Metalhead.Layers.dropblock
 ```
 
-Both `DropBlock` and `StochasticDepth` are used along with a probability value based on a linear schedule. The `Layers` module provides a utility function to create such a schedule as well:
+Both `DropBlock` and `StochasticDepth` are used along with probability values that vary based on a linear schedule across the structure of the model (see the respective papers for more details). The `Layers` module provides a utility function to create such a schedule as well:
 
 ```@docs
 Metalhead.Layers.linear_scheduler
@@ -121,8 +121,10 @@ Many mid-level model functions in Metalhead.jl have been written to support pass
 ## Classifier creation
 
 Metalhead provides a function to create a classifier for neural network models that is quite flexible, and is used by the library extensively to create the classifier "head" for networks.
+This function is called [`Metalhead.Layers.create_classifier`](@ref) and is documented below:
 
 ```@docs
 Metalhead.Layers.create_classifier
 ```
 
+Due to the power of multiple dispatch in Julia, the above function can be called with two different signatures - one of which creates a classifier with no hidden layers, and the other which creates a classifier with a single hidden layer. The function signature for both is documented above, and the user can choose the one that is most convenient for them. Both are used in Metalhead.jl - the latter is used in MobileNetv3, and the former is used almost everywhere else.

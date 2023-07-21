@@ -9,16 +9,6 @@
                       nclasses::Integer = 1000, kwargs...)
 
 Creates a generic inverted residual model structure with the specified configuration.
-
-# Arguments
-
-    - `scalings`: a tuple of two numbers that specify the width and depth scaling factors.
-    - `block_configs`: This is a `Vector` of `Tuple`s that specifies the configuration of the
-    inverted residual blocks. This can take several forms:
-        + for `dwsep_conv_norm`, or depthwise separable convolutional blocks, the tuple
-        should be of the form `(dwsep_conv_norm, kernel size, output channels, stride,
-        number of repeats, activation function)`. For example, the following configuration
-        is valid: `(dwsep_conv_norm, 3, 64, 1, 1, relu6)`.
 """
 function build_invresmodel(scalings::NTuple{2, Real},
                            block_configs::AbstractVector{<:Tuple};
@@ -43,8 +33,7 @@ function build_invresmodel(scalings::NTuple{2, Real},
     # building last layers
     outplanes = _round_channels(block_configs[end][3] * width_mult, divisor)
     if tail_conv
-        # special case, supported fully only for MobileNetv3
-        if expanded_classifier
+        if expanded_classifier # special case, supported fully only for MobileNetv3 
             midplanes = _round_channels(outplanes * block_configs[end][4], divisor)
             append!(layers,
                     conv_norm((1, 1), outplanes, midplanes, activation; norm_layer))
