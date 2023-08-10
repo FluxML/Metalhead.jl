@@ -1,4 +1,4 @@
-# Using the ResNet model family in Metalhead.jl
+# [Using the ResNet model family in Metalhead.jl](@id resnet-guide)
 
 ResNets are one of the most common convolutional neural network (CNN) models used today. Originally proposed by He et al. in [**Deep Residual Learning for Image Recognition**](https://arxiv.org/abs/1512.03385), they use a residual structure to learn identity mappings that strengthens gradient propagation, thereby helping to prevent the vanishing gradient problem and allow the advent of truly deep neural networks as used today.
 
@@ -39,10 +39,10 @@ resnet18 = Metalhead.resnet(Metalhead.basicblock, [2, 2, 2, 2]; nclasses = 10)
 Let's try customising this further. Say I want to make a ResNet-50-like model, but with [`StochasticDepth`](https://arxiv.org/abs/1603.09382) to provide even more regularisation, and also a custom pooling layer such as `AdaptiveMeanMaxPool`. Both of these options are provided by Metalhead out of the box, and so we can write:
 
 ```julia
-using Metalhead: Layers # AdaptiveMeanMaxPool is in the Layers module in Metalhead
+using Metalhead.Layers # AdaptiveMeanMaxPool is in the Layers module in Metalhead
 
 custom_resnet = Metalhead.resnet(Metalhead.bottleneck, [3, 4, 6, 3];
-                                 pool_layer = Layers.AdaptiveMeanMaxPool((1, 1)),
+                                 pool_layer = AdaptiveMeanMaxPool((1, 1)),
                                  stochastic_depth_prob = 0.2)
 ```
 
@@ -52,8 +52,8 @@ base width:
 ```julia
 custom_resnet = Metalhead.resnet(Metalhead.bottleneck, [3, 4, 6, 3];
                                  cardinality = 32, base_width = 4,
-                                 pool_layer = Layers.AdaptiveMeanMaxPool((1, 1)),
+                                 pool_layer = AdaptiveMeanMaxPool((1, 1)),
                                  stochastic_depth_prob = 0.2)
 ```
 
-And we have a custom model, built with minimal effort! The documentation for `Metalhead.resnet` has been written with extensive care and in as much detail as possible to facilitate ease of use. Still, if you find anything difficult to understand, feel free to open an issue and we will be happy to help you out, and to improve the documentation where necessary.
+And we have a custom model, built with minimal effort! The documentation for [`Metalhead.resnet`](@ref) has been written with extensive care and in as much detail as possible to facilitate ease of use. Still, if you find anything difficult to understand, feel free to open an issue and we will be happy to help you out, and to improve the documentation where necessary.

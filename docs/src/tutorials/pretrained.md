@@ -1,6 +1,6 @@
 # [Working with pre-trained models from Metalhead](@id pretrained)
 
-Using a model from Metalhead is as simple as selecting a model from the table of [available models](@ref API-Reference). For example, below we use the pre-trained ResNet-18 model.
+Using a model from Metalhead is as simple as selecting a model from the table of available models given on the homepage of the documentation. For example, below we use the pre-trained ResNet-18 model.
 
 ```@example 1
 using Metalhead
@@ -63,7 +63,7 @@ batchsize = 1
 data = [(rand(Float32, 224, 224, 3, batchsize), onehotbatch(rand(1:1000, batchsize), 1:1000))
         for _ in 1:3]
 opt = Optimisers.Adam()
-state = Optimisers.setup(rule, model);  # initialise this optimiser's state
+state = Optimisers.setup(opt, model);  # initialise this optimiser's state
 for (i, (image, y)) in enumerate(data)
     @info "Starting batch $i ..."
     gs, _ = gradient(model, image) do m, x  # calculate the gradients
