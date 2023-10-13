@@ -93,4 +93,8 @@ for T in (:AlexNet, :VGG, :SqueezeNet, :ResNet, :WideResNet, :ResNeXt,
     @eval Base.show(io::IO, ::MIME"text/plain", model::$T) = _maybe_big_show(io, model)
 end
 
+if !isdefined(Base, :get_extension)
+    include("../ext/MetalheadCUDAExt.jl")
+end
+
 end # module
