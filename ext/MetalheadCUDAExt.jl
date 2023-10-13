@@ -1,14 +1,8 @@
 module MetalheadCUDAExt
 
-if isdefined(Base, :get_extension)
-    using Metalhead
-    using Metalhead: Metalhead, _dropblock_mask
-    using CUDA: CUDA, CuArray
-else
-    using ..Metalhead
-    using ..Metalhead: Metalhead, _dropblock_mask
-    using ..CUDA: CUDA, CuArray
-end
+using Metalhead
+using Metalhead: Metalhead, _dropblock_mask
+using CUDA: CUDA, CuArray
 
 ## bs is `clipped_block_size`
 # Dispatch for GPU
