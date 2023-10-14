@@ -43,13 +43,6 @@ function dropblock(rng::AbstractRNG, x::AbstractArray{T, 4}, drop_block_prob,
     return x .* block_mask .* normalize_scale
 end
 
-## bs is `clipped_block_size`
-# Dispatch for GPU
-dropblock_mask(rng::CUDA.RNG, x::CuArray, gamma, bs) = _dropblock_mask(rng, x, gamma, bs)
-function dropblock_mask(rng, x::CuArray, gamma, bs)
-    throw(ArgumentError("x isa CuArray, but rng isa $(typeof(rng)). dropblock only supports
-                        CUDA.RNG for CuArrays."))
-end
 # Dispatch for CPU
 dropblock_mask(rng, x, gamma, bs) = _dropblock_mask(rng, x, gamma, bs)
 
