@@ -90,12 +90,11 @@ ChainRulesCore.@non_differentiable _dropblock_checks(x, drop_block_prob, gamma_s
 
 function (m::DropBlock)(x)
     _dropblock_checks(x, m.drop_block_prob, m.gamma_scale)
-    return Flux._isactive(m) ?
-           dropblock(m.rng, x, m.drop_block_prob, m.block_size, m.gamma_scale) : x
+    return dropblock(m.rng, x, m.drop_block_prob * Flux._isactive(m, x), m.block_size, m.gamma_scale)
 end
 
 function Flux.testmode!(m::DropBlock, mode = true)
-    return (m.active = (isnothing(mode) || mode === :auto) ? nothing : !mode; m)
+    return (m.active = isnothing(Flux._tidy_active(mode)) ? nothing : !mode; m)
 end
 
 function DropBlock(drop_block_prob = 0.1, block_size::Integer = 7, gamma_scale = 1.0,
