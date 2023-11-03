@@ -153,8 +153,8 @@ function shufflenet(groups, width_scale, num_classes; in_channels=3)
         channels,
         init_block_channels,
         groups; 
-        in_channels=in_channels, 
-        num_classes=num_classes)
+        in_channels, 
+        num_classes)
 
     return net
 end
