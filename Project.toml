@@ -24,6 +24,7 @@ CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 MetalheadCUDAExt = "CUDA"
 
 [compat]
+Artifacts = "1"
 BSON = "0.3.2"
 CUDA = "4, 5"
 ChainRulesCore = "1"
