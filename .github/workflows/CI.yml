@@ -15,6 +15,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
+# needed to allow julia-actions/cache to delete old caches that it has created
+permissions:
+  actions: write
+  contents: read
+
 jobs:
   test:
     name: ${{ matrix.suite }} - Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }}
@@ -50,16 +55,7 @@ jobs:
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
-      - uses: actions/cache@v3
-        env:
-          cache-name: cache-artifacts
-        with:
-          path: ~/.julia/artifacts
-          key: ${{ runner.os }}-test-${{ env.cache-name }}-${{ hashFiles('**/Project.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-test-${{ env.cache-name }}-
-            ${{ runner.os }}-test-
-            ${{ runner.os }}-
+      - uses: julia-actions/cache@v1
       - uses: julia-actions/julia-buildpkg@v1
       - name: "Setup environment"
         run: |
@@ -91,6 +87,7 @@ jobs:
         with:
           version: '1'
           arch: x64
+      - uses: julia-actions/cache@v1
       - uses: julia-actions/julia-buildpkg@v1
       - uses: actions/download-artifact@v3
       - run: |
@@ -109,6 +106,7 @@ jobs:
       - uses: julia-actions/setup-julia@v1
         with:
           version: '1.6'
+      - uses: julia-actions/cache@v1
       - run: |
           julia --project=docs -e '
             using Pkg
