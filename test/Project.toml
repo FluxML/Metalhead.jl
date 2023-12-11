@@ -2,5 +2,16 @@
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
 Images = "916415d5-f1e6-5110-898d-aaa5f9f070e0"
-ReTest = "e0db7c4e-2690-44b9-bad6-7687da720f89"
+ReTestItems = "817f1d60-ba6b-4fd5-9520-3cf149f6a823"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+TestItems = "1c621080-faea-4a02-84b6-bbd5e436b8fe"
+cuDNN = "02a925ec-e4fe-4b08-9a7e-0d78e3d38ccd"
+
+[compat]
+CUDA = "4, 5"
+Flux = "0.13.16, 0.14"
+Images = "0.26"
+Test = "1"
+TestItems = "0.1"
+ReTestItems = "1"
+cuDNN = "1"

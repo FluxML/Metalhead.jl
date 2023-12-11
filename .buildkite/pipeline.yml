@@ -13,7 +13,7 @@ steps:
       queue: "juliagpu"
       cuda: "*"
     env:
-      GROUP: "CUDA"
+      GROUP: "CUDA" # TODO there are zero tests under this group
     if: build.message !~ /\[skip tests\]/
     timeout_in_minutes: 180
     matrix:

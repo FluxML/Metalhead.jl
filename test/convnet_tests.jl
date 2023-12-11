@@ -1,4 +1,4 @@
-@testset "AlexNet" begin
+@testitem "AlexNet" setup=[TestModels] begin
     model = AlexNet()
     @test size(model(x_256)) == (1000, 1)
     @test_throws ArgumentError AlexNet(pretrain = true)
@@ -6,7 +6,7 @@
     _gc()
 end
 
-@testset "VGG" begin
+@testitem "VGG" setup=[TestModels] begin
     @testset "VGG($sz, batchnorm=$bn)" for sz in [11, 13, 16, 19], bn in [true, false]
         m = VGG(sz, batchnorm = bn)
         @test size(m(x_224)) == (1000, 1)
@@ -20,7 +20,7 @@ end
     end
 end
 
-@testset "ResNet" begin
+@testitem "ResNet" setup=[TestModels] begin
     # Tests for pretrained ResNets
     @testset "ResNet($sz)" for sz in [18, 34, 50, 101, 152]
         m = ResNet(sz)
@@ -58,7 +58,7 @@ end
 end
 
 
-@testset "WideResNet" begin
+@testitem "WideResNet" setup=[TestModels] begin
     @testset "WideResNet($sz)" for sz in [50, 101]
         m = WideResNet(sz)
         @test size(m(x_224)) == (1000, 1)
@@ -72,7 +72,7 @@ end
     end
 end
 
-@testset "ResNeXt" begin
+@testitem "ResNeXt" setup=[TestModels] begin
     @testset for depth in [50, 101, 152]
         @testset for cardinality in [32, 64]
             @testset for base_width in [4, 8]
@@ -90,7 +90,7 @@ end
     end
 end
 
-@testset "SEResNet" begin
+@testitem "SEResNet" setup=[TestModels] begin
     @testset for depth in [18, 34, 50, 101, 152]
         m = SEResNet(depth)
         @test size(m(x_224)) == (1000, 1)
@@ -104,7 +104,7 @@ end
     end
 end
 
-@testset "SEResNeXt" begin
+@testitem "SEResNeXt" setup=[TestModels] begin
     @testset for depth in [50, 101, 152]
         @testset for cardinality in [32, 64]
             @testset for base_width in [4, 8]
@@ -122,7 +122,7 @@ end
     end
 end
 
-@testset "Res2Net" begin
+@testitem "Res2Net" setup=[TestModels] begin
     @testset for (base_width, scale) in [(26, 4), (48, 2), (14, 8), (26, 6), (26, 8)]
         m = Res2Net(50; base_width, scale)
         @test size(m(x_224)) == (1000, 1)
@@ -147,7 +147,7 @@ end
     end
 end
 
-@testset "Res2NeXt" begin
+@testitem "Res2NeXt" setup=[TestModels] begin
     @testset for depth in [50, 101]
         m = Res2NeXt(depth)
         @test size(m(x_224)) == (1000, 1)
@@ -161,7 +161,7 @@ end
     end
 end
 
-@testset "EfficientNet" begin
+@testitem "EfficientNet" setup=[TestModels] begin
     @testset "EfficientNet($config)" for config in [:b0, :b1, :b2, :b3, :b4, :b5,] #:b6, :b7, :b8]
         # preferred image resolution scaling
         r = Metalhead.EFFICIENTNET_GLOBAL_CONFIGS[config][1]
@@ -178,7 +178,7 @@ end
     end
 end
 
-@testset "EfficientNetv2" begin
+@testitem "EfficientNetv2" setup=[TestModels] begin
     @testset for config in [:small, :medium, :large] # :xlarge]
         m = EfficientNetv2(config)
         @test size(m(x_224)) == (1000, 1)
@@ -192,7 +192,7 @@ end
     end
 end
 
-@testset "GoogLeNet" begin
+@testitem "GoogLeNet" setup=[TestModels] begin
     @testset for bn in [true, false]
         m = GoogLeNet(batchnorm = bn)
         @test size(m(x_224)) == (1000, 1)
@@ -206,55 +206,22 @@ end
     end
 end
 
-@testset "Inception" begin
+@testitem "Inception" setup=[TestModels] begin
     x_299 = rand(Float32, 299, 299, 3, 2)
-    @testset "Inceptionv3" begin
-        m = Inceptionv3()
+    @testset "$Model" for Model in [Inceptionv3, Inceptionv4, InceptionResNetv2, Xception]
+        m = Model()
         @test size(m(x_299)) == (1000, 2)
-        if Inceptionv3 in PRETRAINED_MODELS
-            @test acctest(Inceptionv3(pretrain = true))
+        if Model in PRETRAINED_MODELS
+            @test acctest(Model(pretrain = true))
         else
-            @test_throws ArgumentError Inceptionv3(pretrain = true)
+            @test_throws ArgumentError Model(pretrain = true)
         end
         @test gradtest(m, x_299)
+        _gc()
     end
-    _gc()
-    @testset "Inceptionv4" begin
-        m = Inceptionv4()
-        @test size(m(x_299)) == (1000, 2)
-        if Inceptionv4 in PRETRAINED_MODELS
-            @test acctest(Inceptionv4(pretrain = true))
-        else
-            @test_throws ArgumentError Inceptionv4(pretrain = true)
-        end
-        @test gradtest(m, x_299)
-    end
-    _gc()
-    @testset "InceptionResNetv2" begin
-        m = InceptionResNetv2()
-        @test size(m(x_299)) == (1000, 2)
-        if InceptionResNetv2 in PRETRAINED_MODELS
-            @test acctest(InceptionResNetv2(pretrain = true))
-        else
-            @test_throws ArgumentError InceptionResNetv2(pretrain = true)
-        end
-        @test gradtest(m, x_299)
-    end
-    _gc()
-    @testset "Xception" begin
-        m = Xception()
-        @test size(m(x_299)) == (1000, 2)
-        if Xception in PRETRAINED_MODELS
-            @test acctest(Xception(pretrain = true))
-        else
-            @test_throws ArgumentError Xception(pretrain = true)
-        end
-        @test gradtest(m, x_299)
-    end
-    _gc()
 end
 
-@testset "SqueezeNet" begin
+@testitem "SqueezeNet" setup=[TestModels] begin
     m = SqueezeNet()
     @test size(m(x_224)) == (1000, 1)
     if SqueezeNet in PRETRAINED_MODELS
@@ -266,7 +233,7 @@ end
     _gc()
 end
 
-@testset "DenseNet" begin
+@testitem "DenseNet" setup=[TestModels] begin
     @testset for sz in [121, 161, 169, 201]
         m = DenseNet(sz)
         @test size(m(x_224)) == (1000, 1)
@@ -280,8 +247,13 @@ end
     end
 end
 
-@testset "MobileNets (width = $width_mult)" for width_mult in [0.5, 0.75, 1, 1.3]
-    @testset "MobileNetv1" begin
+@testsetup module TestMobileNets
+    export WIDTH_MULTS
+    const WIDTH_MULTS = [0.5, 0.75, 1.0, 1.3]
+end
+
+@testitem "MobileNetsV1" setup=[TestModels, TestMobileNets] begin
+    @testset for width_mult in WIDTH_MULTS
         m = MobileNetv1(width_mult)
         @test size(m(x_224)) == (1000, 1)
         if (MobileNetv1, width_mult) in PRETRAINED_MODELS
@@ -290,9 +262,12 @@ end
             @test_throws ArgumentError MobileNetv1(pretrain = true)
         end
         @test gradtest(m, x_224)
+        _gc()
     end
-    _gc()
-    @testset "MobileNetv2" begin
+end
+
+@testitem "MobileNetv2" setup=[TestModels, TestMobileNets] begin
+    @testset for width_mult in WIDTH_MULTS 
         m = MobileNetv2(width_mult)
         @test size(m(x_224)) == (1000, 1)
         if (MobileNetv2, width_mult) in PRETRAINED_MODELS
@@ -302,8 +277,11 @@ end
         end
         @test gradtest(m, x_224)
     end
-    _gc()
-    @testset "MobileNetv3" verbose = true begin
+end
+
+
+@testitem "MobileNetv3" setup=[TestModels, TestMobileNets] begin
+    @testset for width_mult in WIDTH_MULTS
         @testset for config in [:small, :large]
             m = MobileNetv3(config; width_mult)
             @test size(m(x_224)) == (1000, 1)
@@ -316,7 +294,10 @@ end
             _gc()
         end
     end
-    @testset "MNASNet" verbose = true begin
+end
+
+@testitem "MNASNet" setup=[TestModels, TestMobileNets] begin
+    @testset for width in WIDTH_MULTS
         @testset for config in [:A1, :B1]
             m = MNASNet(config; width_mult)
             @test size(m(x_224)) == (1000, 1)
@@ -331,7 +312,7 @@ end
     end
 end
 
-@testset "ConvNeXt" verbose = true begin
+@testitem "ConvNeXt" setup=[TestModels] begin
     @testset for config in [:small, :base, :large, :tiny, :xlarge]
         m = ConvNeXt(config)
         @test size(m(x_224)) == (1000, 1)
@@ -340,7 +321,7 @@ end
     end
 end
 
-@testset "ConvMixer" verbose = true begin
+@testitem "ConvMixer" setup=[TestModels] begin
     @testset for config in [:small, :base, :large]
         m = ConvMixer(config)
         @test size(m(x_224)) == (1000, 1)
@@ -349,7 +330,7 @@ end
     end
 end
 
-@testset "UNet" begin
+@testitem "UNet" setup=[TestModels] begin
     encoder = Metalhead.backbone(ResNet(18))
     model = UNet((256, 256), 3, 10, encoder)
     @test size(model(x_256)) == (256, 256, 10, 1)
