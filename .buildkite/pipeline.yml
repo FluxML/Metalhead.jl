@@ -12,6 +12,12 @@ steps:
     agents:
       queue: "juliagpu"
       cuda: "*"
+    commands: |
+      julia --project=test -e '
+          if VERSION < v"1.7"
+            using Pkg
+            Pkg.rm("ReTestItems") # not compatible with 1.6
+          end'
     env:
       GROUP: "CUDA" # TODO there are zero tests under this group
     if: build.message !~ /\[skip tests\]/
