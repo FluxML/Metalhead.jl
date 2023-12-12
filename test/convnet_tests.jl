@@ -297,7 +297,7 @@ end
 end
 
 @testitem "MNASNet" setup=[TestModels, TestMobileNets] begin
-    @testset for width in WIDTH_MULTS
+    @testset for width_mult in WIDTH_MULTS
         @testset for config in [:A1, :B1]
             m = MNASNet(config; width_mult)
             @test size(m(x_224)) == (1000, 1)
