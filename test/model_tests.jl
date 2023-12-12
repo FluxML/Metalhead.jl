@@ -1,8 +1,9 @@
 @testsetup module TestModels
 using Metalhead, Images
-using Flux: Zygote
+using Flux: gradient, gpu
 
 export PRETRAINED_MODELS,
+    TEST_FAST,
     _gc,
     gradtest,
     normalize_imagenet,
@@ -12,7 +13,8 @@ export PRETRAINED_MODELS,
     TEST_LBLS,
     acctest,
     x_224,
-    x_256
+    x_256,
+    gpu
 
 const PRETRAINED_MODELS = [
     # (DenseNet, 121),
@@ -40,14 +42,15 @@ const PRETRAINED_MODELS = [
     (VGG, 19, false),
 ]
 
+const TEST_FAST = get(ENV, "FAST_TEST", "false") == "true"
+
 function _gc()
     GC.safepoint()
     return GC.gc(true)
 end
 
 function gradtest(model, input)
-    y, pb = Zygote.pullback(model, input)
-    pb(ones(Float32, size(y)))
+    gradient(model, input)
     # if we make it to here with no error, success!
     return true
 end
@@ -62,17 +65,19 @@ end
 const TEST_PATH = download("https://cdn.pixabay.com/photo/2015/05/07/11/02/guitar-756326_960_720.jpg")
 const TEST_IMG = imresize(Images.load(TEST_PATH), (224, 224))
 # CHW -> WHC
-const TEST_X = permutedims(convert(Array{Float32}, channelview(TEST_IMG)), (3, 2, 1)) |> normalize_imagenet
+const TEST_X = let img_array = convert(Array{Float32}, channelview(TEST_IMG))
+    permutedims(img_array, (3, 2, 1)) |> normalize_imagenet |> gpu
+end
 
 # ImageNet labels
 const TEST_LBLS = readlines(download("https://raw.githubusercontent.com/pytorch/hub/master/imagenet_classes.txt"))
 
 function acctest(model)
-    ypred = model(TEST_X) |> vec
+    ypred = gpu(model)(TEST_X) |> vec
     top5 = TEST_LBLS[sortperm(ypred; rev = true)]
     return "acoustic guitar" in top5
 end
 
-const x_224 = rand(Float32, 224, 224, 3, 1)
-const x_256 = rand(Float32, 256, 256, 3, 1)
+const x_224 = rand(Float32, 224, 224, 3, 1) |> gpu
+const x_256 = rand(Float32, 256, 256, 3, 1) |> gpu
 end

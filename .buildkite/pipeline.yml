@@ -19,7 +19,9 @@ steps:
             Pkg.rm("ReTestItems") # not compatible with 1.6
           end'
     env:
-      GROUP: "CUDA" # TODO there are zero tests under this group
+      GROUP: "All"
+      TEST_FAST: true
+      TEST_WORKERS: 4
     if: build.message !~ /\[skip tests\]/
     timeout_in_minutes: 180
     matrix:

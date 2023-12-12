@@ -26,11 +26,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       GROUP: ${{ matrix.suite }}
+      TEST_FAST: ${{ matrix.version != '1' || matrix.os != 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:
         version:
-          - '1' # Replace this with the minimum Julia version that your package supports.
+          - '1.6' # Replace this with the minimum Julia version that your package supports.
+          - '1'
           - 'nightly'
         os:
           - ubuntu-latest
@@ -61,13 +63,15 @@ jobs:
       - uses: julia-actions/cache@v1
       - uses: julia-actions/julia-buildpkg@v1
 
+      - name: Setup test env for 1.6
+        if: ${{ matrix.version == '1.6' }}
+        run: |
+          julia --color=yes --depwarn=yes --project=./test -e 'using Pkg; Pkg.rm("ReTestItems")'
       - name: Run tests
         uses: julia-actions/julia-runtest@v1
         continue-on-error: ${{ !(matrix.version == '1' && matrix.os == 'ubuntu-latest') && matrix.version == 'nightly' }}
         with:
           coverage: ${{ matrix.version == '1' && matrix.os == 'ubuntu-latest' }}
-        # run: |
-        #   julia --color=yes --depwarn=yes --project=./test -e 'include("test/retest.jl"); retest(${{ matrix.suite }})'
       - uses: actions/upload-artifact@v3
         with:
           name: coverage-${{ hashFiles('**/*.cov') }}
