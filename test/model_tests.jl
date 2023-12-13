@@ -1,5 +1,5 @@
 @testsetup module TestModels
-using Metalhead, Images
+using Metalhead, Images, TestImages
 using Flux: gradient, gpu
 
 export PRETRAINED_MODELS,
@@ -62,8 +62,7 @@ function normalize_imagenet(data)
 end
 
 # test image
-const TEST_PATH = download("https://cdn.pixabay.com/photo/2015/05/07/11/02/guitar-756326_960_720.jpg")
-const TEST_IMG = imresize(Images.load(TEST_PATH), (224, 224))
+const TEST_IMG = imresize(testimage("monarch_color_256"), (224, 224))
 # CHW -> WHC
 const TEST_X = let img_array = convert(Array{Float32}, channelview(TEST_IMG))
     permutedims(img_array, (3, 2, 1)) |> normalize_imagenet |> gpu
@@ -75,7 +74,7 @@ const TEST_LBLS = readlines(download("https://raw.githubusercontent.com/pytorch/
 function acctest(model)
     ypred = gpu(model)(TEST_X) |> vec
     top5 = TEST_LBLS[sortperm(ypred; rev = true)]
-    return "acoustic guitar" in top5
+    return "monarch" in top5
 end
 
 const x_224 = rand(Float32, 224, 224, 3, 1) |> gpu
