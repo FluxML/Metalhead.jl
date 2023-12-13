@@ -50,7 +50,7 @@ function _gc()
 end
 
 function gradtest(model, input)
-    gradient(model, input)
+    gradient(sum ∘ model, input)
     # if we make it to here with no error, success!
     return true
 end
