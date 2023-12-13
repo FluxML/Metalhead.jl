@@ -170,7 +170,7 @@ end
 end
 
 @testitem "EfficientNet" setup=[TestModels] begin
-    config = TEST_FAST ? [:b0] : [:b0, :b1, :b2, :b3, :b4, :b5] #:b6, :b7, :b8]
+    configs = TEST_FAST ? [:b0] : [:b0, :b1, :b2, :b3, :b4, :b5] #:b6, :b7, :b8]
     @testset "EfficientNet($config)" for config in configs
         # preferred image resolution scaling
         r = Metalhead.EFFICIENTNET_GLOBAL_CONFIGS[config][1]
@@ -235,7 +235,11 @@ end
     m = SqueezeNet() |> gpu
     @test size(m(x_224)) == (1000, 1)
     if SqueezeNet in PRETRAINED_MODELS
-        @test acctest(SqueezeNet(; pretrain = true))
+        if VERSION >= v"1.7"
+            @test acctest(SqueezeNet(; pretrain = true))
+        else
+            @test_broken acctest(SqueezeNet(; pretrain = true))
+        end
     else
         @test_throws ArgumentError SqueezeNet(pretrain = true)
     end

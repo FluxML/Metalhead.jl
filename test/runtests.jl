@@ -7,9 +7,12 @@ const name_filter = test_group == "All" ? nothing : Regex(test_group)
 
 @static if VERSION >= v"1.7"
     using ReTestItems
-    verbose_results = get(ENV, "CI", "false") == "true"
-    nworkers = parse(Int, get(ENV, "TEST_WORKERS", "0"))
-    runtests(Metalhead; name = name_filter, verbose_results, nworkers)
+    if parse(Bool, get(ENV, "CI", "false"))
+        runtests(Metalhead; name = name_filter, verbose_results = true)
+    else
+        # For running locally
+        runtests(Metalhead; name = name_filter)
+    end
 else
     using TestItemRunner
     function testitem_filter(ti)
