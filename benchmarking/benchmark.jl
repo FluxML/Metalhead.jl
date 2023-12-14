@@ -49,9 +49,9 @@ modelstrings = (
     "EfficientNetv2(:small)",
     "ConvMixer(:small)",
     "ConvNeXt(:small)",
-    # "MLPMixer()", # found no tests
-    # "ResMLP()", # found no tests
-    # "gMLP()", # found no tests
+    # "MLPMixer()", # no tests found
+    # "ResMLP()", # no tests found
+    # "gMLP()", # no tests found
     "ViT(:tiny)",
     "UNet()"
     )
@@ -60,6 +60,7 @@ for (i, modstring) in enumerate(modelstrings)
     @timeit to "$modstring" begin
         @info "Evaluating $i/$(length(modelstrings)) $modstring"
         @timeit to "First Load" eval(Meta.parse(modstring))
+        # second load simulates what might be possible with a proper set-up pkgimage workload
         @timeit to "Second Load" model=eval(Meta.parse(modstring))
         @timeit to "Training" train(model,
             train_loader,

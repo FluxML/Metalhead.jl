@@ -93,7 +93,7 @@ function train(args...;kwargs...)
     try
         _train(args...; kwargs...)
     catch ex
-        rethrow()
+        # rethrow()
         println()
         @error sprint(showerror, ex)
         GC.gc()
