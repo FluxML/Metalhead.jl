@@ -21,6 +21,8 @@ nlabels = length(labels)
 firstbatch = first(first(train_loader))
 imsize = size(firstbatch)[1:2]
 
+@info "Benchmarking" epochs batchsize device imsize
+
 to = TimerOutput()
 
 # these should all be the smallest variant of each that is tested in `/test`
@@ -43,8 +45,8 @@ modelstrings = (
     "Xception()",
     "MobileNetv1(0.5)",
     "MobileNetv2(0.5)",
-    "MobileNetv3(:small, 0.5)",
-    "MNASNet(MNASNet, 0.5)",
+    "MobileNetv3(:small, width_mult=0.5)",
+    "MNASNet(:A1, width_mult=0.5)",
     "EfficientNet(:b0)",
     "EfficientNetv2(:small)",
     "ConvMixer(:small)",
@@ -58,13 +60,15 @@ modelstrings = (
 
 for (i, modstring) in enumerate(modelstrings)
     @timeit to "$modstring" begin
-        @info "Evaluating $i/$(length(modelstrings)) $modstring"
-        @timeit to "First Load" eval(Meta.parse(modstring))
+        @info "Evaluating $i/$(length(modelstrings)): $modstring"
+        # Initial precompile is variable based on what came before, so don't time first load
+        eval(Meta.parse(modstring))
         # second load simulates what might be possible with a proper set-up pkgimage workload
-        @timeit to "Second Load" model=eval(Meta.parse(modstring))
+        @timeit to "Load" model=eval(Meta.parse(modstring))
         @timeit to "Training" train(model,
             train_loader,
             test_loader;
+            limit = 1,
             to,
             device)||(allow_skips || break)
     end
