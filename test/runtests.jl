@@ -1,4 +1,5 @@
 using Metalhead: Metalhead
+using CUDA
 
 # TODO account for GPU tests using name or tag filter
 # TODO write GPU tests!

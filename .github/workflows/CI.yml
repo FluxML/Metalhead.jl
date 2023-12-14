@@ -44,8 +44,8 @@ jobs:
           - 'AlexNet|VGG'
           - 'GoogLeNet|SqueezeNet|MobileNet|MNASNet'
           - 'EfficientNet'
-          - 'ResNet|WideResNet'
-          - 'ResNeXt' # split off from ResNet to reduce overall runtime
+          - '^ResNet|WideResNet'
+          - '^ResNeXt' # split off from ResNet to reduce overall runtime
           - 'SEResNet|SEResNeXt'
           - 'Res2Net|Res2NeXt'
           - 'Inception'
