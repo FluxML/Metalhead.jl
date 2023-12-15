@@ -42,7 +42,7 @@ const PRETRAINED_MODELS = [
     (VGG, 19, false),
 ]
 
-const TEST_FAST = get(ENV, "FAST_TEST", "false") == "true"
+const TEST_FAST = get(ENV, "TEST_FAST", "false") == "true"
 
 function _gc()
     GC.safepoint()
