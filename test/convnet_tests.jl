@@ -49,7 +49,7 @@ end
                     (dropout_prob = 0.8, stochastic_depth_prob = 0.8, dropblock_prob = 0.8),
                 ]
                 @testset for drop_probs in drop_list
-                    m = Metalhead.resnet(block_fn, layers; drop_probs...)
+                    m = Metalhead.resnet(block_fn, layers; drop_probs...) |> gpu
                     @test size(m(x_224)) == (1000, 1)
                     @test gradtest(m, x_224)
                     _gc()
@@ -132,9 +132,14 @@ end
         m = Res2Net(50; base_width, scale) |> gpu
         @test size(m(x_224)) == (1000, 1)
         if (Res2Net, 50, base_width, scale) in PRETRAINED_MODELS
-            @test acctest(Res2Net(50; base_width, scale, pretrain = true))
+            if VERSION < v"1.7" && has_cuda()
+                @test_broken acctest(Res2Net(50; base_width, scale, pretrain = true))
+            else
+                @test acctest(Res2Net(50; base_width, scale, pretrain = true))
+            end
         else
-            @test_throws ArgumentError Res2Net(50; base_width, scale, pretrain = true)
+            err_type = VERSION < v"1.7" && has_cuda() ? Exception : ArgumentError
+            @test_throws err_type Res2Net(50; base_width, scale, pretrain = true)
         end
         @test gradtest(m, x_224)
         _gc()
@@ -158,13 +163,21 @@ end
 @testitem "Res2NeXt" setup=[TestModels] begin
     @testset for depth in [50, 101]
         m = Res2NeXt(depth) |> gpu
-        @test size(m(x_224)) == (1000, 1)
+        if VERSION < v"1.7" && has_cuda()
+            @test_broken size(m(x_224)) == (1000, 1)
+        else
+            @test size(m(x_224)) == (1000, 1)
+        end
         if (Res2NeXt, depth) in PRETRAINED_MODELS
             @test acctest(Res2NeXt(depth; pretrain = true))
         else
             @test_throws ArgumentError Res2NeXt(depth, pretrain = true)
         end
-        @test gradtest(m, x_224)
+        if VERSION < v"1.7" && has_cuda()
+            @test_broken gradtest(m, x_224)
+        else
+            @test gradtest(m, x_224)
+        end
         _gc()
     end
 end

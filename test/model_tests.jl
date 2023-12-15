@@ -1,6 +1,7 @@
 @testsetup module TestModels
 using Metalhead, Images, TestImages
 using Flux: gradient, gpu
+using CUDA: has_cuda
 
 export PRETRAINED_MODELS,
     TEST_FAST,
@@ -14,7 +15,8 @@ export PRETRAINED_MODELS,
     acctest,
     x_224,
     x_256,
-    gpu
+    gpu,
+    has_cuda
 
 const PRETRAINED_MODELS = [
     # (DenseNet, 121),
