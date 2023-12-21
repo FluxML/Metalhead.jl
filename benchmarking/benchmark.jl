@@ -59,7 +59,7 @@ modelstrings = (
     # "ResMLP(; $common)", # no tests found
     # "gMLP(; $common)", # no tests found
     "ViT(:tiny; $common)",
-    "UNet(; $common)"
+    # "UNet(; $common)" # doesn't support kwargs "inchannels", "nclasses"
     )
 df = DataFrame(; model=String[], train_loss=Float64[], train_acc=Float64[], test_loss=Float64[], test_acc=Float64[])
 for (i, modstring) in enumerate(modelstrings)
