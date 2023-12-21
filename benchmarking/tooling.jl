@@ -38,7 +38,8 @@ function load_cifar10(; batchsize=1000)
     return train_loader, test_loader, labels
 end
 
-function _train(model, train_loader, test_loader; epochs = 45, device = gpu, limit=nothing, gpu_gc=true, gpu_stats=false, show_plots=false, to=TimerOutput())
+function _train(model, train_loader, test_loader; epochs = 45,
+        device = gpu, limit=nothing, gpu_gc=true, gpu_stats=false, show_plots=false, to=TimerOutput())
 
     model = model |> device
 
@@ -47,7 +48,8 @@ function _train(model, train_loader, test_loader; epochs = 45, device = gpu, lim
 
     train_loss_hist, train_acc_hist = Float64[], Float64[]
     test_loss_hist, test_acc_hist = Float64[], Float64[]
-
+    elapsed = Float64[]
+    start = time()
     @showprogress "training" for epoch in 1:epochs
         i = 0
         for (x, y) in train_loader
@@ -56,7 +58,7 @@ function _train(model, train_loader, test_loader; epochs = 45, device = gpu, lim
                 gs, _ = gradient(model, x) do m, _x
                     logitcrossentropy(m(_x), y)
                 end
-                state, model = Optimisers.update(state, model, gs)
+                state, model = Optimisers.update!(state, model, gs)
             end
 
             device === gpu && gpu_stats && CUDA.memory_status()
@@ -70,13 +72,14 @@ function _train(model, train_loader, test_loader; epochs = 45, device = gpu, lim
         @timeit to "testing" test_loss, test_acc = loss_and_accuracy(test_loader, model, device; limit)
         push!(train_loss_hist, train_loss); push!(train_acc_hist, train_acc);
         push!(test_loss_hist, test_loss); push!(test_acc_hist, test_acc);
+        push!(elapsed, time() - start)
         if show_plots
-            plt = lineplot(1:epoch, train_loss_hist, name = "train_loss", xlabel="epoch", ylabel="loss")
-            lineplot!(plt, 1:epoch, test_loss_hist, name = "test_loss")
-            display(plt)
-            plt = lineplot(1:epoch, train_acc_hist, name = "train_acc", xlabel="epoch", ylabel="acc")
-            lineplot!(plt, 1:epoch, test_acc_hist, name = "test_acc")
-            display(plt)
+            plt2 = lineplot(1:epoch, train_loss_hist, name = "train_loss", xlabel="epoch", ylabel="loss")
+            lineplot!(plt2, 1:epoch, test_loss_hist, name = "test_loss")
+            display(plt2)
+            plt2 = lineplot(1:epoch, train_acc_hist, name = "train_acc", xlabel="epoch", ylabel="acc")
+            lineplot!(plt2, 1:epoch, test_acc_hist, name = "test_acc")
+            display(plt2)
         end
         if device === gpu && gpu_gc
             GC.gc() # GPU will OOM without this
@@ -84,7 +87,7 @@ function _train(model, train_loader, test_loader; epochs = 45, device = gpu, lim
     end
     train_loss, train_acc, test_loss, test_acc = train_loss_hist[end], train_acc_hist[end], test_loss_hist[end], test_acc_hist[end]
     @info "results after $epochs epochs $(repr(map(x->round(x, digits=3), (; train_loss, train_acc, test_loss, test_acc))))"
-    return train_loss_hist, train_acc_hist, test_loss_hist, test_acc_hist
+    return elapsed, train_loss_hist, train_acc_hist, test_loss_hist, test_acc_hist
 end
 
 # because Flux stacktraces are ludicrously big on <1.10 so don't show them

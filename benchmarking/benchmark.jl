@@ -12,6 +12,8 @@ using UnicodePlots
 
 include("tooling.jl")
 
+function run()
+
 epochs = 45
 batchsize = 1000
 device = gpu
@@ -62,6 +64,8 @@ modelstrings = (
     # "UNet(; $common)" # doesn't support kwargs "inchannels", "nclasses"
     )
 df = DataFrame(; model=String[], train_loss=Float64[], train_acc=Float64[], test_loss=Float64[], test_acc=Float64[])
+plt = lineplot([0], [0], title="test accuracy vs. time (s)", ylim = (0,1), xlim=(0,60))
+max_x = 0
 for (i, modstring) in enumerate(modelstrings)
     @timeit to "$modstring" begin
         @info "Evaluating $i/$(length(modelstrings)): $modstring"
@@ -74,16 +78,23 @@ for (i, modstring) in enumerate(modelstrings)
             test_loader;
             limit = 1,
             to,
-            device)
-        train_loss, train_acc, test_loss, test_acc = if isnothing(ret)
+            device
+            )
+        elapsed, train_loss, train_acc, test_loss, test_acc = if isnothing(ret)
             allow_skips || break
-            missing, missing, missing, missing
+            missing, missing, missing, missing, missing
         else
-            train_loss_hist, train_acc_hist, test_loss_hist, test_acc_hist = ret
-            train_loss_hist[end], train_acc_hist[end], test_loss_hist[end], test_acc_hist[end]
+            elapsed, train_loss_hist, train_acc_hist, test_loss_hist, test_acc_hist = ret
+            max_x = max(maximum(elapsed), max_x)
+            lineplot!(plt, elapsed, test_acc_hist, name=modstring)
+            elapsed, train_loss_hist[end], train_acc_hist[end], test_loss_hist[end], test_acc_hist[end]
         end
-        push!(df, (modstring, train_loss_hist[end], train_acc_hist[end], test_loss_hist[end], test_acc_hist[end]))
+        push!(df, (modstring, train_loss, train_acc, test_loss, test_acc), promote=true)
     end
+    GC.gc(true)
 end
+display(plt)
 display(df)
 print_timer(to; sortby = :firstexec)
+end
+run()
