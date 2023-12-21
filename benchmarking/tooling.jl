@@ -48,10 +48,9 @@ function _train(model, train_loader, test_loader; epochs = 45, device = gpu, lim
     train_loss_hist, train_acc_hist = Float64[], Float64[]
     test_loss_hist, test_acc_hist = Float64[], Float64[]
 
-    @info "starting training"
-    for epoch in 1:epochs
+    @showprogress "training" for epoch in 1:epochs
         i = 0
-        @showprogress "training epoch $epoch/$epochs" for (x, y) in train_loader
+        for (x, y) in train_loader
             x, y = x |> device, y |> device
             @timeit to "batch step" begin
                 gs, _ = gradient(model, x) do m, _x
@@ -67,14 +66,11 @@ function _train(model, train_loader, test_loader; epochs = 45, device = gpu, lim
             end
         end
 
-        @info "epoch $epoch complete. Testing..."
         train_loss, train_acc = loss_and_accuracy(train_loader, model, device; limit)
         @timeit to "testing" test_loss, test_acc = loss_and_accuracy(test_loader, model, device; limit)
-        @info map(x->round(x, digits=3), (; train_loss, train_acc, test_loss, test_acc))
-
+        push!(train_loss_hist, train_loss); push!(train_acc_hist, train_acc);
+        push!(test_loss_hist, test_loss); push!(test_acc_hist, test_acc);
         if show_plots
-            push!(train_loss_hist, train_loss); push!(train_acc_hist, train_acc);
-            push!(test_loss_hist, test_loss); push!(test_acc_hist, test_acc);
             plt = lineplot(1:epoch, train_loss_hist, name = "train_loss", xlabel="epoch", ylabel="loss")
             lineplot!(plt, 1:epoch, test_loss_hist, name = "test_loss")
             display(plt)
@@ -86,6 +82,9 @@ function _train(model, train_loader, test_loader; epochs = 45, device = gpu, lim
             GC.gc() # GPU will OOM without this
         end
     end
+    train_loss, train_acc, test_loss, test_acc = train_loss_hist[end], train_acc_hist[end], test_loss_hist[end], test_acc_hist[end]
+    @info "results after $epochs epochs $(repr(map(x->round(x, digits=3), (; train_loss, train_acc, test_loss, test_acc))))"
+    return train_loss_hist, train_acc_hist, test_loss_hist, test_acc_hist
 end
 
 # because Flux stacktraces are ludicrously big on <1.10 so don't show them
@@ -95,8 +94,8 @@ function train(args...;kwargs...)
     catch ex
         # rethrow()
         println()
-        @error sprint(showerror, ex)
+        println(sprint(showerror, ex))
         GC.gc()
-        return false
+        return nothing
     end
 end
