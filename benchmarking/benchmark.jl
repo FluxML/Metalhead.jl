@@ -75,10 +75,14 @@ for (i, modstring) in enumerate(modelstrings)
             limit = 1,
             to,
             device)
-        isnothing(ret) && !allow_skips ? break : continue
-        train_loss_hist, train_acc_hist, test_loss_hist, test_acc_hist = ret
+        train_loss, train_acc, test_loss, test_acc = if isnothing(ret)
+            allow_skips || break
+            missing, missing, missing, missing
+        else
+            train_loss_hist, train_acc_hist, test_loss_hist, test_acc_hist = ret
+            train_loss_hist[end], train_acc_hist[end], test_loss_hist[end], test_acc_hist[end]
+        end
         push!(df, (modstring, train_loss_hist[end], train_acc_hist[end], test_loss_hist[end], test_acc_hist[end]))
-
     end
 end
 display(df)
