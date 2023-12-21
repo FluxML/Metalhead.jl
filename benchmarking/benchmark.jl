@@ -1,14 +1,15 @@
 
+using Colors
 using CUDA, cuDNN
 using DataFrames
 using Flux
 using Flux: logitcrossentropy, onecold, onehotbatch
+using GLMakie
 using Metalhead
 using MLDatasets
 using Optimisers
 using ProgressMeter
 using TimerOutputs
-using UnicodePlots
 
 include("tooling.jl")
 
@@ -64,7 +65,10 @@ modelstrings = (
     # "UNet(; $common)" # doesn't support kwargs "inchannels", "nclasses"
     )
 df = DataFrame(; model=String[], train_loss=Float64[], train_acc=Float64[], test_loss=Float64[], test_acc=Float64[])
-plt = lineplot([0], [0], title="test accuracy vs. time (s)", ylim = (0,1), xlim=(0,60))
+cols = distinguishable_colors(length(modelstrings), [RGB(1,1,1), RGB(0,0,0)], dropseed=true)
+f = Figure()
+ax = Axis(f[1, 1], title="CIFAR-10 Training on a Nvidia 3090, batch 1000\nTest accuracy vs. time over 45 epochs", xlabel="Time (s)", ylabel="Testset Accuracy")
+display(f)
 max_x = 0
 for (i, modstring) in enumerate(modelstrings)
     @timeit to "$modstring" begin
@@ -86,14 +90,15 @@ for (i, modstring) in enumerate(modelstrings)
         else
             elapsed, train_loss_hist, train_acc_hist, test_loss_hist, test_acc_hist = ret
             max_x = max(maximum(elapsed), max_x)
-            lineplot!(plt, elapsed, test_acc_hist, name=modstring)
+            lines!(ax, elapsed, test_acc_hist, label=modstring, color=cols[i])
             elapsed, train_loss_hist[end], train_acc_hist[end], test_loss_hist[end], test_acc_hist[end]
         end
         push!(df, (modstring, train_loss, train_acc, test_loss, test_acc), promote=true)
     end
     GC.gc(true)
 end
-display(plt)
+f[1, 2] = Legend(f, ax, "Models", framevisible = false)
+display(f)
 display(df)
 print_timer(to; sortby = :firstexec)
 end

@@ -49,7 +49,6 @@ function _train(model, train_loader, test_loader; epochs = 45,
     train_loss_hist, train_acc_hist = Float64[], Float64[]
     test_loss_hist, test_acc_hist = Float64[], Float64[]
     elapsed = Float64[]
-    start = time()
     @showprogress "training" for epoch in 1:epochs
         i = 0
         for (x, y) in train_loader
@@ -72,7 +71,7 @@ function _train(model, train_loader, test_loader; epochs = 45,
         @timeit to "testing" test_loss, test_acc = loss_and_accuracy(test_loader, model, device; limit)
         push!(train_loss_hist, train_loss); push!(train_acc_hist, train_acc);
         push!(test_loss_hist, test_loss); push!(test_acc_hist, test_acc);
-        push!(elapsed, time() - start)
+        push!(elapsed, time())
         if show_plots
             plt2 = lineplot(1:epoch, train_loss_hist, name = "train_loss", xlabel="epoch", ylabel="loss")
             lineplot!(plt2, 1:epoch, test_loss_hist, name = "test_loss")
@@ -85,6 +84,7 @@ function _train(model, train_loader, test_loader; epochs = 45,
             GC.gc() # GPU will OOM without this
         end
     end
+    elapsed = elapsed .- elapsed[1]
     train_loss, train_acc, test_loss, test_acc = train_loss_hist[end], train_acc_hist[end], test_loss_hist[end], test_acc_hist[end]
     @info "results after $epochs epochs $(repr(map(x->round(x, digits=3), (; train_loss, train_acc, test_loss, test_acc))))"
     return elapsed, train_loss_hist, train_acc_hist, test_loss_hist, test_acc_hist
