@@ -22,6 +22,7 @@ steps:
       GROUP: "All"
       TEST_FAST: true
       RETESTITEMS_NWORKERS: 2
+      JULIA_CUDA_HARD_MEMORY_LIMIT: "50%"
     if: build.message !~ /\[skip tests\]/
     timeout_in_minutes: 180
     matrix:

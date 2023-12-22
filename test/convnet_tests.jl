@@ -64,11 +64,7 @@ end
     @testset "WideResNet($sz)" for sz in sizes
         m = WideResNet(sz) |> gpu
         @test size(m(x_224)) == (1000, 1)
-        if VERSION >= v"1.7" && has_cuda()
-            @test_broken gradtest(m, x_224)
-        else
-            @test gradtest(m, x_224)
-        end
+        @test gradtest(m, x_224)
         _gc()
         if (WideResNet, sz) in PRETRAINED_MODELS
             @test acctest(WideResNet(sz; pretrain = true))
