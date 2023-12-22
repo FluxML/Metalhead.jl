@@ -49,7 +49,7 @@ const TEST_FAST = get(ENV, "TEST_FAST", "false") == "true"
 function _gc()
     GC.safepoint()
     GC.gc(true)
-    CUDA.reclaim()
+    has_cuda() && CUDA.reclaim()
 end
 
 function gradtest(model, input)
