@@ -108,11 +108,7 @@ end
         else
             @test_throws ArgumentError SEResNet(depth, pretrain = true)
         end
-        if VERSION >= v"1.7" && has_cuda()
-            @test_broken gradtest(m, x_224)
-        else
-            @test gradtest(m, x_224)
-        end
+        @test gradtest(m, x_224)
         _gc()
     end
 end
