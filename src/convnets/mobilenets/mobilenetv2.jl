@@ -71,7 +71,7 @@ end
 function MobileNetv2(width_mult::Real = 1; pretrain::Bool = false,
                      inchannels::Integer = 3, nclasses::Integer = 1000)
     layers = mobilenetv2(width_mult; inchannels, nclasses)
-    model = MobileNetv1(layers)
+    model = MobileNetv2(layers)
     if pretrain
         loadpretrain!(model, "mobilenet_v2")
     end

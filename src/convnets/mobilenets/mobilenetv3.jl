@@ -91,7 +91,7 @@ end
 function MobileNetv3(config::Symbol; width_mult::Real = 1, pretrain::Bool = false,
                      inchannels::Integer = 3, nclasses::Integer = 1000)
     layers = mobilenetv3(config; width_mult, inchannels, nclasses)
-    model = MobileNetv1(layers)
+    model = MobileNetv3(layers)
     if pretrain
         loadpretrain!(model, "mobilenet_v3")
     end
