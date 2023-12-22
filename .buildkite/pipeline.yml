@@ -21,7 +21,7 @@ steps:
     env:
       GROUP: "All"
       TEST_FAST: true
-      RETESTITEMS_NWORKERS: 4
+      RETESTITEMS_NWORKERS: 2
     if: build.message !~ /\[skip tests\]/
     timeout_in_minutes: 180
     matrix:
