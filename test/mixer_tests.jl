@@ -22,7 +22,7 @@ end
     configs = TEST_FAST ? [:small] : [:small, :base, :large]
     @testset for config in configs
         m = gMLP(config) |> gpu
-        if VERSION < v"1.7" && has_cuda()
+        if has_cuda()
             @test_broken size(m(x_224)) == (1000, 1)
             @test_broken gradtest(m, x_224)
         else

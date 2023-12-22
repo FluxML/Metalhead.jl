@@ -1,7 +1,7 @@
 @testsetup module TestModels
 using Metalhead, Images, TestImages
 using Flux: gradient, gpu
-using CUDA: has_cuda
+using CUDA: CUDA, has_cuda
 
 export PRETRAINED_MODELS,
     TEST_FAST,
@@ -48,7 +48,8 @@ const TEST_FAST = get(ENV, "TEST_FAST", "false") == "true"
 
 function _gc()
     GC.safepoint()
-    return GC.gc(true)
+    GC.gc(true)
+    CUDA.reclaim()
 end
 
 function gradtest(model, input)
