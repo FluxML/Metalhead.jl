@@ -3,11 +3,7 @@
     @testset for config in configs
         m = ViT(config) |> gpu
         @test size(m(x_224)) == (1000, 1)
-        if VERSION < v"1.7" && has_cuda()
-            @test_broken gradtest(m, x_224)
-        else
-            @test gradtest(m, x_224)
-        end
+        @test gradtest(m, x_224)
         _gc()
     end
 end
