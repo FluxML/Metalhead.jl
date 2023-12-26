@@ -13,12 +13,12 @@ using Random
 
 import Functors
 
-# Model utilities
+# Utilities
+include("utilities.jl")
 include("core.jl")
 
 # Custom Layers
 include("layers/Layers.jl")
-include("layers/utilities.jl") # layer utilities
 using .Layers
 
 # CNN models

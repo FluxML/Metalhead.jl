@@ -26,7 +26,7 @@ See Fig. 3 in [reference](https://arxiv.org/abs/1704.04861v1).
   - `bias`: whether to use bias in the convolution layers.
   - `stride`: stride of the first convolution kernel
   - `pad`: padding of the first convolution kernel
-  - `weight`, `init`: initialization for the convolution kernel (see `Flux.Conv`)
+  - `weight`, `init`: initialization for the convolution kernel (see [`Flux.Conv`](@ref))
 """
 function dwsep_conv_norm(kernel_size::Dims{2}, inplanes::Integer, outplanes::Integer,
                          activation = relu; norm_layer = BatchNorm, stride::Integer = 1,

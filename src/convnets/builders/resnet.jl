@@ -27,7 +27,7 @@ Creates a generic ResNet-like model.
   - `block_repeats`: This is a `Vector` of integers that specifies the number of repeats of each
     block in each stage.
   - `connection`: This is a function that determines the residual connection in the model. For
-    `resnets`, either of [`Metalhead.Layers.addact`](@ref) or [`Metalhead.Layers.actadd`](@ref) is recommended.
+    `resnets`, either of [`Metalhead.addact`](@ref) or [`Metalhead.actadd`](@ref) is recommended.
   - `classifier_fn`: This is a function that takes in the number of feature maps and returns a
     classifier. This is usually built as a closure using a function like [`Metalhead.create_classifier`](@ref).
     For example, if the number of output classes is `nclasses`, then the function can be defined as
