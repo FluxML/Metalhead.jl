@@ -2,6 +2,7 @@
 using Metalhead, Images, TestImages
 using Flux: gradient, gpu
 using CUDA: CUDA, has_cuda
+using Downloads
 
 export PRETRAINED_MODELS,
     TEST_FAST,
@@ -72,7 +73,9 @@ const TEST_X = let img_array = convert(Array{Float32}, channelview(TEST_IMG))
 end
 
 # ImageNet labels
-const TEST_LBLS = readlines(download("https://raw.githubusercontent.com/pytorch/hub/master/imagenet_classes.txt"))
+const TEST_LBLS = readlines(Downloads.download(
+    "https://raw.githubusercontent.com/pytorch/hub/master/imagenet_classes.txt"
+))
 
 function acctest(model)
     ypred = gpu(model)(TEST_X) |> collect |> vec
