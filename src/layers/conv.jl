@@ -24,7 +24,7 @@ Create a convolution + normalisation layer pair with activation.
   - `pad`: padding of the convolution kernel
   - `dilation`: dilation of the convolution kernel
   - `groups`: groups for the convolution kernel
-  - `weight`, `init`: initialization for the convolution kernel (see [`Flux.Conv`](@ref))
+  - `weight`, `init`: initialization for the convolution kernel (see `Flux.Conv`)
 """
 function conv_norm(kernel_size::Dims{2}, inplanes::Integer, outplanes::Integer,
                    activation = relu; norm_layer = BatchNorm, revnorm::Bool = false,

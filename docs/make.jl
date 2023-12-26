@@ -1,15 +1,12 @@
-using Documenter, Metalhead, Artifacts, LazyArtifacts, Images, DataAugmentation, Flux
-
-DocMeta.setdocmeta!(Metalhead, :DocTestSetup, :(using Metalhead); recursive = true)
+using Documenter, Metalhead
 
 # copy readme into index.md
 open(joinpath(@__DIR__, "src", "index.md"), "w") do io
     write(io, read(joinpath(@__DIR__, "..", "README.md"), String))
 end
 
-makedocs(; modules = [Metalhead, Artifacts, LazyArtifacts, Images, DataAugmentation, Flux],
+makedocs(; modules = [Metalhead],
          sitename = "Metalhead.jl",
-         doctest = false,
          pages = ["Home" => "index.md",
              "Tutorials" => [
                  "tutorials/quickstart.md",
@@ -41,7 +38,8 @@ makedocs(; modules = [Metalhead, Artifacts, LazyArtifacts, Images, DataAugmentat
                 "Model Utilities" => "api/utilities.md",
              ],
          ],
-         format = Documenter.HTML(; canonical = "https://fluxml.ai/Metalhead.jl/stable/",
+         warnonly = [:example_block, :missing_docs, :cross_references],
+         format = Documenter.HTML(canonical = "https://fluxml.ai/Metalhead.jl/stable/",
                                   #   analytics = "UA-36890222-9",
                                   assets = ["assets/flux.css"],
                                   prettyurls = get(ENV, "CI", nothing) == "true"))
