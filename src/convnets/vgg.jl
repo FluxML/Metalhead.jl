@@ -96,12 +96,10 @@ function vgg(imsize::Dims{2}; config, batchnorm::Bool = false, fcsize::Integer =
     return Chain(Chain(conv...), class)
 end
 
-const VGG_CONV_CONFIGS = Dict(:A => [(64, 1), (128, 1), (256, 2), (512, 2), (512, 2)],
-                              :B => [(64, 2), (128, 2), (256, 2), (512, 2), (512, 2)],
-                              :D => [(64, 2), (128, 2), (256, 3), (512, 3), (512, 3)],
-                              :E => [(64, 2), (128, 2), (256, 4), (512, 4), (512, 4)])
-
-const VGG_CONFIGS = Dict(11 => :A, 13 => :B, 16 => :D, 19 => :E)
+const VGG_CONFIGS = Dict(11 => [(64, 1), (128, 1), (256, 2), (512, 2), (512, 2)],
+                         13 => [(64, 2), (128, 2), (256, 2), (512, 2), (512, 2)],
+                         16 => [(64, 2), (128, 2), (256, 3), (512, 3), (512, 3)],
+                         19 => [(64, 2), (128, 2), (256, 4), (512, 4), (512, 4)])
 
 """
     VGG(depth::Integer; pretrain::Bool = false, batchnorm::Bool = false,
@@ -132,8 +130,7 @@ end
 function VGG(depth::Integer; pretrain::Bool = false, batchnorm::Bool = false,
              inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(depth, keys(VGG_CONFIGS))
-    model = VGG((224, 224); config = VGG_CONV_CONFIGS[VGG_CONFIGS[depth]], batchnorm,
-                inchannels, nclasses)
+    model = vgg((224, 224); config = VGG_CONFIGS[depth], batchnorm, inchannels, nclasses)
     if pretrain
         artifact_name = string("vgg", depth)
         if batchnorm

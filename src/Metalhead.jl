@@ -72,6 +72,9 @@ include("vit-based/vit.jl")
 # Load pretrained weights
 include("pretrain.jl")
 
+# deprecated
+include("deprecations.jl")
+
 # export model functions
 export AlexNet, VGG, ResNet, WideResNet, ResNeXt, DenseNet,
        GoogLeNet, Inceptionv3, Inceptionv4, InceptionResNetv2, Xception,
