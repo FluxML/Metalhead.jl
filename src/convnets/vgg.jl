@@ -77,7 +77,8 @@ function vgg_classifier_layers(imsize::NTuple{3, <:Integer}, nclasses::Integer,
 end
 
 """
-    vgg(imsize; config, inchannels, batchnorm = false, nclasses, fcsize, dropout_prob)
+    vgg(imsize::Dims{2}; config, batchnorm::Bool = false, fcsize::Integer = 4096,
+        dropout_prob = 0.0, inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Create a VGG model
 ([reference](https://arxiv.org/abs/1409.1556v6)).
@@ -110,9 +111,36 @@ const VGG_CONV_CONFIGS = Dict(:A => [(64, 1), (128, 1), (256, 2), (512, 2), (512
 const VGG_CONFIGS = Dict(11 => :A, 13 => :B, 16 => :D, 19 => :E)
 
 """
-    VGG(imsize::Dims{2}; config, inchannels, batchnorm = false, nclasses, fcsize, dropout_prob)
+    VGG(depth::Integer; pretrain::Bool = false, batchnorm::Bool = false,
+        inchannels::Integer = 3, nclasses::Integer = 1000)
+
+Create a VGG style model with specified `depth`.
+([reference](https://arxiv.org/abs/1409.1556v6)).
+
+!!! warning
+    
+    `VGG` does not currently support pretrained weights for the `batchnorm = true` option.
+
+# Arguments
+
+- `depth`: the depth of the VGG model. Must be one of [11, 13, 16, 19].
+- `pretrain`: set to `true` to load pre-trained model weights for ImageNet
+- `batchnorm`: set to `true` to use batch normalization after each convolution
+- `inchannels`: number of input channels
+- `nclasses`: number of output classes
+
+---
+
+    VGG(imsize::Dims{2}; config, batchnorm::Bool = false, dropout_prob = 0.5,
+        inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Construct a VGG model with the specified input image size. Typically, the image size is `(224, 224)`.
+
+!!! warning
+
+    The `VGG(imsize; config, inchannels, batchnorm, nclasses)` function documented below
+    will be deprecated in a future release. Please use `vgg(imsize; config, inchannels, 
+    batchnorm, nclasses)` instead for the same functionality.
 
 ## Keyword Arguments:
 
@@ -124,40 +152,14 @@ Construct a VGG model with the specified input image size. Typically, the image 
   - `fcsize`: intermediate fully connected layer size
     (see [`Metalhead.vgg_classifier_layers`](@ref))
   - `dropout_prob`: dropout level between fully connected layers
+
+See also [`vgg`](@ref).
 """
 struct VGG
     layers::Any
 end
 @functor VGG
 
-function VGG(imsize::Dims{2}; config, batchnorm::Bool = false, dropout_prob = 0.5,
-             inchannels::Integer = 3, nclasses::Integer = 1000)
-    layers = vgg(imsize; config, inchannels, batchnorm, nclasses, dropout_prob)
-    return VGG(layers)
-end
-
-(m::VGG)(x) = m.layers(x)
-
-backbone(m::VGG) = m.layers[1]
-classifier(m::VGG) = m.layers[2]
-
-"""
-    VGG(depth::Integer; pretrain::Bool = false, batchnorm::Bool = false,
-        inchannels::Integer = 3, nclasses::Integer = 1000)
-
-Create a VGG style model with specified `depth`.
-([reference](https://arxiv.org/abs/1409.1556v6)).
-
-# Arguments
-
-  - `depth`: the depth of the VGG model. Must be one of [11, 13, 16, 19].
-  - `pretrain`: set to `true` to load pre-trained model weights for ImageNet
-  - `batchnorm`: set to `true` to use batch normalization after each convolution
-  - `inchannels`: number of input channels
-  - `nclasses`: number of output classes
-
-See also [`vgg`](@ref).
-"""
 function VGG(depth::Integer; pretrain::Bool = false, batchnorm::Bool = false,
              inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(depth, keys(VGG_CONFIGS))
@@ -173,4 +175,19 @@ function VGG(depth::Integer; pretrain::Bool = false, batchnorm::Bool = false,
         loadpretrain!(model, artifact_name)
     end
     return model
+end
+
+(m::VGG)(x) = m.layers(x)
+
+backbone(m::VGG) = m.layers[1]
+classifier(m::VGG) = m.layers[2]
+
+# Deprecated; to be removed in a future release
+function VGG(imsize::Dims{2}; config, batchnorm::Bool = false, dropout_prob = 0.5,
+    inchannels::Integer = 3, nclasses::Integer = 1000)
+    Base.depwarn("The `VGG(imsize; config, inchannels, batchnorm, nclasses)` constructor 
+                will be deprecated in a future release. Please use `vgg(imsize; config, 
+                inchannels, batchnorm, nclasses)` instead for the same functionality.", :VGG)
+    layers = vgg(imsize; config, inchannels, batchnorm, nclasses, dropout_prob)
+    return VGG(layers)
 end
