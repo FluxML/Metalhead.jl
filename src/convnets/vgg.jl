@@ -12,18 +12,11 @@ A VGG block of convolution layers
   - `batchnorm`: set to `true` to include batch normalization after each convolution
 """
 function vgg_block(ifilters::Integer, ofilters::Integer, depth::Integer, batchnorm::Bool)
-    k = (3, 3)
-    p = (1, 1)
-    layers = []
-    for _ in 1:depth
-        if batchnorm
-            append!(layers, conv_norm(k, ifilters, ofilters; pad = p))
-        else
-            push!(layers, Conv(k, ifilters => ofilters, relu; pad = p))
-        end
-        ifilters = ofilters
+    norm_layer = batchnorm ? BatchNorm : identity
+    layers = [conv_norm((3, 3), ifilters, ofilters; pad = (1, 1), norm_layer)...]
+    for i in 2:depth
+        append!(layers, conv_norm((3, 3), ofilters, ofilters; pad = (1, 1), norm_layer))
     end
-    ifilters = ofilters
     return layers
 end
 
