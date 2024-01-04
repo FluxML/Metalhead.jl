@@ -122,30 +122,6 @@ Create a VGG style model with specified `depth`.
 - `inchannels`: number of input channels
 - `nclasses`: number of output classes
 
----
-
-    VGG(imsize::Dims{2}; config, batchnorm::Bool = false, dropout_prob = 0.5,
-        inchannels::Integer = 3, nclasses::Integer = 1000)
-
-Construct a VGG model with the specified input image size. Typically, the image size is `(224, 224)`.
-
-!!! warning
-
-    The `VGG(imsize; config, inchannels, batchnorm, nclasses)` function documented below
-    will be deprecated in a future release. Please use `vgg(imsize; config, inchannels, 
-    batchnorm, nclasses)` instead for the same functionality.
-
-## Keyword Arguments:
-
-  - `config` : VGG convolutional block configuration. It is defined as a vector of tuples
-    `(output_channels, num_convolutions)` for each block
-  - `inchannels`: number of input channels
-  - `batchnorm`: set to `true` to use batch normalization after each convolution
-  - `nclasses`: number of output classes
-  - `fcsize`: intermediate fully connected layer size
-    (see [`Metalhead.vgg_classifier_layers`](@ref))
-  - `dropout_prob`: dropout level between fully connected layers
-
 See also [`vgg`](@ref).
 """
 struct VGG
@@ -174,13 +150,3 @@ end
 
 backbone(m::VGG) = m.layers[1]
 classifier(m::VGG) = m.layers[2]
-
-# Deprecated; to be removed in a future release
-function VGG(imsize::Dims{2}; config, batchnorm::Bool = false, dropout_prob = 0.5,
-    inchannels::Integer = 3, nclasses::Integer = 1000)
-    Base.depwarn("The `VGG(imsize; config, inchannels, batchnorm, nclasses)` constructor 
-                will be deprecated in a future release. Please use `vgg(imsize; config, 
-                inchannels, batchnorm, nclasses)` instead for the same functionality.", :VGG)
-    layers = vgg(imsize; config, inchannels, batchnorm, nclasses, dropout_prob)
-    return VGG(layers)
-end
