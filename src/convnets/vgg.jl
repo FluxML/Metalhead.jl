@@ -130,7 +130,8 @@ end
 function VGG(depth::Integer; pretrain::Bool = false, batchnorm::Bool = false,
              inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(depth, keys(VGG_CONFIGS))
-    model = vgg((224, 224); config = VGG_CONFIGS[depth], batchnorm, inchannels, nclasses)
+    layers = vgg((224, 224); config = VGG_CONFIGS[depth], batchnorm, inchannels, nclasses)
+    model = VGG(layers)
     if pretrain
         artifact_name = string("vgg", depth)
         if batchnorm
