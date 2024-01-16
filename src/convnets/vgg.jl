@@ -119,7 +119,6 @@ Create a VGG style model with specified `depth`.
 - `batchnorm`: set to `true` to use batch normalization after each convolution
 - `inchannels`: number of input channels
 - `nclasses`: number of output classes
-- `dropout_prob`: probability of `Dropout` layers setting inputs to zero
 
 See also [`vgg`](@ref).
 """
@@ -129,9 +128,10 @@ end
 @functor VGG
 
 function VGG(depth::Integer; pretrain::Bool = false, batchnorm::Bool = false,
-             inchannels::Integer = 3, nclasses::Integer = 1000, dropout_prob = 0.5)
+             inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(depth, keys(VGG_CONFIGS))
-    layers = vgg((224, 224); config = VGG_CONFIGS[depth], batchnorm, inchannels, nclasses, dropout_prob)
+    layers = vgg((224, 224); config = VGG_CONFIGS[depth], batchnorm, inchannels, nclasses,
+                 dropout_prob = 0.5)
     model = VGG(layers)
     if pretrain
         artifact_name = string("vgg", depth)
