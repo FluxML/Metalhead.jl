@@ -103,7 +103,7 @@ const VGG_CONFIGS = Dict(11 => [(64, 1), (128, 1), (256, 2), (512, 2), (512, 2)]
 
 """
     VGG(depth::Integer; pretrain::Bool = false, batchnorm::Bool = false,
-        inchannels::Integer = 3, nclasses::Integer = 1000, dropout_prob = 0.5)
+        inchannels::Integer = 3, nclasses::Integer = 1000)
 
 Create a VGG style model with specified `depth`.
 ([reference](https://arxiv.org/abs/1409.1556v6)).
