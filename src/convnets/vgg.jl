@@ -109,7 +109,7 @@ Create a VGG style model with specified `depth`.
 ([reference](https://arxiv.org/abs/1409.1556v6)).
 
 !!! warning
-    
+
     `VGG` does not currently support pretrained weights for the `batchnorm = true` option.
 
 # Arguments
@@ -130,7 +130,8 @@ end
 function VGG(depth::Integer; pretrain::Bool = false, batchnorm::Bool = false,
              inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(depth, keys(VGG_CONFIGS))
-    layers = vgg((224, 224); config = VGG_CONFIGS[depth], batchnorm, inchannels, nclasses)
+    layers = vgg((224, 224); config = VGG_CONFIGS[depth], batchnorm, inchannels, nclasses,
+                 dropout_prob = 0.5)
     model = VGG(layers)
     if pretrain
         artifact_name = string("vgg", depth)
