@@ -36,9 +36,9 @@ To contribute new models, see our [contributing docs](https://fluxml.ai/Metalhea
 | [Inception-v4](https://arxiv.org/abs/1602.07261) | [`Inceptionv4`](https://fluxml.ai/Metalhead.jl/dev/api/inception/#Metalhead.Inceptionv4)   | N            |
 | [InceptionResNet-v2](https://arxiv.org/abs/1602.07261) | [`InceptionResNetv2`](https://fluxml.ai/Metalhead.jl/dev/api/inception/#Metalhead.InceptionResNetv2) | N            |
 | [MLPMixer](https://arxiv.org/pdf/2105.01601)     | [`MLPMixer`](https://fluxml.ai/Metalhead.jl/dev/api/mixer/#Metalhead.MLPMixer)         | N            |
-| [MobileNetv1](https://arxiv.org/abs/1704.04861)  | [`MobileNetv1`](https://fluxml.ai/Metalhead.jl/dev/api/efficientnet/#Metalhead.MobileNetv1)   | N            |
-| [MobileNetv2](https://arxiv.org/abs/1801.04381)  | [`MobileNetv2`](https://fluxml.ai/Metalhead.jl/dev/api/efficientnet/#Metalhead.MobileNetv2)   | N            |
-| [MobileNetv3](https://arxiv.org/abs/1905.02244)  | [`MobileNetv3`](https://fluxml.ai/Metalhead.jl/dev/api/efficientnet/#Metalhead.MobileNetv3)   | N            |
+| [MobileNetv1](https://arxiv.org/abs/1704.04861)  | [`MobileNetv1`](https://fluxml.ai/Metalhead.jl/dev/api/mobilenet/#Metalhead.MobileNetv1)   | N            |
+| [MobileNetv2](https://arxiv.org/abs/1801.04381)  | [`MobileNetv2`](https://fluxml.ai/Metalhead.jl/dev/api/mobilenet/#Metalhead.MobileNetv2)   | N            |
+| [MobileNetv3](https://arxiv.org/abs/1905.02244)  | [`MobileNetv3`](https://fluxml.ai/Metalhead.jl/dev/api/mobilenet/#Metalhead.MobileNetv3)   | N            |
 | [MNASNet](https://arxiv.org/abs/1807.11626)       | [`MNASNet`](https://fluxml.ai/Metalhead.jl/dev/api/efficientnet/#Metalhead.MNASNet)   | N            |
 | [ResMLP](https://arxiv.org/abs/2105.03404)       | [`ResMLP`](https://fluxml.ai/Metalhead.jl/dev/api/mixers/#Metalhead.ResMLP)                    | N            |
 | [ResNet](https://arxiv.org/abs/1512.03385)       | [`ResNet`](https://fluxml.ai/Metalhead.jl/dev/api/resnet/#Metalhead.ResNet)             | Y            |
