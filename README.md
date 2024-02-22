@@ -24,18 +24,18 @@ To contribute new models, see our [contributing docs](https://fluxml.ai/Metalhea
 
 | Model Name                                       | Constructor                                                                                       | Pre-trained? |
 |:-------------------------------------------------|:-----------------------------------------------------------------------------------------------|:------------:|
-| [AlexNet](https://papers.nips.cc/paper/2012/file/c399862d3b9d6b76c8436e924a68c45b-Paper.pdf)    | [`AlexNet`](https://fluxml.ai/Metalhead.jl/dev/api/other/#Metalhead.AlexNet)       | N            |
+| [AlexNet](https://papers.nips.cc/paper/2012/file/c399862d3b9d6b76c8436e924a68c45b-Paper.pdf)    | [`AlexNet`](https://fluxml.ai/Metalhead.jl/dev/api/others/#Metalhead.AlexNet)       | N            |
 | [ConvMixer](https://arxiv.org/abs/2201.09792)    | [`ConvMixer`](https://fluxml.ai/Metalhead.jl/dev/api/hybrid/#Metalhead.ConvMixer)       | N            |
 | [ConvNeXt](https://arxiv.org/abs/2201.03545)     | [`ConvNeXt`](https://fluxml.ai/Metalhead.jl/dev/api/hybrid/#Metalhead.ConvNeXt)         | N            |
 | [DenseNet](https://arxiv.org/abs/1608.06993)     | [`DenseNet`](https://fluxml.ai/Metalhead.jl/dev/api/densenet/#Metalhead.DenseNet)         | N            |
 | [EfficientNet](https://arxiv.org/abs/1905.11946) | [`EfficientNet`](https://fluxml.ai/Metalhead.jl/dev/api/efficientnet/#Metalhead.EfficientNet) | N            |
 | [EfficientNetv2](https://arxiv.org/abs/2104.00298) | [`EfficientNetv2`](https://fluxml.ai/Metalhead.jl/dev/api/efficientnet/#Metalhead.EfficientNetv2) | N            |
 | [gMLP](https://arxiv.org/abs/2105.08050)         | [`gMLP`](https://fluxml.ai/Metalhead.jl/dev/api/mixers/#Metalhead.gMLP)                 | N            |
-| [GoogLeNet](https://arxiv.org/abs/1409.4842)     | [`GoogLeNet`](https://fluxml.ai/Metalhead.jl/dev/api/inception/l#Metalhead.GoogLeNet)       | N            |
+| [GoogLeNet](https://arxiv.org/abs/1409.4842)     | [`GoogLeNet`](https://fluxml.ai/Metalhead.jl/dev/api/inception/#Metalhead.GoogLeNet)       | N            |
 | [Inception-v3](https://arxiv.org/abs/1512.00567) | [`Inceptionv3`](https://fluxml.ai/Metalhead.jl/dev/api/inception/#Metalhead.Inceptionv3)   | N            |
 | [Inception-v4](https://arxiv.org/abs/1602.07261) | [`Inceptionv4`](https://fluxml.ai/Metalhead.jl/dev/api/inception/#Metalhead.Inceptionv4)   | N            |
 | [InceptionResNet-v2](https://arxiv.org/abs/1602.07261) | [`InceptionResNetv2`](https://fluxml.ai/Metalhead.jl/dev/api/inception/#Metalhead.InceptionResNetv2) | N            |
-| [MLPMixer](https://arxiv.org/pdf/2105.01601)     | [`MLPMixer`](https://fluxml.ai/Metalhead.jl/dev/api/mixer/#Metalhead.MLPMixer)         | N            |
+| [MLPMixer](https://arxiv.org/pdf/2105.01601)     | [`MLPMixer`](https://fluxml.ai/Metalhead.jl/dev/api/mixers/#Metalhead.MLPMixer)         | N            |
 | [MobileNetv1](https://arxiv.org/abs/1704.04861)  | [`MobileNetv1`](https://fluxml.ai/Metalhead.jl/dev/api/mobilenet/#Metalhead.MobileNetv1)   | N            |
 | [MobileNetv2](https://arxiv.org/abs/1801.04381)  | [`MobileNetv2`](https://fluxml.ai/Metalhead.jl/dev/api/mobilenet/#Metalhead.MobileNetv2)   | N            |
 | [MobileNetv3](https://arxiv.org/abs/1905.02244)  | [`MobileNetv3`](https://fluxml.ai/Metalhead.jl/dev/api/mobilenet/#Metalhead.MobileNetv3)   | N            |
