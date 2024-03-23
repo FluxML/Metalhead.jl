@@ -86,6 +86,19 @@ layers = Chain(layers, final(outsz[end - 1], outplanes))
 
 return layers
 end
+function modify_first_conv_layer(encoder_backbone, inchannels)
+    for (index, layer) in enumerate(encoder_backbone.layers)
+        if isa(layer, Flux.Conv)  # Checking for a convolutional layer
+            # Extracting the parameters
+            outchannels, kernel_size, stride, pad, activation = layer.out_channels, layer.kernel_size, layer.stride, layer.pad, layer.activation
+            #  new convolutional layer created for desired input
+            new_conv_layer = Flux.Conv(kernel_size, inchannels => outchannels, stride=stride, pad=pad, activation=activation)
+            encoder_backbone.layers[index] = new_conv_layer
+            break  
+        end
+    end
+    return encoder_backbone
+end
 """
     UNet(imsize::Dims{2} = (256, 256), inchannels::Integer = 3, outplanes::Integer = 3,
          encoder_backbone = Metalhead.backbone(DenseNet(121)); pretrain::Bool = false)
@@ -117,12 +130,18 @@ end
 
 function UNet(imsize::Dims{2} = (256, 256), inchannels::Integer = 3, outplanes::Integer = 3,
               encoder_backbone = Metalhead.backbone(DenseNet(121)); pretrain::Bool = false)
+    # Modify the encoder backbone to adjust the first convolutional layer's input channels
+    encoder_backbone = modify_first_conv_layer(encoder_backbone, inchannels)
+    
     layers = unet(encoder_backbone, imsize, inchannels, outplanes)
     model = UNet(layers)
+    
     if pretrain
+
         artifact_name = "UNet"
         loadpretrain!(model, artifact_name)
     end
+    
     return model
 end
 
