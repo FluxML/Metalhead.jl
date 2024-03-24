@@ -97,7 +97,7 @@ function modify_first_conv_layer_advanced(encoder_backbone, inchannels)
             stride = layer.stride
             pad = layer.pad
 
-            # Create a new convolutional layer with the updated input channels
+            
             new_conv_layer = Flux.Conv(kernel_size, inchannels => outchannels, stride=stride, pad=pad)
             layers[index] = new_conv_layer  # Replace the old layer with the new one
 
@@ -140,8 +140,7 @@ end
 @functor UNet
 function UNet(imsize::Dims{2} = (256, 256), inchannels::Integer = 3, outplanes::Integer = 3,
               encoder_backbone = Metalhead.backbone(DenseNet(121)); pretrain::Bool = false)
-    # Modify the first convolutional layer of the encoder backbone to have the correct `inchannels`.
-    # This is a conceptual step; the actual implementation will depend on the structure of your backbone.
+    
     if inchannels != 3
        encoder_backbone = modify_first_conv_layer_advanced(encoder_backbone, inchannels)
 
@@ -150,8 +149,7 @@ function UNet(imsize::Dims{2} = (256, 256), inchannels::Integer = 3, outplanes::
     layers = unet(encoder_backbone, (imsize..., inchannels, 1), outplanes)
     model = UNet(layers)
     if pretrain
-        # Note: As per the original comment, pre-trained weights are not supported in this context.
-        # This block is left as-is from your original code for completeness.
+        
         artifact_name = "UNet"
         loadpretrain!(model, artifact_name)
     end
