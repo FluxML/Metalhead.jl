@@ -136,21 +136,18 @@ See also [`Metalhead.unet`](@ref).
 struct UNet
     layers::Any
 end
+
 @functor UNet
 
 function UNet(imsize::Dims{2} = (256, 256), inchannels::Integer = 3, outplanes::Integer = 3,
               encoder_backbone = Metalhead.backbone(DenseNet(121)); pretrain::Bool = false)
-    # Modify the encoder backbone to adjust the first convolutional layer's input channels
-    encoder_backbone = modify_first_conv_layer(encoder_backbone, inchannels)
+    # Correct the function name to `modify_first_conv_layer_advanced`
+    encoder_backbone = modify_first_conv_layer_advanced(encoder_backbone, inchannels)
     
     layers = unet(encoder_backbone, imsize, inchannels, outplanes)
     model = UNet(layers)
     
-    if pretrain
-
-        artifact_name = "UNet"
-        loadpretrain!(model, artifact_name)
-    end
+    # Pretraining code here (if applicable)
     
     return model
 end
