@@ -88,10 +88,16 @@ return layers
 end
 function modify_first_conv_layer(encoder_backbone, inchannels)
     for (index, layer) in enumerate(encoder_backbone.layers)
-        if isa(layer, Flux.Conv)  # Checking for a convolutional layer
-            # Extracting the parameters
-            outchannels, kernel_size, stride, pad, activation = layer.out_channels, layer.kernel_size, layer.stride, layer.pad, layer.activation
-            #  new convolutional layer created for desired input
+        if isa(layer, Flux.Conv)  
+            # Correctly infer the number of output channels from the layer's weight dimensions
+            outchannels = size(layer.weight, 1)  # The first dimension for Flux.Conv weight is the number of output channels
+            
+            kernel_size = (size(layer.weight, 3), size(layer.weight, 4))  # height and width of the kernel
+            stride = layer.stride
+            pad = layer.pad
+            activation = layer.activation
+
+            # Create a new convolutional layer with the adjusted number of input channels
             new_conv_layer = Flux.Conv(kernel_size, inchannels => outchannels, stride=stride, pad=pad, activation=activation)
             encoder_backbone.layers[index] = new_conv_layer
             break  
@@ -99,6 +105,8 @@ function modify_first_conv_layer(encoder_backbone, inchannels)
     end
     return encoder_backbone
 end
+
+
 """
     UNet(imsize::Dims{2} = (256, 256), inchannels::Integer = 3, outplanes::Integer = 3,
          encoder_backbone = Metalhead.backbone(DenseNet(121)); pretrain::Bool = false)
