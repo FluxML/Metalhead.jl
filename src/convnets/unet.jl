@@ -71,7 +71,7 @@ Backbone of any Metalhead ResNet-like model can be used as encoder
     - `final`: final block as described in original paper
     - `fdownscale`: downscale factor
 """
-function unet(encoder_backbone, imgdims, inchannels::Integer, outplanes::Integer,
+function unet(encoder_backbone, imgdims, inchannels::Integer,outplanes::Integer,
     final::Any = unet_final_block, fdownscale::Integer = 0)
 backbonelayers = collect(flatten_chains(encoder_backbone))
 
