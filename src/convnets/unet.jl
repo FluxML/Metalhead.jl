@@ -86,24 +86,25 @@ layers = Chain(layers, final(outsz[end - 1], outplanes))
 
 return layers
 end
-function modify_first_conv_layer(encoder_backbone, inchannels)
-    for (index, layer) in enumerate(encoder_backbone.layers)
-        if isa(layer, Flux.Conv)
-            # Correctly infer the number of output channels from the layer's weight dimensions
-            outchannels = size(layer.weight, 1)
-            
-            # Recreate the convolutional layer with the new number of input channels
-            kernel_size = (size(layer.weight, 3), size(layer.weight, 4))
+function modify_first_conv_layer_advanced(encoder_backbone, inchannels)
+    layers = [layer for layer in encoder_backbone.layers]  # Create a mutable array from the layers
+    modified = false
+    for index in 1:length(layers)
+        if isa(layers[index], Flux.Conv) && !modified
+            layer = layers[index]
+            outchannels = size(layer.weight, 1)  # The number of output channels
+            kernel_size = (size(layer.weight, 3), size(layer.weight, 4))  # Kernel size
             stride = layer.stride
             pad = layer.pad
-            new_conv_layer = Flux.Conv(kernel_size, inchannels => outchannels, stride=stride, pad=pad)
 
-            # Update the layer in the backbone
-            encoder_backbone.layers[index] = new_conv_layer
-            break  # Assume only the first Conv layer needs adjustment
+            # Create a new convolutional layer with the updated input channels
+            new_conv_layer = Flux.Conv(kernel_size, inchannels => outchannels, stride=stride, pad=pad)
+            layers[index] = new_conv_layer  # Replace the old layer with the new one
+
+            modified = true  # Mark as modified to avoid changing any other Conv layer
         end
     end
-    return encoder_backbone
+    return Flux.Chain(layers...)  # Reconstruct the model with the modified layers
 end
 
 
