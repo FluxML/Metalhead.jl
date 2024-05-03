@@ -6,13 +6,13 @@ Creates a SEResNet model with the specified depth.
 
 # Arguments
 
-  - `depth`: one of `[18, 34, 50, 101, 152]`. The depth of the ResNet model.
+  - `depth`: one of `[18, 34, 50, 101, 152]`. The depth of the SEResNet model.
   - `pretrain`: set to `true` to load the model with pre-trained weights for ImageNet
   - `inchannels`: the number of input channels.
   - `nclasses`: the number of output classes
 
 !!! warning
-    
+
     `SEResNet` does not currently support pretrained weights.
 
 Advanced users who want more configuration options will be better served by using [`resnet`](@ref).
@@ -49,7 +49,7 @@ Creates a SEResNeXt model with the specified depth, cardinality, and base width.
 
 # Arguments
 
-  - `depth`: one of `[50, 101, 152]`. The depth of the ResNet model.
+  - `depth`: one of `[50, 101, 152]`. The depth of the SEResNeXt model.
   - `pretrain`: set to `true` to load the model with pre-trained weights for ImageNet
   - `cardinality`: the number of groups to be used in the 3x3 convolution in each block.
   - `base_width`: the number of feature maps in each group.
@@ -57,7 +57,7 @@ Creates a SEResNeXt model with the specified depth, cardinality, and base width.
   - `nclasses`: the number of output classes
 
 !!! warning
-    
+
     `SEResNeXt` does not currently support pretrained weights.
 
 Advanced users who want more configuration options will be better served by using [`resnet`](@ref).

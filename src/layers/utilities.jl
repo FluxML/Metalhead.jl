@@ -14,16 +14,16 @@ end
 
 Convenience function for applying an activation function to the output after
 summing up the input arrays. Useful as the `connection` argument for the block
-function in [`Metalhead.resnet`](@ref).
+function in `Metalhead.resnet`.
 """
 addact(activation = relu, xs...) = activation(sum(xs))
 
 """
     actadd(activation = relu, xs...)
 
-Convenience function for adding input arrays after applying an activation
-function to them. Useful as the `connection` argument for the block function in
-[`Metalhead.resnet`](@ref).
+Convenience function for summing up the input arrays after applying an 
+activation function to them. Useful as the `connection` argument for the block 
+function in `Metalhead.resnet`.
 """
 actadd(activation = relu, xs...) = sum(activation.(x) for x in xs)
 

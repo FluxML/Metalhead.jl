@@ -12,8 +12,17 @@ steps:
     agents:
       queue: "juliagpu"
       cuda: "*"
+    commands: |
+      julia --project=test -e '
+          if VERSION < v"1.7"
+            using Pkg
+            Pkg.rm("ReTestItems") # not compatible with 1.6
+          end'
     env:
-      GROUP: "CUDA"
+      GROUP: "All"
+      TEST_FAST: true
+      RETESTITEMS_NWORKERS: 2
+      # JULIA_CUDA_HARD_MEMORY_LIMIT: "50%"
     if: build.message !~ /\[skip tests\]/
     timeout_in_minutes: 180
     matrix:

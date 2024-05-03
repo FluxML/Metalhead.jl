@@ -12,7 +12,7 @@ using Random
 
 import Flux.testmode!
 
-include("../utilities.jl")
+include("utilities.jl")
 
 include("attention.jl")
 export MultiHeadSelfAttention

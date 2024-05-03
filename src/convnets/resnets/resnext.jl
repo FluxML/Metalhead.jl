@@ -7,11 +7,11 @@ Creates a ResNeXt model with the specified depth, cardinality, and base width.
 
 # Arguments
 
-  - `depth`: one of `[50, 101, 152]`. The depth of the ResNet model.
+  - `depth`: one of `[50, 101, 152]`. The depth of the ResNeXt model.
 
   - `pretrain`: set to `true` to load the model with pre-trained weights for ImageNet.
     Supported configurations are:
-    
+
       + depth 50, cardinality of 32 and base width of 4.
       + depth 101, cardinality of 32 and base width of 8.
       + depth 101, cardinality of 64 and base width of 4.
