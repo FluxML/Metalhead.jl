@@ -13,10 +13,10 @@ Channel shuffle operation from 'ShuffleNet: An Extremely Efficient Convolutional
 """
 function ChannelShuffle(x::Array{Float32, 4}, g::Int)
     width, height, channels, batch = size(x)
-    channels_per_group = channels÷g
+    channels_per_group = channels ÷ g
     if (channels % g) == 0
         x = reshape(x, (width, height, g, channels_per_group, batch))
-        x = permutedims(x,(1,2,4,3,5))
+        x = permutedims(x, (1, 2, 4, 3, 5))
         x = reshape(x, (width, height, channels, batch))
     end
     return x
@@ -36,7 +36,8 @@ Shuffle Unit from 'ShuffleNet: An Extremely Efficient Convolutional Neural Netwo
   - `downsample`: apply downsaple if true
   - `ignore_group`: ignore group convolution if true
 """
-function ShuffleUnit(in_channels::Integer, out_channels::Integer, groups::Integer, downsample::Bool, ignore_group::Bool)
+function ShuffleUnit(in_channels::Integer, out_channels::Integer,
+        groups::Integer, downsample::Bool, ignore_group::Bool)
     mid_channels = out_channels ÷ 4
     groups = ignore_group ? 1 : groups
     strd = downsample ? 2 : 1
@@ -45,19 +46,21 @@ function ShuffleUnit(in_channels::Integer, out_channels::Integer, groups::Intege
         out_channels -= in_channels
     end
 
-    m = Chain(Conv((1,1), in_channels => mid_channels; groups,pad=SamePad()),
-              BatchNorm(mid_channels),
-              NNlib.relu,
-              x -> ChannelShuffle(x, groups),
-              DepthwiseConv((3,3),  mid_channels => mid_channels; bias=false, stride=strd, pad=SamePad()),
-              BatchNorm(mid_channels),
-              NNlib.relu,
-              Conv((1,1), mid_channels => out_channels; groups, pad=SamePad()),
-              BatchNorm(out_channels),
-              NNlib.relu)
-    
+    m = Chain(Conv((1, 1), in_channels => mid_channels; groups, pad = SamePad()),
+        BatchNorm(mid_channels),
+        NNlib.relu,
+        x -> ChannelShuffle(x, groups),
+        DepthwiseConv((3, 3), mid_channels => mid_channels;
+            bias = false, stride = strd, pad = SamePad()),
+        BatchNorm(mid_channels),
+        NNlib.relu,
+        Conv((1, 1), mid_channels => out_channels; groups, pad = SamePad()),
+        BatchNorm(out_channels),
+        NNlib.relu)
+
     if downsample
-        m = Parallel((mx, x) -> cat(mx, x, dims=3),m, MeanPool((3,3); pad=SamePad(), stride=2))
+        m = Parallel((mx, x) -> cat(mx, x; dims = 3), m,
+            MeanPool((3, 3); pad = SamePad(), stride = 2))
     else
         m = SkipConnection(m, +)
     end
@@ -78,30 +81,32 @@ ShuffleNet model from 'ShuffleNet: An Extremely Efficient Convolutional Neural N
   - `num_classes`: number of classes
   - `in_channels`: number of input channels
 """
-function ShuffleNet(channels, init_block_channels::Integer, groups, num_classes; in_channels=3)
+function ShuffleNet(
+        channels, init_block_channels::Integer, groups, num_classes; in_channels = 3)
     features = []
 
-    append!(features, [Conv((3,3), in_channels => init_block_channels; stride=2, pad=SamePad()),
-    BatchNorm(init_block_channels),
-    NNlib.relu,
-    MaxPool((3,3); stride=2, pad=SamePad())])
+    append!(features,
+        [Conv((3, 3), in_channels => init_block_channels; stride = 2, pad = SamePad()),
+            BatchNorm(init_block_channels),
+            NNlib.relu,
+            MaxPool((3, 3); stride = 2, pad = SamePad())])
 
     in_channels::Integer = init_block_channels
-  
+
     for (i, num_channels) in enumerate(channels)
         stage = []
         for (j, out_channels) in enumerate(num_channels)
-            downsample = j==1
-            ignore_group = i==1 && j==1
+            downsample = j == 1
+            ignore_group = i == 1 && j == 1
             out_ch::Integer = trunc(out_channels)
             push!(stage, ShuffleUnit(in_channels, out_ch, groups, downsample, ignore_group))
             in_channels = out_ch
         end
         append!(features, stage)
     end
-  
+
     model = Chain(features...)
-  
+
     return Chain(model, GlobalMeanPool(), Flux.flatten, Dense(in_channels => num_classes))
 end
 
@@ -118,7 +123,7 @@ Wrapper for ShuffleNet. Create a ShuffleNet model from 'ShuffleNet: An Extremely
   - `num_classes`: number of classes
   - `in_channels`: number of input channels
 """
-function shufflenet(groups, width_scale, num_classes; in_channels=3)
+function shufflenet(groups, width_scale, num_classes; in_channels = 3)
     init_block_channels = 24
     layers = [4, 8, 4]
 
@@ -144,7 +149,7 @@ function shufflenet(groups, width_scale, num_classes; in_channels=3)
     end
 
     if width_scale != 1.0
-        channels = channels*width_scale
+        channels = channels * width_scale
 
         init_block_channels::Integer = trunc(init_block_channels * width_scale)
     end
@@ -152,8 +157,8 @@ function shufflenet(groups, width_scale, num_classes; in_channels=3)
     net = ShuffleNet(
         channels,
         init_block_channels,
-        groups; 
-        in_channels, 
+        groups;
+        in_channels,
         num_classes)
 
     return net
