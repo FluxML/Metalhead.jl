@@ -14,7 +14,7 @@ Channel shuffle operation from 'ShuffleNet: An Extremely Efficient Convolutional
 function ChannelShuffle(x::Array{Float32, 4}, g::Int)
     width, height, channels, batch = size(x)
     channels_per_group = channels ÷ g
-    if (channels % g) == 0
+    if channels % g == 0
         x = reshape(x, (width, height, g, channels_per_group, batch))
         x = permutedims(x, (1, 2, 4, 3, 5))
         x = reshape(x, (width, height, channels, batch))
