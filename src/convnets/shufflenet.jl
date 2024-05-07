@@ -1,7 +1,7 @@
 using Flux
 
 """
-Channelshuffle(channels, groups)
+channel_shuffle(channels, groups)
 
 Channel shuffle operation from 'ShuffleNet: An Extremely Efficient Convolutional Neural Network for Mobile Devices
 ([reference](https://arxiv.org/abs/1707.01083)).
@@ -11,7 +11,7 @@ Channel shuffle operation from 'ShuffleNet: An Extremely Efficient Convolutional
   - `channels`: number of channels
   - `groups`: number of groups
 """
-function ChannelShuffle(x::Array{Float32, 4}, g::Int)
+function channel_shuffle(x::AbstractArray{Float32, 4}, g::Int)
     width, height, channels, batch = size(x)
     channels_per_group = channels ÷ g
     if channels % g == 0
@@ -47,16 +47,13 @@ function ShuffleUnit(in_channels::Integer, out_channels::Integer,
     end
 
     m = Chain(Conv((1, 1), in_channels => mid_channels; groups, pad = SamePad()),
-        BatchNorm(mid_channels),
-        NNlib.relu,
-        x -> ChannelShuffle(x, groups),
+        BatchNorm(mid_channels, NNlib.relu),
+        x -> channel_shuffle(x, groups),
         DepthwiseConv((3, 3), mid_channels => mid_channels;
             bias = false, stride = strd, pad = SamePad()),
-        BatchNorm(mid_channels),
-        NNlib.relu,
+        BatchNorm(mid_channels, NNlib.relu),
         Conv((1, 1), mid_channels => out_channels; groups, pad = SamePad()),
-        BatchNorm(out_channels),
-        NNlib.relu)
+        BatchNorm(out_channels, NNlib.relu))
 
     if downsample
         m = Parallel((mx, x) -> cat(mx, x; dims = 3), m,
@@ -87,8 +84,7 @@ function ShuffleNet(
 
     append!(features,
         [Conv((3, 3), in_channels => init_block_channels; stride = 2, pad = SamePad()),
-            BatchNorm(init_block_channels),
-            NNlib.relu,
+            BatchNorm(init_block_channels, NNlib.relu),
             MaxPool((3, 3); stride = 2, pad = SamePad())])
 
     in_channels::Integer = init_block_channels
