@@ -56,8 +56,7 @@ function ShuffleUnit(in_channels::Integer, out_channels::Integer,
         BatchNorm(out_channels, NNlib.relu))
 
     if downsample
-        m = Parallel((mx, x) -> cat(mx, x; dims = 3), m,
-            MeanPool((3, 3); pad = SamePad(), stride = 2))
+        m = Parallel(cat_channels, m, MeanPool((3,3); pad=SamePad(), stride=2))
     else
         m = SkipConnection(m, +)
     end
