@@ -48,7 +48,7 @@ function ShuffleUnit(in_channels::Integer, out_channels::Integer,
 
     m = Chain(Conv((1, 1), in_channels => mid_channels; groups, pad = SamePad()),
         BatchNorm(mid_channels, NNlib.relu),
-        x -> channel_shuffle(x, groups),
+        Base.Fix2(channel_shuffle, groups),
         DepthwiseConv((3, 3), mid_channels => mid_channels;
             bias = false, stride = strd, pad = SamePad()),
         BatchNorm(mid_channels, NNlib.relu),
