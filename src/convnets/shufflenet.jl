@@ -102,7 +102,7 @@ function ShuffleNet(
 
     model = Chain(features...)
 
-    return Chain(model, GlobalMeanPool(), Flux.flatten, Dense(in_channels => num_classes))
+    return Chain(model, GlobalMeanPool(), MLUtils.flatten, Dense(in_channels => num_classes))
 end
 
 """
