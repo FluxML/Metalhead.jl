@@ -194,3 +194,7 @@ end
 
 backbone(m::ShuffleNet) = m.layers[1]
 classifier(m::ShuffleNet) = m.layers[2:end]
+
+im = rand32(224, 224, 3, 50); # a batch of 50 RGB images
+m = ShuffleNet(1, 1;num_classes=10)
+println(m(im) |> size)
