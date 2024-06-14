@@ -1,4 +1,4 @@
-using Flux
+using Flux, Metalhead, MLUtils, Functors
 
 """
 channel_shuffle(channels, groups)
@@ -56,7 +56,8 @@ function ShuffleUnit(in_channels::Integer, out_channels::Integer,
         BatchNorm(out_channels, NNlib.relu))
 
     if downsample
-        m = Parallel(cat_channels, m, MeanPool((3,3); pad=SamePad(), stride=2))
+        m = Parallel(
+            Metalhead.cat_channels, m, MeanPool((3, 3); pad = SamePad(), stride = 2))
     else
         m = SkipConnection(m, +)
     end
@@ -64,7 +65,7 @@ function ShuffleUnit(in_channels::Integer, out_channels::Integer,
 end
 
 """
-ShuffleNet(channels, init_block_channels::Integer, groups, num_classes; in_channels=3)
+create_shufflenet(channels, init_block_channels::Integer, groups, num_classes; in_channels=3)
 
 ShuffleNet model from 'ShuffleNet: An Extremely Efficient Convolutional Neural Network for Mobile Devices
 ([reference](https://arxiv.org/abs/1707.01083)).
@@ -77,8 +78,9 @@ ShuffleNet model from 'ShuffleNet: An Extremely Efficient Convolutional Neural N
   - `num_classes`: number of classes
   - `in_channels`: number of input channels
 """
-function ShuffleNet(
-        channels, init_block_channels::Integer, groups, num_classes; in_channels = 3)
+function create_shufflenet(
+        channels, init_block_channels::Integer, groups::Integer,
+        num_classes::Integer; in_channels::Integer = 3)
     features = []
 
     append!(features,
@@ -101,14 +103,15 @@ function ShuffleNet(
     end
 
     model = Chain(features...)
+    classifier = Chain(GlobalMeanPool(), MLUtils.flatten, Dense(in_channels => num_classes))
 
-    return Chain(model, GlobalMeanPool(), MLUtils.flatten, Dense(in_channels => num_classes))
+    return Chain(model, classifier)
 end
 
 """
 shufflenet(groups, width_scale, num_classes; in_channels=3)
 
-Wrapper for ShuffleNet. Create a ShuffleNet model from 'ShuffleNet: An Extremely Efficient Convolutional Neural Network for Mobile Devices
+Create a ShuffleNet model from 'ShuffleNet: An Extremely Efficient Convolutional Neural Network for Mobile Devices
 ([reference](https://arxiv.org/abs/1707.01083)).
 
 # Arguments
@@ -118,9 +121,11 @@ Wrapper for ShuffleNet. Create a ShuffleNet model from 'ShuffleNet: An Extremely
   - `num_classes`: number of classes
   - `in_channels`: number of input channels
 """
-function shufflenet(groups, width_scale, num_classes; in_channels = 3)
+
+function shufflenet(groups::Integer = 1, width_scale::Real = 1;
+        num_classes::Integer = 1000, in_channels::Integer = 3)
     init_block_channels = 24
-    layers = [4, 8, 4]
+    nlayers = [4, 8, 4]
 
     if groups == 1
         channels_per_layers = [144, 288, 576]
@@ -137,9 +142,9 @@ function shufflenet(groups, width_scale, num_classes; in_channels = 3)
     end
 
     channels = []
-    for i in eachindex(layers)
+    for i in eachindex(nlayers)
         char = [channels_per_layers[i]]
-        new = repeat(char, layers[i])
+        new = repeat(char, nlayers[i])
         push!(channels, new)
     end
 
@@ -149,12 +154,43 @@ function shufflenet(groups, width_scale, num_classes; in_channels = 3)
         init_block_channels::Integer = trunc(init_block_channels * width_scale)
     end
 
-    net = ShuffleNet(
+    net = create_shufflenet(
         channels,
         init_block_channels,
-        groups;
-        in_channels,
-        num_classes)
+        groups,
+        num_classes;
+        in_channels)
 
     return net
 end
+
+"""
+ShuffleNet(groups, width_scale, num_classes; in_channels=3)
+
+Create a ShuffleNet model from 'ShuffleNet: An Extremely Efficient Convolutional Neural Network for Mobile Devices
+([reference](https://arxiv.org/abs/1707.01083)).
+
+# Arguments
+
+  - `groups`: number of groups
+  - `width_scale`: scaling factor for number of channels
+  - `num_classes`: number of classes
+  - `in_channels`: number of input channels
+"""
+struct ShuffleNet
+    layers::Any
+endstructures
+@functor ShuffleNet
+
+function ShuffleNet(groups::Integer = 1, width_scale::Real = 1;
+        num_classes::Integer = 1000, in_channels::Integer = 3)
+    layers = shufflenet(groups, width_scale; num_classes, in_channels)
+    model = ShuffleNet(layers)
+
+    return model
+end
+
+(m::ShuffleNet)(x) = m.layers(x)
+
+backbone(m::ShuffleNet) = m.layers[1]
+classifier(m::ShuffleNet) = m.layers[2:end]
