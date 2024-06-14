@@ -179,7 +179,7 @@ Create a ShuffleNet model from 'ShuffleNet: An Extremely Efficient Convolutional
 """
 struct ShuffleNet
     layers::Any
-endstructures
+end
 @functor ShuffleNet
 
 function ShuffleNet(groups::Integer = 1, width_scale::Real = 1;
