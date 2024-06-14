@@ -1,4 +1,4 @@
-using Flux
+using Flux, Metalhead, MLUtils
 
 """
 channel_shuffle(channels, groups)
@@ -56,7 +56,7 @@ function ShuffleUnit(in_channels::Integer, out_channels::Integer,
         BatchNorm(out_channels, NNlib.relu))
 
     if downsample
-        m = Parallel(cat_channels, m, MeanPool((3,3); pad=SamePad(), stride=2))
+        m = Parallel(Metalhead.cat_channels, m, MeanPool((3, 3); pad = SamePad(), stride = 2))
     else
         m = SkipConnection(m, +)
     end
@@ -102,7 +102,8 @@ function ShuffleNet(
 
     model = Chain(features...)
 
-    return Chain(model, GlobalMeanPool(), MLUtils.flatten, Dense(in_channels => num_classes))
+    return Chain(
+        model, GlobalMeanPool(), MLUtils.flatten, Dense(in_channels => num_classes))
 end
 
 """
@@ -152,9 +153,9 @@ function shufflenet(groups, width_scale, num_classes; in_channels = 3)
     net = ShuffleNet(
         channels,
         init_block_channels,
-        groups;
-        in_channels,
-        num_classes)
+        groups,
+        num_classes;
+        in_channels)
 
     return net
 end

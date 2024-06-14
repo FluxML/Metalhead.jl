@@ -374,3 +374,14 @@ end
     @test size(model(x_256)) == (256, 256, 3, 1)
     _gc()
 end
+
+
+@testitem "ShuffleNet" setup=[TestModels] begin
+    configs = TEST_FAST ? [(1, 1)] : [(1, 1), (2, 1), (3, 1), (4, 1), (8, 1), (1, 0.75), (3, 0.75), (1, 0.5), (3, 0.5), (1, 0.25), (3, 0.25)]
+    @testset for (groups, width_scale) in configs
+        m = shufflenet(groups, width_scale, 1000) |> gpu
+        @test size(m(x_224)) == (1000, 1)
+        @test gradtest(m, x_224)
+        _gc()
+    end
+end
