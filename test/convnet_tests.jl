@@ -40,13 +40,13 @@ end
                 [2, 2, 2, 2],
                 [3, 4, 6, 3],
                 [3, 4, 23, 3],
-                [3, 8, 36, 3],
+                [3, 8, 36, 3]
             ]
             @testset for layers in layer_list
                 drop_list = [
                     (dropout_prob = 0.1, stochastic_depth_prob = 0.1, dropblock_prob = 0.1),
                     (dropout_prob = 0.5, stochastic_depth_prob = 0.5, dropblock_prob = 0.5),
-                    (dropout_prob = 0.8, stochastic_depth_prob = 0.8, dropblock_prob = 0.8),
+                    (dropout_prob = 0.8, stochastic_depth_prob = 0.8, dropblock_prob = 0.8)
                 ]
                 @testset for drop_probs in drop_list
                     m = Metalhead.resnet(block_fn, layers; drop_probs...) |> gpu
@@ -375,11 +375,12 @@ end
     _gc()
 end
 
-
 @testitem "ShuffleNet" setup=[TestModels] begin
-    configs = TEST_FAST ? [(1, 1)] : [(1, 1), (2, 1), (3, 1), (4, 1), (8, 1), (1, 0.75), (3, 0.75), (1, 0.5), (3, 0.5), (1, 0.25), (3, 0.25)]
+    configs = TEST_FAST ? [(1, 1)] :
+              [(1, 1), (2, 1), (3, 1), (4, 1), (8, 1), (1, 0.75),
+        (3, 0.75), (1, 0.5), (3, 0.5), (1, 0.25), (3, 0.25)]
     @testset for (groups, width_scale) in configs
-        m = shufflenet(groups, width_scale, 1000) |> gpu
+        m = ShuffleNet(groups, width_scale) |> gpu
         @test size(m(x_224)) == (1000, 1)
         @test gradtest(m, x_224)
         _gc()
