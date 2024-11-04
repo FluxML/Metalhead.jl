@@ -1,0 +1,39 @@
+[densenet121]
+git-tree-sha1 = "ffc7f7ed1e7f67baca4b76f6c100e0d5042ff063"
+lazy = true
+
+    [[densenet121.download]]
+    sha256 = "3fd10f0be70cf072fa7f1358f1fbbe01138440dbcaec1b7c8e007084382c1557"
+    url = "https://github.com/FluxML/MetalheadWeights/releases/download/v0.1.1/densenet121-0.1.1.tar.gz"
+
+[googlenet]
+git-tree-sha1 = "56cc81845fcca30508fe81da18c7ba0d96d72cdd"
+lazy = true
+
+    [[googlenet.download]]
+    sha256 = "8ab8d60cc26e81451473badc9dc749b5ffc170a11bc00fb4b203da34fbfdc996"
+    url = "https://github.com/FluxML/MetalheadWeights/releases/download/v0.1.1/googlenet-0.1.1.tar.gz"
+
+[resnet50]
+git-tree-sha1 = "ea3effeaf1ea3969ed5c609f5db5cd0e456ce799"
+lazy = true
+
+    [[resnet50.download]]
+    sha256 = "17760ae50e3d59ed7d74c3dfcdb9f0eeaccec1e2ccd095663955c9fed4f318a8"
+    url = "https://github.com/FluxML/MetalheadWeights/releases/download/v0.1.1/resnet50-0.1.1.tar.gz"
+
+[squeezenet]
+git-tree-sha1 = "e0e53eb402efe4693417db8cbcc31519e74c8c74"
+lazy = true
+
+    [[squeezenet.download]]
+    sha256 = "a3e60f2731296cdf0f32b79badd227eb8dad88a9bee8c828dbe60382869c50f0"
+    url = "https://github.com/FluxML/MetalheadWeights/releases/download/v0.1.1/squeezenet-0.1.1.tar.gz"
+
+[vgg19]
+git-tree-sha1 = "072056ec63bf7308cf89885e91852666e191e80a"
+lazy = true
+
+    [[vgg19.download]]
+    sha256 = "0fa000609965604b9d249e84190c30d067d443d73e6c8e340ef09bd013d0bc90"
+    url = "https://github.com/FluxML/MetalheadWeights/releases/download/v0.1.1/vgg19-0.1.1.tar.gz"
