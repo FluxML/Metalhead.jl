@@ -55,14 +55,13 @@ jobs:
           - 'MLP-Mixer|ResMLP|gMLP'
           - 'ViT'
     steps:
-      - uses: actions/checkout@v3
-      - uses: julia-actions/setup-julia@v1
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
-      - uses: julia-actions/cache@v1
+      - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-buildpkg@v1
-
       - name: Setup test env for 1.6
         if: ${{ matrix.version == '1.6' }}
         run: |
@@ -72,7 +71,7 @@ jobs:
         continue-on-error: ${{ !(matrix.version == '1' && matrix.os == 'ubuntu-latest') && matrix.version == 'nightly' }}
         with:
           coverage: ${{ matrix.version == '1' && matrix.os == 'ubuntu-latest' }}
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: coverage-${{ hashFiles('**/*.cov') }}
           path: '**/*.cov'
@@ -83,19 +82,19 @@ jobs:
     runs-on: ubuntu-latest
     needs: test
     steps:
-      - uses: actions/checkout@v3
-      - uses: julia-actions/setup-julia@v1
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
         with:
           version: '1'
           arch: x64
-      - uses: julia-actions/cache@v1
+      - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-buildpkg@v1
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
       - run: |
           cp -r coverage-*/* .
           rm -rf coverage-*
       - uses: julia-actions/julia-processcoverage@v1
-      - uses: codecov/codecov-action@v3
+      - uses: codecov/codecov-action@v5
         with:
           file: lcov.info
 
