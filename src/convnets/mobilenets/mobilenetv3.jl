@@ -78,10 +78,6 @@ Set `pretrain = true` to load the model with pre-trained weights for ImageNet.
   - `inchannels`: number of input channels
   - `nclasses`: the number of output classes
 
-!!! warning
-    
-    `MobileNetv3` does not currently support pretrained weights.
-
 See also [`Metalhead.mobilenetv3`](@ref).
 """
 struct MobileNetv3
@@ -94,7 +90,7 @@ function MobileNetv3(config::Symbol; width_mult::Real = 1, pretrain::Bool = fals
     layers = mobilenetv3(config; width_mult, inchannels, nclasses)
     model = MobileNetv3(layers)
     if pretrain
-        loadpretrain!(model, "mobilenet_v3")
+        loadpretrain!(model, string("mobilenet_v3_", config))
     end
     return model
 end
