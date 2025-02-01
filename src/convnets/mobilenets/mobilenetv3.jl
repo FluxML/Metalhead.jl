@@ -16,7 +16,7 @@ const MOBILENETV3_CONFIGS = Dict(:small => (1024,
                                                 (mbconv, 5, 40, 4, 2, 1, 4, hardswish),
                                                 (mbconv, 5, 40, 6, 1, 2, 4, hardswish),
                                                 (mbconv, 5, 48, 3, 1, 2, 4, hardswish),
-                                                (mbconv, 5, 96, 6, 1, 3, 4, hardswish),
+                                                (mbconv, 5, 96, 6, 2, 3, 4, hardswish),
                                             ]),
                                  :large => (1280,
                                             [
@@ -31,7 +31,7 @@ const MOBILENETV3_CONFIGS = Dict(:small => (1024,
                                                 (mbconv, 3, 80, 2.3, 1, 2, nothing,
                                                  hardswish),
                                                 (mbconv, 3, 112, 6, 1, 2, 4, hardswish),
-                                                (mbconv, 5, 160, 6, 1, 3, 4, hardswish),
+                                                (mbconv, 5, 160, 6, 2, 3, 4, hardswish),
                                             ]))
 
 """
@@ -54,9 +54,10 @@ function mobilenetv3(config::Symbol; width_mult::Real = 1, dropout_prob = 0.2,
                      inchannels::Integer = 3, nclasses::Integer = 1000)
     _checkconfig(config, [:small, :large])
     max_width, block_configs = MOBILENETV3_CONFIGS[config]
+    norm_layer = (args...; kwargs...) -> BatchNorm(args...; momentum=1.0f-2, eps=1.0f-3, kwargs...)
     return build_invresmodel(width_mult, block_configs; inplanes = 16,
-                             headplanes = max_width, activation = relu,
-                             se_from_explanes = true, se_round_fn = _round_channels,
+                             headplanes = max_width, activation = hardswish, norm_layer,
+                             se_activation = relu, se_from_explanes = true, se_round_fn = _round_channels,
                              expanded_classifier = true, dropout_prob, inchannels, nclasses)
 end
 
