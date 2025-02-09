@@ -307,9 +307,9 @@ end
         m = MobileNetv2(width_mult) |> gpu
         @test size(m(x_224)) == (1000, 1)
         if (MobileNetv2, width_mult) in PRETRAINED_MODELS
-            @test acctest(MobileNetv2(; pretrain = true))
+            @test acctest(MobileNetv2(width_mult; pretrain = true))
         else
-            @test_throws ArgumentError MobileNetv2(pretrain = true)
+            @test_throws ArgumentError MobileNetv2(width_mult; pretrain = true)
         end
         @test gradtest(m, x_224)
     end
@@ -321,9 +321,9 @@ end
         m = MobileNetv3(config; width_mult) |> gpu
         @test size(m(x_224)) == (1000, 1)
         if (MobileNetv3, config, width_mult) in PRETRAINED_MODELS
-            @test acctest(MobileNetv3(config; pretrain = true))
+            @test acctest(MobileNetv3(config; width_mult, pretrain = true))
         else
-            @test_throws ArgumentError MobileNetv3(config; pretrain = true)
+            @test_throws ArgumentError MobileNetv3(config; width_mult, pretrain = true)
         end
         @test gradtest(m, x_224)
         _gc()

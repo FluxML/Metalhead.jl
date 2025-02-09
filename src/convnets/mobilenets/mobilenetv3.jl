@@ -90,6 +90,9 @@ function MobileNetv3(config::Symbol; width_mult::Real = 1, pretrain::Bool = fals
     layers = mobilenetv3(config; width_mult, inchannels, nclasses)
     model = MobileNetv3(layers)
     if pretrain
+        if width_mult != 1.0
+            throw(ArgumentError("No pre-trained weights available for width_mult=$width_mult."))
+        end
         loadpretrain!(model, string("mobilenet_v3_", config))
     end
     return model
