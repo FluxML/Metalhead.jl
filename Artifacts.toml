@@ -1,3 +1,27 @@
+[mobilenet_v2]
+git-tree-sha1 = "1552eb3a913b8ea964482bd68a8fd6e623f57b45"
+lazy = true
+
+    [[mobilenet_v2.download]]
+    sha256 = "24d8afb8897cb82825c51e65c7a02f4b2117581294de25ac7fd5222bbc15ae6e"
+    url = "https://huggingface.co/FluxML/mobilenet/resolve/ccf1ffc5bbb4f2d3b9b7fb7e1285e52de337774e/mobilenet_v2-IMAGENET1K_V2.tar.gz"
+
+[mobilenet_v3_small]
+git-tree-sha1 = "9b1f0550051c731056cda7739fcdd115c36c04ad"
+lazy = true
+
+    [[mobilenet_v3_small.download]]
+    sha256 = "35b7f6d733bfbd1621349a0ec27391c2714add7ca80006fb4032d8bc66629c97"
+    url = "https://huggingface.co/FluxML/mobilenet/resolve/ccf1ffc5bbb4f2d3b9b7fb7e1285e52de337774e/mobilenet_v3_small-IMAGENET1K_V1.tar.gz"
+
+[mobilenet_v3_large]
+git-tree-sha1 = "49971ff8327bc591885e78ff94140ee472f77329"
+lazy = true
+
+    [[mobilenet_v3_large.download]]
+    sha256 = "555fcb5f4f6574d77b603b2fc6672ab437ef60a1a20bc2f951122c91aaaf2f69"
+    url = "https://huggingface.co/FluxML/mobilenet/resolve/ccf1ffc5bbb4f2d3b9b7fb7e1285e52de337774e/mobilenet_v3_large-IMAGENET1K_V2.tar.gz"
+
 [resnet101]
 git-tree-sha1 = "68d563526ab34d3e5aa66b7d96278d2acde212f9"
 lazy = true

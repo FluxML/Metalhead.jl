@@ -57,10 +57,6 @@ Create a MobileNetv2 model with the specified configuration.
   - `inchannels`: The number of input channels.
   - `nclasses`: The number of output classes
 
-!!! warning
-    
-    `MobileNetv2` does not currently support pretrained weights.
-
 See also [`Metalhead.mobilenetv2`](@ref).
 """
 struct MobileNetv2
@@ -73,6 +69,9 @@ function MobileNetv2(width_mult::Real = 1; pretrain::Bool = false,
     layers = mobilenetv2(width_mult; inchannels, nclasses)
     model = MobileNetv2(layers)
     if pretrain
+        if width_mult != 1.0
+            throw(ArgumentError("No pre-trained weights available for width_mult=$width_mult."))
+        end
         loadpretrain!(model, "mobilenet_v2")
     end
     return model
