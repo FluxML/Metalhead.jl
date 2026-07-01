@@ -1,0 +1,6 @@
+[deps]
+DataAugmentation = "88a5189c-e7ff-4f85-ac6b-e6158070f02e"
+Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
+Images = "916415d5-f1e6-5110-898d-aaa5f9f070e0"
+Metalhead = "dbeba491-748d-5e0e-a39e-b530a07fa0cc"
+Publish = "f065f642-d108-4f50-8aa5-6749150a895a"

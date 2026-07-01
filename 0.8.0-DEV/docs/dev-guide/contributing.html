@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="generator" content="Publish.jl" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="keywords" content="" />
+    <title>Metalhead.jl</title>
+    <link rel="stylesheet" href="..&#x2F;..&#x2F;normalize.css" />
+    <link rel="stylesheet" href="https:&#x2F;&#x2F;cdn.jsdelivr.net&#x2F;npm&#x2F;katex@0.12.0&#x2F;dist&#x2F;katex.min.css" />
+    <link rel="stylesheet" href="..&#x2F;..&#x2F;tabulator_simple.min.css" />
+    <link rel="stylesheet" href="..&#x2F;..&#x2F;publish.css" />
+    <link rel="stylesheet" href="..&#x2F;..&#x2F;default.min.css" />
+    <link rel="stylesheet" href="..&#x2F;..&#x2F;custom.css" />
+    <script src="https:&#x2F;&#x2F;cdn.jsdelivr.net&#x2F;npm&#x2F;katex@0.12.0&#x2F;dist&#x2F;katex.min.js"></script>
+    <script src="https:&#x2F;&#x2F;cdn.jsdelivr.net&#x2F;npm&#x2F;katex@0.12.0&#x2F;dist&#x2F;contrib&#x2F;auto-render.min.js"></script>
+    <script src="..&#x2F;..&#x2F;versions.js"></script>
+    <script src="..&#x2F;..&#x2F;lunr.js"></script>
+    <script src="..&#x2F;..&#x2F;highlight.min.js"></script>
+    <script src="..&#x2F;..&#x2F;tabulator.min.js"></script>
+    <script src="..&#x2F;..&#x2F;julia.min.js"></script>
+    <script src="..&#x2F;..&#x2F;julia-repl.min.js"></script>
+    <script src="..&#x2F;..&#x2F;publish.js"></script>
+    
+</head>
+<body>
+    <main id="page">
+        <div class="menu">
+            <div id="projectname">Metalhead.jl</div>
+            <input id="search-input" placeholder="Search">
+            <select id="version-selector"></select>
+            <svg id="menu-toggler" title="Contents" onclick="toggleIndexPage();" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 6C2 5.44772 2.44772 5 3 5H21C21.5523 5 22 5.44772 22 6C22 6.55228 21.5523 7 21 7H3C2.44772 7 2 6.55228 2 6Z" fill="currentColor" /><path d="M2 12.0322C2 11.4799 2.44772 11.0322 3 11.0322H21C21.5523 11.0322 22 11.4799 22 12.0322C22 12.5845 21.5523 13.0322 21 13.0322H3C2.44772 13.0322 2 12.5845 2 12.0322Z" fill="currentColor" /><path d="M3 17.0645C2.44772 17.0645 2 17.5122 2 18.0645C2 18.6167 2.44772 19.0645 3 19.0645H21C21.5523 19.0645 22 18.6167 22 18.0645C22 17.5122 21.5523 17.0645 21 17.0645H3Z" fill="currentColor" /></svg>
+        </div>
+        <div id="toc"><p><a href="../../README.html">Introduction</a></p>
+<h1 id="tutorials"><a href="../../#tutorials" class="anchor"></a>Tutorials</h1>
+<ul>
+<li><a href="../../docs/tutorials/quickstart.html">Quickstart</a></li>
+</ul>
+<h1 id="developer-guide"><a href="../../#developer-guide" class="anchor"></a>Developer guide</h1>
+<ul>
+<li><a href="../../docs/dev-guide/contributing.html">Contributing</a></li>
+</ul>
+<p><a href="../../docstrings.html">API Reference</a></p>
+</div>
+        <article id="content"><h1 id="contributing-to-metalheadjl"><a href="#contributing-to-metalheadjl" class="anchor"></a>Contributing to Metalhead.jl</h1>
+<p>We welcome contributions from anyone to Metalhead.jl! Thank you for taking the time to make our ecosystem better.</p>
+<p>You can contribute by fixing bugs, adding new models, or adding pre-trained weights. If you aren’t ready to write some code, but you think you found a bug or have a feature request, please <a href="https://github.com/FluxML/Metalhead.jl/issues/new/choose">post an issue</a>.</p>
+<p>Before continuing, make sure you read the <a href="https://github.com/FluxML/Flux.jl/blob/master/CONTRIBUTING.md">FluxML contributing guide</a> for general guidelines and tips.</p>
+<h2 id="fixing-bugs"><a href="#fixing-bugs" class="anchor"></a>Fixing bugs</h2>
+<p>To fix a bug in Metalhead.jl, you can <a href="https://github.com/FluxML/Metalhead.jl/pulls">open a PR</a>. It would be helpful to file an issue first so that we can confirm the bug.</p>
+<h2 id="adding-models"><a href="#adding-models" class="anchor"></a>Adding models</h2>
+<p>To add a new model architecture to Metalhead.jl, you can <a href="https://github.com/FluxML/Metalhead.jl/pulls">open a PR</a>. Keep in mind a few guiding principles for how this package is designed:</p>
+<ul>
+<li>reuse layers from Flux as much as possible (e.g. use <code>Parallel</code> before defining a <code>Bottleneck</code> struct)</li>
+<li>adhere as closely as possible to a reference such as a published paper (i.e. the structure of your model should follow intuitively from the paper)</li>
+<li>use generic functional builders (e.g. <a href="../../docstrings/Metalhead.resnet.html"><code>resnet</code></a> is the core function that builds “ResNet-like” models)</li>
+<li>use multiple dispatch to add convenience constructors that wrap your functional builder</li>
+</ul>
+<p>When in doubt, just open a PR! We are more than happy to help review your code to help it align with the rest of the library. After adding a model, you might consider adding some pre-trained weights (see below).</p>
+<h2 id="adding-pre-trained-weights"><a href="#adding-pre-trained-weights" class="anchor"></a>Adding pre-trained weights</h2>
+<p>To add pre-trained weights for an existing model or new model, you can <a href="https://github.com/FluxML/Metalhead.jl/pulls">open a PR</a>. Below, we describe the steps you should follow to get there.</p>
+<p>All Metalhead.jl model artifacts are hosted using HuggingFace. You can find the FluxML account <a href="https://huggingface.co/FluxML">here</a>. This <a href="https://huggingface.co/docs/hub/models">documentation from HuggingFace</a> will provide you with an introduction to their ModelHub. In short, the Model Hub is a collection of Git repositories, similar to Julia packages on GitHub. This means you can <a href="https://huggingface.co/docs/hub/repositories-pull-requests-discussions">make a pull request to our HuggingFace repositories</a> to upload updated weight artifacts just like you would make a PR on GitHub to upload code.</p>
+<ol>
+<li>Train your model or port the weights from another framework.</li>
+<li>Save the model using <a href="https://github.com/JuliaIO/BSON.jl">BSON.jl</a> with <code>BSON.@save &quot;modelname.bson&quot; model</code>. It is important that your model is saved under the key <code>model</code>.</li>
+<li>Compress the saved model as a tarball using <code>tar -cvzf modelname.tar.gz modelname.bson</code>.</li>
+<li>Obtain the SHAs (see the <a href="https://pkgdocs.julialang.org/v1/artifacts/#Basic-Usage">Pkg docs</a>). Edit the <code>Artifacts.toml</code> file in the Metalhead.jl repository and add entry for your model. You can leave the URL empty for now.</li>
+<li>Open a PR on Metalhead.jl. Be sure to ping a maintainer (e.g. <code>@darsnack</code>) to let us know that you are adding a pre-trained weight. We will create a model repository on HuggingFace if it does not already exist.</li>
+<li>Open a PR to the <a href="https://huggingface.co/FluxML">corresponding HuggingFace repo</a>. Do this by going to the “Community” tab in the HuggingFace repository. PRs and discussions are shown as the same thing in the HuggingFace web app. You can use your local Git program to make clone the repo and make PRs if you wish. Check out the <a href="https://huggingface.co/docs/hub/repositories-pull-requests-discussions">guide on PRs to HuggingFace</a> for more information.</li>
+<li>Copy the download URL for the model file that you added to HuggingFace. Make sure to grab the URL for a specific commit and not for the <code>main</code> branch.</li>
+<li>Update your Metalhead.jl PR by adding the URL to the Artifacts.toml.</li>
+<li>If the tests pass for your weights, we will merge your PR! Your model should pass the <code>acctest</code> function in the Metalhead.jl test suite. If your model already exists in the repo, then these tests are already in place, and you can add your model configuration to the <code>PRETRAINED_MODELS</code> list in the <code>runtests.jl</code> file. Please refer to the ResNet tests as an example.</li>
+</ol>
+<p>If you want to fix existing weights, then you can follow the same set of steps.</p>
+</article>
+        <div id="page-navigation">
+            <a id="previous-page" title="Previous" href="..&#x2F;tutorials&#x2F;quickstart.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16.2426 6.34317L14.8284 4.92896L7.75739 12L14.8285 19.0711L16.2427 17.6569L10.5858 12L16.2426 6.34317Z" fill="currentColor" /></svg></a>
+            <a id="next-page" title="Next" href="..&#x2F;..&#x2F;docstrings.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10.5858 6.34317L12 4.92896L19.0711 12L12 19.0711L10.5858 17.6569L16.2427 12L10.5858 6.34317Z" fill="currentColor" /></svg></a>
+        </div>
+        <footer>
+            Built with <a target="_blank" href="https://github.com/MichaelHatherly/Publish.jl">Publish.jl</a> and the <a target="_blank" href="https://julialang.org">Julia Language</a>.
+        </footer>
+    </main>
+    <script>hljs.initHighlightingOnLoad();</script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            renderMathInElement(document.body, {
+                delimiters: [
+                    {left: "$$", right: "$$", display: true},
+                    {left: "$", right: "$", display: false},
+                    {left: "\\(", right: "\\)", display: false},
+                    {left: "\\[", right: "\\]", display: true}
+                ]
+            });
+        });
+    </script>
+</body>
+</html>
