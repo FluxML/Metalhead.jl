@@ -10,8 +10,7 @@ steps:
           dirs:
             - src
     agents:
-      queue: "juliagpu"
-      cuda: "*"
+      queue: "cuda"
     commands: |
       julia --project=test -e '
           if VERSION < v"1.7"
