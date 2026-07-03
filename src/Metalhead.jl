@@ -69,6 +69,9 @@ include("mixers/gmlp.jl")
 # ViTs
 include("vit-based/vit.jl")
 
+## ShuffleNet
+include("convnets/shufflenet.jl")
+
 # Load pretrained weights
 include("pretrain.jl")
 
@@ -81,7 +84,7 @@ export AlexNet, VGG, ResNet, WideResNet, ResNeXt, DenseNet,
        SEResNet, SEResNeXt, Res2Net, Res2NeXt,
        SqueezeNet, MobileNetv1, MobileNetv2, MobileNetv3, MNASNet,
        EfficientNet, EfficientNetv2, ConvMixer, ConvNeXt,
-       MLPMixer, ResMLP, gMLP, ViT, UNet
+       MLPMixer, ResMLP, gMLP, ViT, UNet, ShuffleNet
 
 # useful for feature extraction
 export backbone, classifier
@@ -92,7 +95,7 @@ for T in (:AlexNet, :VGG, :SqueezeNet, :ResNet, :WideResNet, :ResNeXt,
           :Inceptionv3, :Inceptionv4, :InceptionResNetv2, :Xception,
           :MobileNetv1, :MobileNetv2, :MobileNetv3, :MNASNet,
           :EfficientNet, :EfficientNetv2, :ConvMixer, :ConvNeXt,
-          :MLPMixer, :ResMLP, :gMLP, :ViT, :UNet)
+          :MLPMixer, :ResMLP, :gMLP, :ViT, :UNet, :ShuffleNet)
     @eval Base.show(io::IO, ::MIME"text/plain", model::$T) = _maybe_big_show(io, model)
 end
 
