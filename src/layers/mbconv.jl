@@ -81,6 +81,7 @@ First introduced in the MobileNetv2 paper.
 function mbconv(kernel_size::Dims{2}, inplanes::Integer, explanes::Integer,
                 outplanes::Integer, activation = relu; stride::Integer,
                 reduction::Union{Nothing, Real} = nothing,
+                se_activation = activation,
                 se_round_fn = x -> round(Int, x), norm_layer = BatchNorm)
     @assert stride in [1, 2] "`stride` has to be 1 or 2 for `mbconv`"
     layers = []
@@ -97,10 +98,10 @@ function mbconv(kernel_size::Dims{2}, inplanes::Integer, explanes::Integer,
     if !isnothing(reduction)
         push!(layers,
               squeeze_excite(explanes; round_fn = se_round_fn, reduction,
-                             activation, gate_activation = hardσ))
+                             activation=se_activation, gate_activation = hardσ))
     end
     # project
-    append!(layers, conv_norm((1, 1), explanes, outplanes, identity))
+    append!(layers, conv_norm((1, 1), explanes, outplanes, identity; norm_layer))
     return Chain(layers...)
 end
 

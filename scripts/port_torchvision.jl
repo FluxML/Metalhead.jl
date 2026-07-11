@@ -33,6 +33,9 @@ model_list = [
             #   ("vit_b_32", "IMAGENET1K_V1", () -> ViT(:base, patch_size=(32,32)), weights -> tvmodels.vit_b_32(; weights)),
             #   ("vit_l_16", "IMAGENET1K_V1", () -> ViT(:large), weights -> tvmodels.vit_l_16(; weights)),
             #   ("vit_l_32", "IMAGENET1K_V1", () -> ViT(:large, patch_size=(32,32)), weights -> tvmodels.vit_l_32(; weights)),
+            #   ("mobilenet_v2", "IMAGENET1K_V2", () -> MobileNetv2(), weights -> tvmodels.mobilenet_v2(; weights)),
+            #   ("mobilenet_v3_small", "IMAGENET1K_V1", () -> MobileNetv3(:small), weights -> tvmodels.mobilenet_v3_small(; weights)),
+            #   ("mobilenet_v3_large", "IMAGENET1K_V2", () -> MobileNetv3(:large), weights -> tvmodels.mobilenet_v3_large(; weights)),
               ## NOT WORKING:
               ("densenet121", "IMAGENET1K_V1", () -> DenseNet(121), weights -> tvmodels.densenet121(; weights)),
               # ("squeezenet1_0", "IMAGENET1K_V1", () -> SqueezeNet(), weights -> tvmodels.squeezenet1_0(; weights)),
