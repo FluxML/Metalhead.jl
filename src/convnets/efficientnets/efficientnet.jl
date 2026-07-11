@@ -60,7 +60,7 @@ function efficientnet(config::Symbol; norm_layer = BatchNorm, stochastic_depth_p
 end
 
 """
-    EfficientNet(config::Symbol; pretrain::Bool = false, inchannels::Integer = 3,
+    EfficientNet(config::Symbol; pretrain::Union{Bool,String} = false, inchannels::Integer = 3,
                  nclasses::Integer = 1000)
 
 Create an EfficientNet model ([reference](https://arxiv.org/abs/1905.11946v5)).
@@ -68,12 +68,13 @@ Create an EfficientNet model ([reference](https://arxiv.org/abs/1905.11946v5)).
 # Arguments
 
   - `config`: size of the model. Can be one of `[:b0, :b1, :b2, :b3, :b4, :b5, :b6, :b7, :b8]`.
-  - `pretrain`: set to `true` to load the pre-trained weights for ImageNet
+  - `pretrain`: set to `true` to load the pre-trained weights for ImageNet, or provide a local path string to load a
+                custom weights file.
   - `inchannels`: number of input channels.
   - `nclasses`: number of output classes.
 
 !!! warning
-    
+
     EfficientNet does not currently support pretrained weights.
 
 See also [`Metalhead.efficientnet`](@ref).
@@ -83,12 +84,16 @@ struct EfficientNet
 end
 @functor EfficientNet
 
-function EfficientNet(config::Symbol; pretrain::Bool = false, inchannels::Integer = 3,
+function EfficientNet(config::Symbol; pretrain::Union{Bool,String} = false, inchannels::Integer = 3,
                       nclasses::Integer = 1000)
     layers = efficientnet(config; inchannels, nclasses)
     model = EfficientNet(layers)
-    if pretrain
+    if pretrain === true
         loadpretrain!(model, string("efficientnet_", config))
+    elseif pretrain isa String
+        isfile(pretrain) || error("Weights file does not exist at `$pretrain`")
+        m = load_weights_file(pretrain)
+        Flux.loadmodel!(model, m)
     end
     return model
 end
