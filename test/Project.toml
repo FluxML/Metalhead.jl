@@ -10,7 +10,7 @@ cuDNN = "02a925ec-e4fe-4b08-9a7e-0d78e3d38ccd"
 
 [compat]
 CUDA = "5, 6"
-Downloads = "1"
+Downloads = "<0.0.1, 1"
 Flux = "0.16"
 Images = "0.26"
 ReTestItems = "1"
