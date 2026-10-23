@@ -1,0 +1,36 @@
+{
+  "_class_name": "AutoencoderKLFlux2",
+  "_diffusers_version": "0.42.0",
+  "act_fn": "silu",
+  "batch_norm_eps": 0.0001,
+  "batch_norm_momentum": 0.1,
+  "block_out_channels": [
+    8,
+    16,
+    16
+  ],
+  "decoder_block_out_channels": null,
+  "down_block_types": [
+    "DownEncoderBlock2D",
+    "DownEncoderBlock2D",
+    "DownEncoderBlock2D"
+  ],
+  "in_channels": 3,
+  "latent_channels": 4,
+  "layers_per_block": 1,
+  "mid_block_add_attention": true,
+  "norm_num_groups": 4,
+  "out_channels": 3,
+  "patch_size": [
+    2,
+    2
+  ],
+  "sample_size": 32,
+  "up_block_types": [
+    "UpDecoderBlock2D",
+    "UpDecoderBlock2D",
+    "UpDecoderBlock2D"
+  ],
+  "use_post_quant_conv": true,
+  "use_quant_conv": true
+}

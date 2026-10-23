@@ -1,13 +1,13 @@
 ---
 name: port-hf-model
-description: Port a timm or transformers model from the Hugging Face Hub to Metalhead.jl (Flux), validated numerically against PyTorch. Use when asked to port, add or fix a model in src/Timm/ or src/Transformers/ (e.g. a language model such as Llama, Qwen or Mistral), to write or debug a parity fixture (porting/dump.py, test/fixtures/), or to compare a Flux model with its PyTorch original.
+description: Port a timm, transformers or diffusers model from the Hugging Face Hub to Metalhead.jl (Flux), validated numerically against PyTorch. Use when asked to port, add or fix a model in src/Timm/, src/Transformers/ (e.g. a language model such as Llama, Qwen or Mistral) or src/Diffusers/ (a diffusion or flow-matching model, autoencoder, scheduler or text-to-image pipeline such as FLUX.2), to write or debug a parity fixture (porting/dump.py, test/fixtures/), or to compare a Flux model with its PyTorch original.
 ---
 
-# Porting a timm or transformers model to Metalhead
+# Porting a timm, transformers or diffusers model to Metalhead
 
 A port is a Julia file in `src/Timm/` that mirrors the PyTorch module tree of a timm model, or
-in `src/Transformers/` for a transformers model (see "transformers models" at the end, which
-says what differs).
+in `src/Transformers/` for a transformers model, or `src/Diffusers/` for a diffusers one (see
+the sections at the end, which say what differs).
 Weights load by name, with no hand-written mapping. A port is done when its tiny fixtures and
 its real-weight references pass. `src/Timm/resnet.jl` is the reference port; read it first.
 
@@ -267,6 +267,35 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
   avoids writing these paths: it checks that every trainable array gets a finite gradient,
   which also catches submodules the forward pass never calls.
 
+## Half precision
+
+`create_model(...; eltype = Float16)` and `f16`/`bf16` convert in mixed precision: the
+normalization layers keep their parameters and statistics in `Float32` and normalise in
+`Float32`, every other array becomes 16-bit, and so does the data flowing through.
+
+- **A norm layer you write** (`RMSNorm`, `LayerNorm2d`) opts out of the cast with
+  `Flux._keep_f32_under_halfprec(::MyNorm) = true` after its `Flux.@layer` (an internal
+  Flux hook, which `BatchNorm`, `InstanceNorm` and `GroupNorm` define), and passes its
+  parameters to NNlib: `NNlib.rmsnorm(m.weight, x; eps)`, or
+  `NNlib.layernorm(g, b, x; dims, eps)` with `g` and `b` reshaped to broadcast against `x`.
+  These return the eltype of `x`, and throw on 16-bit parameters with 16-bit input. Don't
+  multiply by the weight yourself: a `Float32` weight times `Float16` data is `Float32`.
+- Flux 0.16.13's `LayerNorm` still converts its scale and bias to 16 bits
+  (FluxML/Flux.jl#2773 changes that). Don't define the hook for it here: that is piracy.
+- Other parameters (layer scale `gamma`, ResMLP's `Affine`) convert like any weight.
+- **Constants built in the forward pass** (blur filters, pooling matrices, rotary tables,
+  masks) take `eltype(x)`, and scalars `oftype(x, c)` or `eltype(x)(c)`: a `Float32` array
+  promotes the output to `Float32`, and a Float64 literal (`1.702 .* x`) to Float64. Where
+  the original computes in float32 for half-precision data (timm's position-embedding
+  resampling), compute in `promote_type(eltype(x), Float32)` and convert the result back.
+- **Test** with `check_half_precision(name)` (`test/parity_setup.jl`): it converts a
+  fixture to `Float16` and checks the eltypes of the norm parameters, of the other arrays
+  and of the output, that no warning is logged, and the error against `Float32` (1e-2).
+  Never run `BFloat16` on the CPU in the tests, only on a GPU: NNlib 0.9.52's fused norms
+  throw on `BFloat16` CPU arrays with KernelAbstractions 0.10 (FluxML/NNlib.jl#841, fixed by
+  #843 after 0.9.52), and CPU matrix products and convolutions accumulate in 16 bits. A test
+  may check the eltypes that `eltype = BFloat16` gives, without running the model.
+
 ## Fixtures and debugging
 
 - **Spec format:** `{"architecture": "<arch>", "kwargs": {...}, "input_shape": [2, C, H, W]}`.
@@ -395,3 +424,68 @@ first. The workflow is the one above, with these differences.
   continuation (`check_lm_reference` in `test/parity.jl`). Prefer the smallest checkpoint of
   the architecture. Tokenizers are not part of Metalhead; HuggingFaceTokenizers.jl loads
   them for end-to-end checks outside the test suite.
+
+## diffusers models and pipelines
+
+`src/Diffusers/transformer_flux2.jl` and `src/Diffusers/autoencoder_kl_flux2.jl` are the
+reference ports, and `pipeline_flux2_klein.jl` the reference pipeline. The workflow is the one
+above, with these differences.
+
+- **Source.** Read `porting/.venv/lib/python3.*/site-packages/diffusers/models/<kind>/<file>.py`
+  (`transformers/`, `autoencoders/`) and `pipelines/<name>/pipeline_<name>.py`. Shared blocks
+  are in `models/embeddings.py`, `normalization.py`, `attention_processor.py`, `resnet.py`,
+  `unets/unet_2d_blocks.py` and `autoencoders/vae.py`: port them once, in
+  `src/Diffusers/layers.jl` or `vae.jl`. Leave out what text-to-image doesn't run (the KV cache
+  of reference images, LoRA, fused projections, tiling) and say so in the file header.
+- **Registry.** Register the class of `_class_name` with `DIFFUSERS` and the pipeline family,
+  e.g. `register!(ArchSpec(DIFFUSERS, "AutoencoderKLFlux2", builder; family = "flux2", references = [...]))`.
+  The builder takes the arguments of the class's `__init__` (`@register_to_config`), with their
+  names and defaults; `model_args` passes it the keys of `config.json` it declares. Weights are
+  `diffusion_pytorch_model.safetensors` (`weights_name`). No parameter counts, as for
+  transformers.
+- **Pipelines** register their class with `DIFFUSERS_PIPELINE` (identified by the `...Pipeline`
+  suffix of `_class_name`). `instantiate` (`src/Diffusers/config.jl`) builds each component of
+  `model_index.json` from its subfolder: a model from its `config.json`, a scheduler from
+  `scheduler_config.json` through `SCHEDULERS` (class name => builder), a tokenizer as the
+  directory of its files (the HuggingFaceTokenizers.jl extension in `ext/` tokenizes). The
+  builder takes the components and the other declared keys (`is_distilled`). Schedulers keep
+  no state: port `set_timesteps` and `step` as functions of the noise levels.
+- **Layout.** Images are WHCN; tokens `(C, L, B)`; position ids `(n_axes, L)` integers (torch
+  `(B, L, n_axes)`, of which diffusers takes the first); timesteps vectors. The Julia forward
+  takes the positional arguments of the torch `forward`, in its order, so that fixtures call it
+  with `inputs/<i>`.
+- **Float32 inside float64.** diffusers computes `get_timestep_embedding`, the rotary tables
+  (`.float()` in `get_1d_rotary_pos_embed`), `apply_rotary_emb` (`x.float()`) and the Euler
+  `step` of the scheduler in float32. `exact_float64_diffusers` (`porting/common.py`) patches
+  them; a model that imports a helper by name (`from ..embeddings import apply_rotary_emb`) needs
+  the patch in its own module. Pipelines also keep the noise levels and the eps of the latent
+  statistics in float32, so pipeline fixtures match to about 1e-12.
+- **Half precision** (see "Half precision" above). diffusers casts to float32 where 16 bits
+  lose too much: the sinusoidal timestep embeddings (angles of timesteps near 1000 are off by
+  radians in BFloat16) and the scheduler's step. Do the same, and convert back like torch's
+  `.to(x.dtype)` (`convert_like`). Statistics that stay `Float32` (the latent `BatchNorm` of a
+  FLUX.2 autoencoder) promote 16-bit data when used by hand: convert the result. Where
+  diffusers does compute in 16 bits (the transformer scales the timesteps by 1000 in the
+  model's eltype), mirror it, and loosen `check_half_precision` for that fixture with a
+  comment, rather than diverge from diffusers.
+- **Specs.** `{"library": "diffusers", "architecture": "<class>", "config": {...}, "inputs": {...}, "tap_depth": 2}`.
+  `diffusers_inputs` in `porting/dump.py` builds the inputs of each class from the sizes in
+  `"inputs"`; add a branch for a new class. A pipeline spec has `"components"` (configs, with
+  the text encoder as a transformers spec) and the settings of a run (`porting/specs/flux2_klein_tiny.json`);
+  `dump_flux2_klein` saves the pipeline without a tokenizer and runs it from random token ids
+  and fixed noise, and `Parity.check_pipeline_fixture` compares the prompt embeddings, latents
+  and images. Give a tiny text encoder fewer layers than `text_encoder_out_layers` asks for
+  only knowingly: transformers norms the last of `output_hidden_states`.
+- **Taps.** torch hooks modules that diffusers calls as modules even when they have no
+  parameters (`pos_embed`); a Julia helper that computes the same tables leaves them
+  "not tapped", which is harmless. A tapped submodule is wrapped in a `Tap`, so helpers that
+  take it must not dispatch on its type (`rotary_tables(m, ids, x)`).
+- **References.** `uv run dump_reference.py <org>/<repo>/<subfolder>` for a component (an
+  autoencoder or a transformer; add a branch in `dump_diffusers_reference` for another class),
+  and `<org>/<repo>` for a pipeline (`dump_pipeline_reference`). Random inputs are stored
+  rounded to float16, so both sides use the same values. Register the reference of a component
+  as `"<org>/<repo>/<subfolder>" => sha`: `create_model` reads `org/name/subfolder` as a
+  subfolder. Over several denoising steps float32 errors grow, from about 1e-5 for one step;
+  to tell that from a port error, run both pipelines in float64 with the same embeddings and
+  noise. Tests of multi-gigabyte references run only with `TEST_LARGE`
+  (`METALHEAD_TEST_LARGE=true`).

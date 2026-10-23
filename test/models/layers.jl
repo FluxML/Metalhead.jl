@@ -26,3 +26,18 @@ using Metalhead, Test
     @test [p.key for p in first(torch_params(conv_norm_act(4, 8, 3)))] ==
           ["conv.weight", "bn.weight", "bn.bias", "bn.running_mean", "bn.running_var"]
 end
+
+@testset "mixed-precision norms" begin
+    using Flux
+    using Metalhead.Timm: LayerNorm2d
+    using Metalhead.Transformers: RMSNorm
+    for (norm, x) in [(RMSNorm(4; eps = 1e-6), randn(Float32, 4, 3, 2)),
+        (LayerNorm2d(4), randn(Float32, 5, 3, 4, 2))]
+        foreach(p -> p .= randn(Float32, size(p)), Flux.trainables(norm))
+        half, xh = f16(norm), f16(x)
+        @test all(p -> eltype(p) == Float32, Flux.trainables(half))
+        @test half(xh) isa Array{Float16}
+        @test half(xh) ≈ f16(norm(Float32.(xh))) rtol=1e-3
+        @test f64(norm)(Float64.(x)) isa Array{Float64}
+    end
+end

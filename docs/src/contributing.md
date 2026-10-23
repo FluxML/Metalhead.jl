@@ -7,8 +7,9 @@ Contributions are welcome: bug reports and feature requests as
 
 This page is about adding a model. Metalhead admits models whose weights are on the
 [Hugging Face Hub](https://huggingface.co/models). For now these are
-[timm](https://github.com/huggingface/pytorch-image-models) vision models and
-[transformers](https://github.com/huggingface/transformers) language models. A port is a Flux
+[timm](https://github.com/huggingface/pytorch-image-models) vision models,
+[transformers](https://github.com/huggingface/transformers) language models and
+[diffusers](https://github.com/huggingface/diffusers) models and pipelines. A port is a Flux
 reimplementation of the PyTorch code, validated as described in
 [How models are validated](@ref validation). The registry and `create_model` are not specific
 to timm: a library other than timm gets its own module, `src/<Name>/`, and a
@@ -19,7 +20,7 @@ to timm: a library other than timm gets its own module, `src/<Name>/`, and a
 
 The porting tools in [`porting/`](https://github.com/FluxML/Metalhead.jl/tree/master/porting)
 are a Python project managed with [uv](https://docs.astral.sh/uv/). It pins timm,
-transformers and a CPU build of PyTorch. Python is only needed to port a model: the package and its tests don't use
+transformers, diffusers and a CPU build of PyTorch. Python is only needed to port a model: the package and its tests don't use
 it.
 
 ```sh
@@ -69,6 +70,13 @@ whose builder takes the fields of `config.json`. Its specs have `"library": "tra
 `model_type` and the `config` fields (see `porting/specs/llama_tiny.json`). It has no parameter
 counts: its configurations are checkpoints, which load strictly.
 
+A diffusers model goes in `src/Diffusers/`, and registers its class (`"AutoencoderKLFlux2"`),
+whose builder takes the arguments of its constructor. Its specs have `"library": "diffusers"`,
+the `config` and the sizes of the `inputs` (see `porting/specs/transformer_flux2_tiny.json`). A
+pipeline registers its class too, built from components in subfolders, and its fixture runs a
+pipeline of tiny components end to end (`porting/specs/flux2_klein_tiny.json`). The references
+of a component are named `<org>/<repo>/<subfolder>`.
+
 When a fixture fails, `uv run dump.py specs/<name>.json --all-taps --out out/<name>` records
 the output of every module, and `check.jl out/<name>` shows the first one that differs.
 
@@ -91,5 +99,6 @@ the output of every module, and `check.jl out/<name>` shows the first one that d
 - Every fixture passes at 1e-8, and the references pass at 1e-4.
 - The parameter counts of every registered timm architecture match timm.
 - A gradient test runs.
-- The file header names the timm or transformers module and version it was ported from.
+- The file header names the timm, transformers or diffusers module and version it was ported
+  from.
 - Fixtures are under 1 MB each.

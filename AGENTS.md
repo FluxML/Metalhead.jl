@@ -1,10 +1,11 @@
 # AGENTS.md
 
 Metalhead.jl provides Flux ports of Hugging Face Hub models: the vision models of
-[timm](https://github.com/huggingface/pytorch-image-models), and language models of
-[transformers](https://github.com/huggingface/transformers) (Llama and Qwen for now). Each port mirrors the PyTorch
-module tree, loads the original safetensors weights by name, and is checked numerically
-against PyTorch. `create_model` is the entry point.
+[timm](https://github.com/huggingface/pytorch-image-models), language models of
+[transformers](https://github.com/huggingface/transformers) (Llama and Qwen for now), and
+text-to-image pipelines of [diffusers](https://github.com/huggingface/diffusers) (FLUX.2
+[klein] for now). Each port mirrors the PyTorch module tree, loads the original safetensors
+weights by name, and is checked numerically against PyTorch. `create_model` is the entry point.
 
 ## Layout
 
@@ -17,6 +18,11 @@ against PyTorch. `create_model` is the entry point.
   module, and its architecture names must not clash with those already registered.
 - `src/Transformers/`: one file per transformers model, and `config.jl`, its `ConfigFormat`.
   Blocks that models share (RMSNorm, the rotary tables, the tied output head) go in `layers.jl`.
+- `src/Diffusers/`: diffusers models (`transformer_flux2.jl`, `autoencoder_kl_flux2.jl`, the
+  autoencoders' encoder and decoder in `vae.jl`), schedulers and pipelines. `config.jl` has two
+  `ConfigFormat`s: a model's `config.json` and a pipeline's `model_index.json`, whose components
+  load from subfolders of the repository. The tokenizer of a pipeline loads through the
+  HuggingFaceTokenizers.jl extension (`ext/`).
 - `src/legacy/`: the hand-written models of Metalhead 0.9 (`ResNet(50)`, `Metalhead.Layers`,
   `pretrain = true`). Deprecated, untested, and removed in 0.11: don't extend them.
 - `test/`: run with ParallelTestRunner. Each file is a `@testset` in its own module. Shared
@@ -35,6 +41,7 @@ julia --project -e 'using Pkg; Pkg.test()'                                  # al
 julia --project -e 'using Pkg; Pkg.test(test_args = ["models/resnet"])'     # by path prefix
 julia --project -e 'using Pkg; Pkg.test(test_args = ["--list"])'            # list test files
 METALHEAD_TEST_NETWORK=true julia --project -e 'using Pkg; Pkg.test()'     # also download weights
+METALHEAD_TEST_NETWORK=true METALHEAD_TEST_LARGE=true julia --project -e 'using Pkg; Pkg.test(test_args = ["models/flux2"])'  # 16 GB of FLUX.2
 ```
 
 `Pkg.test` builds a fresh environment each time. For quick iteration, load Metalhead once in a

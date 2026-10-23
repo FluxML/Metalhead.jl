@@ -2,7 +2,7 @@ using Metalhead, Test
 include("../parity_setup.jl")
 using .ParitySetup
 
-const QWEN3_FIXTURES = ["qwen3_tiny", "qwen3_options"]
+const QWEN3_FIXTURES = ["qwen3_tiny", "qwen3_options", "qwen3_padded"]
 
 @testset "fixtures" begin
     for name in QWEN3_FIXTURES
@@ -18,6 +18,12 @@ end
         model = fixture_model(fixture(name); eltype = Float32)
         vocab_size = size(model.model.embed_tokens.weight, 2)
         @test check_gradient(model, rand(1:vocab_size, 5, 2))
+    end
+end
+
+@testset "half precision" begin
+    for name in QWEN3_FIXTURES
+        @test check_half_precision(name)
     end
 end
 
@@ -46,6 +52,21 @@ end
     @test_throws "rope_type" create_model("Qwen3ForCausalLM"; tiny...,
         rope_parameters = Dict("rope_type" => "yarn", "rope_theta" => 1e6, "factor" => 4.0))
     @test_throws "hidden_act" create_model("Qwen3ForCausalLM"; tiny..., hidden_act = "gelu")
+
+    # padding on the right leaves the other tokens unchanged
+    ids = rand(1:16, 6, 2)
+    mask = [1 1; 1 1; 1 1; 1 1; 0 1; 0 1]
+    padded = model(ids; attention_mask = mask)
+    @test padded[:, 1:4, 1] ≈ model(ids[1:4, 1])
+    @test padded[:, :, 2] ≈ model(ids[:, 2])
+    @test model(ids[:, 1]; attention_mask = mask[:, 1]) ≈ padded[:, :, 1]
+    @test_throws "pad on the right" model(ids; attention_mask = reverse(mask; dims = 1))
+    @test_throws "size" model(ids; attention_mask = mask[1:5, :])
+    hidden = forward_intermediates(model, ids; indices = [1], intermediates_only = true,
+        attention_mask = mask)
+    @test only(hidden)[:, 1:4, 1] ≈
+          only(forward_intermediates(model, ids[1:4, 1:1]; indices = [1],
+        intermediates_only = true))[:, :, 1]
 end
 
 TEST_NETWORK && @testset "references" begin

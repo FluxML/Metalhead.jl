@@ -6,8 +6,10 @@
 
 Metalhead.jl provides [Flux.jl](https://fluxml.ai) ports of models from the
 [Hugging Face Hub](https://huggingface.co/models): the vision models of
-[timm](https://github.com/huggingface/pytorch-image-models), and language models of
-[transformers](https://github.com/huggingface/transformers), starting with Llama and Qwen. Each port mirrors the module
+[timm](https://github.com/huggingface/pytorch-image-models), language models of
+[transformers](https://github.com/huggingface/transformers), starting with Llama and Qwen, and
+text-to-image pipelines of [diffusers](https://github.com/huggingface/diffusers), starting with
+FLUX.2 [klein]. Each port mirrors the module
 structure of the PyTorch original, loads the original weights directly from the Hub, and is
 checked numerically against PyTorch.
 
@@ -40,6 +42,7 @@ logits = model(x)                   # 1000 × 1
 | Hub repository | `"timm/resnet50.a1_in1k"` | the architecture and weights of that repository |
 | architecture | `"resnet50"` | the bare architecture; with `pretrained = true`, its default checkpoint |
 | local directory | `"path/to/dir"` | a `config.json` and `model.safetensors` laid out like a Hub repository |
+| component of a pipeline | `"black-forest-labs/FLUX.2-klein-4B/vae"` | the model in that subfolder of a diffusers repository |
 
 ```julia
 model = create_model("resnet50")                                  # random weights, no download
@@ -160,9 +163,24 @@ logits = model(ids)                                      # vocabulary × sequenc
 decode(tokenizer, [argmax(logits[:, end]) - 1])          # " Paris"
 ```
 
+### Text-to-image generation
+
+A diffusers repository holds a pipeline, whose components `create_model` builds from the
+subfolders of the repository. With HuggingFaceTokenizers.jl loaded, it takes prompts:
+
+```julia
+using Flux, HuggingFaceTokenizers
+
+pipe = create_model("black-forest-labs/FLUX.2-klein-4B"; pretrained = true, eltype = BFloat16)
+image = gpu(pipe)("A photo of a red fox sitting in fresh snow"; num_inference_steps = 4)
+size(image)                                              # 1024 × 1024 × 3 × 1, values in [0, 1]
+```
+
 See the [getting started guide](https://fluxml.ai/Metalhead.jl/dev/tutorials/quickstart/) for
 more, the [language models guide](https://fluxml.ai/Metalhead.jl/dev/tutorials/language_models/)
-for generating text, and the [list of models](https://fluxml.ai/Metalhead.jl/dev/models/) for
+for generating text, the
+[text-to-image guide](https://fluxml.ai/Metalhead.jl/dev/tutorials/text_to_image/) for
+generating images, and the [list of models](https://fluxml.ai/Metalhead.jl/dev/models/) for
 the ported architectures and their validated checkpoints.
 
 The [vision models tutorial](https://fluxml.ai/Metalhead.jl/dev/tutorials/vision/) walks through

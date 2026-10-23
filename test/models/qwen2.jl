@@ -21,6 +21,12 @@ end
     end
 end
 
+@testset "half precision" begin
+    for name in QWEN2_FIXTURES
+        @test check_half_precision(name)
+    end
+end
+
 @testset "config" begin
     tiny = (; vocab_size = 16, hidden_size = 8, intermediate_size = 12,
         num_hidden_layers = 2, num_attention_heads = 2, num_key_value_heads = 1)

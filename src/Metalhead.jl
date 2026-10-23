@@ -28,6 +28,7 @@ include("hub/api.jl")
 
 include("Timm/Timm.jl")
 include("Transformers/Transformers.jl")
+include("Diffusers/Diffusers.jl")
 
 export create_model, list_models, forward_features, forward_head, forward_intermediates,
        feature_info

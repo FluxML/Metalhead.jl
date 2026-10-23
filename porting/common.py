@@ -24,10 +24,13 @@ def build(spec, **extra):
     """Build the model described by a spec: `timm.create_model` or a named builder.
 
     With `"shrink": k` in the spec, every channel count is divided by k (see `shrunk_channels`).
-    A spec with `"library": "transformers"` builds a transformers model (see `build_transformers`).
+    A spec with `"library": "transformers"` builds a transformers model (see `build_transformers`),
+    and one with `"library": "diffusers"` a diffusers model (see `build_diffusers`).
     """
     if spec.get("library") == "transformers":
         return build_transformers(spec)
+    if spec.get("library") == "diffusers":
+        return build_diffusers(spec)
     kwargs = copy.deepcopy(dict(spec.get("kwargs", {}), **extra))  # some builders mutate them
     shrink = spec.get("shrink")
     keep = {spec["input_shape"][1], kwargs.get("num_classes", 1000)} if shrink else set()
@@ -50,6 +53,12 @@ def build_transformers(spec):
     import transformers
     config = transformers.AutoConfig.for_model(spec["model_type"], **spec.get("config", {}))
     return getattr(transformers, spec["architecture"])._from_config(config, attn_implementation="sdpa")
+
+
+def build_diffusers(spec):
+    """The diffusers model class `spec["architecture"]`, built from the arguments `spec["config"]`."""
+    import diffusers
+    return getattr(diffusers, spec["architecture"]).from_config(spec.get("config", {}))
 
 
 SHRUNK = (nn.Conv2d, nn.modules.batchnorm._NormBase, nn.Linear)
@@ -218,6 +227,72 @@ def _rotary_forward(self, x, position_ids):
             (emb.sin() * self.attention_scaling).to(x.dtype))
 
 
+@contextlib.contextmanager
+def exact_float64_diffusers():
+    """Compute the timestep embeddings, the rotary embeddings and the Euler steps of diffusers
+    in the dtype of their inputs.
+
+    diffusers computes them in float32 even in a float64 model or pipeline, which would limit
+    the fixtures to float32 precision. Inputs of other dtypes are computed as diffusers does.
+    """
+    from diffusers.models import embeddings
+    from diffusers.models.transformers import transformer_flux2
+    from diffusers.schedulers import scheduling_flow_match_euler_discrete as euler
+
+    def timestep_embedding(timesteps, embedding_dim, flip_sin_to_cos=False,
+                           downscale_freq_shift=1, scale=1, max_period=10000):
+        if timesteps.dtype != torch.float64:
+            return originals[0](timesteps, embedding_dim, flip_sin_to_cos, downscale_freq_shift,
+                                scale, max_period)
+        half = embedding_dim // 2
+        exponent = -np.log(max_period) * torch.arange(half, dtype=torch.float64) / (half - downscale_freq_shift)
+        emb = scale * timesteps[:, None] * torch.exp(exponent)[None, :]
+        emb = torch.cat([torch.sin(emb), torch.cos(emb)], dim=-1)
+        return torch.cat([emb[:, half:], emb[:, :half]], dim=-1) if flip_sin_to_cos else emb
+
+    def pos_embed(self, ids):
+        pos = ids.double()
+        cos, sin = [], []
+        for i, dim in enumerate(self.axes_dim):
+            freqs = 1.0 / (self.theta ** (torch.arange(0, dim, 2, dtype=torch.float64) / dim))
+            angles = torch.outer(pos[..., i], freqs)
+            cos.append(angles.cos().repeat_interleave(2, dim=1))
+            sin.append(angles.sin().repeat_interleave(2, dim=1))
+        return torch.cat(cos, dim=-1), torch.cat(sin, dim=-1)
+
+    def rotary(x, freqs_cis, use_real=True, use_real_unbind_dim=-1, sequence_dim=2):
+        if x.dtype != torch.float64:
+            return originals[2](x, freqs_cis, use_real, use_real_unbind_dim, sequence_dim)
+        assert use_real and use_real_unbind_dim == -1 and sequence_dim == 1
+        cos, sin = (f[None, :, None, :].to(x.dtype) for f in freqs_cis)
+        x_real, x_imag = x.reshape(*x.shape[:-1], -1, 2).unbind(-1)
+        rotated = torch.stack([-x_imag, x_real], dim=-1).flatten(3)
+        return x * cos + rotated * sin
+
+    def step(self, model_output, timestep, sample, *args, return_dict=True, **kwargs):
+        if sample.dtype != torch.float64:
+            return originals[3](self, model_output, timestep, sample, *args,
+                                return_dict=return_dict, **kwargs)
+        if self.step_index is None:
+            self._init_step_index(timestep)
+        dt = self.sigmas[self.step_index + 1] - self.sigmas[self.step_index]
+        self._step_index += 1
+        prev_sample = sample + dt * model_output
+        return (prev_sample,) if not return_dict else euler.FlowMatchEulerDiscreteSchedulerOutput(prev_sample=prev_sample)
+
+    originals = (embeddings.get_timestep_embedding, transformer_flux2.Flux2PosEmbed.forward,
+                 transformer_flux2.apply_rotary_emb, euler.FlowMatchEulerDiscreteScheduler.step)
+    embeddings.get_timestep_embedding = timestep_embedding
+    transformer_flux2.Flux2PosEmbed.forward = pos_embed
+    transformer_flux2.apply_rotary_emb = rotary
+    euler.FlowMatchEulerDiscreteScheduler.step = step
+    try:
+        yield
+    finally:
+        (embeddings.get_timestep_embedding, transformer_flux2.Flux2PosEmbed.forward,
+         transformer_flux2.apply_rotary_emb, euler.FlowMatchEulerDiscreteScheduler.step) = originals
+
+
 def state_dict_f32(model):
     return {k: (v.float() if v.is_floating_point() else v).detach().contiguous().clone()
             for k, v in model.state_dict().items()}
@@ -231,8 +306,10 @@ def classifier_name(model):
 
 
 def versions():
+    import diffusers
     import transformers
-    return {"timm": timm.__version__, "transformers": transformers.__version__, "torch": torch.__version__}
+    return {"timm": timm.__version__, "transformers": transformers.__version__,
+            "diffusers": diffusers.__version__, "torch": torch.__version__}
 
 
 def write_json(path, obj):

@@ -73,6 +73,18 @@ end
     end
 end
 
+@testset "half precision" begin
+    for name in ["vit_tiny", "vit_siglip"]
+        @test check_half_precision(name)
+    end
+    m = fixture_model(fixture("vit_dynamic"); eltype = Float32)
+    @test check_half_precision(m, rand(Float32, 21, 35, 3, 2))
+    # half-precision position embeddings are resampled in Float32, as in timm
+    posemb = Float16.(randn(Float32, 8, 1 + 4 * 4, 1))
+    @test Metalhead.Timm.resample_abs_pos_embed(posemb, (3, 5)) ==
+          Float16.(Metalhead.Timm.resample_abs_pos_embed(Float32.(posemb), (3, 5)))
+end
+
 @testset "gradient" begin
     for (name, x) in [("vit_options", rand(Float32, 32, 16, 2, 2)),
         ("vit_dinov2_reg", rand(Float32, 28, 21, 3, 2)),
