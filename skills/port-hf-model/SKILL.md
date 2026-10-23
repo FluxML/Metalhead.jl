@@ -152,7 +152,9 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
     y = reshape(NNlib.scaled_dot_product_attention(q, k, v; fdrop = m.attn_drop), :, n, b)
     ```
     A torch `(B, H, N, hd)` tensor reversed is `(hd, N, H, B)`. It needs
-    `permutedims(x, (1, 3, 2, 4))` before the call.
+    `permutedims(x, (1, 3, 2, 4))` before the call. Multi-query attention (one key/value
+    head shared by all query heads, MobileNetV4) is the call with keys and values of 1 head
+    (`MultiQueryAttention2d` in `layers.jl`).
 - **Parameters that aren't in a submodule** (`cls_token`, `pos_embed`, layer-scale `gamma`)
   become array fields named like the torch attribute. They load with the torch shape
   reversed, e.g. `(1, 1, D)` becomes `(D, 1, 1)`.
@@ -276,10 +278,21 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
   1280 features), and it builds the registered architecture at full size, so the fixture
   checks the registered `defaults` too. `"weight_dtype": "float16"` halves the
   weights (PyTorch then uses the rounded values, so the check stays exact), and
-  `"tap_depth": d` taps modules with at most `d` dots (default 1).
+  `"tap_depth": d` taps modules with at most `d` dots (default 1; `-1` records no taps).
+  `shrink` only rescales Conv, BatchNorm and Linear layers, so it fails on modules that
+  hold a width elsewhere: attention head dims (`MultiQueryAttention2d`'s `key_dim`), layer
+  scale `gamma`s and `BlurPool2d` (its `channels`). Shrink such models with a small
+  `channel_multiplier` through a generator builder instead (MobileNetV4's hybrid and blur
+  fixtures).
+- **Taps of the stem** are often the largest: a full-resolution `BatchNormAct2d` records
+  three taps (`bn1`, `bn1.drop`, `bn1.act`). With a fixed-width stem, lower the input's
+  channels and size, or `tap_depth`, before the model's width.
 - **Generator builders.** A `"builder"` spec calling timm's `_gen_*` passes its `variant`
   argument, which then lands in the fixture's `model_args`: the Julia `gen_*` must accept
   `variant`, and use it where timm reads it (MobileNetV3's `"small"`, `"minimal"`).
+- **Attention fixtures** need several tokens at every attention block: with one key token
+  the softmax is constant and the query and key weights go unchecked. Pick an input size
+  that leaves at least 2×2 positions at the last attention stage.
 - **What `dump.py` does:** it re-randomises every parameter and BN statistic, runs PyTorch in
   float64, and stores in float16 the outputs ("taps") of modules whose names have at most
   one `.` (`blocks.0`, `patch_embed.proj`). `--all-taps` records every module. `check.jl`

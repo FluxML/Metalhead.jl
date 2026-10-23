@@ -214,12 +214,13 @@ end
     using Metalhead.Timm: decode_block_str, EfficientNetBuilder, decode_arch_def
     using Flux: relu
 
-    @test_throws "MobileNetV4" decode_block_str("uir_r1_a3_k5_s2_e4_c80")
+    @test_throws "mha" decode_block_str("mha_r1_k3_h4_s1_d64_c160")
     @test_throws "unknown block type" decode_block_str("xx_r1_k3_s1_e6_c24")
     builder = EfficientNetBuilder(; act_layer = relu)
     @test_throws "space-to-depth" builder(
         8, decode_arch_def([["ds_r1_k3_s1_e1_c16_se0.25_d1"]]))
-    @test_throws "aa_layer" EfficientNetBuilder(; aa_layer = :blurpc)
+    @test_throws "aa_layer" EfficientNetBuilder(; act_layer = relu, aa_layer = "blurpc")(
+        8, decode_arch_def([["ds_r1_k3_s1_e1_c16"]]))
 
     @test_throws "global_pool" create_model("efficientnet_b0"; global_pool = "max")
     @test_throws "aa_layer" create_model("efficientnet_b0"; aa_layer = "blurpc")

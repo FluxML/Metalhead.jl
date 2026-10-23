@@ -2,8 +2,8 @@
 # Validated against test/fixtures/efficientnet_* and the parameter counts of every
 # registered architecture.
 #
-# Not ported: UIR/MobileNetV4 (`uir`, `mha`, `mqa`), space-to-depth (`d`), anti-aliasing
-# and feature extraction.
+# Not ported: multi-head attention (`mha`), space-to-depth (`d`), anti-aliasing in `ir`
+# and `ds` blocks, and feature extraction.
 
 const BN_MOMENTUM_TF_DEFAULT = 1 - 0.99
 const BN_EPS_TF_DEFAULT = 1e-3
@@ -91,8 +91,24 @@ function decode_block_str(block_str::AbstractString)
     elseif block_type == "cn"
         merge!(block_args,
             Dict(:kernel_size => parse(Int, options["k"]), :skip => skip === true))
-    elseif block_type in ("uir", "mha", "mqa")
-        error("block type `$block_type` (MobileNetV4) is not supported by the Metalhead " *
+    elseif block_type == "uir"
+        # `a` and `p` are the kernel sizes of the optional start and end depthwise convs
+        dw_start = haskey(options, "a") ? parse_ksize(options["a"]) : 0
+        dw_end = haskey(options, "p") ? parse_ksize(options["p"]) : 0
+        merge!(block_args,
+            Dict(:dw_kernel_size_start => dw_start,
+                :dw_kernel_size_mid => parse_ksize(options["k"]),
+                :dw_kernel_size_end => dw_end, :exp_ratio => parse(Float64, options["e"]),
+                :se_ratio => se_ratio, :noskip => skip === false))
+    elseif block_type == "mqa"
+        kv_dim = parse(Int, options["d"])
+        merge!(block_args,
+            Dict(:dw_kernel_size => parse_ksize(options["k"]),
+                :num_heads => parse(Int, options["h"]), :key_dim => kv_dim,
+                :value_dim => kv_dim, :kv_stride => parse(Int, get(options, "v", "1")),
+                :noskip => skip === false))
+    elseif block_type == "mha"
+        error("block type `mha` (multi-head attention) is not supported by the Metalhead " *
               "ports of the EfficientNet family")
     else
         error("unknown block type `$block_type`")
@@ -161,12 +177,15 @@ end
 """
     EfficientNetBuilder(; output_stride = 32, pad_type = "", round_chs_fn = round_channels,
                         se_from_exp = false, act_layer = nothing, norm_layer = BATCHNORM2D,
-                        se_layer = nothing, drop_path_rate = 0.0)
+                        aa_layer = nothing, se_layer = nothing, drop_path_rate = 0.0,
+                        layer_scale_init_value = nothing)
 
 Builds the stages of blocks from decoded block arguments. Calling it as
 `builder(in_chs, block_args)` returns a vector of `Chain`s, and leaves the channel count of
 the last block in `builder.in_chs`. `se_layer(channels; act_layer, rd_ratio)` creates the
-squeeze-and-excitation module of a block.
+squeeze-and-excitation module of a block. `aa_layer` (anti-aliasing, see `create_aa`) is
+supported by the `cn`, `er`, `uir` and `mqa` blocks, and `layer_scale_init_value` applies
+to the `uir` and `mqa` blocks of MobileNetV4.
 """
 mutable struct EfficientNetBuilder
     output_stride::Int
@@ -175,23 +194,25 @@ mutable struct EfficientNetBuilder
     se_from_exp::Bool
     act_layer::Any
     norm_layer::Any
+    aa_layer::Any
     se_layer::Any
     drop_path_rate::Float64
+    layer_scale_init_value::Any
     in_chs::Int
 end
 
 function EfficientNetBuilder(; output_stride = 32, pad_type = "",
         round_chs_fn = round_channels, se_from_exp = false, act_layer = nothing,
         norm_layer = BATCHNORM2D, aa_layer = nothing, se_layer = nothing,
-        drop_path_rate = 0.0)
-    aa_layer === nothing || error("`aa_layer` is not supported by the Metalhead ports of " *
-          "the EfficientNet family")
+        drop_path_rate = 0.0, layer_scale_init_value = nothing)
     return EfficientNetBuilder(output_stride, pad_type, round_chs_fn, se_from_exp,
-        act_layer, norm_layer, se_layer, drop_path_rate, 0)
+        act_layer, norm_layer, aa_layer, se_layer, drop_path_rate,
+        layer_scale_init_value, 0)
 end
 
 const BLOCK_TYPES = Dict("ir" => InvertedResidual, "ds" => DepthwiseSeparableConv,
-    "dsa" => DepthwiseSeparableConv, "er" => EdgeResidual, "cn" => ConvBnAct)
+    "dsa" => DepthwiseSeparableConv, "er" => EdgeResidual, "cn" => ConvBnAct,
+    "uir" => UniversalInvertedResidual, "mqa" => MobileAttention)
 
 function make_block!(b::EfficientNetBuilder, ba, block_idx, block_count)
     drop_path_rate = b.drop_path_rate * block_idx / block_count
@@ -203,6 +224,16 @@ function make_block!(b::EfficientNetBuilder, ba, block_idx, block_count)
     ba[:act_layer] = something(ba[:act_layer], b.act_layer)
     ba[:norm_layer] = b.norm_layer
     ba[:drop_path_rate] = drop_path_rate
+    if b.aa_layer !== nothing
+        block_type in ("cn", "er", "uir", "mqa") ||
+            error("`aa_layer` is not supported in `$block_type` blocks by the Metalhead " *
+                  "ports of the EfficientNet family")
+        ba[:aa_layer] = b.aa_layer
+    end
+    if block_type in ("uir", "mqa")
+        ba[:layer_scale_init_value] = b.layer_scale_init_value
+        block_type == "mqa" && (ba[:use_multi_query] = true)
+    end
 
     se_ratio = pop!(ba, :se_ratio, nothing)
     if se_ratio !== nothing && !iszero(se_ratio) && b.se_layer !== nothing

@@ -1,0 +1,18 @@
+{
+  "architecture": "mobilenetv4_conv_aa_large",
+  "num_classes": 4,
+  "model_args": {
+    "variant": "mobilenetv4_conv_aa_large",
+    "channel_multiplier": 0.05,
+    "aa_layer": "avg",
+    "act_layer": "hard_swish"
+  },
+  "pretrained_cfg": {
+    "input_size": [
+      3,
+      40,
+      48
+    ],
+    "classifier": "classifier"
+  }
+}

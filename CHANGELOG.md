@@ -9,19 +9,20 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
 ### Added
 
 - Flux ports of [timm](https://github.com/huggingface/pytorch-image-models) models that load
-  their weights directly from the Hugging Face Hub (#305, #307, #319):
+  their weights directly from the Hugging Face Hub (#305, #307, #319, #320):
   - `create_model` builds a model from a Hub repository (`"timm/resnet50.a1_in1k"`), a timm
     name with its pretrained tag, a bare architecture (`"resnet50"`) or a local directory.
     It takes timm's keyword arguments (`num_classes`, `in_chans`, ...), plus `pretrained`,
     `revision` and `eltype`.
   - `list_models`, `forward_features`, `forward_head` and `Metalhead.pretrained_cfg`.
-  - 217 architectures: ResNet, ResNeXt, Wide ResNet, SE-ResNet, SE-ResNeXt, SENet, ECA-ResNet,
+  - 254 architectures: ResNet, ResNeXt, Wide ResNet, SE-ResNet, SE-ResNeXt, SENet, ECA-ResNet,
     Res2Net and Res2NeXt; ViT; ConvNeXt; VGG; DenseNet; Inception v3 and v4,
     Inception-ResNet-v2; aligned Xception; MLP-Mixer, ResMLP and gMLP; ConvMixer;
-    EfficientNet (B0–B8, Lite, EdgeTPU) and EfficientNetV2; MobileNet v1, v2 and v3; MNASNet,
-    SemNASNet, SPNASNet and TinyNet; LCNet.
+    EfficientNet (B0–B8, L2, Lite, EdgeTPU, CondConv) and EfficientNetV2; MobileNet v1, v2,
+    v3 and v4; MobileNet-EdgeTPU; MNASNet, SemNASNet, SPNASNet and TinyNet; MixNet; FBNet-C
+    and FBNetV3; LCNet.
 - Validation against PyTorch: float64 parity fixtures for every code path, run in CI without
-  Python or network access, and float32 references for 39 pretrained checkpoints. Weights load
+  Python or network access, and float32 references for 51 pretrained checkpoints. Weights load
   strictly by name.
 - `porting/` tools and a Claude Code skill (`skills/port-hf-model`) for porting new
   models (#305, #307).

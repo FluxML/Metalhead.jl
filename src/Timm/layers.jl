@@ -168,15 +168,19 @@ function (m::CondConv2d)(x, routing_weights)
     return m.bias isa AbstractArray ? y .+ reshape(m.bias * routing_weights, 1, 1, :, b) : y
 end
 
-# timm.layers.ConvNormAct without anti-aliasing: create_conv2d, then BatchNormAct2d, which
-# is Flux's BatchNorm with the activation inside (its keys are at the BatchNorm level).
+# timm.layers.ConvNormAct: create_conv2d, then BatchNormAct2d, which is Flux's BatchNorm
+# with the activation inside (its keys are at the BatchNorm level). With `aa_layer` and a
+# stride, the conv doesn't stride and an anti-aliasing `aa` (see `create_aa`) downsamples.
 function conv_norm_act(in_chs, out_chs, kernel_size = 1; stride = 1, padding = "",
         dilation = 1, groups = 1, bias = false, apply_act = true, act_layer = relu,
-        eps = 1.0f-5)
-    return Chain(;
-        conv = create_conv2d(
-            in_chs, out_chs, kernel_size; stride, padding, dilation, groups, bias),
-        bn = BatchNorm(out_chs, apply_act ? act_layer : identity; eps = Float32(eps)))
+        eps = 1.0f-5, momentum = 0.1f0, aa_layer = nothing)
+    use_aa = aa_layer !== nothing && stride > 1
+    conv = create_conv2d(in_chs, out_chs, kernel_size; stride = use_aa ? 1 : stride,
+        padding, dilation, groups, bias)
+    bn = BatchNorm(out_chs, apply_act ? act_layer : identity; eps = Float32(eps),
+        momentum = Float32(momentum))
+    use_aa || return Chain(; conv, bn)
+    return Chain(; conv, bn, aa = create_aa(aa_layer, out_chs; stride))
 end
 
 # nn.AvgPool2d(k, stride, ceil_mode=True, count_include_pad=False)
@@ -417,19 +421,24 @@ function (m::ClassifierHead)(x; pre_logits::Bool = false)
     x = m.drop(m.global_pool(x))
     return pre_logits ? m.flatten(x) : m.flatten(m.fc(x))
 end
-# timm.layers.BlurPool2d with reflect padding: a depthwise binomial blur, then subsampling.
-# timm keeps the filter in a non-persistent buffer, so it is rebuilt here and has no keys.
+# timm.layers.BlurPool2d: a depthwise binomial blur, then subsampling, after reflect or
+# zero ("constant") padding. timm keeps the filter in a non-persistent buffer, so it is
+# rebuilt here and has no keys.
 @concrete struct BlurPool2d
     channels
     filt_size
     stride
     pad
+    pad_mode
 end
 Flux.@layer BlurPool2d
 
-function BlurPool2d(channels = nothing; filt_size = 3, stride = 2)
+function BlurPool2d(channels = nothing; filt_size = 3, stride = 2, pad_mode = "reflect")
     filt_size > 1 || error("`filt_size` must be larger than 1")
-    return BlurPool2d(channels, filt_size, stride, get_padding(filt_size, stride))
+    pad_mode in ("reflect", "constant") ||
+        error("`pad_mode = $(repr(pad_mode))` is not supported; use \"reflect\" or " *
+              "\"constant\"")
+    return BlurPool2d(channels, filt_size, stride, get_padding(filt_size, stride), pad_mode)
 end
 
 function blur_filter(T, k, c)
@@ -441,8 +450,99 @@ ChainRulesCore.@non_differentiable blur_filter(::Any, ::Any, ::Any)
 function (m::BlurPool2d)(x)
     c = something(m.channels, size(x, 3))
     filt = blur_filter(eltype(x), m.filt_size, c)
-    x = NNlib.pad_reflect(x, ntuple(_ -> m.pad, 4); dims = (1, 2))
+    pad = ntuple(_ -> m.pad, 4)
+    x = m.pad_mode == "reflect" ? NNlib.pad_reflect(x, pad; dims = (1, 2)) :
+        NNlib.pad_zeros(x, pad; dims = (1, 2))
     return NNlib.conv(x, filt; stride = m.stride, groups = c)
+end
+
+# timm.layers.create_aa for the anti-aliasing layers given by name: "avg" is
+# nn.AvgPool2d(stride), "blurpool" a BlurPool2d, "blurpc" one with zero padding. Gives
+# `identity` (timm's nn.Identity) when there is no aa_layer or it isn't enabled.
+function create_aa(aa_layer, channels = nothing; stride = 2, enable = true)
+    (aa_layer === nothing || !enable) && return identity
+    aa_layer isa AbstractString ||
+        error("`aa_layer = $(repr(aa_layer))` is not supported; use \"avg\", " *
+              "\"blurpool\" or \"blurpc\"")
+    key = replace(lowercase(aa_layer), "_" => "", "-" => "")
+    key in ("avg", "avgpool") && return MeanPool((stride, stride))
+    key in ("blur", "blurpool") && return BlurPool2d(channels; stride)
+    key == "blurpc" && return BlurPool2d(channels; stride, pad_mode = "constant")
+    return error("anti-aliasing layer `$aa_layer` is not supported; use \"avg\", " *
+                 "\"blurpool\" or \"blurpc\"")
+end
+
+# timm.layers.LayerScale2d: a learned per-channel scale of a WHCN feature map.
+@concrete struct LayerScale2d
+    gamma
+end
+Flux.@layer LayerScale2d
+
+function LayerScale2d(dim::Integer, init_values = 1e-5)
+    return LayerScale2d(fill(Float32(init_values), dim))
+end
+
+(m::LayerScale2d)(x) = x .* reshape(m.gamma, 1, 1, :, 1)
+
+"""
+    MultiQueryAttention2d(dim, dim_out = dim; num_heads = 8, key_dim, value_dim,
+                          kv_stride = 1, dw_kernel_size = 3, dilation = 1, padding = "",
+                          attn_drop = 0.0, proj_drop = 0.0,
+                          norm_layer = (; eps = 1e-5, momentum = 0.1), use_bias = false)
+
+timm.layers.MultiQueryAttention2d on WHCN feature maps, without query strides: `num_heads`
+query heads share a single key and value head, whose inputs are downsampled by a strided
+depthwise conv and a BatchNorm (with the `eps` and `momentum` of `norm_layer`) when
+`kv_stride > 1`.
+"""
+@concrete struct MultiQueryAttention2d
+    query
+    key
+    value
+    attn_drop
+    output
+    num_heads
+end
+Flux.@layer MultiQueryAttention2d
+
+function MultiQueryAttention2d(dim, dim_out = dim; num_heads = 8, key_dim = nothing,
+        value_dim = nothing, query_strides = 1, kv_stride = 1, dw_kernel_size = 3,
+        dilation = 1, padding = "", attn_drop = 0.0, proj_drop = 0.0,
+        norm_layer = (; eps = 1e-5, momentum = 0.1), use_bias = false)
+    all(==(1), to_2tuple(query_strides)) ||
+        error("`query_strides` larger than 1 are not supported by the Metalhead port of " *
+              "MultiQueryAttention2d")
+    key_dim = something(key_dim, dim ÷ num_heads)
+    value_dim = something(value_dim, dim ÷ num_heads)
+    function kv_branch(out_dim; proj_padding = "")
+        proj = create_conv2d(dim, out_dim, 1; padding = proj_padding, bias = use_bias)
+        kv_stride > 1 || return Chain(; proj)
+        down_conv = create_conv2d(dim, dim, dw_kernel_size; stride = kv_stride, dilation,
+            padding, depthwise = true)
+        norm = BatchNorm(dim; eps = Float32(norm_layer.eps),
+            momentum = Float32(norm_layer.momentum))
+        return Chain(; down_conv, norm, proj)
+    end
+    query = Chain(; proj = create_conv2d(dim, num_heads * key_dim, 1; bias = use_bias))
+    output = Chain(;
+        proj = create_conv2d(value_dim * num_heads, dim_out, 1; bias = use_bias),
+        drop = dropout_or_identity(proj_drop))
+    return MultiQueryAttention2d(query, kv_branch(key_dim; proj_padding = padding),
+        kv_branch(value_dim), dropout_or_identity(attn_drop), output, num_heads)
+end
+
+function (m::MultiQueryAttention2d)(x)
+    q, k, v = m.query(x), m.key(x), m.value(x)
+    w, h, _, b = size(q)
+    key_dim, value_dim = size(k, 3), size(v, 3)
+    # torch's (B, heads, key_dim, H * W) query and (B, 1, H' * W', dim) keys and values,
+    # in NNlib's (dim, heads, length, batch) layout
+    q = permutedims(reshape(q, w * h, key_dim, m.num_heads, b), (2, 3, 1, 4))
+    k = permutedims(reshape(k, :, key_dim, 1, b), (2, 3, 1, 4))
+    v = permutedims(reshape(v, :, value_dim, 1, b), (2, 3, 1, 4))
+    o = NNlib.scaled_dot_product_attention(q, k, v; fdrop = m.attn_drop)
+    o = reshape(permutedims(o, (3, 1, 2, 4)), w, h, value_dim * m.num_heads, b)
+    return m.output(o)
 end
 
 # timm.layers.get_act_layer for the activations given by name (a function passes through).
