@@ -8,8 +8,8 @@ function get_padding(kernel_size, stride = 1, dilation = 1)
     return ((stride - 1) + dilation * (kernel_size - 1)) ÷ 2
 end
 
-# timm's to_2tuple for sizes given as an Int or a (height, width) sequence.
-to_2tuple(x::Integer) = (x, x)
+# timm's to_2tuple for sizes given as a number or a (height, width) sequence.
+to_2tuple(x::Number) = (x, x)
 to_2tuple(x) = Tuple(x)
 
 # timm.layers.make_divisible: round a channel count to a multiple of `divisor`.
@@ -96,6 +96,9 @@ end
 # timm's DropPath (stochastic depth) drops whole samples: `dims` is the batch dimension
 # (4 for WHCN feature maps, 3 for (C, L, B) tokens). For modules timm creates only when p > 0.
 drop_path(p; dims = 4) = p > 0 ? Dropout(p; dims) : nothing
+
+# DropPath on (C, L, B) tokens, or nn.Identity() when p == 0.
+token_drop_path(p) = dropout_or_identity(p; dims = 3)
 
 # nn.Dropout(p) / DropPath(p), or nn.Identity() when p == 0.
 dropout_or_identity(p; dims = :) = p > 0 ? Dropout(p; dims) : identity
@@ -233,3 +236,58 @@ function create_attn(attn_type, channels)
     attn == "eca" && return EcaModule(channels)
     return error("attention `$attn_type` is not supported; use \"se\" or \"eca\"")
 end
+
+# timm.layers.GluMlp with `gate_last = true` and no `use_conv`: fc1 gives a value half and a
+# gate half along the features, `x1 * act(x2)`.
+@concrete struct GluMlp
+    fc1
+    act
+    drop1
+    norm
+    fc2
+    drop2
+end
+Flux.@layer GluMlp
+
+function GluMlp(
+        in_features, hidden_features, out_features = in_features; act_layer = sigmoid,
+        bias = true, drop = 0.0, init = TRUNC_NORMAL)
+    iseven(hidden_features) || error("`hidden_features` ($hidden_features) must be even")
+    return GluMlp(Dense(in_features => hidden_features; bias, init),
+        act_layer, dropout_or_identity(drop), identity,
+        Dense(hidden_features ÷ 2 => out_features; bias, init), dropout_or_identity(drop))
+end
+
+function (m::GluMlp)(x)
+    x1, x2 = Flux.chunk(m.fc1(x), 2; dims = 1)
+    return m.drop2(m.fc2(m.norm(m.drop1(x1 .* m.act(x2)))))
+end
+
+# timm.layers.GatedMlp: `gate_layer(hidden_features)` builds the gate (e.g. a spatial gating
+# unit), which halves the features before fc2.
+@concrete struct GatedMlp
+    fc1
+    act
+    drop1
+    gate
+    norm
+    fc2
+    drop2
+end
+Flux.@layer GatedMlp
+
+function GatedMlp(
+        in_features, hidden_features, out_features = in_features; act_layer = gelu_erf,
+        gate_layer = nothing, bias = true, drop = 0.0, init = TRUNC_NORMAL)
+    gate, fc2_in = identity, hidden_features
+    if gate_layer !== nothing
+        iseven(hidden_features) ||
+            error("`hidden_features` ($hidden_features) must be even")
+        gate, fc2_in = gate_layer(hidden_features), hidden_features ÷ 2
+    end
+    return GatedMlp(Dense(in_features => hidden_features; bias, init), act_layer,
+        dropout_or_identity(drop), gate, identity,
+        Dense(fc2_in => out_features; bias, init), dropout_or_identity(drop))
+end
+
+(m::GatedMlp)(x) = m.drop2(m.fc2(m.norm(m.gate(m.drop1(m.act(m.fc1(x)))))))

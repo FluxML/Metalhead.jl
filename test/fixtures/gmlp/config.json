@@ -1,0 +1,27 @@
+{
+  "architecture": "gmlp_s16_224",
+  "num_classes": 4,
+  "model_args": {
+    "img_size": [
+      16,
+      32
+    ],
+    "patch_size": 4,
+    "in_chans": 2,
+    "num_blocks": 2,
+    "embed_dim": 24,
+    "mlp_ratio": 3,
+    "block_layer": "SpatialGatingBlock",
+    "mlp_layer": "GatedMlp",
+    "proj_drop_rate": 0.1,
+    "drop_path_rate": 0.2
+  },
+  "pretrained_cfg": {
+    "input_size": [
+      2,
+      16,
+      32
+    ],
+    "classifier": "head"
+  }
+}

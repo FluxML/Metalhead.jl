@@ -62,9 +62,6 @@ end
 
 (m::VisionTransformer)(x) = forward_head(m, forward_features(m, x))
 
-# timm's DropPath on (C, L, B) tokens: one mask per sample.
-token_drop_path(p) = dropout_or_identity(p; dims = 3)
-
 # timm's init_weights_vit_timm for nn.Linear
 vit_dense(in_out; bias = true) = Dense(in_out; bias, init = TRUNC_NORMAL)
 

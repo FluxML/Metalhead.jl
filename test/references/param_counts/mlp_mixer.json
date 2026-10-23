@@ -1,0 +1,62 @@
+{
+ "gmixer_12_224": {
+  "num_params": 12701080,
+  "num_tensors": 150
+ },
+ "gmixer_24_224": {
+  "num_params": 24721096,
+  "num_tensors": 294
+ },
+ "gmlp_b16_224": {
+  "num_params": 73075392,
+  "num_tensors": 306
+ },
+ "gmlp_s16_224": {
+  "num_params": 19422656,
+  "num_tensors": 306
+ },
+ "gmlp_ti16_224": {
+  "num_params": 5867328,
+  "num_tensors": 306
+ },
+ "mixer_b16_224": {
+  "num_params": 59880472,
+  "num_tensors": 150
+ },
+ "mixer_b32_224": {
+  "num_params": 60293428,
+  "num_tensors": 150
+ },
+ "mixer_l16_224": {
+  "num_params": 208196168,
+  "num_tensors": 294
+ },
+ "mixer_l32_224": {
+  "num_params": 206939264,
+  "num_tensors": 294
+ },
+ "mixer_s16_224": {
+  "num_params": 18528264,
+  "num_tensors": 102
+ },
+ "mixer_s32_224": {
+  "num_params": 19104624,
+  "num_tensors": 102
+ },
+ "resmlp_12_224": {
+  "num_params": 15350872,
+  "num_tensors": 150
+ },
+ "resmlp_24_224": {
+  "num_params": 30020680,
+  "num_tensors": 294
+ },
+ "resmlp_36_224": {
+  "num_params": 44690488,
+  "num_tensors": 438
+ },
+ "resmlp_big_24_224": {
+  "num_params": 129138280,
+  "num_tensors": 294
+ }
+}
