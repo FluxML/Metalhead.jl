@@ -23,5 +23,9 @@ include("vit.jl")
 include("convnext.jl")
 include("mlp_mixer.jl")
 include("convmixer.jl")
+include("inception_v3.jl")
+include("inception_v4.jl")
+include("inception_resnet_v2.jl")
+include("xception.jl")
 
 end # module

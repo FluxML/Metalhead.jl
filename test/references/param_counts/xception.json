@@ -1,0 +1,22 @@
+{
+ "xception41": {
+  "num_params": 26969560,
+  "num_tensors": 422
+ },
+ "xception41p": {
+  "num_params": 26907752,
+  "num_tensors": 246
+ },
+ "xception65": {
+  "num_params": 39916312,
+  "num_tensors": 662
+ },
+ "xception65p": {
+  "num_params": 39819560,
+  "num_tensors": 390
+ },
+ "xception71": {
+  "num_params": 42338736,
+  "num_tensors": 732
+ }
+}

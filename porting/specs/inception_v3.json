@@ -1,0 +1,1 @@
+{"architecture": "inception_v3", "shrink": 16, "tap_depth": 0, "weight_dtype": "float16", "kwargs": {"num_classes": 10, "in_chans": 1, "drop_rate": 0.5}, "input_shape": [2, 1, 107, 107]}

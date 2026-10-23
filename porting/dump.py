@@ -2,6 +2,11 @@
 
     uv run dump.py specs/<name>.json [--out DIR] [--all-taps]
 
+Optional spec keys: "shrink": k divides every channel count by k (see `shrunk_channels` in
+common.py; the Julia side applies `shrink_channels` from config.json), and
+"weight_dtype": "float16" stores the weights in half precision, and "tap_depth": d records the
+modules with at most d dots in their name (default 1), to keep large fixtures small.
+
 The fixture directory looks like a Hub repository (config.json + model.safetensors), so the Julia
 side loads it with `create_model(dir; pretrained = true)`, plus acts.safetensors with the input,
 logits, features and module outputs ("taps") of the PyTorch model, computed in float64.
@@ -37,6 +42,10 @@ def main():
     model = build(spec).eval()
     rerandomize(model, spec.get("seed", 0))
     weights = state_dict_f32(model)
+    if spec.get("weight_dtype") == "float16":  # halves the file; torch gets the rounded values
+        weights = {k: v.half() if v.is_floating_point() else v for k, v in weights.items()}
+        model.load_state_dict({k: v.float() if v.is_floating_point() else v
+                               for k, v in weights.items()})
     model = model.double()
 
     tap_dtype = getattr(torch, args.tap_dtype or ("float32" if args.all_taps else "float16"))
@@ -54,7 +63,7 @@ def main():
         return fn
 
     handles = [m.register_forward_hook(hook(n)) for n, m in model.named_modules()
-               if n and (args.all_taps or n.count(".") < 2)]
+               if n and (args.all_taps or n.count(".") <= spec.get("tap_depth", 1))]
     gen = torch.Generator().manual_seed(spec.get("seed", 0) + 1)
     x = torch.randn(spec["input_shape"], generator=gen, dtype=torch.float64)
     with torch.no_grad():
@@ -71,6 +80,8 @@ def main():
         "model_args": kwargs,
         "pretrained_cfg": {"input_size": spec["input_shape"][1:], "classifier": classifier_name(model)},
     }
+    if spec.get("shrink"):
+        config["shrink"] = spec["shrink"]
     write_json(out / "config.json", config)
     save_file(weights, out / "model.safetensors")
     acts = {"input": x, "output": logits.contiguous(), "features": features.contiguous(), **taps}
