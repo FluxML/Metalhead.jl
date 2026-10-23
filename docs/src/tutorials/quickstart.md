@@ -20,7 +20,9 @@ model = create_model("timm/resnet50.a1_in1k"; pretrained = true) # weights from 
 ```
 
 With `pretrained = true`, Metalhead downloads and caches the repository's `config.json` and
-safetensors weights (sharded checkpoints too).
+safetensors weights (sharded checkpoints too). The cache is shared with Python's
+`huggingface_hub` (`~/.cache/huggingface/hub`, or `HF_HUB_CACHE`), and so are `HF_TOKEN` for
+private or gated repositories and `HF_HUB_OFFLINE` to use only cached files.
 The [model list](@ref models) shows the checkpoints each architecture was validated against.
 Bare architecture names use the first of them and load it at the commit it was validated at.
 Other repositories load from their `main` branch, or from `revision`:

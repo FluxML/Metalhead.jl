@@ -1,7 +1,5 @@
-# Hub access through HuggingFaceHub.jl. Files are cached per commit sha,
-# so a pinned revision needs no network once cached.
-
-hub_repo(repo, revision) = HF.Model(; id = String(repo), revision = String(revision))
+# Hub access through HuggingFaceApi.jl, which shares the download cache of Python's
+# huggingface_hub. Files are cached per commit sha, so a pinned revision needs no network once cached.
 
 """
     hf_download(repo, filename; revision = "main") -> String
@@ -9,10 +7,11 @@ hub_repo(repo, revision) = HF.Model(; id = String(repo), revision = String(revis
 Download `filename` from the Hub model repository `repo` at `revision`, returning the local path.
 """
 function hf_download(repo::AbstractString, filename::AbstractString; revision::AbstractString = "main")
-    return HF.file_download(hub_repo(repo, revision), filename)
+    return HF.hf_hub_download(repo, filename; revision)
 end
 
-is_not_found(e) = hasproperty(e, :status) && getproperty(e, :status) == 404
+# HuggingFaceApi reports a missing file as an ErrorException with the Hub's error code.
+is_not_found(e) = e isa ErrorException && occursin("EntryNotFound", e.msg)
 
 """
     hf_weights(repo; revision = "main") -> Vector{String}

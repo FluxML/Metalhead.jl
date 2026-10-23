@@ -2,24 +2,17 @@
 #
 #   julia --project=.. check_reference.jl ../test/references/timm--<repo>.safetensors ...
 #
-# The checkpoint is loaded from the Python Hub cache that dump_reference.py filled, so this needs
-# no network access from Julia.
+# Metalhead shares the Hub cache of Python's huggingface_hub, so the checkpoint that
+# dump_reference.py downloaded loads with no network access.
 using Metalhead, SafeTensors
 include(joinpath(@__DIR__, "..", "test", "parity.jl"))
 using .Parity
-
-function hub_cache()
-    return get(ENV, "HF_HUB_CACHE",
-        joinpath(get(ENV, "HF_HOME", joinpath(homedir(), ".cache", "huggingface")), "hub"))
-end
 
 pass = true
 for file in ARGS
     meta = SafeTensors.deserialize(file).metadata
     ref = Metalhead.Checkpoint(file)
-    snapshot = joinpath(hub_cache(), "models--" * replace(meta["repo"], "/" => "--"),
-        "snapshots", meta["revision"])
-    model = create_model(snapshot; pretrained = true)
+    model = create_model(meta["repo"]; pretrained = true, revision = meta["revision"])
     x = reference_input(Tuple(Metalhead.JSON.parse(meta["input_shape"])))
     logits = relerr(model(x), ref["logits"])
     pre_logits = relerr(forward_head(model, forward_features(model, x); pre_logits = true), ref["pre_logits"])
