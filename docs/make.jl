@@ -40,7 +40,6 @@ makedocs(; modules = [Metalhead],
          ],
          warnonly = [:example_block, :missing_docs, :cross_references],
          format = Documenter.HTML(canonical = "https://fluxml.ai/Metalhead.jl/stable/",
-                                  #   analytics = "UA-36890222-9",
                                   assets = ["assets/flux.css"],
                                   prettyurls = get(ENV, "CI", nothing) == "true"))
 

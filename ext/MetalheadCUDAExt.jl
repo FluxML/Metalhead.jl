@@ -1,10 +1,6 @@
 module MetalheadCUDAExt
 
-if isdefined(Base, :get_extension)
-    using Metalhead: Metalhead
-else
-    using ..Metalhead: Metalhead
-end
+using Metalhead: Metalhead
 using CUDA: CUDA, CuArray
 
 ## bs is `clipped_block_size`

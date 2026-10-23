@@ -68,7 +68,7 @@ See also [`squeezenet`](@ref).
 struct SqueezeNet
     layers::Any
 end
-@functor SqueezeNet
+Flux.@layer SqueezeNet
 
 function SqueezeNet(; pretrain::Bool = false, inchannels::Integer = 3,
                     nclasses::Integer = 1000)

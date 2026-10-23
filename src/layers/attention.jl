@@ -18,7 +18,7 @@ struct MultiHeadSelfAttention{P, Q, R}
     attn_drop::Q
     projection::R
 end
-@functor MultiHeadSelfAttention
+Flux.@layer MultiHeadSelfAttention
 
 function MultiHeadSelfAttention(planes::Integer, nheads::Integer = 8; qkv_bias::Bool = false,
                      attn_dropout_prob = 0.0, proj_dropout_prob = 0.0)

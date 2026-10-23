@@ -26,7 +26,7 @@ struct ChannelLayerNorm{D, T}
     diag::D
     eps::T
 end
-@functor ChannelLayerNorm
+Flux.@layer :noexpand ChannelLayerNorm
 
 function ChannelLayerNorm(sz::Integer, λ = identity; eps = 1.0f-6)
     diag = Flux.Scale(1, 1, sz, λ)
@@ -56,7 +56,7 @@ end
 LayerNormV2(size::Integer...; kw...) = LayerNormV2(Int.(size); kw...)
 LayerNormV2(size_act...; kw...) = LayerNormV2(Int.(size_act[1:end-1]), size_act[end]; kw...)
 
-@functor LayerNormV2
+Flux.@layer :noexpand LayerNormV2
 
 function (a::LayerNormV2)(x::AbstractArray)
 	eps = convert(float(eltype(x)), a.eps)  # avoids promotion for Float16 data, but should eps change too?
@@ -66,7 +66,7 @@ end
 function Base.show(io::IO, l::LayerNormV2)
 	print(io, "LayerNormV2(", join(l.size, ", "))
 	l.λ === identity || print(io, ", ", l.λ)
-	Flux.hasaffine(l) || print(io, ", affine=false")
+	l.affine || print(io, ", affine=false")
 	print(io, ")")
 end
 

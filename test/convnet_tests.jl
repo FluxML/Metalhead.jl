@@ -142,8 +142,7 @@ end
                 @test acctest(Res2Net(50; base_width, scale, pretrain = true))
             end
         else
-            err_type = VERSION < v"1.7" && has_cuda() ? Exception : ArgumentError
-            @test_throws err_type Res2Net(50; base_width, scale, pretrain = true)
+            @test_throws ArgumentError Res2Net(50; base_width, scale, pretrain = true)
         end
         if has_cuda()
             @test_broken gradtest(m, x_224)
@@ -256,11 +255,7 @@ end
     m = SqueezeNet() |> gpu
     @test size(m(x_224)) == (1000, 1)
     if SqueezeNet in PRETRAINED_MODELS
-        if VERSION >= v"1.7"
-            @test acctest(SqueezeNet(; pretrain = true))
-        else
-            @test_broken acctest(SqueezeNet(; pretrain = true))
-        end
+        @test acctest(SqueezeNet(; pretrain = true))
     else
         @test_throws ArgumentError SqueezeNet(pretrain = true)
     end

@@ -68,7 +68,7 @@ function create_classifier(inplanes::Integer, hidden_planes::Integer, nclasses::
                            activations::NTuple{2, Any} = (relu, identity);
                            use_conv::NTuple{2, Bool} = (false, false),
                            pool_layer = AdaptiveMeanPool((1, 1)), dropout_prob = nothing)
-    fc_layers = [uc ? Conv$(1, 1) : Dense for uc in use_conv]
+    fc_layers = [uc ? (args...) -> Conv((1, 1), args...) : Dense for uc in use_conv]
     # Decide whether to flatten the input or not
     flatten_in_pool = !use_conv[1] && pool_layer !== identity
     if use_conv[1]

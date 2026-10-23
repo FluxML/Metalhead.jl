@@ -99,7 +99,7 @@ See also [`Metalhead.vit`](@ref).
 struct ViT
     layers::Any
 end
-@functor ViT
+Flux.@layer ViT
 
 function ViT(config::Symbol; imsize::Dims{2} = (224, 224), patch_size::Dims{2} = (16, 16),
              pretrain::Bool = false, inchannels::Integer = 3, nclasses::Integer = 1000)

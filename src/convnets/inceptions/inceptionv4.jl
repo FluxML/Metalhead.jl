@@ -132,7 +132,7 @@ See also [`Metalhead.inceptionv4`](@ref).
 struct Inceptionv4
     layers::Any
 end
-@functor Inceptionv4
+Flux.@layer Inceptionv4
 
 function Inceptionv4(; pretrain::Bool = false, inchannels::Integer = 3,
                      nclasses::Integer = 1000)

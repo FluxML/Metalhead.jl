@@ -16,7 +16,7 @@ The API reference contains the documentation and options for each model function
 
 !!! note
 
-	Metalhead is still under active development and thus not all models have pre-trained weights supported. While we are working on expanding the footprint of the pre-trained models, if you would like to help contribute model weights yourself, please check out the [contributing guide](@ref contributing) guide.
+	Metalhead is still under active development and thus not all models have pre-trained weights supported. While we are working on expanding the footprint of the pre-trained models, if you would like to help contribute model weights yourself, please check out the [contributing guide](@ref contributing).
 
 To use a pre-trained model, just instantiate the model with the `pretrain` keyword argument set to `true`:
 
@@ -27,6 +27,15 @@ model = ResNet(18; pretrain = true);
 ```
 
 Refer to the [pretraining guide](@ref pretrained) for more details on how to use pre-trained models.
+
+To run a model on an NVIDIA GPU, install and load [CUDA.jl](https://github.com/JuliaGPU/CUDA.jl) and [cuDNN.jl](https://github.com/JuliaGPU/CUDA.jl/tree/master/lib/cudnn) alongside Flux, and move the model (and its inputs) to the device. See the [Flux GPU guide](https://fluxml.ai/Flux.jl/stable/guide/gpu/) for details.
+
+```julia
+using Flux, Metalhead, CUDA, cuDNN
+
+device = gpu_device()
+model = ResNet(18; pretrain = true) |> device;
+```
 
 ## More model configuration options
 

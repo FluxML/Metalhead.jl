@@ -94,7 +94,7 @@ See also [`Metalhead.mnasnet`](@ref).
 struct MNASNet
     layers::Any
 end
-@functor MNASNet
+Flux.@layer MNASNet
 
 function MNASNet(config::Symbol; width_mult::Real = 1, pretrain::Bool = false,
                  inchannels::Integer = 3, nclasses::Integer = 1000)

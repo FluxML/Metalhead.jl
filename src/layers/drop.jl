@@ -75,8 +75,7 @@ mutable struct DropBlock{F, R <: AbstractRNG}
     active::Union{Bool, Nothing}
     rng::R
 end
-@functor DropBlock
-trainable(a::DropBlock) = (;)
+Flux.@layer DropBlock trainable=()
 
 function _dropblock_checks(x::AbstractArray{<:Any, 4}, drop_block_prob, gamma_scale)
     @assert 0≤drop_block_prob≤1 "drop_block_prob must be between 0 and 1, got
@@ -98,7 +97,7 @@ function Flux.testmode!(m::DropBlock, mode = true)
 end
 
 function DropBlock(drop_block_prob = 0.1, block_size::Integer = 7, gamma_scale = 1.0,
-                   rng = default_rng_value())
+                   rng = Random.default_rng())
     if isnothing(drop_block_prob)
         return identity
     end
@@ -135,7 +134,7 @@ equivalent to `identity`.
     for more information on the behaviour of this argument. Custom RNGs are only supported
     on the CPU.
 """
-function StochasticDepth(p, mode = :row; rng = default_rng_value())
+function StochasticDepth(p, mode = :row; rng = Random.default_rng())
     if isnothing(p)
         return identity
     else

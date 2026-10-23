@@ -134,7 +134,7 @@ function bottle2neck(inplanes::Integer, planes::Integer; stride::Integer = 1,
     layers = [
         conv_norm((1, 1), inplanes, width * scale, activation;
                   norm_layer, revnorm)...,
-        chunk$(; size = width, dims = 3), tuplify, reslayer,
+        x -> chunk(x; size = width, dims = 3), tuplify, reslayer,
         conv_norm((1, 1), width * scale, outplanes, activation;
                   norm_layer, revnorm)...,
         attn_fn(outplanes),
@@ -445,7 +445,18 @@ function resnet(block_type, block_repeats::AbstractVector{<:Integer},
     classifier_fn = nfeatures -> create_classifier(nfeatures, nclasses; dropout_prob,
                                                    pool_layer, use_conv)
     return build_resnet((imsize..., inchannels), stem, get_layers, block_repeats,
-                        connection$activation, classifier_fn)
+                        ActivatedConnection(connection, activation), classifier_fn)
+end
+
+# A `Functors` leaf: the pretrained weights store `()` in its place (#287)
+struct ActivatedConnection{C, A}
+    connection::C
+    activation::A
+end
+Functors.@leaf ActivatedConnection
+(c::ActivatedConnection)(xs...) = c.connection(c.activation, xs...)
+function Base.show(io::IO, c::ActivatedConnection)
+    return print(io, c.connection, "(", c.activation, ", ...)")
 end
 
 function resnet(block_fn, block_repeats, downsample_opt::Symbol = :B; kwargs...)

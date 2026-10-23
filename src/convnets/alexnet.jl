@@ -50,7 +50,7 @@ See also [`alexnet`](@ref).
 struct AlexNet
     layers::Any
 end
-@functor AlexNet
+Flux.@layer AlexNet
 
 function AlexNet(; pretrain::Bool = false, inchannels::Integer = 3,
                  nclasses::Integer = 1000)

@@ -25,7 +25,7 @@ Advanced users who want more configuration options will be better served by usin
 struct ResNeXt
     layers::Any
 end
-@functor ResNeXt
+Flux.@layer ResNeXt
 
 function ResNeXt(depth::Integer; pretrain::Bool = false, cardinality::Integer = 32,
                  base_width::Integer = 4, inchannels::Integer = 3, nclasses::Integer = 1000)

@@ -11,12 +11,6 @@ steps:
             - src
     agents:
       queue: "cuda"
-    commands: |
-      julia --project=test -e '
-          if VERSION < v"1.7"
-            using Pkg
-            Pkg.rm("ReTestItems") # not compatible with 1.6
-          end'
     env:
       GROUP: "All"
       TEST_FAST: true
@@ -28,7 +22,7 @@ steps:
       setup:
         julia:
           - "1"
-          - "1.6"
+          - "1.10"
           - "nightly"
       adjustments:
         - with:

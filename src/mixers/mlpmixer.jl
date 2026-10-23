@@ -54,7 +54,7 @@ See also [`Metalhead.mlpmixer`](@ref).
 struct MLPMixer
     layers::Any
 end
-@functor MLPMixer
+Flux.@layer MLPMixer
 
 function MLPMixer(config::Symbol; imsize::Dims{2} = (224, 224),
                   patch_size::Dims{2} = (16, 16), pretrain::Bool = false,

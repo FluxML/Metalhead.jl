@@ -140,7 +140,7 @@ See also [`Metalhead.densenet`](@ref).
 struct DenseNet
     layers::Any
 end
-@functor DenseNet
+Flux.@layer DenseNet
 
 function DenseNet(config::Int; pretrain::Bool = false, growth_rate::Int = 32,
                   reduction = 0.5, inchannels::Int = 3, nclasses::Int = 1000)
