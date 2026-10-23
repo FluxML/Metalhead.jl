@@ -1,0 +1,30 @@
+{
+ "vit_base_patch16_224": {
+  "num_params": 86567656,
+  "num_tensors": 152
+ },
+ "vit_base_patch32_224": {
+  "num_params": 88224232,
+  "num_tensors": 152
+ },
+ "vit_large_patch16_224": {
+  "num_params": 304326632,
+  "num_tensors": 296
+ },
+ "vit_large_patch32_224": {
+  "num_params": 305510400,
+  "num_tensors": 294
+ },
+ "vit_small_patch16_224": {
+  "num_params": 22050664,
+  "num_tensors": 152
+ },
+ "vit_small_patch32_224": {
+  "num_params": 22878952,
+  "num_tensors": 152
+ },
+ "vit_tiny_patch16_224": {
+  "num_params": 5717416,
+  "num_tensors": 152
+ }
+}

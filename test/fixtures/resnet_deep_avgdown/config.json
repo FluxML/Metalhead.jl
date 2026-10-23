@@ -1,0 +1,27 @@
+{
+  "architecture": "resnet26d",
+  "num_classes": 10,
+  "model_args": {
+    "layers": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "channels": [
+      8,
+      16,
+      32,
+      64
+    ],
+    "stem_width": 8
+  },
+  "pretrained_cfg": {
+    "input_size": [
+      3,
+      28,
+      28
+    ],
+    "classifier": "fc"
+  }
+}

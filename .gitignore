@@ -5,16 +5,11 @@
 .vscode/
 .DS_Store
 .CondaPkg/
-scripts/weights/
-scripts/Artifacts.toml
+scripts/legacy/weights/
+scripts/legacy/Artifacts.toml
+Manifest*.toml
+_flux-theme
+uv.lock
+.python-version
 # copied from README.md
 docs/src/index.md 
-
-# manifests
-docs/Manifest.toml
-Manifest.toml
-Manifest-v*.toml
-
-# docs theme
-_flux-theme
-

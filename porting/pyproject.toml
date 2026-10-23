@@ -1,0 +1,22 @@
+[project]
+name = "metalhead-porting"
+version = "0.1.0"
+description = "Fixture and reference generation for Metalhead.jl ports (not part of the Julia package)"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=2",
+    "safetensors>=0.4",
+    "timm>=1.0.20",
+    "torch>=2.5",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true

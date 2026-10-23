@@ -1,0 +1,34 @@
+{
+ "convnext_atto": {
+  "num_params": 3695520,
+  "num_tensors": 128
+ },
+ "convnext_base": {
+  "num_params": 88591464,
+  "num_tensors": 344
+ },
+ "convnext_femto": {
+  "num_params": 5217784,
+  "num_tensors": 128
+ },
+ "convnext_large": {
+  "num_params": 197767336,
+  "num_tensors": 344
+ },
+ "convnext_nano": {
+  "num_params": 15593560,
+  "num_tensors": 146
+ },
+ "convnext_pico": {
+  "num_params": 9045672,
+  "num_tensors": 128
+ },
+ "convnext_small": {
+  "num_params": 50223688,
+  "num_tensors": 344
+ },
+ "convnext_tiny": {
+  "num_params": 28589128,
+  "num_tensors": 182
+ }
+}

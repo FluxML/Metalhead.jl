@@ -40,6 +40,8 @@ jobs:
         os:
           - ubuntu-latest
         suite:
+          - 'Hub'
+          - 'Models'
           - 'AlexNet|VGG'
           - 'GoogLeNet|SqueezeNet|MobileNet|MNASNet'
           - 'EfficientNet'

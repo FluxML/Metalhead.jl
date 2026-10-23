@@ -1,0 +1,1 @@
+{"architecture": "convnext_tiny", "kwargs": {"depths": [1, 2, 2, 1], "dims": [8, 16, 24, 32], "kernel_sizes": [3, 5, 7, 5], "patch_size": 2, "drop_rate": 0.1, "drop_path_rate": 0.1, "num_classes": 10}, "input_shape": [2, 3, 64, 64]}

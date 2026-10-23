@@ -1,0 +1,26 @@
+{
+  "architecture": "convnext_atto",
+  "num_classes": 10,
+  "model_args": {
+    "depths": [
+      1,
+      2,
+      2,
+      1
+    ],
+    "dims": [
+      8,
+      16,
+      24,
+      32
+    ]
+  },
+  "pretrained_cfg": {
+    "input_size": [
+      3,
+      64,
+      64
+    ],
+    "classifier": "head.fc"
+  }
+}
