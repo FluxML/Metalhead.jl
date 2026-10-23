@@ -1,0 +1,1 @@
+{"architecture": "res2net50_26w_4s", "kwargs": {"layers": [2, 1, 1, 1], "channels": [6, 12, 24, 48], "num_classes": 10}, "input_shape": [2, 3, 32, 32]}

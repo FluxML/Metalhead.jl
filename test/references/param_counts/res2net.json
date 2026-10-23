@@ -1,0 +1,38 @@
+{
+ "res2net101_26w_4s": {
+  "num_params": 45206688,
+  "num_tensors": 852
+ },
+ "res2net101d": {
+  "num_params": 45225920,
+  "num_tensors": 862
+ },
+ "res2net50_14w_8s": {
+  "num_params": 25059816,
+  "num_tensors": 747
+ },
+ "res2net50_26w_4s": {
+  "num_params": 25699120,
+  "num_tensors": 427
+ },
+ "res2net50_26w_6s": {
+  "num_params": 37051448,
+  "num_tensors": 587
+ },
+ "res2net50_26w_8s": {
+  "num_params": 48403776,
+  "num_tensors": 747
+ },
+ "res2net50_48w_2s": {
+  "num_params": 25287304,
+  "num_tensors": 267
+ },
+ "res2net50d": {
+  "num_params": 25718352,
+  "num_tensors": 437
+ },
+ "res2next50": {
+  "num_params": 24671464,
+  "num_tensors": 427
+ }
+}

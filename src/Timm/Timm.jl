@@ -16,6 +16,7 @@ import ..Metalhead: forward_features, forward_head
 
 include("layers.jl")
 include("resnet.jl")
+include("res2net.jl")
 include("vit.jl")
 include("convnext.jl")
 

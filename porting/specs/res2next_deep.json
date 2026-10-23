@@ -1,0 +1,1 @@
+{"architecture": "res2next50", "kwargs": {"layers": [2, 1, 1, 1], "channels": [8, 16, 32, 64], "stem_type": "deep", "stem_width": 8, "avg_down": true, "cardinality": 2, "base_width": 16, "block_args": {"scale": 2}, "num_classes": 10}, "input_shape": [2, 3, 32, 32]}

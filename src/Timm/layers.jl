@@ -181,3 +181,55 @@ function (m::NormMlpClassifierHead)(x; pre_logits::Bool = false)
     x = m.drop(m.pre_logits(m.flatten(m.norm(m.global_pool(x)))))
     return pre_logits ? x : m.fc(x)
 end
+
+# timm.layers.SEModule (squeeze-and-excitation), in its default norm-free ReLU form.
+@concrete struct SEModule
+    fc1
+    bn
+    act
+    fc2
+    gate
+end
+Flux.@layer SEModule
+
+function SEModule(channels::Integer; rd_ratio = 1 / 16, rd_divisor = 8)
+    rd_channels = make_divisible(channels * rd_ratio, rd_divisor; round_limit = 0.0)
+    return SEModule(Conv((1, 1), channels => rd_channels), identity, relu,
+        Conv((1, 1), rd_channels => channels), sigmoid)
+end
+
+function (m::SEModule)(x)
+    x_se = m.fc2(m.act(m.bn(m.fc1(GlobalMeanPool()(x)))))
+    return x .* m.gate(x_se)
+end
+
+# timm.layers.EcaModule (efficient channel attention): a Conv1d over the channel means.
+@concrete struct EcaModule
+    conv
+    gate
+end
+Flux.@layer EcaModule
+
+function EcaModule(channels::Integer; gamma = 2, beta = 1)
+    t = trunc(Int, abs(log(channels) / log(2) + beta) / gamma)  # math.log(channels, 2)
+    kernel_size = max(isodd(t) ? t : t + 1, 3)
+    return EcaModule(
+        Conv((kernel_size,), 1 => 1; pad = (kernel_size - 1) ÷ 2, bias = false), sigmoid)
+end
+
+function (m::EcaModule)(x)
+    c, b = size(x, 3), size(x, 4)
+    y = m.gate(m.conv(reshape(GlobalMeanPool()(x), c, 1, b)))
+    return x .* reshape(y, 1, 1, c, b)
+end
+
+# timm.layers.create_attn for the attention types "se" and "eca"; `nothing` gives no module.
+function create_attn(attn_type, channels)
+    attn_type === nothing && return nothing
+    attn_type isa AbstractString ||
+        error("`attn_layer = $(repr(attn_type))` is not supported; use \"se\" or \"eca\"")
+    attn = lowercase(attn_type)
+    attn == "se" && return SEModule(channels)
+    attn == "eca" && return EcaModule(channels)
+    return error("attention `$attn_type` is not supported; use \"se\" or \"eca\"")
+end
