@@ -10,6 +10,12 @@ For a transformers causal LM, the input is `PROMPTS` tokenized by the repo's tok
 a common length (`input_ids`, 0-based), and the outputs are the hidden states after the final
 norm, the logits of the last position, and the greedy continuation of the first prompt
 (`generated_ids`), in float32, so that the Julia tests need neither Python nor a tokenizer.
+
+A diffusers component is named `<org>/<repo>/<subfolder>` (e.g. `.../vae`): an autoencoder
+encodes and decodes `reference_input` images, and a FLUX.2 transformer predicts the flow of
+random latents. A diffusers pipeline (`<org>/<repo>` with a model_index.json) generates an image
+from `PIPELINE_PROMPT` end to end, from fixed initial noise. Random inputs are stored rounded to
+float16, so that both sides use the same values.
 """
 import argparse
 import json
@@ -40,7 +46,13 @@ PROMPTS = ["The capital of France is Paris, and the capital of Italy is",
 
 
 def dump_reference(repo, revision, batch):
+    parts = repo.split("/")
+    repo, subfolder = "/".join(parts[:2]), "/".join(parts[2:])
     sha = HfApi().model_info(repo, revision=revision).sha
+    if subfolder:
+        return dump_diffusers_reference(repo, subfolder, sha, batch)
+    if any(f.rfilename == "model_index.json" for f in HfApi().model_info(repo, revision=sha).siblings):
+        return dump_pipeline_reference(repo, sha)
     config = json.loads(pathlib.Path(hf_hub_download(repo, "config.json", revision=sha)).read_text())
     if "model_type" in config:
         return dump_lm_reference(repo, sha)
@@ -89,6 +101,89 @@ def dump_lm_reference(repo, sha, max_new_tokens=8):
     save_file(tensors, out, metadata=meta)
     print(f"{out}: {repo}@{sha}, {out.stat().st_size / 1e3:.1f} kB, greedy continuation "
           f"{tokenizer.decode(generated[0, n:])!r}")
+
+
+def reference_path(name):
+    out = ROOT / "test" / "references" / (name.replace("/", "--") + ".safetensors")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    return out
+
+
+def half_randn(gen, *shape):
+    """Standard normal values rounded to float16, returned in float32."""
+    return torch.randn(*shape, generator=gen).half().float()
+
+
+def dump_diffusers_reference(repo, subfolder, sha, batch):
+    import diffusers
+    config = json.loads(pathlib.Path(hf_hub_download(repo, f"{subfolder}/config.json", revision=sha)).read_text())
+    cls = getattr(diffusers, config["_class_name"])
+    model = cls.from_pretrained(repo, subfolder=subfolder, revision=sha, torch_dtype=torch.float32).eval()
+    gen = torch.Generator().manual_seed(0)
+    if config["_class_name"].startswith("Autoencoder"):
+        shape = [batch, config["in_channels"], 64, 48]
+        x = reference_input(shape)
+        with torch.no_grad():
+            latents = model.encode(x).latent_dist.mode()
+            output = model.decode(latents).sample
+        tensors = {"latents": latents, "output": output}
+        meta = {"input_shape": json.dumps(shape)}
+    elif config["_class_name"] == "Flux2Transformer2DModel":
+        from diffusers import Flux2KleinPipeline as Pipeline
+        h, w, n = 8, 6, 12
+        hidden = half_randn(gen, batch, h * w, config["in_channels"])
+        text = half_randn(gen, batch, n, config["joint_attention_dim"])
+        timestep = torch.tensor([0.7, 0.3][:batch])
+        img_ids = Pipeline._prepare_latent_ids(torch.zeros(batch, 1, h, w))
+        txt_ids = Pipeline._prepare_text_ids(text)
+        with torch.no_grad():
+            output = model(hidden, text, timestep, img_ids, txt_ids).sample
+        tensors = {"inputs/1": hidden.half(), "inputs/2": text.half(), "inputs/3": timestep,
+                   "inputs/4": img_ids, "inputs/5": txt_ids, "output": output}
+        meta = {}
+    else:
+        raise SystemExit(f"no reference for {config['_class_name']}")
+    name = f"{repo}/{subfolder}"
+    out = reference_path(name)
+    meta.update({"repo": name, "revision": sha, "class": config["_class_name"], **versions()})
+    save_file({k: v.contiguous() for k, v in tensors.items()}, out, metadata=meta)
+    print(f"{out}: {name}@{sha}, {out.stat().st_size / 1e3:.1f} kB")
+
+
+PIPELINE_PROMPT = "A photo of a red fox sitting in fresh snow, looking at the camera"
+
+
+def dump_pipeline_reference(repo, sha, height=256, width=256, steps=4, embed_positions=24):
+    """An image of a diffusers text-to-image pipeline, in float32, from fixed noise.
+
+    Stores the token ids and mask of the prompt (0-based), the prompt embeddings of its first
+    `embed_positions` positions, the initial noise, the denoised latents and the image."""
+    import diffusers
+    pipe = diffusers.DiffusionPipeline.from_pretrained(repo, revision=sha, torch_dtype=torch.float32)
+    pipe.set_progress_bar_config(disable=True)
+    assert type(pipe).__name__ == "Flux2KleinPipeline", type(pipe).__name__
+    tokenizer = pipe.tokenizer
+    text = tokenizer.apply_chat_template([{"role": "user", "content": PIPELINE_PROMPT}], tokenize=False,
+                                         add_generation_prompt=True, enable_thinking=False)
+    tokens = tokenizer(text, return_tensors="pt", padding="max_length", truncation=True, max_length=512)
+    gen = torch.Generator().manual_seed(0)
+    f = pipe.vae_scale_factor * 2
+    latents = half_randn(gen, 1, pipe.transformer.config.in_channels, height // f, width // f)
+    with torch.no_grad():
+        prompt_embeds, _ = pipe.encode_prompt(PIPELINE_PROMPT)
+        kwargs = dict(prompt_embeds=prompt_embeds, height=height, width=width,
+                      num_inference_steps=steps, guidance_scale=1.0)
+        denoised = pipe(latents=latents.clone(), output_type="latent", **kwargs).images
+        image = pipe(latents=latents.clone(), output_type="pt", **kwargs).images
+    out = reference_path(repo)
+    meta = {"repo": repo, "revision": sha, "class": type(pipe).__name__,
+            "prompt": PIPELINE_PROMPT, "height": str(height), "width": str(width),
+            "num_inference_steps": str(steps), **versions()}
+    tensors = {"input_ids": tokens["input_ids"], "attention_mask": tokens["attention_mask"],
+               "prompt_embeds": prompt_embeds[:, :embed_positions], "latents": latents.half(),
+               "output_latents": denoised, "output": image}
+    save_file({k: v.contiguous() for k, v in tensors.items()}, out, metadata=meta)
+    print(f"{out}: {repo}@{sha}, {out.stat().st_size / 1e3:.1f} kB")
 
 
 if __name__ == "__main__":

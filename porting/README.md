@@ -5,7 +5,7 @@ This folder is not part of the Julia package API, and the Julia tests never run 
 
 ```sh
 cd porting
-uv sync                                   # torch (CPU), timm, transformers, safetensors
+uv sync                                   # torch (CPU), timm, transformers, diffusers, safetensors
 uv run inspect_model.py resnet18          # module tree and state_dict of a timm model
 uv run dump.py specs/resnet_basic.json specs/resnext.json     # tiny fixtures -> test/fixtures/<name>/
 julia --project=.. check.jl specs/resnet_basic.json specs/resnext.json   # parity reports, one session
@@ -15,6 +15,9 @@ uv run param_counts.py resnet resnet18 resnet50   # -> test/references/param_cou
 uv run dump_reference.py timm/resnet18.a1_in1k   # real weights -> test/references/
 uv run dump.py specs/llama_tiny.json             # a transformers spec ("library": "transformers")
 uv run dump_reference.py HuggingFaceTB/SmolLM2-135M   # a language model: tokenized prompts
+uv run dump.py specs/transformer_flux2_tiny.json specs/flux2_klein_tiny.json   # diffusers model, pipeline
+uv run dump_reference.py black-forest-labs/FLUX.2-klein-4B/vae   # a component in a subfolder
+uv run dump_reference.py black-forest-labs/FLUX.2-klein-4B       # a pipeline, end to end
 julia --project=.. check_reference.jl ../test/references/timm--resnet18.a1_in1k.safetensors
 julia --project=.. -e 'using Pkg; Pkg.test(test_args = ["models/resnet"])'   # one family's tests
 ```

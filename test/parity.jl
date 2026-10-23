@@ -5,7 +5,8 @@ module Parity
 using Metalhead, Flux, Functors, LinearAlgebra, SafeTensors
 using Metalhead: Checkpoint, join_key, layer_params
 
-export Tap, tapify, check_fixture, fixture_model, shrink_channels, check_lm_reference,
+export Tap, tapify, check_fixture, fixture_model, fixture_inputs, shrink_channels,
+       check_lm_reference, check_pipeline_fixture, check_diffusers_reference,
        reference_input, relerr
 
 relerr(a, b) = norm(a .- b) / max(norm(b), floatmin(Float64))
@@ -170,11 +171,95 @@ function check_lm_reference(file)
         last_logits = relerr(logits, ref["last_logits"]), generated = generated == expected)
 end
 
+"""
+    check_pipeline_fixture(dir; eltype = Float64) -> NamedTuple
+
+Compare a diffusers text-to-image pipeline written by porting/dump.py (a directory with a
+model_index.json) with diffusers': the relative errors of the prompt embeddings of its token ids
+(and of the negative prompt's, for classifier-free guidance), and of the denoised latents and
+the images that the pipeline makes from diffusers' embeddings and initial noise.
+"""
+function check_pipeline_fixture(dir; eltype = Float64)
+    file = joinpath(dir, "acts.safetensors")
+    acts = Checkpoint(file)
+    spec = Metalhead.JSON.parse(SafeTensors.deserialize(file).metadata["spec"])
+    pipe = create_model(dir; pretrained = true, eltype)
+    encode(prefix) = Metalhead.Diffusers.encode_prompt(pipe, acts[prefix * "input_ids"] .+ 1;
+        attention_mask = acts[prefix * "attention_mask"],
+        text_encoder_out_layers = Tuple(spec["text_encoder_out_layers"]))
+    guided = haskey(acts, "negative_prompt_embeds")
+    kwargs = (; height = spec["height"], width = spec["width"],
+        num_inference_steps = spec["num_inference_steps"],
+        guidance_scale = spec["guidance_scale"], latents = acts["latents"],
+        negative_prompt_embeds = guided ? acts["negative_prompt_embeds"] : nothing)
+    latents = pipe(acts["prompt_embeds"]; kwargs..., output_type = :latent)
+    image = pipe(acts["prompt_embeds"]; kwargs...)
+    return (; prompt_embeds = relerr(encode(""), acts["prompt_embeds"]),
+        negative_prompt_embeds = guided ?
+                                 relerr(encode("negative_"), acts["negative_prompt_embeds"]) :
+                                 0.0,
+        latents = relerr(latents, acts["output_latents"]),
+        image = relerr(image, acts["output"]))
+end
+
+"""
+    check_diffusers_reference(file; eltype = Float32) -> NamedTuple
+
+Compare a diffusers model or pipeline with the reference outputs of its real checkpoint,
+written by porting/dump_reference.py: the relative errors of the latents and images of an
+autoencoder, of the output of a transformer, or of the prompt embeddings, denoised latents and
+image of a pipeline, which starts from its own prompt embeddings.
+"""
+function check_diffusers_reference(file; eltype = Float32)
+    meta = SafeTensors.deserialize(file).metadata
+    ref = Checkpoint(file)
+    model = create_model(meta["repo"]; pretrained = true, revision = meta["revision"], eltype)
+    D = Metalhead.Diffusers
+    class = meta["class"]
+    if startswith(class, "Autoencoder")
+        x = Base.eltype(ref["output"]).(reference_input(Tuple(Metalhead.JSON.parse(meta["input_shape"]))))
+        latents = D.mode(D.encode(model, x))
+        return (; repo = meta["repo"], latents = relerr(latents, ref["latents"]),
+            output = relerr(D.decode(model, latents), ref["output"]))
+    elseif class == "Flux2Transformer2DModel"
+        inputs = [x isa AbstractArray{Float16} ? eltype.(x) : x
+                  for x in (ref["inputs/$i"] for i in 1:5)]
+        return (; repo = meta["repo"], output = relerr(model(inputs...), ref["output"]))
+    end
+    embeds = D.encode_prompt(model, ref["input_ids"] .+ 1; attention_mask = ref["attention_mask"])
+    n = size(ref["prompt_embeds"], 2)
+    kwargs = (; height = parse(Int, meta["height"]), width = parse(Int, meta["width"]),
+        num_inference_steps = parse(Int, meta["num_inference_steps"]), guidance_scale = 1.0,
+        latents = eltype.(ref["latents"]))
+    latents = model(embeds; kwargs..., output_type = :latent)
+    image = model(embeds; kwargs...)
+    return (; repo = meta["repo"], prompt_embeds = relerr(embeds[:, 1:n, :], ref["prompt_embeds"]),
+        latents = relerr(latents, ref["output_latents"]), image = relerr(image, ref["output"]))
+end
+
 function greedy_decode(model, ids, n)
     for _ in 1:n
         ids = [ids; argmax(model(ids)[:, end])]
     end
     return ids
+end
+
+"""
+    fixture_inputs(acts) -> (args, kwargs)
+
+The inputs of the model of a fixture: "input" (token ids are made 1-based) or the positional
+"inputs/1", "inputs/2", ..., and the keyword arguments "kwargs/<name>".
+"""
+function fixture_inputs(acts)
+    args = if haskey(acts, "input")
+        x = acts["input"]
+        (Base.eltype(x) <: Integer ? x .+ 1 : x,)  # 0-based token ids
+    else
+        Tuple(acts["inputs/$i"] for i in 1:count(startswith("inputs/"), keys(acts)))
+    end
+    kwargs = (; (Symbol(chopprefix(k, "kwargs/")) => acts[k]
+                 for k in sort!(filter(startswith("kwargs/"), collect(keys(acts)))))...)
+    return args, kwargs
 end
 
 """
@@ -184,20 +269,21 @@ Load the tiny fixture in `dir` with [`fixture_model`](@ref) (in float64) and
 compare its logits and features (float64, relative error `rtol`) and every recorded module output
 with PyTorch's. Module outputs are stored in float16 or float32 and compared at a tolerance set
 by their precision, and so are the `forward_intermediates` (see [`check_intermediates`](@ref)).
+A fixture without features (a diffusion model) has `features = 0.0`.
 Returns the relative errors, with the taps in PyTorch call order.
 """
 function check_fixture(dir; rtol = 1e-8, model = fixture_model(dir))
     acts = Checkpoint(joinpath(dir, "acts.safetensors"))
     meta = SafeTensors.deserialize(joinpath(dir, "acts.safetensors")).metadata
     order = Metalhead.JSON.parse(meta["call_order"])
-    x = acts["input"]
-    x = Base.eltype(x) <: Integer ? x .+ 1 : x  # 0-based token ids
-    output = relerr(model(x), acts["output"])
-    features = relerr(forward_features(model, x), acts["features"])
+    args, kwargs = fixture_inputs(acts)
+    output = relerr(model(args...; kwargs...), acts["output"])
+    features = haskey(acts, "features") ?
+               relerr(forward_features(model, args...; kwargs...), acts["features"]) : 0.0
     tapkeys = filter(startswith("tap/"), collect(keys(acts)))
     names = Set(first(parse_tap(k)) for k in tapkeys)
     sink = Dict{String, Vector{Any}}()
-    tapify(model, names, sink)(x)
+    tapify(model, names, sink)(args...; kwargs...)
     taps = map(order) do k
         name, call, part = parse_tap("tap/" * k)
         ref = acts["tap/" * k]
@@ -207,7 +293,7 @@ function check_fixture(dir; rtol = 1e-8, model = fixture_model(dir))
         err = y === nothing ? missing : size(y) == size(ref) ? relerr(y, ref) : Inf
         return (; name = k, err, tol = TAP_RTOL[eltype(ref)])
     end
-    intermediates = check_intermediates(model, x, acts, meta)
+    intermediates = check_intermediates(model, first(args), acts, meta; kwargs...)
     return (; output,
         features,
         taps,
@@ -218,14 +304,15 @@ function check_fixture(dir; rtol = 1e-8, model = fixture_model(dir))
 end
 
 """
-    check_intermediates(model, x, acts) -> Vector{NamedTuple}
+    check_intermediates(model, x, acts, meta = Dict(); kwargs...) -> Vector{NamedTuple}
 
-Compare `forward_intermediates(model, x)` (plain, with `norm = true` and the prefix tokens of
-vision transformers) with the references "intermediates/<i>", "intermediates_norm/<i>" and
-"intermediates_prefix/<i>" of a fixture, and its features with "features". Without
-"intermediates_norm", the normed intermediates must equal the plain references.
+Compare `forward_intermediates(model, x; kwargs...)` (plain, with `norm = true` and the prefix
+tokens of vision transformers) with the references "intermediates/<i>",
+"intermediates_norm/<i>" and "intermediates_prefix/<i>" of a fixture, and its features with
+"features". Without "intermediates_norm", the normed intermediates must equal the plain
+references. `kwargs` are the model's keyword arguments (a language model's `attention_mask`).
 """
-function check_intermediates(model, x, acts, meta = Dict())
+function check_intermediates(model, x, acts, meta = Dict(); kwargs...)
     n = count(startswith("intermediates/"), keys(acts))
     n == 0 && return NamedTuple[]
     errs = NamedTuple[]
@@ -237,9 +324,9 @@ function check_intermediates(model, x, acts, meta = Dict())
         push!(errs, (; name = "feature_info", err = feature_info(model) == ref ? 0.0 : Inf,
             tol = 0.0))
     end
-    features, plain = forward_intermediates(model, x)
+    features, plain = forward_intermediates(model, x; kwargs...)
     record!("features", features, acts["features"], 1e-8)
-    _, normed = forward_intermediates(model, x; norm = true)
+    _, normed = forward_intermediates(model, x; norm = true, kwargs...)
     length(plain) == length(normed) == n || return [(; name = "count", err = Inf, tol)]
     for i in 1:n
         record!("intermediates/$i", plain[i], acts["intermediates/$i"], tol)
@@ -249,9 +336,9 @@ function check_intermediates(model, x, acts, meta = Dict())
     end
     take = unique([1, n])
     selected = forward_intermediates(model, x; indices = reverse(take),
-        intermediates_only = true)
+        intermediates_only = true, kwargs...)
     early = forward_intermediates(model, x; indices = [1], stop_early = true,
-        intermediates_only = true)
+        intermediates_only = true, kwargs...)
     for (i, y) in zip(take, selected)
         record!("selected/$i", y, acts["intermediates/$i"], tol)
     end

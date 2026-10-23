@@ -53,6 +53,30 @@ end
     @test model_source("timm/not_validated.x", nothing).revision == "main"
     s = model_source(FIXTURE, nothing)
     @test s.repo === nothing && s.dir == FIXTURE
+
+    # a component of a diffusers pipeline, in a subfolder of its repository
+    pipeline, sha = first(lookup("Flux2KleinPipeline").references)
+    s = model_source(pipeline * "/vae", nothing)
+    @test (s.repo, s.subfolder, s.revision) == (pipeline, "vae", sha)
+    @test Metalhead.join_path(s.subfolder, "config.json") == "vae/config.json"
+    s = model_source("AutoencoderKLFlux2", nothing)
+    @test (s.repo, s.subfolder) == (pipeline, "vae")
+    @test model_source(pipeline, nothing, "transformer").subfolder == "transformer"
+    @test model_source("org/name/sub", "v1", "dir").subfolder == "sub/dir"
+end
+
+@testset "diffusers formats" begin
+    using Metalhead.Diffusers: DIFFUSERS, DIFFUSERS_PIPELINE
+    dir = joinpath(pkgdir(Metalhead), "test", "fixtures", "flux2_klein_tiny")
+    @test string(DIFFUSERS) == "diffusers" && string(DIFFUSERS_PIPELINE) == "diffusers pipeline"
+    s = model_source(dir, nothing)
+    @test identify(Metalhead.source_config(s)) == (DIFFUSERS_PIPELINE, "Flux2KleinPipeline")
+    vae = Metalhead.subsource(s, "vae")
+    @test identify(Metalhead.source_config(vae)) == (DIFFUSERS, "AutoencoderKLFlux2")
+    @test Metalhead.source_weights(vae, Metalhead.weights_name(DIFFUSERS)) ==
+          [joinpath(dir, "vae", "diffusion_pytorch_model.safetensors")]
+    @test_throws "neither a config.json nor a model_index.json" Metalhead.source_config(
+        Metalhead.subsource(s, "tokenizer"))
 end
 
 @testset "timm format" begin

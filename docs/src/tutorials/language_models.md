@@ -50,11 +50,17 @@ sequence.
 - `model(ids)` takes token indices of size `(seq_len, batch_size)`, or a vector for a single
   sequence, and returns logits of size `(vocab_size, seq_len, batch_size)` (or
   `(vocab_size, seq_len)`).
-- Attention is causal and there is no padding mask, so the sequences of a batch must have the
-  same length.
+- Attention is causal. Sequences of different lengths are batched by padding them on the right
+  and passing the tokenizer's `attention_mask`, of size `(seq_len, batch_size)`, as a keyword
+  argument: `model(ids; attention_mask)`. The padding takes no part in the attention of the
+  other tokens.
 - [`forward_features`](@ref) returns the hidden states after the final norm, of size
   `(hidden_size, seq_len, batch_size)`, and [`forward_head`](@ref) applies the output
   projection `lm_head` to them.
+- [`forward_intermediates`](@ref) returns the hidden states of the decoder layers, which
+  diffusion models such as FLUX.2 use as text embeddings:
+  `forward_intermediates(model, ids; indices = [9, 18, 27], intermediates_only = true)`. The
+  `i`-th is transformers' `output_hidden_states[i]`.
 - The weights are converted to `eltype` (`Float32` by default) when they are loaded, whatever
   their type on the Hub (often `bfloat16`).
 

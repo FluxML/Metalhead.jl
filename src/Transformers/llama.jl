@@ -22,7 +22,7 @@ Flux.@layer LlamaMLP
 end
 Flux.@layer LlamaAttention
 
-function (m::LlamaAttention)(x, cos, sin)
+function (m::LlamaAttention)(x, cos, sin, kv_lengths = nothing)
     _, n, b = size(x)
     q = reshape(m.q_proj(x), m.head_dim, :, n, b)
     k = reshape(m.k_proj(x), m.head_dim, :, n, b)
@@ -30,7 +30,7 @@ function (m::LlamaAttention)(x, cos, sin)
     q = NNlib.apply_rotary_embedding(q, cos, sin)
     k = NNlib.apply_rotary_embedding(k, cos, sin)
     y = NNlib.scaled_dot_product_attention(q, k, v; fdrop = m.attention_dropout,
-        is_causal = true)
+        is_causal = true, kv_lengths)
     return m.o_proj(reshape(y, :, n, b))
 end
 
@@ -42,8 +42,8 @@ end
 end
 Flux.@layer LlamaDecoderLayer
 
-function (m::LlamaDecoderLayer)(x, cos, sin)
-    x = x .+ m.self_attn(m.input_layernorm(x), cos, sin)
+function (m::LlamaDecoderLayer)(x, cos, sin, kv_lengths = nothing)
+    x = x .+ m.self_attn(m.input_layernorm(x), cos, sin, kv_lengths)
     return x .+ m.mlp(m.post_attention_layernorm(x))
 end
 
@@ -55,16 +55,25 @@ end
 end
 Flux.@layer LlamaModel
 
-function (m::LlamaModel)(input_ids::AbstractMatrix{<:Integer})
+# The token embeddings, the rotary tables and the lengths of the sequences of a batch.
+function embed(m::LlamaModel, input_ids, attention_mask)
     x = m.embed_tokens(input_ids)
     cos, sin = rotary_tables(m.rotary_emb, x, size(input_ids, 1))
+    return x, cos, sin, kv_lengths_of(attention_mask, input_ids)
+end
+
+function (m::LlamaModel)(input_ids::AbstractMatrix{<:Integer}; attention_mask = nothing)
+    x, cos, sin, kv_lengths = embed(m, input_ids, attention_mask)
     for layer in m.layers
-        x = layer(x, cos, sin)
+        x = layer(x, cos, sin, kv_lengths)
     end
     return m.norm(x)
 end
 
-(m::LlamaModel)(input_ids::AbstractVector{<:Integer}) = dropdims(m(reshape(input_ids, :, 1)); dims = 3)
+function (m::LlamaModel)(input_ids::AbstractVector{<:Integer}; attention_mask = nothing)
+    mask = attention_mask === nothing ? nothing : reshape(attention_mask, :, 1)
+    return dropdims(m(reshape(input_ids, :, 1); attention_mask = mask); dims = 3)
+end
 
 @concrete struct LlamaForCausalLM
     model
@@ -72,11 +81,39 @@ end
 end
 Flux.@layer LlamaForCausalLM
 
-forward_features(m::LlamaForCausalLM, input_ids) = m.model(input_ids)
+function forward_features(m::LlamaForCausalLM, input_ids; attention_mask = nothing)
+    return m.model(input_ids; attention_mask)
+end
 
 forward_head(m::LlamaForCausalLM, x; pre_logits::Bool = false) = pre_logits ? x : m.lm_head(x)
 
-(m::LlamaForCausalLM)(input_ids) = forward_head(m, forward_features(m, input_ids))
+function (m::LlamaForCausalLM)(input_ids; attention_mask = nothing)
+    return forward_head(m, forward_features(m, input_ids; attention_mask))
+end
+
+"""
+    forward_intermediates(model::LlamaForCausalLM, input_ids; indices = nothing, norm = false,
+                          stop_early = false, intermediates_only = false, attention_mask = nothing)
+
+The outputs of the decoder layers of a language model built on Llama's classes (Llama, Qwen2,
+Qwen3), each of size `(hidden_size, seq_len, batch_size)`: the `i`-th intermediate is
+transformers' `output_hidden_states[i]`, the output of the `i`-th layer, except that the last
+one is not normed unless `norm = true`. The features are the hidden states after the final norm,
+as [`forward_features`](@ref) returns them. `indices`, `norm`, `stop_early` and
+`intermediates_only` are those of the vision models, and `attention_mask` that of the model.
+"""
+function forward_intermediates(m::LlamaForCausalLM, input_ids::AbstractMatrix{<:Integer};
+        indices = nothing, norm::Bool = false, stop_early::Bool = false,
+        intermediates_only::Bool = false, attention_mask = nothing)
+    model = m.model
+    take, max_index = feature_take_indices(length(model.layers), indices)
+    x, cos, sin, kv_lengths = embed(model, input_ids, attention_mask)
+    layers = [h -> layer(h, cos, sin, kv_lengths) for layer in model.layers]
+    outs = stage_outputs(layers, x, stop_early ? max_index : length(layers))
+    intermediates = [norm ? model.norm(outs[i]) : outs[i] for i in take]
+    intermediates_only && return intermediates
+    return model.norm(last(outs)), intermediates
+end
 
 """
     llama_for_causal_lm(; vocab_size = 32000, hidden_size = 4096, num_hidden_layers = 32, kwargs...)
@@ -88,9 +125,12 @@ Rotary embeddings other than the default (`rope_scaling` or a `rope_parameters` 
 `rope_type`, as in Llama 3) error.
 
 The model maps token indices of size `(seq_len, batch_size)`, or a vector for a single
-sequence, to logits of size `(vocab_size, seq_len, batch_size)`, with causal attention and no
-padding. Token indices start at 1: add 1 to the ids of a Hugging Face tokenizer.
-[`forward_features`](@ref) returns the hidden states after the final norm.
+sequence, to logits of size `(vocab_size, seq_len, batch_size)`, with causal attention. Token
+indices start at 1: add 1 to the ids of a Hugging Face tokenizer. A batch of sequences of
+different lengths, padded on the right, takes the tokenizer's `attention_mask` of size
+`(seq_len, batch_size)` as a keyword argument, which keeps the padding out of the keys.
+[`forward_features`](@ref) returns the hidden states after the final norm, and
+[`forward_intermediates`](@ref) those of each layer.
 """
 function llama_for_causal_lm(; vocab_size = 32000, hidden_size = 4096,
         intermediate_size = 11008, num_hidden_layers = 32, num_attention_heads = 32,

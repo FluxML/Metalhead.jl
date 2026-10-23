@@ -66,8 +66,8 @@ end
 ChainRulesCore.@non_differentiable bicubic_weights_like(::Any, ::Any, ::Any, ::Any)
 
 # timm.layers.resample_abs_pos_embed on the (D, num_prefix_tokens + H * W, 1) Julia layout,
-# with sizes in torch's (H, W) order. Unlike timm, it interpolates in the eltype of `posemb`
-# rather than in Float32 (porting/common.py does the same for float64 fixtures).
+# with sizes in torch's (H, W) order. Like timm, it interpolates half precision in Float32,
+# but Float64 in Float64 (porting/common.py does the same for float64 fixtures).
 function resample_abs_pos_embed(posemb::AbstractArray{<:Any, 3}, new_size,
         old_size = nothing; num_prefix_tokens::Int = 1, interpolation = "bicubic",
         antialias::Bool = true)
@@ -87,6 +87,8 @@ function resample_abs_pos_embed(posemb::AbstractArray{<:Any, 3}, new_size,
 
     # torch's spatial tokens are row-major (w fastest), so the grid is (D, W, H) here.
     x = reshape(posemb[:, (num_prefix_tokens + 1):end, :], D, w, h)
+    T, Tc = eltype(posemb), promote_type(eltype(posemb), Float32)
+    x = T === Tc ? x : Tc.(x)
     if new_w != w
         weights_w = bicubic_weights_like(x, w, new_w, antialias)
         x = reshape(weights_w * reshape(permutedims(x, (2, 1, 3)), w, :), new_w, D, h)
@@ -96,7 +98,7 @@ function resample_abs_pos_embed(posemb::AbstractArray{<:Any, 3}, new_size,
         weights_h = bicubic_weights_like(x, h, new_h, antialias)
         x = reshape(reshape(x, :, h) * transpose(weights_h), D, new_w, new_h)
     end
-    x = reshape(x, D, :, 1)
+    x = reshape(T === Tc ? x : T.(x), D, :, 1)
     num_prefix_tokens > 0 || return x
     return cat(posemb[:, 1:num_prefix_tokens, :], x; dims = 2)
 end

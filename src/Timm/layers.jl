@@ -222,21 +222,23 @@ function check_unsupported(name; kwargs...)
     end
 end
 
-# timm.layers.LayerNorm2d: LayerNorm over the channels of a WHCN feature map.
+# timm.layers.LayerNorm2d: LayerNorm over the channels of a WHCN feature map. Under
+# `f16`/`bf16` its parameters stay `Float32`, as NNlib's mixed-precision norms require.
 @concrete struct LayerNorm2d
     weight
     bias
     eps
 end
 Flux.@layer LayerNorm2d
+Flux._keep_f32_under_halfprec(::LayerNorm2d) = true
 
 function LayerNorm2d(channels::Integer; eps = 1e-6)
     return LayerNorm2d(ones(Float32, channels), zeros(Float32, channels), eps)
 end
 
 function (m::LayerNorm2d)(x)
-    y = NNlib.normalise(x; dims = 3, eps = m.eps)
-    return y .* reshape(m.weight, 1, 1, :, 1) .+ reshape(m.bias, 1, 1, :, 1)
+    return NNlib.layernorm(reshape(m.weight, 1, 1, :, 1), reshape(m.bias, 1, 1, :, 1), x;
+        dims = 3, eps = m.eps)
 end
 
 # timm.layers.Mlp, with 1x1 convolutions on WHCN when `use_conv = true`.

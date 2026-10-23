@@ -42,7 +42,23 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
   `HuggingFaceTB/SmolLM2-135M`, `Qwen/Qwen2.5-0.5B` and `Qwen/Qwen3-0.6B`.
   `create_model` loads them from their Hub repository, and takes the fields of `config.json`
   as keyword arguments. They take token indices starting at 1 and return logits; there is no
-  key-value cache or padding mask yet.
+  key-value cache yet. Batches padded on the right take the tokenizer's `attention_mask`, and
+  `forward_intermediates` returns the hidden states of the decoder layers.
+- Flux ports of [diffusers](https://github.com/huggingface/diffusers) models and pipelines, in
+  `Metalhead.Diffusers`: text-to-image generation with FLUX.2 [klein] (`Flux2KleinPipeline`,
+  with `Flux2Transformer2DModel`, `AutoencoderKLFlux2` and `FlowMatchEulerDiscreteScheduler`),
+  validated against `black-forest-labs/FLUX.2-klein-4B`. `create_model` builds a pipeline from
+  the `model_index.json` of a repository, or one of its components with `subfolder`
+  (`"org/name/vae"` also names one). With HuggingFaceTokenizers.jl loaded, pipelines take
+  prompts as strings.
+- Mixed precision under `eltype = Float16` or `Flux.BFloat16` (or `f16`/`bf16`): the
+  RMSNorms of the language models and timm's `LayerNorm2d` keep their parameters in
+  `Float32`, as Flux's `BatchNorm` and `GroupNorm` do, and normalise in `Float32`, while the
+  activations stay in half precision. ViTs resample their position embeddings in `Float32`,
+  as timm does. Flux's `LayerNorm` does the same from the release after Flux 0.16.13
+  (FluxML/Flux.jl#2773). On the CPU, the RMSNorms and Flux's `LayerNorm` and `GroupNorm`
+  fail on `BFloat16` input with KernelAbstractions 0.10 until the NNlib release after 0.9.52
+  (FluxML/NNlib.jl#843).
 - Validation against PyTorch: float64 parity fixtures for every code path, run in CI without
   Python or network access, and float32 references for 59 pretrained checkpoints. Weights load
   strictly by name.

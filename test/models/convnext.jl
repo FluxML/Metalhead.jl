@@ -32,6 +32,12 @@ end
     end
 end
 
+@testset "half precision" begin
+    for name in ["convnext_conv_mlp", "convnext_linear_mlp"]
+        @test check_half_precision(name)
+    end
+end
+
 @testset "forward_intermediates" begin
     using Flux
     m = fixture_model(fixture("convnext_linear_mlp"); eltype = Float32)  # patch_size = 2

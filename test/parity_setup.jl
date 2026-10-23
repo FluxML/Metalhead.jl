@@ -8,13 +8,17 @@ using Flux, Functors
 using Test
 using ChainRulesCore: unthunk
 
-export Parity, check_fixture, check_lm_reference, fixture_model, shrink_channels,
+export Parity, check_fixture, check_lm_reference, check_pipeline_fixture,
+       check_diffusers_reference, fixture_model, fixture_inputs, shrink_channels,
        reference_input, relerr, tapify, fixture, reference_files, reference_files_of,
        check_param_counts,
-       check_gradient, JSON, SafeTensors, TEST_NETWORK, check_intermediate_api
+       check_gradient, check_half_precision, JSON, SafeTensors, TEST_NETWORK, TEST_LARGE,
+       check_intermediate_api
 
 # The reference tests download pretrained weights from the Hub.
 const TEST_NETWORK = parse(Bool, get(ENV, "METALHEAD_TEST_NETWORK", "false"))
+# With METALHEAD_TEST_NETWORK, also those of multi-gigabyte checkpoints (FLUX.2).
+const TEST_LARGE = TEST_NETWORK && parse(Bool, get(ENV, "METALHEAD_TEST_LARGE", "false"))
 
 const TEST_DIR = joinpath(pkgdir(Metalhead), "test")
 
@@ -53,15 +57,15 @@ function check_param_counts(arch)
 end
 
 """
-    check_gradient(model, x) -> Bool
+    check_gradient(model, x...) -> Bool
 
-Whether a gradient of `sum(abs2, model(x))` in train mode reaches every trainable array of
+Whether a gradient of `sum(abs2, model(x...))` in train mode reaches every trainable array of
 `model` and is finite. Logs the arrays that get none (e.g. of a submodule the forward pass never
 calls) or a non-finite one.
 """
-function check_gradient(model, x)
+function check_gradient(model, x...)
     model = Flux.trainmode!(model)
-    g = Flux.gradient(m -> sum(abs2, m(x)), model)[1]
+    g = Flux.gradient(m -> sum(abs2, m(x...)), model)[1]
     bad = String[]
     for (kp, _) in Flux.trainables(model; path = true)
         dp = g !== nothing && Functors.haskeypath(g, kp) ? Functors.getkeypath(g, kp) :
@@ -70,6 +74,48 @@ function check_gradient(model, x)
     end
     isempty(bad) || @info "parameters without a finite gradient" bad
     return isempty(bad)
+end
+
+"""
+    check_half_precision(model, x...; T = Float16, rtol = 1e-2, kwargs...) -> Bool
+
+Whether the Float32 `model` converted to `T` (by `f16` or `bf16`) runs in mixed precision on
+the inputs `x` (floating-point arrays are converted to `T`) and keyword arguments `kwargs`:
+the layers that opt out of half precision (`Flux._keep_f32_under_halfprec`, the norms)
+keep `Float32` arrays and every other floating-point array is `T`, the output has eltype
+`T`, no warning is logged (such as Flux's eltype mismatch), and the relative error of the
+output against `model(x)` is at most `rtol`. Logs what fails.
+"""
+function check_half_precision(model, x...; T = Float16, rtol = 1e-2, kwargs...)
+    half = Metalhead.ELTYPE_CONVERTERS[T](model)
+    wrong = String[]
+    function walk(l, path)
+        if Flux._keep_f32_under_halfprec(l)
+            all(a -> !(a isa AbstractArray{<:AbstractFloat}) || eltype(a) == Float32,
+                Functors.fleaves(l)) || push!(wrong, path)
+        elseif l isa AbstractArray{<:AbstractFloat}
+            eltype(l) == T || push!(wrong, path)
+        elseif !Functors.isleaf(l)
+            foreach(((k, c),) -> walk(c, "$path.$k"), pairs(Functors.children(l)))
+        end
+    end
+    walk(half, "model")
+    tohalf(a) = a isa AbstractArray{<:AbstractFloat} ? Metalhead.ELTYPE_CONVERTERS[T](a) : a
+    logs, y = Test.collect_test_logs(; min_level = Base.CoreLogging.Warn) do
+        return half(map(tohalf, x)...; kwargs...)
+    end
+    err = relerr(Float32.(y), model(x...; kwargs...))
+    warnings = [l.message for l in logs]
+    ok = isempty(wrong) && eltype(y) == T && isempty(warnings) && err <= rtol
+    ok || @info "not in mixed precision" T wrong output=eltype(y) warnings err
+    return ok
+end
+
+function check_half_precision(name::AbstractString; kwargs...)
+    args, inputs = fixture_inputs(Metalhead.Checkpoint(joinpath(fixture(name), "acts.safetensors")))
+    args = map(a -> a isa AbstractArray{<:AbstractFloat} ? Float32.(a) : a, args)
+    model = fixture_model(fixture(name); eltype = Float32)
+    return check_half_precision(model, args...; inputs..., kwargs...)
 end
 
 function check_intermediate_api(name::AbstractString)

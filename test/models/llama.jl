@@ -22,6 +22,16 @@ end
     end
 end
 
+@testset "half precision" begin
+    for name in LLAMA_FIXTURES
+        @test check_half_precision(name)
+    end
+    # `create_model(...; eltype)` loads the checkpoint into the Float32 norms
+    half = fixture_model(fixture("llama_tiny"); eltype = Float16)
+    @test eltype(half.model.norm.weight) == Float32
+    @test eltype(half.model.embed_tokens.weight) == Float16
+end
+
 @testset "config" begin
     tiny = (; vocab_size = 16, hidden_size = 8, intermediate_size = 12,
         num_hidden_layers = 1, num_attention_heads = 2)
@@ -43,8 +53,10 @@ end
         eltype = Float16)
     @test half.lm_head.weight === half.model.embed_tokens.weight
     @test eltype(half(rand(1:16, 5))) == Float16
+    # BFloat16 is only run on GPUs, not tested on the CPU
     bf16 = create_model("LlamaForCausalLM"; tiny..., eltype = BFloat16)
-    @test eltype(bf16(rand(1:16, 5))) == BFloat16
+    @test eltype(bf16.model.norm.weight) == Float32
+    @test eltype(bf16.model.embed_tokens.weight) == BFloat16
 
     # config.json has `rope_theta` and `rope_scaling` (transformers 4) or `rope_parameters` (5)
     theta(; kw...) = create_model("LlamaForCausalLM"; tiny..., kw...).model.rotary_emb.rope_theta

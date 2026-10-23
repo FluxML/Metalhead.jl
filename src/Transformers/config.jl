@@ -16,7 +16,5 @@ end
 
 # The keys of config.json that the builder declares as keywords, as transformers ignores the others.
 function model_args(::TransformersFormat, spec, config, kwargs)
-    declared = Set(k for m in methods(spec.build) for k in Base.kwarg_decl(m))
-    from_config = nt(filter(p -> Symbol(first(p)) in declared, config))
-    return merge(spec.defaults, from_config, kwargs)
+    return merge(spec.defaults, declared_args(spec.build, config), kwargs)
 end

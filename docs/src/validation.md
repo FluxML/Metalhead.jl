@@ -5,8 +5,8 @@ page describes what is checked, and what that guarantees.
 
 ## What a port is
 
-A port is a Julia file in `src/Timm/` (timm) or `src/Transformers/` (transformers) that
-rebuilds the PyTorch module tree with Flux layers.
+A port is a Julia file in `src/Timm/` (timm), `src/Transformers/` (transformers) or
+`src/Diffusers/` (diffusers) that rebuilds the PyTorch module tree with Flux layers.
 Each PyTorch submodule becomes a field with the same name, so a checkpoint's `state_dict`
 keys follow from the structure of the Flux model. Weights load by name, with no hand-written
 mapping. Arrays use Flux's layout, which is PyTorch's with the dimensions reversed (NCHW
@@ -46,7 +46,18 @@ three layers, a hidden size of a few dozen and a vocabulary of a few dozen token
 `save_pretrained` like a Hub repository, and its input is random token ids. The taps go down to
 the attention, MLP and norms of each layer. transformers computes its RMSNorms and rotary
 embeddings in float32, even in a float64 model. `dump.py` computes them in float64, so that the
-1e-8 comparison tests the architecture rather than that rounding.
+1e-8 comparison tests the architecture rather than that rounding. One fixture pads a batch on
+the right and passes its `attention_mask`, and each records the hidden states of every layer.
+
+For a diffusers model, the fixture is a small configuration of the class, saved with
+`save_pretrained`, run on random inputs: images for an autoencoder; image tokens, text tokens,
+noise levels and position ids for the FLUX.2 transformer. diffusers computes its timestep and
+rotary embeddings in float32, which `dump.py` computes in float64 too. A pipeline fixture is a
+whole pipeline of tiny components (text encoder, transformer, autoencoder and scheduler), saved
+like a Hub repository with a `model_index.json`. It stores the prompt embeddings of random
+token ids, which must match to 1e-8, and the latents and images that the pipeline makes from
+fixed noise in a few steps, which match to 1e-10: diffusers keeps the noise levels in float32,
+in a float64 pipeline too.
 
 Fixtures are under 1 MB each. They run without Python and without network access.
 
@@ -63,6 +74,15 @@ reference stores the token ids, the hidden states after the final norm, the logi
 position and transformers' greedy continuation of the first prompt. The Flux model must match
 the hidden states and logits to 1e-4, and reproduce the continuation exactly. The tests need
 neither Python nor a tokenizer.
+
+For FLUX.2 [klein] 4B, the references are the latents and image of a few images through its
+autoencoder, the output of its transformer for random inputs, and an image of 256 × 256 pixels
+generated in 4 steps from a prompt and fixed noise, with the token ids and the prompt
+embeddings. The autoencoder and the transformer match to 1e-5, and the latents of the pipeline
+to 1e-3: rounding errors grow over the denoising steps, so that PyTorch's own float32 latents
+differ from its float64 ones by 6e-4. In float64, the port and PyTorch generate the same latents
+to 1e-12. The transformer and the pipeline download 8 and 16 GB, and run only with
+`METALHEAD_TEST_LARGE=true` as well.
 
 ## Parameter counts
 

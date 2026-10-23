@@ -6,20 +6,50 @@ jsonvalue(v::AbstractVector) = Tuple(jsonvalue.(v))
 jsonvalue(v::AbstractDict) = nt(v)
 jsonvalue(v) = v
 
-# A model source: a Hub repository, or a local directory laid out like one.
+# A model source: a Hub repository, or a local directory laid out like one, and the subfolder
+# of a component of a diffusers pipeline ("" for the root).
 struct ModelSource
     repo::Union{Nothing, String}
     dir::Union{Nothing, String}
     revision::String
+    subfolder::String
 end
 
+function subsource(s::ModelSource, name)
+    return ModelSource(s.repo, s.dir, s.revision, join_path(s.subfolder, name))
+end
+join_path(a, b) = isempty(a) ? String(b) : isempty(b) ? String(a) : string(a, "/", b)
+
 function source_file(s::ModelSource, file)
+    file = join_path(s.subfolder, file)
     return s.dir === nothing ? hf_download(s.repo, file; revision = s.revision) :
            joinpath(s.dir, file)
 end
-function source_weights(s::ModelSource)
-    return s.dir === nothing ? hf_weights(s.repo; revision = s.revision) :
-           [joinpath(s.dir, "model.safetensors")]
+
+function source_weights(s::ModelSource, name = "model")
+    s.dir === nothing &&
+        return hf_weights(s.repo; revision = s.revision, subfolder = s.subfolder, name)
+    dir = joinpath(s.dir, s.subfolder)
+    file = joinpath(dir, "$name.safetensors")
+    isfile(file) && return [file]
+    index = joinpath(dir, "$name.safetensors.index.json")
+    isfile(index) || error("$dir has no safetensors weights ($name.safetensors or $name.safetensors.index.json)")
+    return [joinpath(dir, f) for f in shard_files(JSON.parsefile(index))]
+end
+
+# The `config.json` of a source, or the `model_index.json` of a diffusers pipeline.
+function source_config(s::ModelSource)
+    for file in ("config.json", "model_index.json")
+        path = try
+            source_file(s, file)
+        catch e
+            is_not_found(e) || rethrow()
+            continue
+        end
+        isfile(path) && return JSON.parsefile(path)
+    end
+    where = s.dir === nothing ? "$(s.repo)@$(s.revision)" : s.dir
+    return error("$(join_path(where, s.subfolder)) has neither a config.json nor a model_index.json")
 end
 
 function bare_spec(name)
@@ -27,26 +57,33 @@ function bare_spec(name)
     return error("`$name` is neither a ported architecture (see `list_models()`), a Hub repository (`org/name`) nor a directory")
 end
 
-# What `name` stands for: a local directory, a Hub repository, or the repository of the
-# default checkpoint of a bare architecture. A validated repository defaults to the commit it
-# was validated at.
-function model_source(name::AbstractString, revision)
-    isdir(name) && return ModelSource(nothing, abspath(name), "")
-    if occursin('/', name)
-        pinned = [sha for spec in values(REGISTRY) for (repo, sha) in spec.references
-                  if repo == name]
-        return ModelSource(String(name), nothing,
-            something(revision, isempty(pinned) ? "main" : first(pinned)))
+# A Hub repository `org/name`, and the subfolder of `org/name/subfolder`.
+function split_repo(name)
+    parts = split(name, '/')
+    return join(parts[1:2], '/'), join(parts[3:end], '/')
+end
+
+# What `name` stands for: a local directory, a Hub repository (or a subfolder of one), or the
+# repository of the default checkpoint of a bare architecture. A validated repository defaults
+# to the commit it was validated at.
+function model_source(name::AbstractString, revision, subfolder = "")
+    isdir(name) && return ModelSource(nothing, abspath(name), "", subfolder)
+    if !occursin('/', name)
+        spec = bare_spec(name)
+        isempty(spec.references) &&
+            error("`$name` has no validated pretrained checkpoint; pass a Hub repository instead")
+        name, sha = first(spec.references)
+        revision = something(revision, sha)
     end
-    spec = bare_spec(name)
-    isempty(spec.references) &&
-        error("`$name` has no validated pretrained checkpoint; pass a Hub repository instead")
-    repo, sha = first(spec.references)
-    return ModelSource(repo, nothing, something(revision, sha))
+    repo, sub = split_repo(name)
+    pinned = [sha for spec in values(REGISTRY) for (ref, sha) in spec.references
+              if first(split_repo(ref)) == repo]
+    revision = something(revision, isempty(pinned) ? "main" : first(pinned))
+    return ModelSource(String(repo), nothing, revision, join_path(sub, subfolder))
 end
 
 """
-    create_model(name; pretrained = false, revision = nothing, eltype = Float32, kwargs...)
+    create_model(name; pretrained = false, revision = nothing, subfolder = "", eltype = Float32, kwargs...)
 
 Build a ported model.
 
@@ -62,28 +99,26 @@ The remaining keyword arguments are the original library's model arguments, e.g.
 `num_classes`, or the fields of a transformers model's `config.json`, e.g. `num_hidden_layers`.
 Changing `num_classes` of a pretrained model re-initialises its classifier.
 
+A diffusers repository holds a pipeline, described by its `model_index.json`, whose
+components are in subfolders: `create_model` builds the whole pipeline, and with `subfolder`
+(e.g. `"vae"` or `"transformer"`) a single component, which `"org/name/vae"` also names.
+
 The model is returned in test mode; call `Flux.trainmode!` before training.
 """
 function create_model(name::AbstractString; pretrained::Bool = false,
-        revision::Union{Nothing, AbstractString} = nothing,
+        revision::Union{Nothing, AbstractString} = nothing, subfolder::AbstractString = "",
         eltype::Type{<:AbstractFloat} = Float32, kwargs...)
     if !pretrained && !isdir(name) && !occursin('/', name)
+        isempty(subfolder) || error("`subfolder` needs a Hub repository or a directory")
         spec = bare_spec(name)
         model = spec.build(; merge(spec.defaults, values(kwargs))...)
         return Flux.testmode!(ELTYPE_CONVERTERS[eltype](model))
     end
-    source = model_source(name, revision)
-    config = JSON.parsefile(source_file(source, "config.json"))
+    source = model_source(name, revision, String(subfolder))
+    config = source_config(source)
     format, architecture = identify(config)
-    spec = lookup(architecture)
-    args = model_args(format, spec, config, NamedTuple(kwargs))
-    model = ELTYPE_CONVERTERS[eltype](spec.build(; args...))
-    if pretrained
-        skip = skip_prefix(format, config, args)
-        load_state!(model, Checkpoint(source_weights(source)); skip, ignore = [DEFAULT_IGNORE;
-                                                                               spec.ignore])
-    end
-    return Flux.testmode!(model)
+    return instantiate(format, lookup(architecture), source, config; pretrained, eltype,
+        kwargs...)
 end
 
 """

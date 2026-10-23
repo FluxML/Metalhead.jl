@@ -24,6 +24,13 @@ configuration and then by the user's `kwargs`.
 """
 model_args(::ConfigFormat, spec, config, kwargs) = merge(spec.defaults, kwargs)
 
+# The entries of `config` that `build` declares as keyword arguments, as a NamedTuple: the
+# arguments of a configuration that also holds keys its library doesn't pass to the model.
+function declared_args(build, config)
+    declared = Set(k for m in methods(build) for k in Base.kwarg_decl(m))
+    return nt(filter(p -> Symbol(first(p)) in declared, config))
+end
+
 """
     skip_prefix(format, config, args) -> Union{Nothing, String}
 
@@ -32,6 +39,33 @@ its initial values (e.g. the classifier after changing `num_classes`). Throws if
 checkpoint can't be loaded into such a model at all.
 """
 skip_prefix(::ConfigFormat, config, args) = nothing
+
+"""
+    weights_name(format) -> String
+
+The name of the safetensors weights of a model in `format`: `"model"` for `model.safetensors`
+or its shards (the default).
+"""
+weights_name(::ConfigFormat) = "model"
+
+"""
+    instantiate(format, spec, source, config; pretrained, eltype, kwargs...)
+
+Build the model `spec` of the parsed `config`, from [`model_args`](@ref), in the element type
+`eltype`, and with `pretrained = true` load its weights from `source`. A format whose
+configuration describes several models (a diffusers pipeline) builds them here.
+"""
+function instantiate(format::ConfigFormat, spec, source, config; pretrained::Bool,
+        eltype, kwargs...)
+    args = model_args(format, spec, config, NamedTuple(kwargs))
+    model = ELTYPE_CONVERTERS[eltype](spec.build(; args...))
+    if pretrained
+        skip = skip_prefix(format, config, args)
+        load_state!(model, Checkpoint(source_weights(source, weights_name(format))); skip,
+            ignore = [DEFAULT_IGNORE; spec.ignore])
+    end
+    return Flux.testmode!(model)
+end
 
 """
     ArchSpec(format, name, build; family = "other", defaults = (;),

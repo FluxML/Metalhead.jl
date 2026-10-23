@@ -12,6 +12,15 @@ pass = true
 for file in ARGS
     meta = SafeTensors.deserialize(file).metadata
     ref = Metalhead.Checkpoint(file)
+    if haskey(meta, "class")  # a diffusers model or pipeline
+        r = check_diffusers_reference(file)
+        errs = [k => v for (k, v) in pairs(r) if k != :repo]
+        ok = all(<=(1e-3) ∘ last, errs)
+        global pass &= ok
+        println(rpad(meta["repo"], 50), join(["$k $(round(v; sigdigits = 2))" for (k, v) in errs], "  "),
+            ok ? "  ok" : "  FAIL")
+        continue
+    end
     if haskey(ref, "input_ids")
         r = check_lm_reference(file)
         ok = r.hidden_states <= 1e-4 && r.last_logits <= 1e-4 && r.generated
