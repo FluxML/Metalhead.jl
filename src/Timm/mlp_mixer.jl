@@ -167,6 +167,29 @@ end
 
 (m::MlpMixer)(x) = forward_head(m, forward_features(m, x))
 
+# The blocks; `norm` applies the final norm to all, and "NCHW" reshapes the tokens to the
+# patch grid (timm's `stem.dynamic_feat_size`).
+function forward_intermediates(m::MlpMixer, x; indices = nothing, norm::Bool = false,
+        stop_early::Bool = false, output_fmt = "NCHW", intermediates_only::Bool = false)
+    check_output_fmt(output_fmt, ("NCHW", "NLC"))
+    n = length(m.blocks)
+    take, max_index = feature_take_indices(n, indices)
+    outs = stage_outputs(m.blocks.layers, m.stem(x), stop_early ? max_index : n)
+    grid = patch_grid(m.stem, x)
+    intermediates = map(take) do i
+        y = norm ? m.norm(outs[i]) : outs[i]
+        return output_fmt == "NCHW" ? tokens_to_nchw(y, grid) : y
+    end
+    intermediates_only && return intermediates
+    return m.norm(last(outs)), intermediates
+end
+
+function feature_info(m::MlpMixer)
+    num_chs, reduction = size(m.stem.proj.weight, 4), maximum(m.stem.proj.stride)
+    return [(; num_chs, reduction, module_name = "blocks.$(i - 1)")
+            for i in 1:length(m.blocks)]
+end
+
 """
     mlp_mixer(; img_size = 224, patch_size = 16, num_blocks = 8, embed_dim = 512, kwargs...)
 

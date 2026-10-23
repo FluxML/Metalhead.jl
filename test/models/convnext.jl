@@ -32,6 +32,28 @@ end
     end
 end
 
+@testset "forward_intermediates" begin
+    using Flux
+    m = fixture_model(fixture("convnext_linear_mlp"); eltype = Float32)  # patch_size = 2
+    x = rand(Float32, 64, 64, 3, 2)
+    feats, ys = forward_intermediates(m, x)
+    @test feats ≈ forward_features(m, x)
+    @test [size(y, 3) for y in ys] == [f.num_chs for f in feature_info(m)]
+    @test [64 ÷ size(y, 1) for y in ys] == [f.reduction for f in feature_info(m)]
+    @test forward_intermediates(m, x; indices = 1, norm = true)[2] ≈ ys[4:4]
+    @test forward_intermediates(m, x; indices = [2, 4], intermediates_only = true) ≈
+          ys[[2, 4]]
+    early, sel = forward_intermediates(m, x; indices = [3], stop_early = true)
+    @test early ≈ sel[1] ≈ ys[3]
+    @test_throws "indices" forward_intermediates(m, x; indices = [5])
+    @test_throws "output_fmt" forward_intermediates(m, x; output_fmt = "NLC")
+    loss(m) = sum(forward_intermediates(m, x; indices = [2], intermediates_only = true)[1])
+    g = Flux.gradient(loss, m)[1]
+    @test all(isfinite, g.stem.layers[1].weight)
+    @test all(isfinite, g.stages.layers[2].blocks.layers[1].gamma)
+    @test g.stages.layers[3] === nothing
+end
+
 TEST_NETWORK && @testset "references" begin
     for file in reference_files("convnext")
         meta=SafeTensors.deserialize(file).metadata

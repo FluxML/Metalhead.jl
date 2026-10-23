@@ -222,6 +222,30 @@ end
 
 (m::ResNet)(x) = forward_head(m, forward_features(m, x))
 
+# The stem and the four stages; `norm` is accepted for timm's signature but there is no norm.
+function forward_intermediates(m::ResNet, x; indices = nothing, norm::Bool = false,
+        stop_early::Bool = false, output_fmt = "NCHW", intermediates_only::Bool = false)
+    check_output_fmt(output_fmt)
+    take, max_index = feature_take_indices(5, indices)
+    stem = m.act1(m.bn1(m.conv1(x)))
+    stages = (m.maxpool, m.layer1, m.layer2, m.layer3, m.layer4)
+    outs = stage_outputs(stages, stem, stop_early ? max_index : 5)
+    feats = (stem, Base.tail(outs)...)
+    intermediates = [feats[i] for i in take]
+    intermediates_only && return intermediates
+    return last(outs), intermediates
+end
+
+block_out_chs(b::BasicBlock) = b.bn2.chs
+block_out_chs(b::Bottleneck) = b.bn3.chs
+
+function feature_info(m::ResNet)
+    stages = (m.layer1, m.layer2, m.layer3, m.layer4)
+    return [(; num_chs = m.bn1.chs, reduction = 2, module_name = "act1");
+            [(; num_chs = block_out_chs(last(s.layers)), reduction = 2^(i + 1),
+                 module_name = "layer$i") for (i, s) in enumerate(stages)]]
+end
+
 const RESNET_REFERENCES = Dict(
     "resnet18" => ["timm/resnet18.a1_in1k" => "491b427b45c94c7fb0e78b5474cc919aff584bbf"],
     "resnet26t" =>

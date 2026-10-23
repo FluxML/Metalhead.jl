@@ -173,6 +173,9 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
   everything else is used as stored.
 - **Entry points.** Define `forward_features(m::T, x)`, `forward_head(m::T, x; pre_logits = false)`
   and `(m::T)(x) = forward_head(m, forward_features(m, x))`, mirroring timm.
+  Where timm defines `forward_intermediates`, port it and `feature_info` too, with the helpers
+  of `src/Timm/features.jl` (ResNet's is the reference). `dump.py` records its outputs, and
+  `check_fixture` fails until the Julia method matches them.
 - **Builders** take exactly timm's keyword names and defaults. Error on values the port doesn't
   implement with `check_unsupported`.
   - `model_args` from `config.json` arrive with lists as `Tuple`s and JSON null as `nothing`.

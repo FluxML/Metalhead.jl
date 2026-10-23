@@ -1,30 +1,206 @@
 {
+ "vit_base_patch14_dinov2": {
+  "num_params": 86579712,
+  "num_tensors": 174
+ },
+ "vit_base_patch14_reg4_dinov2": {
+  "num_params": 86582016,
+  "num_tensors": 175
+ },
  "vit_base_patch16_224": {
   "num_params": 86567656,
   "num_tensors": 152
+ },
+ "vit_base_patch16_384": {
+  "num_params": 86859496,
+  "num_tensors": 152
+ },
+ "vit_base_patch16_clip_224": {
+  "num_params": 86568424,
+  "num_tensors": 153
+ },
+ "vit_base_patch16_clip_384": {
+  "num_params": 86860264,
+  "num_tensors": 153
+ },
+ "vit_base_patch16_clip_quickgelu_224": {
+  "num_params": 86193152,
+  "num_tensors": 153
+ },
+ "vit_base_patch16_siglip_224": {
+  "num_params": 92884224,
+  "num_tensors": 162
+ },
+ "vit_base_patch16_siglip_256": {
+  "num_params": 92930304,
+  "num_tensors": 162
+ },
+ "vit_base_patch16_siglip_384": {
+  "num_params": 93176064,
+  "num_tensors": 162
+ },
+ "vit_base_patch16_siglip_512": {
+  "num_params": 93520128,
+  "num_tensors": 162
+ },
+ "vit_base_patch16_siglip_gap_224": {
+  "num_params": 85797120,
+  "num_tensors": 149
  },
  "vit_base_patch32_224": {
   "num_params": 88224232,
   "num_tensors": 152
  },
+ "vit_base_patch32_384": {
+  "num_params": 88297192,
+  "num_tensors": 152
+ },
+ "vit_base_patch32_clip_224": {
+  "num_params": 88225000,
+  "num_tensors": 153
+ },
+ "vit_base_patch32_clip_256": {
+  "num_params": 87861248,
+  "num_tensors": 153
+ },
+ "vit_base_patch32_clip_384": {
+  "num_params": 88297960,
+  "num_tensors": 153
+ },
+ "vit_base_patch32_clip_quickgelu_224": {
+  "num_params": 87849728,
+  "num_tensors": 153
+ },
+ "vit_base_patch32_siglip_256": {
+  "num_params": 94552320,
+  "num_tensors": 162
+ },
+ "vit_base_patch8_224": {
+  "num_params": 86576872,
+  "num_tensors": 152
+ },
+ "vit_huge_patch14_clip_224": {
+  "num_params": 632047080,
+  "num_tensors": 393
+ },
+ "vit_huge_patch14_clip_336": {
+  "num_params": 632456680,
+  "num_tensors": 393
+ },
+ "vit_huge_patch14_clip_quickgelu_224": {
+  "num_params": 632077824,
+  "num_tensors": 393
+ },
+ "vit_large_patch14_clip_224": {
+  "num_params": 304204776,
+  "num_tensors": 297
+ },
+ "vit_large_patch14_clip_336": {
+  "num_params": 304532456,
+  "num_tensors": 297
+ },
+ "vit_large_patch14_clip_quickgelu_224": {
+  "num_params": 303966976,
+  "num_tensors": 297
+ },
+ "vit_large_patch14_clip_quickgelu_336": {
+  "num_params": 304294656,
+  "num_tensors": 297
+ },
+ "vit_large_patch14_dinov2": {
+  "num_params": 304367616,
+  "num_tensors": 342
+ },
+ "vit_large_patch14_reg4_dinov2": {
+  "num_params": 304370688,
+  "num_tensors": 343
+ },
  "vit_large_patch16_224": {
   "num_params": 304326632,
   "num_tensors": 296
+ },
+ "vit_large_patch16_384": {
+  "num_params": 304715752,
+  "num_tensors": 296
+ },
+ "vit_large_patch16_siglip_256": {
+  "num_params": 315956224,
+  "num_tensors": 306
+ },
+ "vit_large_patch16_siglip_384": {
+  "num_params": 316283904,
+  "num_tensors": 306
+ },
+ "vit_large_patch16_siglip_512": {
+  "num_params": 316742656,
+  "num_tensors": 306
+ },
+ "vit_large_patch16_siglip_gap_256": {
+  "num_params": 303361024,
+  "num_tensors": 293
  },
  "vit_large_patch32_224": {
   "num_params": 305510400,
   "num_tensors": 294
  },
+ "vit_large_patch32_384": {
+  "num_params": 306632680,
+  "num_tensors": 296
+ },
+ "vit_small_patch14_dinov2": {
+  "num_params": 22056192,
+  "num_tensors": 174
+ },
+ "vit_small_patch14_reg4_dinov2": {
+  "num_params": 22057344,
+  "num_tensors": 175
+ },
  "vit_small_patch16_224": {
   "num_params": 22050664,
+  "num_tensors": 152
+ },
+ "vit_small_patch16_384": {
+  "num_params": 22196584,
   "num_tensors": 152
  },
  "vit_small_patch32_224": {
   "num_params": 22878952,
   "num_tensors": 152
  },
+ "vit_small_patch32_384": {
+  "num_params": 22915432,
+  "num_tensors": 152
+ },
+ "vit_small_patch8_224": {
+  "num_params": 21670272,
+  "num_tensors": 150
+ },
+ "vit_so400m_patch14_siglip_224": {
+  "num_params": 427680704,
+  "num_tensors": 342
+ },
+ "vit_so400m_patch14_siglip_384": {
+  "num_params": 428225600,
+  "num_tensors": 342
+ },
+ "vit_so400m_patch14_siglip_gap_224": {
+  "num_params": 412442352,
+  "num_tensors": 329
+ },
+ "vit_so400m_patch16_siglip_256": {
+  "num_params": 427888064,
+  "num_tensors": 342
+ },
+ "vit_so400m_patch16_siglip_384": {
+  "num_params": 428256704,
+  "num_tensors": 342
+ },
  "vit_tiny_patch16_224": {
   "num_params": 5717416,
+  "num_tensors": 152
+ },
+ "vit_tiny_patch16_384": {
+  "num_params": 5790376,
   "num_tensors": 152
  }
 }

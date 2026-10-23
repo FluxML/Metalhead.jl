@@ -10,7 +10,8 @@ modules with at most d dots in their name (default 1), to keep large fixtures sm
 
 The fixture directory looks like a Hub repository (config.json + model.safetensors), so the Julia
 side loads it with `create_model(dir; pretrained = true)`, plus acts.safetensors with the input,
-logits, features and module outputs ("taps") of the PyTorch model, computed in float64.
+logits, features, module outputs ("taps") and `forward_intermediates` of the PyTorch model,
+computed in float64.
 """
 import argparse
 import json
@@ -19,7 +20,8 @@ import pathlib
 import torch
 from safetensors.torch import save_file
 
-from common import build, classifier_name, rerandomize, state_dict_f32, versions, write_json
+from common import (build, classifier_name, float64_pos_embed, rerandomize, state_dict_f32,
+                    versions, write_json)
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
@@ -74,11 +76,12 @@ def dump(spec_path, args):
                if n and (args.all_taps or n.count(".") <= spec.get("tap_depth", 1))]
     gen = torch.Generator().manual_seed(spec.get("seed", 0) + 1)
     x = torch.randn(spec["input_shape"], generator=gen, dtype=torch.float64)
-    with torch.no_grad():
+    with torch.no_grad(), float64_pos_embed():
         logits = model(x)
         for h in handles:
             h.remove()
         features = model.forward_features(x)
+        intermediates = dump_intermediates(model, x)
 
     kwargs = dict(spec.get("kwargs", {}))
     num_classes = kwargs.pop("num_classes", getattr(model, "num_classes", None))
@@ -92,14 +95,37 @@ def dump(spec_path, args):
         config["shrink"] = spec["shrink"]
     write_json(out / "config.json", config)
     save_file(weights, out / "model.safetensors")
-    acts = {"input": x, "output": logits.contiguous(), "features": features.contiguous(), **taps}
+    acts = {"input": x, "output": logits.contiguous(), "features": features.contiguous(), **taps,
+            **intermediates}
     meta = {"spec": json.dumps(spec), "call_order": json.dumps(order),
             "num_params": str(sum(p.numel() for p in model.parameters())), **versions()}
     save_file(acts, out / "acts.safetensors", metadata=meta)
 
     size = sum(f.stat().st_size for f in out.iterdir())
-    print(f"{out}: {len(weights)} tensors, {len(taps)} taps, {size / 1e6:.2f} MB")
+    print(f"{out}: {len(weights)} tensors, {len(taps)} taps, {len(intermediates)} intermediates, "
+          f"{size / 1e6:.2f} MB")
     return size <= args.max_bytes or bool(args.out)
+
+
+def dump_intermediates(model, x):
+    """The outputs of `forward_intermediates`, if the model has it, in float32.
+
+    "intermediates/<i>" (1-based) are the NCHW intermediates, "intermediates_norm/<i>" those with
+    `norm=True` when they differ, and "intermediates_prefix/<i>" the prefix (class and register)
+    tokens of vision transformers.
+    """
+    if not hasattr(model, "forward_intermediates"):
+        return {}
+    store = lambda y: y.to(torch.float32).contiguous()
+    _, plain = model.forward_intermediates(x)
+    out = {f"intermediates/{i + 1}": store(y) for i, y in enumerate(plain)}
+    _, normed = model.forward_intermediates(x, norm=True)
+    if any(not torch.equal(a, b) for a, b in zip(plain, normed)):
+        out.update({f"intermediates_norm/{i + 1}": store(y) for i, y in enumerate(normed)})
+    if getattr(model, "num_prefix_tokens", 0) > 0:
+        _, pairs = model.forward_intermediates(x, return_prefix_tokens=True)
+        out.update({f"intermediates_prefix/{i + 1}": store(p) for i, (_, p) in enumerate(pairs)})
+    return out
 
 
 if __name__ == "__main__":

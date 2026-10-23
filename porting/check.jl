@@ -25,7 +25,7 @@ function report(arg; verbose)
     println(arg, ": ", r.pass ? "PASS" : "FAIL", "  (output ", r.output, ", features ",
         r.features, ")")
     if verbose || !r.pass
-        for t in r.taps
+        for t in [r.taps; r.intermediates]
             println("  ", rpad(t.name, 40),
                 lpad(ismissing(t.err) ? "-" : string(round(t.err; sigdigits = 2)), 10),
                 "  ", status(t.err, t.tol))

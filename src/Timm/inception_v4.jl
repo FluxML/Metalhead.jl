@@ -205,6 +205,41 @@ end
 
 (m::InceptionV4)(x) = forward_head(m, forward_features(m, x))
 
+# The `features` entries ending a stage (timm's `feature_info`), and their strides.
+const INCEPTION_V4_STAGE_ENDS = (3, 4, 10, 18, 22)
+const INCEPTION_V4_REDUCTIONS = (2, 4, 8, 16, 32)
+
+# `norm` is accepted for timm's signature but there is no norm.
+function forward_intermediates(m::InceptionV4, x; indices = nothing, norm::Bool = false,
+        stop_early::Bool = false, output_fmt = "NCHW", intermediates_only::Bool = false)
+    check_output_fmt(output_fmt)
+    ends = INCEPTION_V4_STAGE_ENDS
+    take, max_index = feature_take_indices(length(ends), indices)
+    stop = stop_early ? ends[max_index] : length(m.features)
+    outs = stage_outputs(m.features.layers, x, stop)
+    intermediates = [outs[ends[i]] for i in take]
+    intermediates_only && return intermediates
+    return last(outs), intermediates
+end
+
+# Output channels of the blocks that end a stage.
+inception_v4_chs(c::Chain) = inception_v4_chs(c[end])
+inception_v4_chs(b::BatchNorm) = b.chs
+inception_v4_chs(m::InceptionV4Mixed3a) = size(m.conv[:conv].weight, 3) + m.conv[:bn].chs
+function inception_v4_chs(m::Union{InceptionV4A, InceptionV4B})
+    return sum(inception_v4_chs, (m.branch0, m.branch1, m.branch2, m.branch3))
+end
+function inception_v4_chs(m::InceptionV4C)
+    return sum(inception_v4_chs,
+        (m.branch0, m.branch1_1a, m.branch1_1b, m.branch2_3a, m.branch2_3b, m.branch3))
+end
+
+function feature_info(m::InceptionV4)
+    return [(; num_chs = inception_v4_chs(m.features[e]), reduction,
+                module_name = "features.$(e - 1)")
+            for (e, reduction) in zip(INCEPTION_V4_STAGE_ENDS, INCEPTION_V4_REDUCTIONS)]
+end
+
 register!(ArchSpec(:timm, "inception_v4", inception_v4;
     references = ["timm/inception_v4.tf_in1k" =>
         "ad5d294cda312745a9afa433e45d9ccd956a1548"]))

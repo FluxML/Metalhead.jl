@@ -67,6 +67,35 @@ end
     @test all(isfinite, g.blocks.layers[1].mlp_channels.gate.norm.diag.scale)
 end
 
+@testset "forward_intermediates" begin
+    using Flux
+    m = fixture_model(fixture("resmlp"); eltype = Float32)  # patch (8, 4): a 8×2 grid
+    x = rand(Float32, 32, 16, 3, 2)
+    feats, nchw = forward_intermediates(m, x)
+    _, nlc = forward_intermediates(m, x; output_fmt = "NLC")
+    @test feats ≈ forward_features(m, x)
+    @test size(nchw[1]) == (8, 2, 24, 2) && size(nlc[1]) == (24, 16, 2)
+    @test nchw[2][3, 2, :, 1] == nlc[2][:, 3 + 8, 1]
+    @test feature_info(m) == [(; num_chs = 24, reduction = 8, module_name = "blocks.$i")
+                              for i in 0:2]
+    normed = forward_intermediates(m, x; norm = true, output_fmt = "NLC",
+        intermediates_only = true)
+    @test normed ≈ m.norm.(nlc) && normed[3] ≈ feats
+    @test forward_intermediates(m, x; indices = 1, output_fmt = "NLC")[2] ≈ nlc[3:3]
+    @test forward_intermediates(m, x; indices = [3, 1], intermediates_only = true) ≈
+          nchw[[1, 3]]
+    early, sel = forward_intermediates(m, x; indices = [2], stop_early = true,
+        output_fmt = "NLC")
+    @test early ≈ m.norm(sel[1]) && sel[1] ≈ nlc[2]
+    @test_throws "indices" forward_intermediates(m, x; indices = [4])
+    @test_throws "output_fmt" forward_intermediates(m, x; output_fmt = "NHWC")
+    loss(m) = sum(forward_intermediates(m, x; indices = [2], intermediates_only = true)[1])
+    g = Flux.gradient(loss, m)[1]
+    @test all(isfinite, g.stem.proj.weight)
+    @test all(isfinite, g.blocks.layers[2].linear_tokens.weight)
+    @test g.blocks.layers[3] === nothing
+end
+
 TEST_NETWORK && @testset "references" begin
     for prefix in ["mixer_", "resmlp_", "gmlp_"], file in reference_files(prefix)
         meta = SafeTensors.deserialize(file).metadata

@@ -1,0 +1,1 @@
+{"architecture": "vit_tiny_patch16_224", "kwargs": {"img_size": 32, "patch_size": 8, "embed_dim": 16, "depth": 2, "num_heads": 2, "global_pool": "max", "class_token": false, "pos_embed": "none", "final_norm": false, "act_layer": "gelu_tanh", "num_classes": 4}, "input_shape": [2, 3, 32, 32]}

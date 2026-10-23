@@ -261,16 +261,72 @@ end
 
 (m::Mlp)(x) = m.drop2(m.fc2(m.norm(m.drop1(m.act(m.fc1(x))))))
 
-# timm.layers.PatchEmbed: (W, H, C, B) image to (C, W*H, B) tokens.
+# timm.layers.PatchEmbed: (W, H, C, B) image to (C, W*H, B) tokens, or with `flatten = false`
+# to (C, W, H, B), the Julia layout of timm's NHWC output for dynamic image sizes.
 @concrete struct PatchEmbed
     proj
+    flatten
 end
 Flux.@layer PatchEmbed
 
+PatchEmbed(proj; flatten::Bool = true) = PatchEmbed(proj, flatten)
+
 function (m::PatchEmbed)(x)
-    x = m.proj(x)
-    w, h, c, b = size(x)
-    return permutedims(reshape(x, w * h, c, b), (2, 1, 3))
+    y = permutedims(m.proj(x), (3, 1, 2, 4))
+    return m.flatten ? reshape(y, size(y, 1), :, size(y, 4)) : y
+end
+
+# The (W, H) patch grid of an image, timm's `dynamic_feat_size` without padding.
+patch_grid(m::PatchEmbed, x) = size(x)[1:2] .÷ m.proj.stride
+
+# timm.layers.LayerScale on (C, ...) arrays.
+@concrete struct LayerScale
+    gamma
+end
+Flux.@layer LayerScale
+
+layer_scale(dim, init_values) = LayerScale(fill(Float32(init_values), dim))
+
+(m::LayerScale)(x) = x .* m.gamma
+
+# timm.layers.quick_gelu, the activation of OpenAI's CLIP.
+quick_gelu(x::Number) = x * sigmoid(oftype(x, 1.702) * x)
+quick_gelu(x::AbstractArray) = quick_gelu.(x)
+
+# timm.layers.AttentionPoolLatent on (C, N, B) tokens: attention from learned latent queries,
+# then an MLP, keeping the first latent (pool_type = "token"). Without qk_norm, whose
+# q_norm and k_norm are identities.
+@concrete struct AttentionPoolLatent
+    num_heads
+    latent
+    q
+    kv
+    proj
+    proj_drop
+    norm
+    mlp
+end
+Flux.@layer AttentionPoolLatent
+
+function attention_pool_latent(
+        dim; num_heads = 8, mlp_ratio = 4.0, qkv_bias = true, norm_eps = 1e-6,
+        act_layer = gelu_erf)
+    latent = Flux.truncated_normal(; std = dim^-0.5, lo = -2, hi = 2)(dim, 1, 1)
+    return AttentionPoolLatent(num_heads, latent, Dense(dim => dim; bias = qkv_bias),
+        Dense(dim => 2dim; bias = qkv_bias), Dense(dim => dim), identity,
+        LayerNorm(dim; eps = norm_eps), Mlp(dim, floor(Int, dim * mlp_ratio); act_layer))
+end
+
+function (m::AttentionPoolLatent)(x)
+    _, n, b = size(x)
+    len = size(m.latent, 2)
+    q = reshape(m.q(repeat(m.latent, 1, 1, b)), :, m.num_heads, len, b)
+    kv = reshape(m.kv(x), :, m.num_heads, 2, n, b)
+    k, v = kv[:, :, 1, :, :], kv[:, :, 2, :, :]
+    y = NNlib.scaled_dot_product_attention(q, k, v)
+    y = m.proj_drop(m.proj(reshape(y, :, len, b)))
+    y = y .+ m.mlp(m.norm(y))
+    return y[:, 1, :]
 end
 
 # timm.layers.NormMlpClassifierHead without the hidden layer: pool, norm, flatten, dropout, fc.
