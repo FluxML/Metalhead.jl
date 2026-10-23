@@ -10,6 +10,7 @@ module Timm
 using Flux
 using NNlib
 using ConcreteStructs: @concrete
+using MLUtils: chunk
 using ..Metalhead: ArchSpec, register!
 import ..Metalhead: layer_params
 import ..Metalhead: forward_features, forward_head

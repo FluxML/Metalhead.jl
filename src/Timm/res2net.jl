@@ -1,8 +1,6 @@
 # Ported from timm.models.res2net (timm 1.0.30, Apache-2.0, Ross Wightman).
 # Validated against test/fixtures/res2ne* and test/references/timm--res2net*.
 
-using MLUtils: chunk
-
 @concrete struct Bottle2neck
     conv1
     bn1

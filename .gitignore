@@ -13,3 +13,4 @@ uv.lock
 .python-version
 # copied from README.md
 docs/src/index.md 
+.claude/worktrees/
