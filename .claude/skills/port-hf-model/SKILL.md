@@ -210,8 +210,13 @@ Metalhead before it checks anything. Batch work per process, and see "Iterating 
   (or `f32`/`f64`).
 - `Conv` has 8 fields, `pad_mode` last, and `BatchNorm` stores its channel count in `chs`.
   Construct layers with their public constructors rather than positionally where possible.
+- Constant arrays built in the forward pass (blur filters, pooling matrices) must not be
+  mutated, or Zygote fails: build them with comprehensions and mark the builder
+  `ChainRulesCore.@non_differentiable`. Broadcasting functions like `binomial.` also breaks
+  under Zygote.
 - Test items are isolated modules: a file-level `const` in a test file is not visible inside
-  an item, and helpers go in `test/parity_testsetup.jl`.
+  an item, and helpers go in `test/parity_testsetup.jl`. Statistics is not in the test
+  environment.
 - Zygote gradients mirror the model, with `Chain` entries under `.layers`, `LayerNorm` weights
   under `.diag.scale` and a `Conv2dSame`'s under `.conv.weight`. `check_gradient(model, x)`
   avoids writing these paths: it checks that every trainable array gets a finite gradient,
