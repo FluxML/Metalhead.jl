@@ -58,6 +58,8 @@ end
     @test_throws "unsupported keyword" create_model(fixture("llama_tiny"); num_layers = 2)
     @test_throws "hidden_act" create_model("LlamaForCausalLM"; tiny..., hidden_act = "gelu")
     @test_throws "divisible" create_model("LlamaForCausalLM"; tiny..., num_key_value_heads = 3)
+    @test_throws "divisible" create_model("LlamaForCausalLM"; tiny..., hidden_size = 9,
+        head_dim = 4)
 end
 
 TEST_NETWORK && @testset "references" begin

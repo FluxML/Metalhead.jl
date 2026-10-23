@@ -64,6 +64,35 @@ function rope_theta_of(name; rope_theta, rope_scaling, rope_parameters)
     return Float64(get(params, :rope_theta, something(rope_theta, 10_000.0)))
 end
 
+# transformers' `head_dim` and `num_key_value_heads` of an attention layer, from their
+# config values, which may be `nothing`.
+function attention_heads(; hidden_size, num_attention_heads, num_key_value_heads, head_dim)
+    if head_dim === nothing
+        hidden_size % num_attention_heads == 0 ||
+            error("`hidden_size` ($hidden_size) must be divisible by `num_attention_heads` ($num_attention_heads)")
+        head_dim = hidden_size ÷ num_attention_heads
+    end
+    num_key_value_heads = something(num_key_value_heads, num_attention_heads)
+    num_attention_heads % num_key_value_heads == 0 ||
+        error("`num_attention_heads` ($num_attention_heads) must be divisible by `num_key_value_heads` ($num_key_value_heads)")
+    return head_dim, num_key_value_heads
+end
+
+# transformers' `layer_types` of a model with optional sliding-window attention (Qwen2, Qwen3),
+# computed as its config's `__post_init__` does when the config has none. Only full attention
+# is supported.
+function check_full_attention(name; num_hidden_layers, use_sliding_window, sliding_window,
+        max_window_layers, layer_types)
+    window = use_sliding_window ? sliding_window : nothing
+    types = something(layer_types,
+        [window !== nothing && i >= max_window_layers ? "sliding_attention" :
+         "full_attention"
+         for i in 0:(num_hidden_layers - 1)])
+    all(==("full_attention"), types) ||
+        error("`layer_types = $(repr(Tuple(types)))` is not supported by the Metalhead port of $name: only full attention is")
+    return nothing
+end
+
 """
     TiedLMHead(weight)
 

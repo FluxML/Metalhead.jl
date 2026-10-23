@@ -21,11 +21,12 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
    `julia --project=. -e 'using Pkg; Pkg.instantiate(); using Metalhead'` in the background
    (precompiling a fresh checkout takes minutes), and `cd porting && uv sync`. Read the timm
    source meanwhile. In a git worktree, check that `HEAD` has the latest shared helpers in
-   `src/Timm/layers.jl` (worktrees may start at `master`).
+   `src/Timm/layers.jl` (worktrees may start at `master`); a worktree has no
+   `porting/.venv` of its own until its `uv sync`, which takes seconds from uv's cache.
 1. **Inspect.** `uv run inspect_model.py <arch> [kw=value ...]` prints the
    module tree and the `state_dict`. Quote list values, because zsh globs brackets:
    `'depths=[1,1,1,1]'`. Read the timm source in
-   `porting/.venv/lib/python3.12/site-packages/timm/models/<family>.py`: the module classes,
+   `porting/.venv/lib/python3.*/site-packages/timm/models/<family>.py`: the module classes,
    their `forward`, `forward_features`, `forward_head`, and the `@register_model` entry points.
    Read the constructors in full, including the loops and conditionals. Some modules appear
    only for non-default arguments, such as ConvNeXt's stage-0 downsample when `patch_size == 2`.
@@ -69,7 +70,10 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
    fixtures, parameter counts, a gradient test with `check_gradient`, and the references,
    which download weights and so run only under `TEST_NETWORK &&`. Make the
    architecture filter (`startswith(arch, "vit_")`) and `reference_files(prefix)` specific
-   enough not to catch another family.
+   enough not to catch another family. For a transformers model, use
+   `reference_files_of("<Class>")`, the files of the registered `references`: one
+   organisation's repositories share a prefix across architectures (`Qwen/Qwen3-0.6B`,
+   `Qwen/Qwen3-30B-A3B`).
 8. **Run the tests** of your family only, by file path prefix:
    `julia --project -e 'using Pkg; Pkg.test(test_args = ["models/<family>"])'` (several are
    allowed, e.g. `["models/mlp_mixer", "models/convmixer"]`). Run all of `["hub", "models"]`
@@ -80,20 +84,26 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
 - **Run Julia in a persistent session: the Julia MCP tool** (`mcp__julia__julia_eval`), for all
   Julia code except `Pkg.test`. If it is listed only as a deferred tool, load it first with
   ToolSearch (`select:mcp__julia__julia_eval,mcp__julia__julia_restart`). Pass
-  `env_path` = the repository root (your worktree): each `env_path` has its own session, with
-  Revise loaded, so edits to `src/` are picked up without restarting. A warm session checks a
-  fixture in under a second; a new `julia` process spends 20–30 s loading first.
+  `env_path` = the repository root (your worktree): each `env_path` has its own session. A
+  warm session checks a fixture in under a second; a new `julia` process spends 20–30 s
+  loading first.
   ```julia
   using Metalhead
-  includet(joinpath(pkgdir(Metalhead), "test", "parity.jl"))  # once per session, tracked by Revise
+  isdefined(Main, :Revise)  # decides `includet` or `include` below
+  includet(joinpath(pkgdir(Metalhead), "test", "parity.jl"))  # once per session
   fixture(name) = joinpath(pkgdir(Metalhead), "test", "fixtures", name)
   r = Parity.check_fixture(fixture("<name>")); println(r.pass, " ", r.output)
   ```
+  - The tool says it loads Revise, but that needs Revise in the default Julia environment,
+    which may lack it. Without Revise, `include` `parity.jl` instead of `includet`, and
+    restart (`julia_restart` with the same `env_path`) after each edit to `src/`, then
+    reload; a restart and `using Metalhead` take about 15 s. Don't install Revise into the
+    global environment yourself.
   - The tool shows only printed output: `println` or `display` the results.
   - Call `Parity.` names qualified, and never `include` `parity.jl` a second time: each include
     makes a new module, and the exported names become ambiguous.
-  - Restart (`julia_restart` with the same `env_path`) only after changing the fields of a
-    struct, which Revise cannot do, or when the session is broken.
+  - With Revise, restart only after changing the fields of a struct, which Revise cannot do,
+    or when the session is broken.
 - **Without the tool**, batch: `check.jl` and `check_reference.jl` take any number of
   fixtures, and `dump.py` and `dump_reference.py` any number of specs or repos.
 - `Pkg.test` builds a new test environment each time (a few minutes): run it for your family
@@ -324,6 +334,27 @@ first. The workflow is the one above, with these differences.
   changes (`# Copied from` or `modular_<model>.py` say which): reuse `RMSNorm`,
   `RotaryEmbedding` and `rotary_tables` (for `NNlib.apply_rotary_embedding`), `TiedLMHead`
   and `rope_theta_of` from `layers.jl`, and add shared blocks there.
+- **Llama subclasses.** Where `modular_<model>.py` subclasses the Llama classes, the port
+  reuses the Llama structs, as Res2Net reuses timm's `ResNet`: its builder passes
+  `llama_like` (`llama.jl`) a function that builds the attention of a layer, and defines only
+  the modules that differ. `qwen2.jl` changes only which projections have a bias;
+  `qwen3.jl` adds a `Qwen3Attention` with per-head `q_norm` and `k_norm`. Weight keys come
+  from field names, so the struct names don't matter for loading. `attention_heads` derives
+  `head_dim` and `num_key_value_heads`; an explicit `head_dim` need not divide
+  `hidden_size` (Qwen3-0.6B: 16 heads of 128 features, hidden size 1024).
+- **Derived config fields.** A config class's `__post_init__` can derive fields from others,
+  and `save_pretrained` writes the derived values to `config.json`. Qwen2 and Qwen3 set
+  `sliding_window = None` unless `use_sliding_window`, then derive `layer_types` from
+  `max_window_layers`. Declare the derived field (`layer_types`) as well as its sources,
+  compute it the same way when it is `nothing`, and check the result: `check_full_attention`
+  in `layers.jl` does this for sliding-window attention, which the ports don't implement.
+  Probe edge cases in Python before choosing what to reject (`uv run python -I -c ...`):
+  transformers itself fails on a `"sliding_attention"` layer when `use_sliding_window` is false.
+- **Undeclared and validated fields.** Grep the modeling file for `getattr(config, ...)`: it
+  reads keys that the config class may not declare but a `config.json` can carry (Qwen2's
+  `head_dim`). Declare those too, or `model_args` drops them. The config's validators
+  (`validate_architecture`) say what to reject: `LlamaConfig` requires `hidden_size`
+  divisible by `num_attention_heads` even with an explicit `head_dim`; Qwen3's doesn't.
 - **Registry.** Register the class name with the transformers `ConfigFormat`
   (`src/Transformers/config.jl`) and its model module as the family, e.g.
   `register!(ArchSpec(TRANSFORMERS, "Qwen2ForCausalLM", builder; family = "qwen2", references = [...]))`.

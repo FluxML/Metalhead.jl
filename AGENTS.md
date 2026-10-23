@@ -2,7 +2,7 @@
 
 Metalhead.jl provides Flux ports of Hugging Face Hub models: the vision models of
 [timm](https://github.com/huggingface/pytorch-image-models), and language models of
-[transformers](https://github.com/huggingface/transformers) (Llama for now). Each port mirrors the PyTorch
+[transformers](https://github.com/huggingface/transformers) (Llama and Qwen for now). Each port mirrors the PyTorch
 module tree, loads the original safetensors weights by name, and is checked numerically
 against PyTorch. `create_model` is the entry point.
 
@@ -38,7 +38,7 @@ METALHEAD_TEST_NETWORK=true julia --project -e 'using Pkg; Pkg.test()'     # als
 ```
 
 `Pkg.test` builds a fresh environment each time. For quick iteration, load Metalhead once in a
-persistent Julia session and `includet` `test/parity.jl` (see the skill).
+persistent Julia session and `include` `test/parity.jl` (`includet` with Revise; see the skill).
 
 ## Conventions
 
