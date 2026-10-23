@@ -1,5 +1,5 @@
-const ELTYPE_CONVERTERS = Dict{DataType, Function}(Float16 => f16, Float32 => f32, Float64 =>
-    f64)
+const ELTYPE_CONVERTERS = Dict{DataType, Function}(
+    Float16 => f16, BFloat16 => bf16, Float32 => f32, Float64 => f64)
 
 nt(d::AbstractDict) = (; (Symbol(k) => jsonvalue(v) for (k, v) in d)...)
 jsonvalue(v::AbstractVector) = Tuple(jsonvalue.(v))

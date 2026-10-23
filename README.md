@@ -57,9 +57,9 @@ checkpoints. With `pretrained = true`, the repository's `config.json` and safete
 are downloaded once and cached in the cache of Python's `huggingface_hub`
 (`~/.cache/huggingface/hub`, or `HF_HUB_CACHE`). `HF_TOKEN` gives access to private or gated
 repositories, and `HF_HUB_OFFLINE=1` uses only cached files. The keyword `revision` picks a
-branch, tag or commit, and `eltype` builds the model in `Float16`, `Float32` (the default) or
-`Float64`. Other keywords are the model arguments of the original library (timm's `num_classes`,
-`drop_rate`, ...), and override the repository's configuration.
+branch, tag or commit, and `eltype` builds the model in `Float16`, `Flux.BFloat16`, `Float32`
+(the default) or `Float64`. Other keywords are the model arguments of the original library
+(timm's `num_classes`, `drop_rate`, ...), and override the repository's configuration.
 
 ### Inputs and outputs
 

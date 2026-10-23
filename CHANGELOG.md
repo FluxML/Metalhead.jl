@@ -16,7 +16,8 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
   - `create_model` builds a model from a Hub repository (`"timm/resnet50.a1_in1k"`), a bare
     architecture (`"resnet50"`) or a local directory. Weights are random unless
     `pretrained = true`. It takes timm's keyword arguments (`num_classes`, `in_chans`, ...),
-    plus `pretrained`, `revision` and `eltype`.
+    plus `pretrained`, `revision` and `eltype` (`Float16`, `Flux.BFloat16`, `Float32` or
+    `Float64`).
   - `list_models`, `forward_features`, `forward_head` and `Metalhead.Timm.pretrained_cfg`,
     which returns the preprocessing settings of a checkpoint.
   - Architecture names are unique across libraries. A library registers its architectures with
