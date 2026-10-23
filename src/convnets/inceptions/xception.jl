@@ -88,7 +88,7 @@ See also [`Metalhead.xception`](@ref).
 struct Xception
     layers::Any
 end
-@functor Xception
+Flux.@layer Xception
 
 function Xception(; pretrain::Bool = false, inchannels::Integer = 3,
                   nclasses::Integer = 1000)

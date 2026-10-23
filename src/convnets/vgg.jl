@@ -125,7 +125,7 @@ See also [`vgg`](@ref).
 struct VGG
     layers::Any
 end
-@functor VGG
+Flux.@layer VGG
 
 function VGG(depth::Integer; pretrain::Bool = false, batchnorm::Bool = false,
              inchannels::Integer = 3, nclasses::Integer = 1000)

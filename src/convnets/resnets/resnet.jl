@@ -16,7 +16,7 @@ Advanced users who want more configuration options will be better served by usin
 struct ResNet
     layers::Any
 end
-@functor ResNet
+Flux.@layer ResNet
 
 function ResNet(depth::Integer; pretrain::Bool = false, inchannels::Integer = 3,
                 nclasses::Integer = 1000)
@@ -60,7 +60,7 @@ Advanced users who want more configuration options will be better served by usin
 struct WideResNet
     layers::Any
 end
-@functor WideResNet
+Flux.@layer WideResNet
 
 function WideResNet(depth::Integer; pretrain::Bool = false, inchannels::Integer = 3,
                     nclasses::Integer = 1000)

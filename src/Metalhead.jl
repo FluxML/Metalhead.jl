@@ -1,14 +1,13 @@
 module Metalhead
 
 using Flux
-using Flux: Zygote, outputsize
+using Flux: outputsize
 using Functors
 using BSON
 using JLD2
 using Artifacts, LazyArtifacts
 using Statistics
 using MLUtils
-using PartialFunctions
 using Random
 
 import Functors
@@ -85,19 +84,5 @@ export AlexNet, VGG, ResNet, WideResNet, ResNeXt, DenseNet,
 
 # useful for feature extraction
 export backbone, classifier
-
-# use Flux._big_show to pretty print large models
-for T in (:AlexNet, :VGG, :SqueezeNet, :ResNet, :WideResNet, :ResNeXt,
-          :SEResNet, :SEResNeXt, :Res2Net, :Res2NeXt, :GoogLeNet, :DenseNet,
-          :Inceptionv3, :Inceptionv4, :InceptionResNetv2, :Xception,
-          :MobileNetv1, :MobileNetv2, :MobileNetv3, :MNASNet,
-          :EfficientNet, :EfficientNetv2, :ConvMixer, :ConvNeXt,
-          :MLPMixer, :ResMLP, :gMLP, :ViT, :UNet)
-    @eval Base.show(io::IO, ::MIME"text/plain", model::$T) = _maybe_big_show(io, model)
-end
-
-if !isdefined(Base, :get_extension)
-    include("../ext/MetalheadCUDAExt.jl")
-end
 
 end # module

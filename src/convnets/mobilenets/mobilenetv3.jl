@@ -86,7 +86,7 @@ See also [`Metalhead.mobilenetv3`](@ref).
 struct MobileNetv3
     layers::Any
 end
-@functor MobileNetv3
+Flux.@layer MobileNetv3
 
 function MobileNetv3(config::Symbol; width_mult::Real = 1, pretrain::Bool = false,
                      inchannels::Integer = 3, nclasses::Integer = 1000)

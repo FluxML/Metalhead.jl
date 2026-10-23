@@ -66,7 +66,7 @@ See also [`Metalhead.mobilenetv2`](@ref).
 struct MobileNetv2
     layers::Any
 end
-@functor MobileNetv2
+Flux.@layer MobileNetv2
 
 function MobileNetv2(width_mult::Real = 1; pretrain::Bool = false,
                      inchannels::Integer = 3, nclasses::Integer = 1000)

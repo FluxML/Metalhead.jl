@@ -1,13 +1,11 @@
 module Layers
 
 using Flux
-using Flux: default_rng_value
 using NNlib
 using Functors
 using ChainRulesCore
 using Statistics
 using MLUtils
-using PartialFunctions
 using Random
 
 import Flux.testmode!

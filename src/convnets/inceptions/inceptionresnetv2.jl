@@ -117,7 +117,7 @@ See also [`Metalhead.inceptionresnetv2`](@ref).
 struct InceptionResNetv2
     layers::Any
 end
-@functor InceptionResNetv2
+Flux.@layer InceptionResNetv2
 
 function InceptionResNetv2(; pretrain::Bool = false, inchannels::Integer = 3,
                            nclasses::Integer = 1000)

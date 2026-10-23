@@ -25,7 +25,7 @@ Advanced users who want more configuration options will be better served by usin
 struct Res2Net
     layers::Any
 end
-@functor Res2Net
+Flux.@layer Res2Net
 
 function Res2Net(depth::Integer; pretrain::Bool = false, scale::Integer = 4,
                  base_width::Integer = 26, inchannels::Integer = 3,
@@ -75,7 +75,7 @@ Advanced users who want more configuration options will be better served by usin
 struct Res2NeXt
     layers::Any
 end
-@functor Res2NeXt
+Flux.@layer Res2NeXt
 
 function Res2NeXt(depth::Integer; pretrain::Bool = false, scale::Integer = 4,
                   base_width::Integer = 4, cardinality::Integer = 8,

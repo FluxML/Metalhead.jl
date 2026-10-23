@@ -2,6 +2,8 @@ name: pr_comment
 on:
   pull_request:
     types: [labeled]
+permissions:
+  pull-requests: write
 jobs:
   pr_comment:
     runs-on: ubuntu-latest

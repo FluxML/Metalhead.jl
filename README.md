@@ -9,6 +9,8 @@
 
 ## Installation
 
+Metalhead.jl requires Julia 1.10 or later. Install it from the Julia package manager:
+
 ```julia
 julia> ]add Metalhead
 ```
@@ -41,9 +43,13 @@ To contribute new models, see our [contributing docs](https://fluxml.ai/Metalhea
 | [MobileNetv2](https://arxiv.org/abs/1801.04381)  | [`MobileNetv2`](https://fluxml.ai/Metalhead.jl/dev/api/mobilenet/#Metalhead.MobileNetv2)   | N            |
 | [MobileNetv3](https://arxiv.org/abs/1905.02244)  | [`MobileNetv3`](https://fluxml.ai/Metalhead.jl/dev/api/mobilenet/#Metalhead.MobileNetv3)   | N            |
 | [MNASNet](https://arxiv.org/abs/1807.11626)       | [`MNASNet`](https://fluxml.ai/Metalhead.jl/dev/api/efficientnet/#Metalhead.MNASNet)   | N            |
+| [Res2Net](https://arxiv.org/abs/1904.01169)      | [`Res2Net`](https://fluxml.ai/Metalhead.jl/dev/api/resnet/#Metalhead.Res2Net)           | N            |
+| [Res2NeXt](https://arxiv.org/abs/1904.01169)     | [`Res2NeXt`](https://fluxml.ai/Metalhead.jl/dev/api/resnet/#Metalhead.Res2NeXt)         | N            |
 | [ResMLP](https://arxiv.org/abs/2105.03404)       | [`ResMLP`](https://fluxml.ai/Metalhead.jl/dev/api/mixers/#Metalhead.ResMLP)                    | N            |
 | [ResNet](https://arxiv.org/abs/1512.03385)       | [`ResNet`](https://fluxml.ai/Metalhead.jl/dev/api/resnet/#Metalhead.ResNet)             | Y            |
 | [ResNeXt](https://arxiv.org/abs/1611.05431)      | [`ResNeXt`](https://fluxml.ai/Metalhead.jl/dev/api/resnet/#Metalhead.ResNeXt)           | Y            |
+| [SE-ResNet](https://arxiv.org/abs/1709.01507)    | [`SEResNet`](https://fluxml.ai/Metalhead.jl/dev/api/resnet/#Metalhead.SEResNet)         | N            |
+| [SE-ResNeXt](https://arxiv.org/abs/1709.01507)   | [`SEResNeXt`](https://fluxml.ai/Metalhead.jl/dev/api/resnet/#Metalhead.SEResNeXt)       | N            |
 | [SqueezeNet](https://arxiv.org/abs/1602.07360)   | [`SqueezeNet`](https://fluxml.ai/Metalhead.jl/dev/api/others/#Metalhead.SqueezeNet)     | Y            |
 | [Xception](https://arxiv.org/abs/1610.02357) | [`Xception`](https://fluxml.ai/Metalhead.jl/dev/api/inception/#Metalhead.Xception)                 | N            |
 | [WideResNet](https://arxiv.org/abs/1605.07146)   | [`WideResNet`](https://fluxml.ai/Metalhead.jl/dev/api/resnet/#Metalhead.WideResNet)     | Y            |

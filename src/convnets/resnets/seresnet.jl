@@ -20,7 +20,7 @@ Advanced users who want more configuration options will be better served by usin
 struct SEResNet
     layers::Any
 end
-@functor SEResNet
+Flux.@layer SEResNet
 
 function SEResNet(depth::Integer; pretrain::Bool = false, inchannels::Integer = 3,
                   nclasses::Integer = 1000)
@@ -65,7 +65,7 @@ Advanced users who want more configuration options will be better served by usin
 struct SEResNeXt
     layers::Any
 end
-@functor SEResNeXt
+Flux.@layer SEResNeXt
 
 function SEResNeXt(depth::Integer; pretrain::Bool = false, cardinality::Integer = 32,
                    base_width::Integer = 4, inchannels::Integer = 3,

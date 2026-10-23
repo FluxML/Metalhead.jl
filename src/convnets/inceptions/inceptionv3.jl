@@ -178,7 +178,7 @@ See also [`Metalhead.inceptionv3`](@ref).
 struct Inceptionv3
     layers::Any
 end
-@functor Inceptionv3
+Flux.@layer Inceptionv3
 
 function Inceptionv3(; pretrain::Bool = false, inchannels::Integer = 3,
                      nclasses::Integer = 1000)

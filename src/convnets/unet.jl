@@ -110,7 +110,7 @@ See also [`Metalhead.unet`](@ref).
 struct UNet
     layers::Any
 end
-@functor UNet
+Flux.@layer UNet
 
 function UNet(imsize::Dims{2} = (256, 256), inchannels::Integer = 3, outplanes::Integer = 3,
               encoder_backbone = Metalhead.backbone(DenseNet(121)); pretrain::Bool = false)

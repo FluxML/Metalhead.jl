@@ -39,7 +39,7 @@ Positional embedding layer used by many vision transformer-like models.
 struct ViPosEmbedding{T}
     vectors::T
 end
-@functor ViPosEmbedding
+Flux.@layer ViPosEmbedding
 
 function ViPosEmbedding(embedsize::Integer, npatches::Integer;
                         init = (dims::Dims{2}) -> rand(Float32, dims))
@@ -57,7 +57,7 @@ vision transformer models.
 struct ClassTokens{T}
     token::T
 end
-@functor ClassTokens
+Flux.@layer ClassTokens
 
 ClassTokens(planes::Integer; init = Flux.zeros32) = ClassTokens(init(planes, 1, 1))
 

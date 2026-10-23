@@ -84,7 +84,7 @@ See also [`efficientnet`](#).
 struct EfficientNetv2
     layers::Any
 end
-@functor EfficientNetv2
+Flux.@layer EfficientNetv2
 
 function EfficientNetv2(config::Symbol; pretrain::Bool = false,
                         inchannels::Integer = 3, nclasses::Integer = 1000)

@@ -94,7 +94,7 @@ See also [`Metalhead.googlenet`](@ref).
 struct GoogLeNet
     layers::Any
 end
-@functor GoogLeNet
+Flux.@layer GoogLeNet
 
 function GoogLeNet(; pretrain::Bool = false, inchannels::Integer = 3,
                    nclasses::Integer = 1000, batchnorm::Bool = false, bias::Bool = true)

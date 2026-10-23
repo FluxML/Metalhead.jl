@@ -121,7 +121,7 @@ See also [`Metalhead.convnext`](@ref).
 struct ConvNeXt
     layers::Any
 end
-@functor ConvNeXt
+Flux.@layer ConvNeXt
 
 function ConvNeXt(config::Symbol; pretrain::Bool = false, inchannels::Integer = 3,
                   nclasses::Integer = 1000)

@@ -81,7 +81,7 @@ See also [`Metalhead.efficientnet`](@ref).
 struct EfficientNet
     layers::Any
 end
-@functor EfficientNet
+Flux.@layer EfficientNet
 
 function EfficientNet(config::Symbol; pretrain::Bool = false, inchannels::Integer = 3,
                       nclasses::Integer = 1000)

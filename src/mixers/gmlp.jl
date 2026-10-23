@@ -14,7 +14,7 @@ struct SpatialGatingUnit{T, F}
     norm::T
     proj::F
 end
-@functor SpatialGatingUnit
+Flux.@layer SpatialGatingUnit
 
 function SpatialGatingUnit(planes::Integer, npatches::Integer; norm_layer = LayerNorm)
     gateplanes = planes ÷ 2
@@ -82,7 +82,7 @@ See also [`Metalhead.mlpmixer`](@ref).
 struct gMLP
     layers::Any
 end
-@functor gMLP
+Flux.@layer gMLP
 
 function gMLP(config::Symbol; imsize::Dims{2} = (224, 224), patch_size::Dims{2} = (16, 16),
               pretrain::Bool = false, inchannels::Integer = 3, nclasses::Integer = 1000)

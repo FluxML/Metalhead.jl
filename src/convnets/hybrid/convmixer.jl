@@ -67,7 +67,7 @@ See also [`Metalhead.convmixer`](@ref).
 struct ConvMixer
     layers::Any
 end
-@functor ConvMixer
+Flux.@layer ConvMixer
 
 function ConvMixer(config::Symbol; pretrain::Bool = false, inchannels::Integer = 3,
                    nclasses::Integer = 1000)
