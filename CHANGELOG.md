@@ -36,7 +36,7 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
   strictly by name.
 - `porting/` tools and a Claude Code skill (`skills/port-hf-model`) for porting new
   models (#305, #307).
-- Documentation: getting started, model list, validation, porting and a
+- Documentation: getting started, a model list grouped by family, validation, porting and a
   [migration guide](https://fluxml.ai/Metalhead.jl/dev/migration/) from 0.9 (#307).
 
 ### Changed
@@ -51,6 +51,10 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
 - The hand-written models (`ResNet(50)`, `ViT(:base)`, ...) and their lowercase builders, the
   `Metalhead.Layers` module, and `pretrain = true` with the weights it loads from the FluxML
   organisation. They will be removed in 0.11 (#305).
+
+### Removed
+
+- Deprecated API reference pages and the old ResNet tutorial from the documentation.
 
 ### Fixed
 
