@@ -99,31 +99,42 @@ function llama_for_causal_lm(; vocab_size = 32000, hidden_size = 4096,
         rope_theta = nothing, rope_scaling = nothing, rope_parameters = nothing,
         attention_bias = false, attention_dropout = 0.0, mlp_bias = false,
         head_dim = nothing)
+    # `LlamaConfig` checks this even when `head_dim` is given
     hidden_size % num_attention_heads == 0 ||
         error("`hidden_size` ($hidden_size) must be divisible by `num_attention_heads` ($num_attention_heads)")
-    num_key_value_heads = something(num_key_value_heads, num_attention_heads)
-    num_attention_heads % num_key_value_heads == 0 ||
-        error("`num_attention_heads` ($num_attention_heads) must be divisible by `num_key_value_heads` ($num_key_value_heads)")
-    head_dim = something(head_dim, hidden_size ÷ num_attention_heads)
+    head_dim, num_key_value_heads = attention_heads(; hidden_size, num_attention_heads,
+        num_key_value_heads, head_dim)
     theta = rope_theta_of("LlamaForCausalLM"; rope_theta, rope_scaling, rope_parameters)
+    attention(dense) = LlamaAttention(head_dim,
+        dense(hidden_size => num_attention_heads * head_dim, attention_bias),
+        dense(hidden_size => num_key_value_heads * head_dim, attention_bias),
+        dense(hidden_size => num_key_value_heads * head_dim, attention_bias),
+        dense(num_attention_heads * head_dim => hidden_size, attention_bias),
+        dropout_or_identity(attention_dropout))
+    return llama_like(attention; vocab_size, hidden_size, intermediate_size,
+        num_hidden_layers, hidden_act, initializer_range, rms_norm_eps, tie_word_embeddings,
+        rope_theta = theta, head_dim, mlp_bias)
+end
+
+# A `LlamaForCausalLM` whose layers have the self-attention `attention(dense)`, where
+# `dense(in => out, bias)` is a Linear layer initialised like transformers'. The models that
+# transformers derives from Llama's classes (Qwen2, Qwen3) are built with it.
+function llama_like(attention; vocab_size, hidden_size, intermediate_size,
+        num_hidden_layers, hidden_act, initializer_range, rms_norm_eps, tie_word_embeddings,
+        rope_theta, head_dim, mlp_bias = false)
     init = normal_init(initializer_range)
     dense(in_out, bias) = Dense(in_out; bias, init)
+    norm() = RMSNorm(hidden_size; eps = rms_norm_eps)
     function decoder_layer()
-        attn = LlamaAttention(head_dim,
-            dense(hidden_size => num_attention_heads * head_dim, attention_bias),
-            dense(hidden_size => num_key_value_heads * head_dim, attention_bias),
-            dense(hidden_size => num_key_value_heads * head_dim, attention_bias),
-            dense(num_attention_heads * head_dim => hidden_size, attention_bias),
-            dropout_or_identity(attention_dropout))
         mlp = LlamaMLP(dense(hidden_size => intermediate_size, mlp_bias),
             dense(hidden_size => intermediate_size, mlp_bias),
             dense(intermediate_size => hidden_size, mlp_bias), act_fn(hidden_act))
-        return LlamaDecoderLayer(attn, mlp, RMSNorm(hidden_size; eps = rms_norm_eps),
-            RMSNorm(hidden_size; eps = rms_norm_eps))
+        return LlamaDecoderLayer(attention(dense), mlp, norm(), norm())
     end
     embed_tokens = Embedding(vocab_size => hidden_size; init)
-    model = LlamaModel(embed_tokens, [decoder_layer() for _ in 1:num_hidden_layers],
-        RMSNorm(hidden_size; eps = rms_norm_eps), RotaryEmbedding(head_dim, theta))
+    model = LlamaModel(
+        embed_tokens, [decoder_layer() for _ in 1:num_hidden_layers], norm(),
+        RotaryEmbedding(head_dim, rope_theta))
     lm_head = tie_word_embeddings ? TiedLMHead(embed_tokens.weight) :
               dense(hidden_size => vocab_size, false)
     return LlamaForCausalLM(model, lm_head)

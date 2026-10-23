@@ -26,6 +26,8 @@ function write_model_list(path)
         "llama" => "Llama",
         "mlp_mixer" => "MLP-Mixer, ResMLP and gMLP",
         "mobilenetv3" => "MobileNetV3/V4, FBNetV3 and LCNet",
+        "qwen2" => "Qwen2",
+        "qwen3" => "Qwen3",
         "res2net" => "Res2Net",
         "resnet" => "ResNet",
         "vgg" => "VGG",

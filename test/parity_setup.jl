@@ -9,7 +9,8 @@ using Test
 using ChainRulesCore: unthunk
 
 export Parity, check_fixture, check_lm_reference, fixture_model, shrink_channels,
-       reference_input, relerr, tapify, fixture, reference_files, check_param_counts,
+       reference_input, relerr, tapify, fixture, reference_files, reference_files_of,
+       check_param_counts,
        check_gradient, JSON, SafeTensors, TEST_NETWORK, check_intermediate_api
 
 # The reference tests download pretrained weights from the Hub.
@@ -23,6 +24,13 @@ function reference_files(prefix; org = "timm")
     return filter(
         f -> startswith(basename(f), "$org--$prefix") && endswith(f, ".safetensors"),
         readdir(joinpath(TEST_DIR, "references"); join = true))
+end
+
+# The reference files of the checkpoints registered for `arch`, which a repository prefix
+# can't single out when an organisation publishes several architectures (Qwen).
+function reference_files_of(arch)
+    return [joinpath(TEST_DIR, "references", replace(repo, "/" => "--") * ".safetensors")
+            for (repo, _) in Metalhead.lookup(arch).references]
 end
 
 const PARAM_COUNTS = merge((JSON.parsefile(f)

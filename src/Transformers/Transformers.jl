@@ -22,5 +22,7 @@ import ..Metalhead: forward_features, forward_head
 include("config.jl")
 include("layers.jl")
 include("llama.jl")
+include("qwen2.jl")
+include("qwen3.jl")
 
 end # module

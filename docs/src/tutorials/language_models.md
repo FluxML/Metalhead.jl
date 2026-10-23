@@ -2,7 +2,8 @@
 
 Metalhead also ports language models from
 [Hugging Face Transformers](https://github.com/huggingface/transformers), starting with the
-Llama architecture (`LlamaForCausalLM`). They load from the Hub like the timm models:
+Llama and Qwen architectures (`LlamaForCausalLM`, `Qwen2ForCausalLM` and `Qwen3ForCausalLM`).
+They load from the Hub like the timm models:
 
 ```julia
 using Metalhead
@@ -68,6 +69,11 @@ create_model("LlamaForCausalLM"; vocab_size = 1000, hidden_size = 64, intermedia
     num_hidden_layers = 2, num_attention_heads = 4, num_key_value_heads = 2)
 ```
 
-Options that the port doesn't implement raise an error. For Llama, these are the rotary
-embeddings other than the default one, such as the `rope_type = "llama3"` of Llama 3.1 and
-later.
+Options that the port doesn't implement raise an error. These are the rotary embeddings other
+than the default one, such as the `rope_type = "llama3"` of Llama 3.1 and later, and the
+sliding-window attention of Qwen2 and Qwen3 (`use_sliding_window`), which their released
+checkpoints leave off.
+
+transformers derives the Qwen2 and Qwen3 classes from Llama's, and their ports reuse the
+Llama structs: a Qwen model is a `LlamaForCausalLM`, whose Qwen3 attention layers are
+`Qwen3Attention`s.

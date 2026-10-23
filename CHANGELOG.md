@@ -38,12 +38,13 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
     v3 and v4; MobileNet-EdgeTPU; MNASNet, SemNASNet, SPNASNet and TinyNet; MixNet; FBNet-C
     and FBNetV3; LCNet.
 - Flux ports of [transformers](https://github.com/huggingface/transformers) language models,
-  starting with `LlamaForCausalLM`, validated against `HuggingFaceTB/SmolLM2-135M` (#327).
+  `LlamaForCausalLM` (#327), `Qwen2ForCausalLM` and `Qwen3ForCausalLM` (#329), validated against
+  `HuggingFaceTB/SmolLM2-135M`, `Qwen/Qwen2.5-0.5B` and `Qwen/Qwen3-0.6B`.
   `create_model` loads them from their Hub repository, and takes the fields of `config.json`
   as keyword arguments. They take token indices starting at 1 and return logits; there is no
   key-value cache or padding mask yet.
 - Validation against PyTorch: float64 parity fixtures for every code path, run in CI without
-  Python or network access, and float32 references for 56 pretrained checkpoints. Weights load
+  Python or network access, and float32 references for 59 pretrained checkpoints. Weights load
   strictly by name.
 - `porting/` tools and an agent skill (`skills/port-hf-model`) for porting new
   models (#305, #307).
