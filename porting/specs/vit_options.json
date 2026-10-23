@@ -1,0 +1,1 @@
+{"architecture": "vit_small_patch16_224", "kwargs": {"img_size": [16, 32], "patch_size": [4, 8], "in_chans": 2, "embed_dim": 24, "depth": 3, "num_heads": 3, "mlp_ratio": 2.5, "qkv_bias": false, "drop_rate": 0.1, "pos_drop_rate": 0.1, "proj_drop_rate": 0.1, "attn_drop_rate": 0.1, "drop_path_rate": 0.2, "num_classes": 7}, "input_shape": [2, 2, 16, 32]}

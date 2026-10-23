@@ -1,0 +1,19 @@
+{
+  "architecture": "vit_tiny_patch16_224",
+  "num_classes": 10,
+  "model_args": {
+    "img_size": 32,
+    "patch_size": 8,
+    "embed_dim": 16,
+    "depth": 2,
+    "num_heads": 2
+  },
+  "pretrained_cfg": {
+    "input_size": [
+      3,
+      32,
+      32
+    ],
+    "classifier": "head"
+  }
+}

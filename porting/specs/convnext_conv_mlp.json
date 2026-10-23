@@ -1,0 +1,1 @@
+{"architecture": "convnext_atto", "kwargs": {"depths": [1, 2, 2, 1], "dims": [8, 16, 24, 32], "num_classes": 10}, "input_shape": [2, 3, 64, 64]}

@@ -1,0 +1,1 @@
+{"architecture": "resnet18", "kwargs": {"layers": [1, 1, 1, 1], "channels": [8, 16, 32, 64], "num_classes": 10}, "input_shape": [2, 3, 32, 32]}

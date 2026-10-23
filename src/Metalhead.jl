@@ -14,4 +14,20 @@ import Functors
 
 include("legacy/legacy.jl")
 
+# Hugging Face Hub ports
+using ConcreteStructs: @concrete
+import HuggingFaceHub as HF
+using JSON: JSON
+using SafeTensors: SafeTensors
+
+include("hub/checkpoint.jl")
+include("hub/download.jl")
+include("hub/loadweights.jl")
+include("hub/registry.jl")
+include("hub/api.jl")
+
+include("Timm/Timm.jl")
+
+export create_model, list_models, forward_features, forward_head
+
 end # module

@@ -1,0 +1,130 @@
+{
+ "resnet101": {
+  "num_params": 44549160,
+  "num_tensors": 522
+ },
+ "resnet101c": {
+  "num_params": 44568392,
+  "num_tensors": 532
+ },
+ "resnet101d": {
+  "num_params": 44568392,
+  "num_tensors": 532
+ },
+ "resnet101s": {
+  "num_params": 44672936,
+  "num_tensors": 532
+ },
+ "resnet10t": {
+  "num_params": 5435488,
+  "num_tensors": 72
+ },
+ "resnet14t": {
+  "num_params": 10081632,
+  "num_tensors": 97
+ },
+ "resnet152": {
+  "num_params": 60192808,
+  "num_tensors": 777
+ },
+ "resnet152c": {
+  "num_params": 60212040,
+  "num_tensors": 787
+ },
+ "resnet152d": {
+  "num_params": 60212040,
+  "num_tensors": 787
+ },
+ "resnet152s": {
+  "num_params": 60316584,
+  "num_tensors": 787
+ },
+ "resnet18": {
+  "num_params": 11689512,
+  "num_tensors": 102
+ },
+ "resnet18d": {
+  "num_params": 11708744,
+  "num_tensors": 112
+ },
+ "resnet200d": {
+  "num_params": 64693064,
+  "num_tensors": 1027
+ },
+ "resnet26": {
+  "num_params": 15995176,
+  "num_tensors": 147
+ },
+ "resnet26d": {
+  "num_params": 16014408,
+  "num_tensors": 157
+ },
+ "resnet26t": {
+  "num_params": 16011872,
+  "num_tensors": 157
+ },
+ "resnet34": {
+  "num_params": 21797672,
+  "num_tensors": 182
+ },
+ "resnet34d": {
+  "num_params": 21816904,
+  "num_tensors": 192
+ },
+ "resnet50": {
+  "num_params": 25557032,
+  "num_tensors": 267
+ },
+ "resnet50c": {
+  "num_params": 25576264,
+  "num_tensors": 277
+ },
+ "resnet50d": {
+  "num_params": 25576264,
+  "num_tensors": 277
+ },
+ "resnet50s": {
+  "num_params": 25680808,
+  "num_tensors": 277
+ },
+ "resnet50t": {
+  "num_params": 25573728,
+  "num_tensors": 277
+ },
+ "resnext101_32x16d": {
+  "num_params": 194026792,
+  "num_tensors": 522
+ },
+ "resnext101_32x32d": {
+  "num_params": 468530472,
+  "num_tensors": 522
+ },
+ "resnext101_32x4d": {
+  "num_params": 44177704,
+  "num_tensors": 522
+ },
+ "resnext101_32x8d": {
+  "num_params": 88791336,
+  "num_tensors": 522
+ },
+ "resnext101_64x4d": {
+  "num_params": 83455272,
+  "num_tensors": 522
+ },
+ "resnext50_32x4d": {
+  "num_params": 25028904,
+  "num_tensors": 267
+ },
+ "resnext50d_32x4d": {
+  "num_params": 25048136,
+  "num_tensors": 277
+ },
+ "wide_resnet101_2": {
+  "num_params": 126886696,
+  "num_tensors": 522
+ },
+ "wide_resnet50_2": {
+  "num_params": 68883240,
+  "num_tensors": 267
+ }
+}
