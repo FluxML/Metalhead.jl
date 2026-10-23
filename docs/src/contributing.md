@@ -7,7 +7,8 @@ Contributions are welcome: bug reports and feature requests as
 
 This page is about adding a model. Metalhead admits models whose weights are on the
 [Hugging Face Hub](https://huggingface.co/models). For now these are
-[timm](https://github.com/huggingface/pytorch-image-models) vision models. A port is a Flux
+[timm](https://github.com/huggingface/pytorch-image-models) vision models and
+[transformers](https://github.com/huggingface/transformers) language models. A port is a Flux
 reimplementation of the PyTorch code, validated as described in
 [How models are validated](@ref validation). The registry and `create_model` are not specific
 to timm: a library other than timm gets its own module, `src/<Name>/`, and a
@@ -17,8 +18,8 @@ to timm: a library other than timm gets its own module, `src/<Name>/`, and a
 ## Setup
 
 The porting tools in [`porting/`](https://github.com/FluxML/Metalhead.jl/tree/master/porting)
-are a Python project managed with [uv](https://docs.astral.sh/uv/). It pins timm and a CPU
-build of PyTorch. Python is only needed to port a model: the package and its tests don't use
+are a Python project managed with [uv](https://docs.astral.sh/uv/). It pins timm,
+transformers and a CPU build of PyTorch. Python is only needed to port a model: the package and its tests don't use
 it.
 
 ```sh
@@ -62,6 +63,12 @@ The skill is also the reference for porting by hand. In short:
 7. **Add tests** in `test/models/<family>.jl`, following the existing ones, and run
    `julia --project -e 'using Pkg; Pkg.test(test_args = ["models"])'`.
 
+A transformers model follows the same steps, with three differences. The port goes in
+`src/Transformers/<model>.jl`, and registers the transformers class (`"LlamaForCausalLM"`),
+whose builder takes the fields of `config.json`. Its specs have `"library": "transformers"`, a
+`model_type` and the `config` fields (see `porting/specs/llama_tiny.json`). It has no parameter
+counts: its configurations are checkpoints, which load strictly.
+
 When a fixture fails, `uv run dump.py specs/<name>.json --all-taps --out out/<name>` records
 the output of every module, and `check.jl out/<name>` shows the first one that differs.
 
@@ -82,7 +89,7 @@ the output of every module, and `check.jl out/<name>` shows the first one that d
 ## Pull request checklist
 
 - Every fixture passes at 1e-8, and the references pass at 1e-4.
-- The parameter counts of every registered architecture match timm.
+- The parameter counts of every registered timm architecture match timm.
 - A gradient test runs.
-- The file header names the timm module and version it was ported from.
+- The file header names the timm or transformers module and version it was ported from.
 - Fixtures are under 1 MB each.

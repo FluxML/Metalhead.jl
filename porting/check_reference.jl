@@ -1,6 +1,6 @@
 # Compare a port with the reference outputs of a real checkpoint, written by dump_reference.py.
 #
-#   julia --project=.. check_reference.jl ../test/references/timm--<repo>.safetensors ...
+#   julia --project=.. check_reference.jl ../test/references/<org>--<repo>.safetensors ...
 #
 # Metalhead shares the Hub cache of Python's huggingface_hub, so the checkpoint that
 # dump_reference.py downloaded loads with no network access.
@@ -12,6 +12,15 @@ pass = true
 for file in ARGS
     meta = SafeTensors.deserialize(file).metadata
     ref = Metalhead.Checkpoint(file)
+    if haskey(ref, "input_ids")
+        r = check_lm_reference(file)
+        ok = r.hidden_states <= 1e-4 && r.last_logits <= 1e-4 && r.generated
+        global pass &= ok
+        println(rpad(meta["repo"], 50), " hidden_states ", round(r.hidden_states; sigdigits = 2),
+            "  last_logits ", round(r.last_logits; sigdigits = 2),
+            "  greedy ", r.generated ? "same" : "DIFFERENT", ok ? "  ok" : "  FAIL")
+        continue
+    end
     model = create_model(meta["repo"]; pretrained = true, revision = meta["revision"])
     x = reference_input(Tuple(Metalhead.JSON.parse(meta["input_shape"])))
     logits = relerr(model(x), ref["logits"])

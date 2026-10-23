@@ -3,6 +3,11 @@
     uv run dump.py specs/<name>.json [specs/<other>.json ...] [--all-taps]
     uv run dump.py specs/<name>.json --out DIR --all-taps     # a debug dump
 
+A spec with "library": "transformers" describes a transformers model: "architecture" (the class,
+e.g. "LlamaForCausalLM"), "model_type" and "config" (the fields of its config), and "input_shape"
+(batch, seq_len) of random token ids. Its fixture directory is written by `save_pretrained`, and
+the RMSNorms and rotary tables are computed in float64 (see `exact_float64` in common.py).
+
 Optional spec keys: "shrink": k divides every channel count by k (see `shrunk_channels` in
 common.py; the Julia side applies `shrink_channels` from config.json), and
 "weight_dtype": "float16" stores the weights in half precision, and "tap_depth": d records the
@@ -20,8 +25,8 @@ import pathlib
 import torch
 from safetensors.torch import save_file
 
-from common import (build, classifier_name, float64_pos_embed, rerandomize, state_dict_f32,
-                    versions, write_json)
+from common import (build, classifier_name, exact_float64, float64_pos_embed, rerandomize,
+                    state_dict_f32, versions, write_json)
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
@@ -47,6 +52,9 @@ def dump(spec_path, args):
     spec = json.loads(spec_path.read_text())
     out = pathlib.Path(args.out) if args.out else ROOT / "test" / "fixtures" / spec_path.stem
     out.mkdir(parents=True, exist_ok=True)
+
+    if spec.get("library") == "transformers":
+        return dump_transformers(spec, out, args)
 
     torch.manual_seed(spec.get("seed", 0))
     model = build(spec).eval()
@@ -153,6 +161,53 @@ def dump_intermediates(model, x):
         _, pairs = model.forward_intermediates(x, return_prefix_tokens=True)
         out.update({f"intermediates_prefix/{i + 1}": store(p) for i, (_, p) in enumerate(pairs)})
     return out
+
+
+def dump_transformers(spec, out, args):
+    """Write the fixture of a transformers spec: the logits of a causal LM, its last hidden state
+    (features), and the outputs of the modules with parameters (taps)."""
+    seed = spec.get("seed", 0)
+    torch.manual_seed(seed)
+    model = build(spec).eval()
+    rerandomize(model, seed)
+    model.save_pretrained(out)  # config.json, and model.safetensors without the tied lm_head
+    (out / "generation_config.json").unlink(missing_ok=True)
+    model = model.double()
+    exact_float64(model)
+
+    tap_dtype = getattr(torch, args.tap_dtype or ("float32" if args.all_taps else "float16"))
+    taps, order, counts = {}, [], {}
+
+    def hook(name):
+        def fn(module, inputs, output):
+            outs = output if isinstance(output, (tuple, list)) else (output,)
+            tensors = [o for o in outs if isinstance(o, torch.Tensor)]
+            counts[name] = counts.get(name, 0) + 1
+            for i, o in enumerate(tensors):
+                key = f"{name}#{counts[name]}" + (f".{i + 1}" if len(tensors) > 1 else "")
+                taps["tap/" + key] = o.detach().to(tap_dtype).contiguous()
+                order.append(key)
+        return fn
+
+    handles = [m.register_forward_hook(hook(n)) for n, m in model.named_modules()
+               if n and any(True for _ in m.parameters())
+               and (args.all_taps or n.count(".") <= spec.get("tap_depth", 1))]
+    gen = torch.Generator().manual_seed(seed + 1)
+    x = torch.randint(model.config.vocab_size, spec["input_shape"], generator=gen)
+    with torch.no_grad():
+        logits = model(input_ids=x).logits
+        for h in handles:
+            h.remove()
+        features = model.model(input_ids=x).last_hidden_state
+
+    acts = {"input": x, "output": logits.contiguous(), "features": features.contiguous(), **taps}
+    meta = {"spec": json.dumps(spec), "call_order": json.dumps(order),
+            "num_params": str(sum(p.numel() for p in model.parameters())), **versions()}
+    save_file(acts, out / "acts.safetensors", metadata=meta)
+
+    size = sum(f.stat().st_size for f in out.iterdir())
+    print(f"{out}: {len(model.state_dict())} tensors, {len(taps)} taps, {size / 1e6:.2f} MB")
+    return size <= args.max_bytes or bool(args.out)
 
 
 if __name__ == "__main__":

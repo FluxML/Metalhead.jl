@@ -37,6 +37,11 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
     EfficientNet (B0–B8, L2, Lite, EdgeTPU, CondConv) and EfficientNetV2; MobileNet v1, v2,
     v3 and v4; MobileNet-EdgeTPU; MNASNet, SemNASNet, SPNASNet and TinyNet; MixNet; FBNet-C
     and FBNetV3; LCNet.
+- Flux ports of [transformers](https://github.com/huggingface/transformers) language models,
+  starting with `LlamaForCausalLM`, validated against `HuggingFaceTB/SmolLM2-135M` (#327).
+  `create_model` loads them from their Hub repository, and takes the fields of `config.json`
+  as keyword arguments. They take token indices starting at 1 and return logits; there is no
+  key-value cache or padding mask yet.
 - Validation against PyTorch: float64 parity fixtures for every code path, run in CI without
   Python or network access, and float32 references for 56 pretrained checkpoints. Weights load
   strictly by name.
@@ -50,7 +55,7 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
 ### Changed
 
 - New dependencies: HuggingFaceApi, SafeTensors, JSON and ConcreteStructs. Flux 0.16.13 and
-  NNlib 0.9.51 are now the minimum versions (#305).
+  NNlib 0.9.52 are now the minimum versions (#305, #327).
 - Downloads share the cache of Python's `huggingface_hub` (`~/.cache/huggingface/hub`), and
   its `HF_TOKEN`, `HF_HUB_CACHE` and `HF_HUB_OFFLINE` environment variables.
 

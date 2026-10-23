@@ -5,7 +5,8 @@ page describes what is checked, and what that guarantees.
 
 ## What a port is
 
-A port is a Julia file in `src/Timm/` that rebuilds the PyTorch module tree with Flux layers.
+A port is a Julia file in `src/Timm/` (timm) or `src/Transformers/` (transformers) that
+rebuilds the PyTorch module tree with Flux layers.
 Each PyTorch submodule becomes a field with the same name, so a checkpoint's `state_dict`
 keys follow from the structure of the Flux model. Weights load by name, with no hand-written
 mapping. Arrays use Flux's layout, which is PyTorch's with the dimensions reversed (NCHW
@@ -40,6 +41,13 @@ float64), along with timm's channels, reductions and module names. For families 
 native `forward_intermediates`, `dump.py` records hooks at the modules in `feature_info`.
 The tests check selected indices, early stopping and gradients through the selected taps.
 
+For a language model, the fixture is a small configuration of the transformers class (two or
+three layers, a hidden size of a few dozen and a vocabulary of a few dozen tokens), saved with
+`save_pretrained` like a Hub repository, and its input is random token ids. The taps go down to
+the attention, MLP and norms of each layer. transformers computes its RMSNorms and rotary
+embeddings in float32, even in a float64 model. `dump.py` computes them in float64, so that the
+1e-8 comparison tests the architecture rather than that rounding.
+
 Fixtures are under 1 MB each. They run without Python and without network access.
 
 ## References
@@ -50,10 +58,16 @@ commit of the weights. The Flux model, loaded from the Hub at that commit, must 
 **1e-4 in float32**. Correct ports land between 1e-7 and 1e-5. These tests download the
 weights, so they only run with `METALHEAD_TEST_NETWORK=true`.
 
+For a language model, the input is two prompts tokenized by the repository's tokenizer. The
+reference stores the token ids, the hidden states after the final norm, the logits of the last
+position and transformers' greedy continuation of the first prompt. The Flux model must match
+the hidden states and logits to 1e-4, and reproduce the continuation exactly. The tests need
+neither Python nor a tokenizer.
+
 ## Parameter counts
 
-The test suite builds every registered architecture with its default arguments and compares
-its number of parameters and tensors with timm's, recorded by `porting/param_counts.py`. This
+The test suite builds every registered timm architecture with its default arguments and
+compares its number of parameters and tensors with timm's, recorded by `porting/param_counts.py`. This
 checks that the registered defaults reproduce what `timm.create_model` builds, including for
 architectures that are too large for a fixture.
 

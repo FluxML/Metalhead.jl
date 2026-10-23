@@ -5,7 +5,7 @@ module Parity
 using Metalhead, Flux, Functors, LinearAlgebra, SafeTensors
 using Metalhead: Checkpoint, join_key, layer_params
 
-export Tap, tapify, check_fixture, fixture_model, shrink_channels, check_reference,
+export Tap, tapify, check_fixture, fixture_model, shrink_channels, check_lm_reference,
        reference_input, relerr
 
 relerr(a, b) = norm(a .- b) / max(norm(b), floatmin(Float64))
@@ -51,7 +51,7 @@ Rebuild `model` with a [`Tap`](@ref) around every module whose PyTorch name is i
 Fails for structs whose fields are not type parameters (use `@concrete`).
 """
 function tapify(x, names, sink, key = "")
-    y = if layer_params(x) !== nothing || x isa AbstractArray || x isa Function ||
+    y = if layer_params(x) !== nothing || x isa AbstractArray{<:Number} || x isa Function ||
            Functors.isleaf(x)
         x
     elseif x isa Chain
@@ -150,6 +150,34 @@ function fixture_model(dir; eltype = Float64)
 end
 
 """
+    check_lm_reference(file) -> NamedTuple
+
+Compare a causal language model with the reference outputs of its real checkpoint, written by
+porting/dump_reference.py: the relative errors of the hidden states and of the logits of the
+last position, and whether greedy decoding reproduces transformers' continuation of the first
+prompt.
+"""
+function check_lm_reference(file)
+    meta = SafeTensors.deserialize(file).metadata
+    ref = Checkpoint(file)
+    model = create_model(meta["repo"]; pretrained = true, revision = meta["revision"])
+    ids = ref["input_ids"] .+ 1
+    hidden = forward_features(model, ids)
+    logits = forward_head(model, hidden[:, end, :])
+    expected = vec(ref["generated_ids"]) .+ 1
+    generated = greedy_decode(model, ids[:, 1], length(expected) - size(ids, 1))
+    return (; repo = meta["repo"], hidden_states = relerr(hidden, ref["hidden_states"]),
+        last_logits = relerr(logits, ref["last_logits"]), generated = generated == expected)
+end
+
+function greedy_decode(model, ids, n)
+    for _ in 1:n
+        ids = [ids; argmax(model(ids)[:, end])]
+    end
+    return ids
+end
+
+"""
     check_fixture(dir; rtol = 1e-8, model = fixture_model(dir)) -> NamedTuple
 
 Load the tiny fixture in `dir` with [`fixture_model`](@ref) (in float64) and
@@ -163,6 +191,7 @@ function check_fixture(dir; rtol = 1e-8, model = fixture_model(dir))
     meta = SafeTensors.deserialize(joinpath(dir, "acts.safetensors")).metadata
     order = Metalhead.JSON.parse(meta["call_order"])
     x = acts["input"]
+    x = Base.eltype(x) <: Integer ? x .+ 1 : x  # 0-based token ids
     output = relerr(model(x), acts["output"])
     features = relerr(forward_features(model, x), acts["features"])
     tapkeys = filter(startswith("tap/"), collect(keys(acts)))

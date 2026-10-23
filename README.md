@@ -5,8 +5,9 @@
 [![Coverage](https://codecov.io/gh/FluxML/Metalhead.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/FluxML/Metalhead.jl)
 
 Metalhead.jl provides [Flux.jl](https://fluxml.ai) ports of models from the
-[Hugging Face Hub](https://huggingface.co/models), starting with the vision models of
-[timm](https://github.com/huggingface/pytorch-image-models). Each port mirrors the module
+[Hugging Face Hub](https://huggingface.co/models): the vision models of
+[timm](https://github.com/huggingface/pytorch-image-models), and language models of
+[transformers](https://github.com/huggingface/transformers), starting with Llama. Each port mirrors the module
 structure of the PyTorch original, loads the original weights directly from the Hub, and is
 checked numerically against PyTorch.
 
@@ -63,8 +64,7 @@ branch, tag or commit, and `eltype` builds the model in `Float16`, `Flux.BFloat1
 
 ### Inputs and outputs
 
-Image models, which are all the ported models so far, take Flux's layout, width × height ×
-channels × batch. PyTorch's `(N, C, H, W)` is the same memory layout with the dimensions
+Image models take Flux's layout, width × height × channels × batch. PyTorch's `(N, C, H, W)` is the same memory layout with the dimensions
 reversed, and sizes in timm configurations, such as `input_size = (3, 224, 224)`, are in
 PyTorch order. Classifiers return logits, of size classes × batch.
 
@@ -142,9 +142,28 @@ model.fc               # Dense(2048 => 1000)
 The layers are ordinary Flux layers, so `Flux.freeze!`, `Flux.state` and `Flux.loadmodel!` work
 as usual, and models move to a GPU with Flux's `gpu_device()`.
 
+### Language models
+
+Language models take token indices, which start at 1, and return logits, of size
+vocabulary × sequence length (× batch). Metalhead has no tokenizers:
+[HuggingFaceTokenizers.jl](https://github.com/MurrellGroup/HuggingFaceTokenizers.jl) loads
+them from the Hub.
+
+```julia
+using HuggingFaceTokenizers
+
+model = create_model("HuggingFaceTB/SmolLM2-135M"; pretrained = true)
+tokenizer = from_pretrained(Tokenizer, "HuggingFaceTB/SmolLM2-135M")
+
+ids = encode(tokenizer, "The capital of France is the city of").ids .+ 1   # ids start at 0
+logits = model(ids)                                      # vocabulary × sequence length
+decode(tokenizer, [argmax(logits[:, end]) - 1])          # " Paris"
+```
+
 See the [getting started guide](https://fluxml.ai/Metalhead.jl/dev/tutorials/quickstart/) for
-more, and the [list of models](https://fluxml.ai/Metalhead.jl/dev/models/) for the ported
-architectures and their validated checkpoints.
+more, the [language models guide](https://fluxml.ai/Metalhead.jl/dev/tutorials/language_models/)
+for generating text, and the [list of models](https://fluxml.ai/Metalhead.jl/dev/models/) for
+the ported architectures and their validated checkpoints.
 
 The [vision models tutorial](https://fluxml.ai/Metalhead.jl/dev/tutorials/vision/) walks through
 classifying a photograph, training a classifier on your images and fine-tuning a backbone.
@@ -177,8 +196,10 @@ equivalent of each model.
 
 The architectures, pretrained weights and their configurations come from
 [timm](https://github.com/huggingface/pytorch-image-models) (PyTorch Image Models), by Ross
-Wightman and the Hugging Face team. Metalhead's ports translate timm's code, and its tests
-compare against timm's outputs. Pretrained weights keep the license of their Hub repository.
+Wightman and the Hugging Face team, and from
+[transformers](https://github.com/huggingface/transformers), by the Hugging Face team.
+Metalhead's ports translate their code, and its tests compare against their outputs.
+Pretrained weights keep the license of their Hub repository.
 
 Porting timm with AI agents, loading the Hub weights by name and checking the result against
 PyTorch, follows [Luximm.jl](https://github.com/csvance/Luximm.jl) by Carroll Vance, which

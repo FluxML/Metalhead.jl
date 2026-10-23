@@ -1,7 +1,8 @@
 # AGENTS.md
 
-Metalhead.jl provides Flux ports of Hugging Face Hub models, for now the vision models of
-[timm](https://github.com/huggingface/pytorch-image-models). Each port mirrors the PyTorch
+Metalhead.jl provides Flux ports of Hugging Face Hub models: the vision models of
+[timm](https://github.com/huggingface/pytorch-image-models), and language models of
+[transformers](https://github.com/huggingface/transformers) (Llama for now). Each port mirrors the PyTorch
 module tree, loads the original safetensors weights by name, and is checked numerically
 against PyTorch. `create_model` is the entry point.
 
@@ -14,6 +15,8 @@ against PyTorch. `create_model` is the entry point.
   `config.jl` is timm's `ConfigFormat`, the template for any other library: it says how a
   `config.json` names an architecture and its arguments. A library gets its own `src/<Name>/`
   module, and its architecture names must not clash with those already registered.
+- `src/Transformers/`: one file per transformers model, and `config.jl`, its `ConfigFormat`.
+  Blocks that models share (RMSNorm, the rotary tables, the tied output head) go in `layers.jl`.
 - `src/legacy/`: the hand-written models of Metalhead 0.9 (`ResNet(50)`, `Metalhead.Layers`,
   `pretrain = true`). Deprecated, untested, and removed in 0.11: don't extend them.
 - `test/`: run with ParallelTestRunner. Each file is a `@testset` in its own module. Shared

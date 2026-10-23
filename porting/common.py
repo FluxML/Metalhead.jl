@@ -5,6 +5,7 @@ import functools
 import importlib
 import inspect
 import json
+import types
 
 import numpy as np
 import timm
@@ -23,7 +24,10 @@ def build(spec, **extra):
     """Build the model described by a spec: `timm.create_model` or a named builder.
 
     With `"shrink": k` in the spec, every channel count is divided by k (see `shrunk_channels`).
+    A spec with `"library": "transformers"` builds a transformers model (see `build_transformers`).
     """
+    if spec.get("library") == "transformers":
+        return build_transformers(spec)
     kwargs = copy.deepcopy(dict(spec.get("kwargs", {}), **extra))  # some builders mutate them
     shrink = spec.get("shrink")
     keep = {spec["input_shape"][1], kwargs.get("num_classes", 1000)} if shrink else set()
@@ -38,6 +42,14 @@ def build(spec, **extra):
                    and any(True for _ in m.parameters(recurse=False))}
         assert not unknown, f"shrink does not handle the parameters of {sorted(unknown)}"
     return model
+
+
+def build_transformers(spec):
+    """The transformers class `spec["architecture"]`, built from a config of `spec["model_type"]`
+    with the fields `spec["config"]`, with PyTorch's scaled_dot_product_attention."""
+    import transformers
+    config = transformers.AutoConfig.for_model(spec["model_type"], **spec.get("config", {}))
+    return getattr(transformers, spec["architecture"])._from_config(config, attn_implementation="sdpa")
 
 
 SHRUNK = (nn.Conv2d, nn.modules.batchnorm._NormBase, nn.Linear)
@@ -174,6 +186,38 @@ def rerandomize(model, seed=0):
                 normal(t, 0.5)
 
 
+def exact_float64(model):
+    """Compute the RMSNorms and rotary tables of a transformers model in its own dtype.
+
+    transformers computes them in float32 even in a float64 model, which would limit the
+    fixtures to float32 precision. In a float32 model the results are unchanged but for the
+    rounding of the rotary frequencies, which are computed in float64 here.
+    """
+    for m in model.modules():
+        name = type(m).__name__
+        if name.endswith("RMSNorm"):
+            m.forward = types.MethodType(_rmsnorm_forward, m)
+        elif name.endswith("RotaryEmbedding"):
+            assert m.rope_type == "default", f"{name}: rope_type {m.rope_type} is not supported"
+            m.forward = types.MethodType(_rotary_forward, m)
+
+
+def _rmsnorm_forward(self, x):
+    variance = x.pow(2).mean(-1, keepdim=True)
+    return self.weight * (x * torch.rsqrt(variance + self.variance_epsilon))
+
+
+@torch.no_grad()
+def _rotary_forward(self, x, position_ids):
+    dim = 2 * self.inv_freq.numel()
+    base = self.config.rope_parameters["rope_theta"]
+    inv_freq = 1.0 / (base ** (torch.arange(0, dim, 2, dtype=torch.float64) / dim))
+    freqs = position_ids[..., None].double() * inv_freq
+    emb = torch.cat((freqs, freqs), dim=-1)
+    return ((emb.cos() * self.attention_scaling).to(x.dtype),
+            (emb.sin() * self.attention_scaling).to(x.dtype))
+
+
 def state_dict_f32(model):
     return {k: (v.float() if v.is_floating_point() else v).detach().contiguous().clone()
             for k, v in model.state_dict().items()}
@@ -187,7 +231,8 @@ def classifier_name(model):
 
 
 def versions():
-    return {"timm": timm.__version__, "torch": torch.__version__}
+    import transformers
+    return {"timm": timm.__version__, "transformers": transformers.__version__, "torch": torch.__version__}
 
 
 def write_json(path, obj):
