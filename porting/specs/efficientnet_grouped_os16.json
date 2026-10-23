@@ -1,0 +1,1 @@
+{"architecture": "efficientnet_b0", "builder": "timm.models.efficientnet:_gen_efficientnet", "kwargs": {"variant": "efficientnet_b0", "channel_multiplier": 0.1, "channel_divisor": 4, "depth_multiplier": 0.3, "group_size": 4, "output_stride": 16, "num_classes": 4, "in_chans": 1, "stem_kernel_size": 5, "drop_rate": 0.2, "drop_path_rate": 0.1}, "input_shape": [2, 1, 32, 32]}

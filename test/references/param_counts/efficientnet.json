@@ -1,0 +1,310 @@
+{
+ "efficientnet_b0": {
+  "num_params": 5288548,
+  "num_tensors": 311
+ },
+ "efficientnet_b1": {
+  "num_params": 7794184,
+  "num_tensors": 439
+ },
+ "efficientnet_b2": {
+  "num_params": 9109994,
+  "num_tensors": 439
+ },
+ "efficientnet_b3": {
+  "num_params": 12233232,
+  "num_tensors": 496
+ },
+ "efficientnet_b4": {
+  "num_params": 19341616,
+  "num_tensors": 610
+ },
+ "efficientnet_b5": {
+  "num_params": 30389784,
+  "num_tensors": 738
+ },
+ "efficientnet_b6": {
+  "num_params": 43040704,
+  "num_tensors": 852
+ },
+ "efficientnet_b7": {
+  "num_params": 66347960,
+  "num_tensors": 1037
+ },
+ "efficientnet_b8": {
+  "num_params": 87413142,
+  "num_tensors": 1151
+ },
+ "efficientnet_el": {
+  "num_params": 10589712,
+  "num_tensors": 362
+ },
+ "efficientnet_el_pruned": {
+  "num_params": 10589712,
+  "num_tensors": 362
+ },
+ "efficientnet_em": {
+  "num_params": 6899496,
+  "num_tensors": 322
+ },
+ "efficientnet_es": {
+  "num_params": 5438392,
+  "num_tensors": 247
+ },
+ "efficientnet_es_pruned": {
+  "num_params": 5438392,
+  "num_tensors": 247
+ },
+ "efficientnet_lite0": {
+  "num_params": 4652008,
+  "num_tensors": 247
+ },
+ "efficientnet_lite1": {
+  "num_params": 5416680,
+  "num_tensors": 322
+ },
+ "efficientnet_lite2": {
+  "num_params": 6092072,
+  "num_tensors": 322
+ },
+ "efficientnet_lite3": {
+  "num_params": 8197096,
+  "num_tensors": 367
+ },
+ "efficientnet_lite4": {
+  "num_params": 13006568,
+  "num_tensors": 457
+ },
+ "efficientnetv2_l": {
+  "num_params": 118515272,
+  "num_tensors": 1331
+ },
+ "efficientnetv2_m": {
+  "num_params": 54139356,
+  "num_tensors": 963
+ },
+ "efficientnetv2_rw_m": {
+  "num_params": 53236442,
+  "num_tensors": 1035
+ },
+ "efficientnetv2_rw_s": {
+  "num_params": 23941296,
+  "num_tensors": 682
+ },
+ "efficientnetv2_rw_t": {
+  "num_params": 13649388,
+  "num_tensors": 653
+ },
+ "efficientnetv2_s": {
+  "num_params": 21458488,
+  "num_tensors": 672
+ },
+ "efficientnetv2_xl": {
+  "num_params": 208119808,
+  "num_tensors": 1712
+ },
+ "mnasnet_050": {
+  "num_params": 2218512,
+  "num_tensors": 262
+ },
+ "mnasnet_075": {
+  "num_params": 3170208,
+  "num_tensors": 262
+ },
+ "mnasnet_100": {
+  "num_params": 4383312,
+  "num_tensors": 262
+ },
+ "mnasnet_140": {
+  "num_params": 7115728,
+  "num_tensors": 262
+ },
+ "mnasnet_small": {
+  "num_params": 2030264,
+  "num_tensors": 272
+ },
+ "mobilenetv1_100": {
+  "num_params": 4231976,
+  "num_tensors": 137
+ },
+ "mobilenetv1_100h": {
+  "num_params": 5282600,
+  "num_tensors": 142
+ },
+ "mobilenetv1_125": {
+  "num_params": 6270840,
+  "num_tensors": 137
+ },
+ "mobilenetv2_035": {
+  "num_params": 1677128,
+  "num_tensors": 262
+ },
+ "mobilenetv2_050": {
+  "num_params": 1968680,
+  "num_tensors": 262
+ },
+ "mobilenetv2_075": {
+  "num_params": 2636424,
+  "num_tensors": 262
+ },
+ "mobilenetv2_100": {
+  "num_params": 3504872,
+  "num_tensors": 262
+ },
+ "mobilenetv2_110d": {
+  "num_params": 4516520,
+  "num_tensors": 337
+ },
+ "mobilenetv2_120d": {
+  "num_params": 5831144,
+  "num_tensors": 397
+ },
+ "mobilenetv2_140": {
+  "num_params": 6108776,
+  "num_tensors": 262
+ },
+ "semnasnet_050": {
+  "num_params": 2082006,
+  "num_tensors": 279
+ },
+ "semnasnet_075": {
+  "num_params": 2912278,
+  "num_tensors": 279
+ },
+ "semnasnet_100": {
+  "num_params": 3887038,
+  "num_tensors": 279
+ },
+ "semnasnet_140": {
+  "num_params": 6105992,
+  "num_tensors": 279
+ },
+ "spnasnet_100": {
+  "num_params": 4421616,
+  "num_tensors": 322
+ },
+ "test_efficientnet": {
+  "num_params": 356196,
+  "num_tensors": 75
+ },
+ "tf_efficientnet_b0": {
+  "num_params": 5288548,
+  "num_tensors": 311
+ },
+ "tf_efficientnet_b1": {
+  "num_params": 7794184,
+  "num_tensors": 439
+ },
+ "tf_efficientnet_b2": {
+  "num_params": 9109994,
+  "num_tensors": 439
+ },
+ "tf_efficientnet_b3": {
+  "num_params": 12233232,
+  "num_tensors": 496
+ },
+ "tf_efficientnet_b4": {
+  "num_params": 19341616,
+  "num_tensors": 610
+ },
+ "tf_efficientnet_b5": {
+  "num_params": 30389784,
+  "num_tensors": 738
+ },
+ "tf_efficientnet_b6": {
+  "num_params": 43040704,
+  "num_tensors": 852
+ },
+ "tf_efficientnet_b7": {
+  "num_params": 66347960,
+  "num_tensors": 1037
+ },
+ "tf_efficientnet_b8": {
+  "num_params": 87413142,
+  "num_tensors": 1151
+ },
+ "tf_efficientnet_el": {
+  "num_params": 10589712,
+  "num_tensors": 362
+ },
+ "tf_efficientnet_em": {
+  "num_params": 6899496,
+  "num_tensors": 322
+ },
+ "tf_efficientnet_es": {
+  "num_params": 5438392,
+  "num_tensors": 247
+ },
+ "tf_efficientnet_lite0": {
+  "num_params": 4652008,
+  "num_tensors": 247
+ },
+ "tf_efficientnet_lite1": {
+  "num_params": 5416680,
+  "num_tensors": 322
+ },
+ "tf_efficientnet_lite2": {
+  "num_params": 6092072,
+  "num_tensors": 322
+ },
+ "tf_efficientnet_lite3": {
+  "num_params": 8197096,
+  "num_tensors": 367
+ },
+ "tf_efficientnet_lite4": {
+  "num_params": 13006568,
+  "num_tensors": 457
+ },
+ "tf_efficientnetv2_b0": {
+  "num_params": 7139704,
+  "num_tensors": 361
+ },
+ "tf_efficientnetv2_b1": {
+  "num_params": 8141052,
+  "num_tensors": 443
+ },
+ "tf_efficientnetv2_b2": {
+  "num_params": 10096086,
+  "num_tensors": 462
+ },
+ "tf_efficientnetv2_b3": {
+  "num_params": 14358406,
+  "num_tensors": 538
+ },
+ "tf_efficientnetv2_l": {
+  "num_params": 118515272,
+  "num_tensors": 1331
+ },
+ "tf_efficientnetv2_m": {
+  "num_params": 54139356,
+  "num_tensors": 963
+ },
+ "tf_efficientnetv2_s": {
+  "num_params": 21458488,
+  "num_tensors": 672
+ },
+ "tf_efficientnetv2_xl": {
+  "num_params": 208119808,
+  "num_tensors": 1712
+ },
+ "tinynet_a": {
+  "num_params": 6187972,
+  "num_tensors": 368
+ },
+ "tinynet_b": {
+  "num_params": 3730562,
+  "num_tensors": 311
+ },
+ "tinynet_c": {
+  "num_params": 2457234,
+  "num_tensors": 292
+ },
+ "tinynet_d": {
+  "num_params": 2338446,
+  "num_tensors": 216
+ },
+ "tinynet_e": {
+  "num_params": 2042972,
+  "num_tensors": 197
+ }
+}

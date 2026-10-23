@@ -1,0 +1,14 @@
+{
+  "architecture": "tf_mobilenetv3_large_100",
+  "num_classes": 4,
+  "model_args": {},
+  "pretrained_cfg": {
+    "input_size": [
+      3,
+      32,
+      48
+    ],
+    "classifier": "classifier"
+  },
+  "shrink": 8
+}

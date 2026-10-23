@@ -5,12 +5,16 @@ open(joinpath(@__DIR__, "src", "index.md"), "w") do io
     write(io, read(joinpath(@__DIR__, "..", "README.md"), String))
 end
 
-# The model list is generated from the registry, grouped by builder.
+# The model list is generated from the registry, grouped by the source file of the builders.
+# A family built by several functions (timm's `_gen_*`) is titled by its file.
 function write_model_list(path)
-    groups = Dict{Symbol, Vector{Metalhead.ArchSpec}}()
+    groups = Dict{String, Vector{Metalhead.ArchSpec}}()
     for spec in values(Metalhead.REGISTRY)
-        push!(get!(groups, nameof(spec.build), Metalhead.ArchSpec[]), spec)
+        file = basename(string(first(methods(spec.build)).file))
+        push!(get!(groups, file, Metalhead.ArchSpec[]), spec)
     end
+    builders(file) = sort!(unique(string(nameof(s.build)) for s in groups[file]))
+    title(file) = length(builders(file)) == 1 ? only(builders(file)) : splitext(file)[1]
     narchs = length(Metalhead.REGISTRY)
     nrefs = sum(length(s.references) for s in values(Metalhead.REGISTRY))
     open(path, "w") do io
@@ -27,11 +31,11 @@ function write_model_list(path)
             those in the [timm organisation](https://huggingface.co/timm), load with the same
             strict checks.
             """)
-        for builder in sort!(collect(keys(groups)))
-            specs = sort!(groups[builder]; by = s -> s.name)
-            file = basename(string(first(methods(first(specs).build)).file))
-            println(io, "## `$builder`\n")
-            println(io, "Built by `Metalhead.Timm.$builder` ",
+        for file in sort!(collect(keys(groups)); by = title)
+            specs = sort!(groups[file]; by = s -> s.name)
+            println(io, "## `$(title(file))`\n")
+            built_by = join(("`Metalhead.Timm.$b`" for b in builders(file)), ", ")
+            println(io, "Built by $built_by ",
                 "([source](https://github.com/FluxML/Metalhead.jl/blob/master/src/Timm/$file)).\n")
             println(io, "| Architecture | Validated checkpoints |\n|:--|:--|")
             for s in specs

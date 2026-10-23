@@ -1,0 +1,1 @@
+{"architecture": "lcnet_050", "shrink": 8, "kwargs": {"num_classes": 4}, "input_shape": [2, 3, 32, 32]}

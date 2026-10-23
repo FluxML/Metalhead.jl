@@ -1,0 +1,1 @@
+{"architecture": "mobilenetv3_rw", "builder": "timm.models.mobilenetv3:_gen_mobilenet_v3_rw", "kwargs": {"variant": "mobilenetv3_rw", "channel_multiplier": 0.1, "num_features": 32, "bn_eps": 0.001, "num_classes": 4}, "input_shape": [2, 3, 32, 32]}

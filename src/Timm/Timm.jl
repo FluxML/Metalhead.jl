@@ -30,5 +30,9 @@ include("inception_resnet_v2.jl")
 include("xception.jl")
 include("vgg.jl")
 include("densenet.jl")
+include("efficientnet_blocks.jl")
+include("efficientnet_builder.jl")
+include("efficientnet.jl")
+include("mobilenetv3.jl")
 
 end # module

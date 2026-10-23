@@ -1,0 +1,1 @@
+{"architecture": "mobilenetv3_small_050", "shrink": 8, "kwargs": {"num_classes": 4, "in_chans": 1, "se_from_exp": false, "head_norm": true}, "input_shape": [2, 1, 32, 32]}

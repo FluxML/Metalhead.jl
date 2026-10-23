@@ -37,7 +37,9 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
    the entry point, plus `num_classes = 0` when the default pretrained cfg has no classifier.
    `param_counts.py` prints `num_classes` to check this. Register only architectures whose
    code paths your fixtures cover. Checkpoint tensors of modules the port omits on purpose
-   (e.g. Inception's `AuxLogits`) go in `ignore`.
+   (e.g. Inception's `AuxLogits`) go in `ignore`. Skip entry points whose arguments change
+   with `pretrained = True` (`fbnetc_100` sets `bn_eps` only then): one `defaults` can't
+   reproduce both.
 4. **Tiny fixtures.** For each distinct code path (block type, stem type, optional branch),
    write `porting/specs/<name>.json` (see "Fixtures" below). Give every
    keyword the builder accepts a non-default value in at least one spec. Two or three fixtures
@@ -103,6 +105,9 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
     entries (activations, pools, identities) as placeholders, so that Julia index `i` is torch
     index `i-1`.
   - `nn.ModuleList` becomes a `Vector` (`Chain([blocks...])` for sequential stages).
+    Never splat many blocks into a Tuple (`Chain(blocks...)`): every architecture then
+    compiles its own methods, 5–60 s each (77 EfficientNets took over 20 minutes to build
+    once; with Vectors, 40 s).
   - `nn.Sequential(OrderedDict(...))` and named submodules of a container become a
     `Chain(name = ...)` with those names.
   - Weight keys are derived from field names, so a renamed field means a missing key.
@@ -253,9 +258,16 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
   channel count except the image channels and `num_classes` is divided by `k` on both sides
   (`shrunk_channels` in `porting/common.py`, `shrink_channels` in `test/parity.jl`), and
   `fixture_model` builds the full-size Julia model, shrinks it and loads the weights strictly.
-  Every other channel count must be divisible by `k`. `"weight_dtype": "float16"` halves the
+  Every other channel count must be divisible by `k` (multiples of 8 from `round_channels`
+  allow `k = 8`). Only depthwise `groups` are rescaled, so `shrink` can't be combined with
+  `group_size`. `shrink` also suits generators that hard-code a wide head (MobileNetV3's
+  1280 features), and it builds the registered architecture at full size, so the fixture
+  checks the registered `defaults` too. `"weight_dtype": "float16"` halves the
   weights (PyTorch then uses the rounded values, so the check stays exact), and
   `"tap_depth": d` taps modules with at most `d` dots (default 1).
+- **Generator builders.** A `"builder"` spec calling timm's `_gen_*` passes its `variant`
+  argument, which then lands in the fixture's `model_args`: the Julia `gen_*` must accept
+  `variant`, and use it where timm reads it (MobileNetV3's `"small"`, `"minimal"`).
 - **What `dump.py` does:** it re-randomises every parameter and BN statistic, runs PyTorch in
   float64, and stores in float16 the outputs ("taps") of modules whose names have at most
   one `.` (`blocks.0`, `patch_embed.proj`). `--all-taps` records every module. `check.jl`
@@ -267,5 +279,6 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
   `uv run dump.py specs/<name>.json --all-taps --out out/<name>`, then
   `julia --project=.. check.jl out/<name>`. The first failing tap is the first module that
   differs. "not tapped" means the Julia model has no module under that name. That is harmless
-  for parameter-free `nn.Identity` placeholders of options the port rejects. Real submodules
-  of the supported code path must exist under their torch name.
+  for parameter-free `nn.Identity` placeholders of options the port rejects, and for the
+  `drop` and `act` children of timm's `BatchNormAct2d`, which Flux's `BatchNorm` holds inside.
+  Real submodules of the supported code path must exist under their torch name.

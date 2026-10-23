@@ -1,0 +1,19 @@
+{
+  "architecture": "mobilenetv1_100h",
+  "num_classes": 4,
+  "model_args": {
+    "variant": "mobilenetv1_100h",
+    "channel_multiplier": 0.02,
+    "depth_multiplier": 0.5,
+    "head_conv": true,
+    "group_size": 2
+  },
+  "pretrained_cfg": {
+    "input_size": [
+      3,
+      32,
+      32
+    ],
+    "classifier": "classifier"
+  }
+}

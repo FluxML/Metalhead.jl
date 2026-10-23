@@ -1,0 +1,1 @@
+{"architecture": "tf_mobilenetv3_large_100", "shrink": 8, "kwargs": {"num_classes": 4}, "input_shape": [2, 3, 32, 48]}
