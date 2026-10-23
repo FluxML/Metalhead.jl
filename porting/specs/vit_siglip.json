@@ -1,0 +1,1 @@
+{"architecture": "vit_base_patch32_siglip_256", "kwargs": {"img_size": 32, "patch_size": 8, "embed_dim": 16, "depth": 2, "num_heads": 2, "mlp_ratio": 3.7362, "num_classes": 10}, "input_shape": [2, 3, 32, 32]}

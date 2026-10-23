@@ -15,9 +15,11 @@ using Statistics: mean
 using ChainRulesCore: ChainRulesCore
 using ..Metalhead: ArchSpec, register!
 import ..Metalhead: layer_params
-import ..Metalhead: forward_features, forward_head
+import ..Metalhead: forward_features, forward_head, forward_intermediates, feature_info
 
 include("layers.jl")
+include("pos_embed.jl")
+include("features.jl")
 include("resnet.jl")
 include("res2net.jl")
 include("vit.jl")

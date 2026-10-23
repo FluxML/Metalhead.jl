@@ -91,6 +91,46 @@ def shrunk_channels(k, keep=()):
             restore()
 
 
+@contextlib.contextmanager
+def float64_pos_embed():
+    """Resample ViT position embeddings in the precision of the model.
+
+    timm's `resample_abs_pos_embed` (dynamic image sizes) interpolates in float32 even for a
+    float64 model, which would cap the precision of float64 fixtures. This runs its exact steps
+    without the cast; the Julia port computes in the eltype of the embedding too.
+    """
+    import torch.nn.functional as F
+    from timm.models import vision_transformer as vit
+
+    original = vit.resample_abs_pos_embed
+
+    def resample(posemb, new_size, old_size=None, num_prefix_tokens=1,
+                 interpolation="bicubic", antialias=True, verbose=False):
+        if posemb.dtype != torch.float64:
+            return original(posemb, new_size, old_size, num_prefix_tokens, interpolation,
+                            antialias, verbose)
+        num_new_tokens = new_size[0] * new_size[1] + num_prefix_tokens
+        if num_new_tokens == posemb.shape[1] and (
+                (old_size is not None and tuple(old_size) == tuple(new_size))
+                or (old_size is None and new_size[0] == new_size[1])):
+            return posemb
+        if old_size is None:
+            hw = int((posemb.shape[1] - num_prefix_tokens) ** 0.5)
+            old_size = hw, hw
+        prefix, posemb = posemb[:, :num_prefix_tokens], posemb[:, num_prefix_tokens:]
+        dim = posemb.shape[-1]
+        posemb = posemb.reshape(1, old_size[0], old_size[1], -1).permute(0, 3, 1, 2)
+        posemb = F.interpolate(posemb, size=new_size, mode=interpolation, antialias=antialias)
+        posemb = posemb.permute(0, 2, 3, 1).reshape(1, -1, dim)
+        return torch.cat([prefix, posemb], dim=1) if num_prefix_tokens else posemb
+
+    vit.resample_abs_pos_embed = resample
+    try:
+        yield
+    finally:
+        vit.resample_abs_pos_embed = original
+
+
 NORMS = (nn.modules.batchnorm._NormBase, nn.LayerNorm, nn.GroupNorm)
 
 

@@ -99,6 +99,29 @@ pooled = forward_head(model, features; pre_logits = true)   # 768 × 2
 logits = forward_head(model, features)                      # 1000 × 2
 ```
 
+## Multi-scale features
+
+Segmentation and depth heads take the feature maps of several stages. `forward_intermediates`
+returns them, like timm's, and `feature_info` gives their channels and strides:
+
+```julia
+resnet = create_model("resnet50")
+feature_info(resnet)              # (num_chs = 64, reduction = 2, module_name = "act1"), ...
+maps = forward_intermediates(resnet, x; indices = 2:5, intermediates_only = true)
+size.(maps)                       # 56 × 56 × 256 × 2, 28 × 28 × 512 × 2, ...
+```
+
+`indices` are 1-based positions in `feature_info`, or an integer `k` for the last `k`.
+Vision transformers return the tokens of their blocks as feature maps of the patch grid
+(`output_fmt = "NLC"` keeps them as tokens), and with `dynamic_img_size = true` accept any
+input size that is a multiple of the patch size:
+
+```julia
+dinov2 = create_model("vit_small_patch14_dinov2"; pretrained = true, dynamic_img_size = true)
+maps = forward_intermediates(dinov2, rand(Float32, 224, 308, 3, 1); indices = 4,
+    intermediates_only = true)    # 16 × 22 × 384 × 1 each
+```
+
 ## Fine-tuning
 
 Pass a new `num_classes` to load the pretrained weights with a freshly initialised classifier:

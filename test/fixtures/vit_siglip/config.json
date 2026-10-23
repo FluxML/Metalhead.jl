@@ -1,0 +1,20 @@
+{
+  "architecture": "vit_base_patch32_siglip_256",
+  "num_classes": 10,
+  "model_args": {
+    "img_size": 32,
+    "patch_size": 8,
+    "embed_dim": 16,
+    "depth": 2,
+    "num_heads": 2,
+    "mlp_ratio": 3.7362
+  },
+  "pretrained_cfg": {
+    "input_size": [
+      3,
+      32,
+      32
+    ],
+    "classifier": "head"
+  }
+}

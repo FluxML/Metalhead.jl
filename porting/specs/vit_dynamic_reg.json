@@ -1,0 +1,1 @@
+{"architecture": "vit_small_patch14_reg4_dinov2", "kwargs": {"img_size": [28, 21], "patch_size": 7, "embed_dim": 16, "depth": 2, "num_heads": 2, "dynamic_img_size": true, "num_classes": 3}, "input_shape": [2, 3, 56, 14]}

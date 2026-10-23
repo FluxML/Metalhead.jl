@@ -34,8 +34,12 @@ def dump_reference(repo, revision, batch):
     sha = HfApi().model_info(repo, revision=revision).sha
     config = json.loads(pathlib.Path(hf_hub_download(repo, "config.json", revision=sha)).read_text())
     weights = hf_hub_download(repo, "model.safetensors", revision=sha)
+    # the repository's pretrained cfg, as timm uses when loading from the Hub: with the
+    # architecture's default cfg, a checkpoint of another tag could lose its classifier
+    cfg = dict(config["pretrained_cfg"], file=weights, custom_load=False,
+               num_classes=config["num_classes"])
     model = timm.create_model(config["architecture"], pretrained=True, num_classes=config["num_classes"],
-                              pretrained_cfg_overlay=dict(file=weights, custom_load=False), **config.get("model_args", {}))
+                              pretrained_cfg_overlay=cfg, **config.get("model_args", {}))
     model.eval()
 
     shape = [batch, *config["pretrained_cfg"]["input_size"]]

@@ -120,6 +120,30 @@ forward_features(m::ConvNeXt, x) = m.norm_pre(m.stages(m.stem(x)))
 forward_head(m::ConvNeXt, x; pre_logits::Bool = false) = m.head(x; pre_logits)
 (m::ConvNeXt)(x) = forward_head(m, forward_features(m, x))
 
+# The four stages; `norm` applies `norm_pre` to the last one.
+function forward_intermediates(m::ConvNeXt, x; indices = nothing, norm::Bool = false,
+        stop_early::Bool = false, output_fmt = "NCHW", intermediates_only::Bool = false)
+    check_output_fmt(output_fmt)
+    n = length(m.stages)
+    take, max_index = feature_take_indices(n, indices)
+    stop = stop_early ? max_index : n
+    outs = stage_outputs(m.stages.layers, m.stem(x), stop)
+    intermediates = [norm && i == n ? m.norm_pre(outs[i]) : outs[i] for i in take]
+    intermediates_only && return intermediates
+    return stop == n ? m.norm_pre(last(outs)) : last(outs), intermediates
+end
+
+function convnext_stride(s::ConvNeXtStage)
+    return s.downsample === identity ? 1 : first(s.downsample[2].stride)
+end
+
+function feature_info(m::ConvNeXt)
+    stages = m.stages.layers
+    return [(; num_chs = length(last(s.blocks.layers).gamma),
+                reduction = first(m.stem[1].stride) * prod(convnext_stride, stages[1:i]),
+                module_name = "stages.$(i - 1)") for (i, s) in enumerate(stages)]
+end
+
 const CONVNEXT_REFERENCES = Dict(
     "convnext_atto" =>
         ["timm/convnext_atto.d2_in1k" => "435c0a8d02d5b872e90c8cde36887465982cb399"],

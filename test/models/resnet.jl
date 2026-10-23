@@ -26,6 +26,27 @@ end
     end
 end
 
+@testset "forward_intermediates" begin
+    using Flux
+    m = fixture_model(fixture("resnet_basic"); eltype = Float32)
+    x = rand(Float32, 32, 32, 3, 2)
+    feats, ys = forward_intermediates(m, x)
+    @test feats ≈ forward_features(m, x)
+    @test [size(y, 3) for y in ys] == [f.num_chs for f in feature_info(m)]
+    @test [32 ÷ size(y, 1) for y in ys] == [f.reduction for f in feature_info(m)]
+    @test forward_intermediates(m, x; indices = 2)[2] ≈ ys[4:5]
+    @test forward_intermediates(m, x; indices = [3, 1], intermediates_only = true) ≈
+          ys[[1, 3]]
+    early, sel = forward_intermediates(m, x; indices = (2,), stop_early = true)
+    @test early ≈ sel[1] ≈ ys[2]
+    @test_throws "indices" forward_intermediates(m, x; indices = [6])
+    @test_throws "output_fmt" forward_intermediates(m, x; output_fmt = "NLC")
+    loss(m) = sum(forward_intermediates(m, x; indices = [3], intermediates_only = true)[1])
+    g = Flux.gradient(loss, m)[1]
+    @test all(isfinite, g.conv1.weight) && all(isfinite, g.layer2.layers[1].conv1.weight)
+    @test g.layer3 === nothing
+end
+
 @testset "attention layers" begin
     using Metalhead.Timm: SEModule, EcaModule, create_attn
     using Metalhead: create_model

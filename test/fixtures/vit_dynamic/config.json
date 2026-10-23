@@ -1,0 +1,20 @@
+{
+  "architecture": "vit_small_patch14_dinov2",
+  "num_classes": 0,
+  "model_args": {
+    "img_size": 28,
+    "patch_size": 7,
+    "embed_dim": 16,
+    "depth": 2,
+    "num_heads": 2,
+    "dynamic_img_size": true
+  },
+  "pretrained_cfg": {
+    "input_size": [
+      3,
+      35,
+      21
+    ],
+    "classifier": "head"
+  }
+}

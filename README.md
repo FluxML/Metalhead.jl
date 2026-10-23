@@ -98,6 +98,16 @@ pooled = forward_head(model, features; pre_logits = true)  # pooled features, 76
 logits = forward_head(model, features)                     # same as model(x), 1000 × 2
 ```
 
+### Multi-scale features
+
+Segmentation and depth heads take the feature maps of several stages. `forward_intermediates`
+returns them, as timm's does, and `feature_info` gives their channels and strides:
+
+```julia
+maps = forward_intermediates(model, x; intermediates_only = true)  # 56 × 56 × 96 × 2, ...
+feature_info(model)  # (num_chs = 96, reduction = 4, module_name = "stages.0"), ...
+```
+
 ### Fine-tuning
 
 A new `num_classes` loads the pretrained weights with a freshly initialised classifier, and

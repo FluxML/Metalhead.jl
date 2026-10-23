@@ -155,7 +155,8 @@ end
 Load the tiny fixture in `dir` with [`fixture_model`](@ref) (in float64) and
 compare its logits and features (float64, relative error `rtol`) and every recorded module output
 with PyTorch's. Module outputs are stored in float16 or float32 and compared at a tolerance set
-by their precision. Returns the relative errors, with the taps in PyTorch call order.
+by their precision, and so are the `forward_intermediates` (see [`check_intermediates`](@ref)).
+Returns the relative errors, with the taps in PyTorch call order.
 """
 function check_fixture(dir; rtol = 1e-8, model = fixture_model(dir))
     acts = Checkpoint(joinpath(dir, "acts.safetensors"))
@@ -176,11 +177,49 @@ function check_fixture(dir; rtol = 1e-8, model = fixture_model(dir))
         err = y === nothing ? missing : size(y) == size(ref) ? relerr(y, ref) : Inf
         return (; name = k, err, tol = TAP_RTOL[eltype(ref)])
     end
+    intermediates = check_intermediates(model, x, acts)
     return (; output,
         features,
         taps,
+        intermediates,
         pass = output <= rtol && features <= rtol &&
-               all(t -> ismissing(t.err) || t.err <= t.tol, taps))
+               all(t -> ismissing(t.err) || t.err <= t.tol, taps) &&
+               all(t -> t.err <= t.tol, intermediates))
+end
+
+"""
+    check_intermediates(model, x, acts) -> Vector{NamedTuple}
+
+Compare `forward_intermediates(model, x)` (plain, with `norm = true` and the prefix tokens of
+vision transformers) with the references "intermediates/<i>", "intermediates_norm/<i>" and
+"intermediates_prefix/<i>" of a fixture, and its features with "features". Without
+"intermediates_norm", the normed intermediates must equal the plain references.
+"""
+function check_intermediates(model, x, acts)
+    n = count(startswith("intermediates/"), keys(acts))
+    n == 0 && return NamedTuple[]
+    errs = NamedTuple[]
+    record!(name, y, ref, tol) = push!(errs,
+        (; name, err = size(y) == size(ref) ? relerr(y, ref) : Inf, tol))
+    tol = TAP_RTOL[Float32]
+    features, plain = forward_intermediates(model, x)
+    record!("features", features, acts["features"], 1e-8)
+    _, normed = forward_intermediates(model, x; norm = true)
+    length(plain) == length(normed) == n || return [(; name = "count", err = Inf, tol)]
+    for i in 1:n
+        record!("intermediates/$i", plain[i], acts["intermediates/$i"], tol)
+        key = haskey(acts, "intermediates_norm/$i") ? "intermediates_norm/$i" :
+              "intermediates/$i"
+        record!("intermediates_norm/$i", normed[i], acts[key], tol)
+    end
+    if haskey(acts, "intermediates_prefix/1")
+        _, pairs = forward_intermediates(model, x; return_prefix_tokens = true)
+        for i in 1:n
+            record!("intermediates_prefix/$i", last(pairs[i]),
+                acts["intermediates_prefix/$i"], tol)
+        end
+    end
+    return errs
 end
 
 end # module

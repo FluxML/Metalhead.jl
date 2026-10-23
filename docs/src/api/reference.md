@@ -8,6 +8,8 @@ list_models
 Metalhead.pretrained_cfg
 forward_features
 forward_head
+forward_intermediates
+feature_info
 ```
 
 ## Builders

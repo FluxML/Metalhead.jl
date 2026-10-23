@@ -15,14 +15,20 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
     It takes timm's keyword arguments (`num_classes`, `in_chans`, ...), plus `pretrained`,
     `revision` and `eltype`.
   - `list_models`, `forward_features`, `forward_head` and `Metalhead.pretrained_cfg`.
-  - 254 architectures: ResNet, ResNeXt, Wide ResNet, SE-ResNet, SE-ResNeXt, SENet, ECA-ResNet,
-    Res2Net and Res2NeXt; ViT; ConvNeXt; VGG; DenseNet; Inception v3 and v4,
-    Inception-ResNet-v2; aligned Xception; MLP-Mixer, ResMLP and gMLP; ConvMixer;
+  - `forward_intermediates` and `feature_info`, for the multi-scale features of segmentation
+    and depth heads (ResNet and its variants, ConvNeXt, ViT, the MLP mixers, Inception v4).
+  - ViT options of DINOv2, CLIP and SigLIP: layer scale, register tokens, pre-norm,
+    QuickGELU, attention pooling (`global_pool = "map"`), average/max pooling, and
+    `dynamic_img_size`, which resamples the position embedding like PyTorch's antialiased
+    bicubic interpolation.
+  - 298 architectures: ResNet, ResNeXt, Wide ResNet, SE-ResNet, SE-ResNeXt, SENet, ECA-ResNet,
+    Res2Net and Res2NeXt; ViT, including DINOv2 (with registers), CLIP and SigLIP; ConvNeXt;
+    VGG; DenseNet; Inception v3 and v4, Inception-ResNet-v2; aligned Xception; MLP-Mixer, ResMLP and gMLP; ConvMixer;
     EfficientNet (B0–B8, L2, Lite, EdgeTPU, CondConv) and EfficientNetV2; MobileNet v1, v2,
     v3 and v4; MobileNet-EdgeTPU; MNASNet, SemNASNet, SPNASNet and TinyNet; MixNet; FBNet-C
     and FBNetV3; LCNet.
 - Validation against PyTorch: float64 parity fixtures for every code path, run in CI without
-  Python or network access, and float32 references for 51 pretrained checkpoints. Weights load
+  Python or network access, and float32 references for 56 pretrained checkpoints. Weights load
   strictly by name.
 - `porting/` tools and a Claude Code skill (`skills/port-hf-model`) for porting new
   models (#305, #307).

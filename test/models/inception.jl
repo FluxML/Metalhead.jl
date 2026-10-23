@@ -31,6 +31,27 @@ end
     end
 end
 
+@testset "forward_intermediates" begin
+    using Flux
+    m = fixture_model(fixture("inception_v4"); eltype = Float32)  # channels shrunk by 32
+    x = rand(Float32, 75, 75, 1, 2)
+    feats, ys = forward_intermediates(m, x)
+    @test feats ≈ forward_features(m, x)
+    @test [size(y, 3) for y in ys] == [f.num_chs for f in feature_info(m)] ==
+          [2, 5, 12, 32, 48]
+    @test forward_intermediates(m, x; indices = 2)[2] ≈ ys[4:5]
+    @test forward_intermediates(m, x; indices = [4, 2], intermediates_only = true) ≈
+          ys[[2, 4]]
+    early, sel = forward_intermediates(m, x; indices = [3], stop_early = true)
+    @test early ≈ sel[1] ≈ ys[3]
+    @test_throws "indices" forward_intermediates(m, x; indices = [0])
+    loss(m) = sum(forward_intermediates(m, x; indices = [2], intermediates_only = true)[1])
+    g = Flux.gradient(loss, m)[1]
+    @test all(isfinite, g.features.layers[1].layers.conv.weight)
+    @test all(isfinite, g.features.layers[4].conv.layers.conv.weight)
+    @test g.features.layers[5] === nothing
+end
+
 @testset "shrink_channels" begin
     using Flux
     m = create_model("resnet18"; num_classes = 10)

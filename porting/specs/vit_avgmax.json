@@ -1,0 +1,1 @@
+{"architecture": "vit_tiny_patch16_224", "kwargs": {"img_size": 32, "patch_size": 8, "embed_dim": 16, "depth": 2, "num_heads": 2, "global_pool": "avgmax", "reg_tokens": 1, "pool_include_prefix": true, "proj_bias": false, "num_classes": 4}, "input_shape": [2, 3, 32, 32]}

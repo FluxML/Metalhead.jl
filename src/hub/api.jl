@@ -74,10 +74,13 @@ function create_model(name::AbstractString; pretrained::Bool = false,
     model_args = nt(get(config, "model_args", Dict()))
     ckpt_classes = get(config, "num_classes", nothing)
     from_config = ckpt_classes === nothing ? (;) : (; num_classes = ckpt_classes)
-    args = merge(spec.defaults, model_args, from_config, values(kwargs))
+    cfg = get(config, "pretrained_cfg", Dict())
+    # timm's _update_default_model_kwargs: models of a fixed input size are built for it
+    from_cfg = get(cfg, "fixed_input_size", false) && haskey(cfg, "input_size") ?
+               (; img_size = Tuple(cfg["input_size"][2:3])) : (;)
+    args = merge(spec.defaults, from_cfg, model_args, from_config, values(kwargs))
     model = ELTYPE_CONVERTERS[eltype](spec.build(; args...))
     if pretrained
-        cfg = get(config, "pretrained_cfg", Dict())
         if haskey(args, :in_chans) &&
            args.in_chans != get(get(cfg, "input_size", [3]), 1, 3)
             error("loading pretrained weights with a different `in_chans` is not supported yet")
@@ -121,3 +124,34 @@ Apply the pooling and classifier of `model` to the output of [`forward_features`
 With `pre_logits = true`, return the pooled features before the classifier.
 """
 function forward_head end
+
+"""
+    forward_intermediates(model, x; indices = nothing, norm = false, stop_early = false,
+                          output_fmt = "NCHW", intermediates_only = false)
+
+Run `model` and collect the outputs of its stages or blocks, for dense prediction heads
+(timm's `forward_intermediates`). The intermediates are those of [`feature_info`](@ref).
+
+  - `indices`: `nothing` takes all intermediates, an integer `k` the last `k`, and a collection
+    the given positions (1-based, unlike timm's).
+  - `norm`: apply the final norm of the model to the intermediates, where timm does.
+  - `stop_early`: skip the stages after the last selected one.
+  - `output_fmt`: `"NCHW"` returns WHCN feature maps (the Julia layout of PyTorch's NCHW);
+    transformers also accept `"NLC"`, for `(C, L, N)` tokens.
+
+Returns `(features, intermediates)`, where `features` is the output of
+[`forward_features`](@ref) (truncated with `stop_early`), or only `intermediates` with
+`intermediates_only = true`. Vision transformers take `return_prefix_tokens = true`, which
+returns each intermediate as a `(spatial, prefix)` tuple, where `prefix` holds the class and
+register tokens.
+"""
+function forward_intermediates end
+
+"""
+    feature_info(model) -> Vector{NamedTuple}
+
+The intermediates of [`forward_intermediates`](@ref), as timm's `model.feature_info`: for each,
+its number of channels `num_chs`, its `reduction` (stride) relative to the input, and the
+PyTorch name `module_name` of the module that outputs it (timm's `module`).
+"""
+function feature_info end

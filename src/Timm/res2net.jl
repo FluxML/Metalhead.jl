@@ -19,6 +19,8 @@ Flux.@layer Bottle2neck
 
 const BOTTLE2NECK_EXPANSION = 4
 
+block_out_chs(b::Bottle2neck) = b.bn3.chs
+
 # Like timm, ignores the ResNet block arguments it has no use for (`reduce_first`,
 # `drop_path_rate`) and, unlike Bottleneck, takes no attention layer.
 function Bottle2neck(inplanes, planes; stride = 1, downsample = nothing, cardinality = 1,
