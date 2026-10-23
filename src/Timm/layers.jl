@@ -30,34 +30,142 @@ end
 Flux.@layer Conv2dSame
 layer_params(m::Conv2dSame) = layer_params(m.conv)
 
-function (m::Conv2dSame)(x)
-    (; weight, stride, dilation) = m.conv
-    pad = ntuple(4) do i
+# The (left, right, top, bottom) TF "SAME" padding of a WHCN input, in Flux order.
+function pad_same(x, kernel_size, stride, dilation)
+    return ntuple(4) do i
         d = (i + 1) ÷ 2
-        p = get_same_padding(size(x, d), size(weight, d), stride[d], dilation[d])
+        p = get_same_padding(size(x, d), kernel_size[d], stride[d], dilation[d])
         isodd(i) ? p ÷ 2 : p - p ÷ 2
     end
+end
+ChainRulesCore.@non_differentiable pad_same(::Any...)
+
+function (m::Conv2dSame)(x)
+    (; weight, stride, dilation) = m.conv
+    pad = pad_same(x, size(weight), stride, dilation)
     return m.conv(NNlib.pad_zeros(x, pad; dims = (1, 2)))
 end
 
 """
-    create_conv2d(in_chs, out_chs, kernel_size; stride, dilation, padding = "", groups, depthwise, bias = false)
+    create_conv2d(in_chs, out_chs, kernel_size; stride, dilation, padding = "", groups, depthwise, bias = false, num_experts = 0)
 
-timm.layers.create_conv2d for one kernel size (no MixedConv2d/CondConv2d). Sizes are Ints or
-torch-order `(h, w)` pairs. `padding` is `""` (PyTorch-style symmetric), `"same"` (TF-style,
-a `Conv2dSame` unless it is static), `"valid"`, or an explicit torch padding.
+timm.layers.create_conv2d. Sizes are Ints or torch-order `(h, w)` pairs; a vector of kernel
+sizes gives a [`MixedConv2d`](@ref) and `num_experts > 0` a [`CondConv2d`](@ref). `padding`
+is `""` (PyTorch-style symmetric), `"same"` (TF-style, a `Conv2dSame` unless it is static),
+`"valid"`, or an explicit torch padding.
 """
 function create_conv2d(in_chs, out_chs, kernel_size; stride = 1, dilation = 1,
-        padding = "", groups = 1, depthwise = false, bias = false)
+        padding = "", groups = 1, depthwise = false, bias = false, num_experts = 0)
+    if kernel_size isa AbstractVector
+        num_experts > 0 && error("MixedConv2d with CondConv is not supported")
+        groups == 1 || groups == in_chs ||
+            error("MixedConv2d is a normal or a depthwise conv, not $groups groups")
+        return MixedConv2d(in_chs, out_chs, kernel_size; stride, dilation, padding,
+            depthwise = depthwise || groups == in_chs, bias)
+    end
+    groups = depthwise ? in_chs : groups
+    num_experts > 0 && return CondConv2d(in_chs, out_chs, kernel_size; stride, dilation,
+        padding, groups, bias, num_experts)
     k, s, d = (reverse(to_2tuple(v)) for v in (kernel_size, stride, dilation))
-    conv(pad) = Conv(k, in_chs => out_chs; stride = s, pad, dilation = d,
-        groups = depthwise ? in_chs : groups, bias)
+    conv(pad) = Conv(k, in_chs => out_chs; stride = s, pad, dilation = d, groups, bias)
     padding isa AbstractString || return conv(reverse(to_2tuple(padding)))
     padding = lowercase(padding)
     padding == "valid" && return conv(0)
     is_static = all(@. s == 1 && iseven(d * (k - 1)))
     padding == "same" && !is_static && return Conv2dSame(conv(0))
     return conv(get_padding.(k, s, d))
+end
+
+# timm's _split_channels: equal splits, the first one taking the remainder.
+function split_channels(channels, num_groups)
+    return ntuple(num_groups) do i
+        return channels ÷ num_groups + (i == 1) * (channels % num_groups)
+    end
+end
+
+"""
+    MixedConv2d(in_chs, out_chs, kernel_sizes; stride, dilation, padding, depthwise, bias)
+
+timm.layers.MixedConv2d (MixConv): the channels are split into one group per kernel size,
+each convolved with its own kernel size, and concatenated. A `ModuleDict` in timm, so the
+convs' keys are `0.weight`, `1.weight`, ... with no segment for the container.
+"""
+@concrete struct MixedConv2d
+    convs
+    splits
+end
+Flux.@layer MixedConv2d
+
+function layer_params(m::MixedConv2d)
+    return [(string(i - 1, ".", name), array, kind)
+            for (i, conv) in enumerate(m.convs)
+            for (name, array, kind) in layer_params(conv)]
+end
+
+function MixedConv2d(in_chs, out_chs, kernel_sizes::AbstractVector; stride = 1,
+        dilation = 1, padding = "", depthwise = false, bias = false)
+    in_splits = split_channels(in_chs, length(kernel_sizes))
+    out_splits = split_channels(out_chs, length(kernel_sizes))
+    convs = map(Tuple(kernel_sizes), in_splits, out_splits) do k, in_ch, out_ch
+        create_conv2d(in_ch, out_ch, k; stride, dilation, padding,
+            groups = depthwise ? in_ch : 1, bias)
+    end
+    return MixedConv2d(convs, in_splits)
+end
+
+# Zygote can't differentiate `cumsum` of a tuple of Ints, hence a non-differentiable helper.
+split_ranges(splits) = map((stop, n) -> (stop - n + 1):stop, cumsum(splits), splits)
+ChainRulesCore.@non_differentiable split_ranges(::Any)
+
+function (m::MixedConv2d)(x)
+    xs = map(r -> x[:, :, r, :], split_ranges(m.splits))
+    return cat(map((conv, xi) -> conv(xi), m.convs, xs)...; dims = 3)
+end
+
+"""
+    CondConv2d(in_chs, out_chs, kernel_size; num_experts, stride, dilation, padding, groups, bias)
+
+timm.layers.CondConv2d: a conv whose kernel (and bias) is a per-sample mixture of
+`num_experts` kernels, called as `m(x, routing_weights)` with routing weights of size
+`(num_experts, batch)`. `weight` is torch's `(num_experts, params)` reversed: column `e` is
+the flattened kernel of expert `e`. The samples are convolved at once, as one grouped conv.
+"""
+@concrete struct CondConv2d
+    weight
+    bias
+    kernel_size
+    stride
+    pad
+    dilation
+    groups
+end
+Flux.@layer CondConv2d trainable=(weight, bias)
+
+function CondConv2d(in_chs, out_chs, kernel_size; num_experts, stride = 1, dilation = 1,
+        padding = "", groups = 1, bias = false)
+    k, s, d = (reverse(to_2tuple(v)) for v in (kernel_size, stride, dilation))
+    lowercase(padding) in ("", "same") ||
+        error("CondConv2d padding `$padding` is not supported")
+    is_static = padding == "" || all(@. s == 1 && iseven(d * (k - 1)))
+    # `nothing` is the dynamic TF "SAME" padding, computed from the input size
+    pad = is_static ? Tuple(Iterators.flatten((p, p) for p in get_padding.(k, s, d))) :
+          nothing
+    # the normal(0, sqrt(2 / fan_out)) init of timm's _init_weight_goog, which all the
+    # models using CondConv2d apply
+    weight = randn(Float32, prod(k) * (in_chs ÷ groups) * out_chs, num_experts) .*
+             sqrt(2.0f0 / (prod(k) * out_chs ÷ groups))
+    return CondConv2d(weight, bias ? zeros(Float32, out_chs, num_experts) : false, k, s,
+        pad, d, groups)
+end
+
+function (m::CondConv2d)(x, routing_weights)
+    w, h, c, b = size(x)
+    weight = reshape(m.weight * routing_weights, m.kernel_size..., c ÷ m.groups, :)
+    pad = something(m.pad, pad_same(x, m.kernel_size, m.stride, m.dilation))
+    y = NNlib.conv(reshape(x, w, h, c * b, 1), weight; stride = m.stride, pad,
+        dilation = m.dilation, groups = m.groups * b, flipped = true)
+    y = reshape(y, size(y, 1), size(y, 2), :, b)
+    return m.bias isa AbstractArray ? y .+ reshape(m.bias * routing_weights, 1, 1, :, b) : y
 end
 
 # timm.layers.ConvNormAct without anti-aliasing: create_conv2d, then BatchNormAct2d, which

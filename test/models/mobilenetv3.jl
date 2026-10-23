@@ -4,7 +4,7 @@ using .ParitySetup
 
 @testset "fixtures" begin
     for name in ["mobilenetv3_large", "mobilenetv3_tf_large", "mobilenetv3_small_head_norm",
-        "mobilenetv3_tf_small_minimal", "mobilenetv3_rw", "lcnet"]
+        "mobilenetv3_tf_small_minimal", "mobilenetv3_rw", "lcnet", "fbnetv3"]
         r = check_fixture(fixture(name))
         @test r.output <= 1e-8
         @test r.features <= 1e-8
@@ -22,7 +22,7 @@ end
     for (name, insize) in [("mobilenetv3_large", (32, 32, 3, 2)),
         ("mobilenetv3_tf_large", (48, 32, 3, 2)),
         ("mobilenetv3_small_head_norm", (32, 32, 1, 2)), ("mobilenetv3_rw", (32, 32, 3, 2)),
-        ("lcnet", (32, 32, 3, 2))]
+        ("lcnet", (32, 32, 3, 2)), ("fbnetv3", (32, 32, 3, 2))]
         m = fixture_model(fixture(name); eltype = Float32)
         @test check_gradient(m, rand(Float32, insize))
     end
@@ -79,12 +79,11 @@ end
     @test_throws "norm_layer" create_model(
         "mobilenetv3_large_100"; norm_layer = "groupnorm")
     @test_throws "not been ported" create_model("mobilenetv4_conv_small")
-    @test_throws "not been ported" create_model("fbnetv3_b")
 end
 
 TEST_NETWORK && @testset "references" begin
     for file in reference_files("mobilenetv3") ∪ reference_files("tf_mobilenetv3") ∪
-                reference_files("lcnet")
+                reference_files("lcnet") ∪ reference_files("fbnetv3")
         meta = SafeTensors.deserialize(file).metadata
         ref = Metalhead.Checkpoint(file)
         model = create_model(meta["repo"]; pretrained = true, revision = meta["revision"])

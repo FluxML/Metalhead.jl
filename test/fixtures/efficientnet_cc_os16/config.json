@@ -1,0 +1,20 @@
+{
+  "architecture": "efficientnet_cc_b0_4e",
+  "num_classes": 4,
+  "model_args": {
+    "variant": "efficientnet_cc_b0_4e",
+    "channel_multiplier": 0.1,
+    "depth_multiplier": 0.5,
+    "output_stride": 16,
+    "in_chans": 1,
+    "drop_path_rate": 0.1
+  },
+  "pretrained_cfg": {
+    "input_size": [
+      1,
+      32,
+      32
+    ],
+    "classifier": "classifier"
+  }
+}

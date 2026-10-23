@@ -1,0 +1,18 @@
+{
+  "architecture": "mixnet_s",
+  "num_classes": 4,
+  "model_args": {
+    "variant": "mixnet_s",
+    "channel_multiplier": 0.1,
+    "drop_rate": 0.2,
+    "drop_path_rate": 0.1
+  },
+  "pretrained_cfg": {
+    "input_size": [
+      3,
+      32,
+      32
+    ],
+    "classifier": "classifier"
+  }
+}

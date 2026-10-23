@@ -1,4 +1,16 @@
 {
+ "fbnetv3_b": {
+  "num_params": 8598464,
+  "num_tensors": 510
+ },
+ "fbnetv3_d": {
+  "num_params": 10306272,
+  "num_tensors": 559
+ },
+ "fbnetv3_g": {
+  "num_params": 16623888,
+  "num_tensors": 630
+ },
  "lcnet_035": {
   "num_params": 1644370,
   "num_tensors": 147

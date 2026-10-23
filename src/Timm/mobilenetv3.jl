@@ -4,8 +4,7 @@
 #
 # Blocks and builder are those of the EfficientNet family (efficientnet_blocks.jl,
 # efficientnet_builder.jl). Not ported: MobileNetV4 (UIR and attention blocks, anti-
-# aliasing), FBNet-V3 (`se_from_exp = false` and `rd_round_fn` work, but no fixture
-# covers its tables) and feature extraction.
+# aliasing) and feature extraction.
 
 @concrete struct MobileNetV3
     conv_stem
@@ -170,6 +169,56 @@ function gen_mobilenet_v3(; variant, channel_multiplier = 1.0, depth_multiplier 
         kwargs...)
 end
 
+# `variant` selects the table, as in timm.
+function gen_fbnetv3(; variant, channel_multiplier = 1.0, act_layer = nothing, kwargs...)
+    vl = last(split(variant, '_'))
+    if vl in ("a", "b")
+        stem_size = 16
+        arch_def = [
+            ["ds_r2_k3_s1_e1_c16"],
+            ["ir_r1_k5_s2_e4_c24", "ir_r3_k5_s1_e2_c24"],
+            ["ir_r1_k5_s2_e5_c40_se0.25", "ir_r4_k5_s1_e3_c40_se0.25"],
+            ["ir_r1_k5_s2_e5_c72", "ir_r4_k3_s1_e3_c72"],
+            ["ir_r1_k3_s1_e5_c120_se0.25", "ir_r5_k5_s1_e3_c120_se0.25"],
+            ["ir_r1_k3_s2_e6_c184_se0.25", "ir_r5_k5_s1_e4_c184_se0.25",
+                "ir_r1_k5_s1_e6_c224_se0.25"],
+            ["cn_r1_k1_s1_c1344"]
+        ]
+    elseif vl == "d"
+        stem_size = 24
+        arch_def = [
+            ["ds_r2_k3_s1_e1_c16"],
+            ["ir_r1_k3_s2_e5_c24", "ir_r5_k3_s1_e2_c24"],
+            ["ir_r1_k5_s2_e4_c40_se0.25", "ir_r4_k3_s1_e3_c40_se0.25"],
+            ["ir_r1_k3_s2_e5_c72", "ir_r4_k3_s1_e3_c72"],
+            ["ir_r1_k3_s1_e5_c128_se0.25", "ir_r6_k5_s1_e3_c128_se0.25"],
+            ["ir_r1_k3_s2_e6_c208_se0.25", "ir_r5_k5_s1_e5_c208_se0.25",
+                "ir_r1_k5_s1_e6_c240_se0.25"],
+            ["cn_r1_k1_s1_c1440"]
+        ]
+    elseif vl == "g"
+        stem_size = 32
+        arch_def = [
+            ["ds_r3_k3_s1_e1_c24"],
+            ["ir_r1_k5_s2_e4_c40", "ir_r4_k5_s1_e2_c40"],
+            ["ir_r1_k5_s2_e4_c56_se0.25", "ir_r4_k5_s1_e3_c56_se0.25"],
+            ["ir_r1_k5_s2_e5_c104", "ir_r4_k3_s1_e3_c104"],
+            ["ir_r1_k3_s1_e5_c160_se0.25", "ir_r8_k5_s1_e3_c160_se0.25"],
+            ["ir_r1_k3_s2_e6_c264_se0.25", "ir_r6_k5_s1_e5_c264_se0.25",
+                "ir_r2_k5_s1_e6_c288_se0.25"],
+            ["cn_r1_k1_s1_c1728"]
+        ]
+    else
+        error("unknown FBNet-V3 variant `$variant`")
+    end
+    round_chs_fn = c -> round_channels(c, channel_multiplier; round_limit = 0.95)
+    se_layer = (channels; kw...) -> SqueezeExcite(channels; gate_layer = hardsigmoid,
+        rd_round_fn = round_chs_fn, kw...)
+    return create_mnv3(; block_args = decode_arch_def(arch_def), num_features = 1984,
+        head_bias = false, stem_size, round_chs_fn, se_from_exp = false,
+        act_layer = something(act_layer, "hard_swish"), se_layer, kwargs...)
+end
+
 function gen_lcnet(; variant = nothing, channel_multiplier = 1.0, kwargs...)
     arch_def = [
         ["dsa_r1_k3_s1_c32"],
@@ -201,7 +250,9 @@ const MOBILENETV3_REFERENCES = Dict(
     ],
     "mobilenetv3_rw" =>
         ["timm/mobilenetv3_rw.rmsp_in1k" => "d29d2e0bdcc626b1bc989aba56d45bab17eb2275"],
-    "lcnet_050" => ["timm/lcnet_050.ra2_in1k" => "7d724d70bd001f453d812e733aa9b1931a69f6c2"]
+    "lcnet_050" => ["timm/lcnet_050.ra2_in1k" => "7d724d70bd001f453d812e733aa9b1931a69f6c2"],
+    "fbnetv3_b" =>
+        ["timm/fbnetv3_b.ra2_in1k" => "41fc9b427ca1b8a2293e1e79b54ccd30b22bc536"]
 )
 
 const MOBILENETV3_ARCHS = String[]
@@ -226,6 +277,9 @@ let tf = (bn_eps = BN_EPS_TF_DEFAULT, pad_type = "same")
     end
     register_mnv3!("mobilenetv3_rw", gen_mobilenet_v3_rw; channel_multiplier = 1.0,
         bn_eps = BN_EPS_TF_DEFAULT)
+    for name in ["fbnetv3_b", "fbnetv3_d", "fbnetv3_g"]
+        register_mnv3!(name, gen_fbnetv3; variant = name)
+    end
     for (name, cm) in
         [("035", 0.35), ("050", 0.5), ("075", 0.75), ("100", 1.0), ("150", 1.5)]
         register_mnv3!("lcnet_$name", gen_lcnet; channel_multiplier = cm)

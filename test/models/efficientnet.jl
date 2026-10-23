@@ -4,7 +4,9 @@ using .ParitySetup
 
 @testset "fixtures" begin
     for name in ["efficientnet_grouped_os16", "efficientnet_tf_same", "efficientnet_edge",
-        "efficientnetv2_base_tf", "mobilenetv1_head", "mobilenetv1_nohead", "mnasnet_a1"]
+        "efficientnetv2_base_tf", "mobilenetv1_head", "mobilenetv1_nohead", "mnasnet_a1",
+        "mixnet_s", "mixnet_tf_same", "efficientnet_cc_tf_same", "efficientnet_cc_os16",
+        "mobilenet_edgetpu_v2"]
         r = check_fixture(fixture(name))
         @test r.output <= 1e-8
         @test r.features <= 1e-8
@@ -13,7 +15,9 @@ using .ParitySetup
 end
 
 @testset "architectures" begin
-    for arch in Metalhead.Timm.EFFICIENTNET_ARCHS
+    # the L2 models have 480M parameters (2 GB each): their counts were checked once
+    for arch in setdiff(Metalhead.Timm.EFFICIENTNET_ARCHS,
+        ["efficientnet_l2", "tf_efficientnet_l2"])
         @test check_param_counts(arch)
     end
 end
@@ -49,6 +53,14 @@ end
     g = grad("mobilenetv1_head", (32, 32, 3, 2))
     @test all(isfinite, g.blocks.layers[1].layers[1].conv_pw.weight)
     @test all(isfinite, g.bn2.γ)
+
+    # MixedConv2d with TF padding, CondConv2d with dynamic padding, grouped EdgeResidual
+    for (name, insize) in [("mixnet_tf_same", (44, 36, 3, 2)),
+        ("efficientnet_cc_tf_same", (44, 36, 3, 2)),
+        ("mobilenet_edgetpu_v2", (32, 32, 3, 2))]
+        m = fixture_model(fixture(name); eltype = Float32)
+        @test check_gradient(m, rand(Float32, insize))
+    end
 end
 
 @testset "builder" begin
@@ -73,6 +85,9 @@ end
     @test depths(2.2; fix_first_last = true) == [1, 5, 5, 7, 7, 9, 1]
     @test depths((1.2, 1.2, 1.2, 1.2, 1.6, 1.6, 2.0)) == [2, 3, 3, 4, 5, 7, 2]
     @test_throws "one value per stage" depths((1.2, 1.6))
+    cc = decode_arch_def([["ir_r1_k3_s1_e6_c24_cc4", "ir_r1_k3_s1_e6_c24"]];
+        experts_multiplier = 2)
+    @test cc[1][1][:num_experts] == 8 && !haskey(cc[1][2], :num_experts)
 
     multi = [["ir_r1_k3_s2_e6_c24", "ir_r2_k3_s1_e3_c24", "ir_r1_k5_s1_e6_c24"],
         ["dsa_r3_k3_s1_c8", "ds_r2_k3_s1_c8"]]
@@ -89,6 +104,36 @@ end
     @test args[:block_type] == "er" && args[:exp_ratio] == 8.0 && args[:stride] == 2
     @test args[:force_in_chs] == 24 && args[:se_ratio] == 0.25 && args[:noskip]
     @test args[:act_layer] === relu && args[:group_size] == 8
+    args, _ = decode_block_str("ir_r1_k3.5.7_a1.1_p1.1_s2_e6_c40_se0.5_nsw")
+    @test args[:dw_kernel_size] == [3, 5, 7] && args[:exp_kernel_size] == [1, 1]
+    @test args[:pw_kernel_size] == [1, 1] && args[:act_layer] === swish
+
+    # MixedConv2d: channel splits as timm's _split_channels, depthwise when groups == in_chs
+    using Metalhead.Timm: create_conv2d, MixedConv2d, CondConv2d, split_channels
+    @test split_channels(48, 5) == (12, 9, 9, 9, 9) && split_channels(16, 2) == (8, 8)
+    mc = create_conv2d(48, 48, [3, 5, 7, 9, 11]; stride = 2, groups = 48, padding = "same")
+    @test mc isa MixedConv2d && mc.splits == (12, 9, 9, 9, 9)
+    @test all(mc.convs) do c
+        c isa Metalhead.Timm.Conv2dSame && c.conv.groups == size(c.conv.weight, 4)
+    end
+    @test first.(Metalhead.Timm.layer_params(mc))[1:2] == ["0.weight", "1.weight"]
+    pw = create_conv2d(8, 24, [1, 1])
+    @test size.(getfield.(pw.convs, :weight)) == ((1, 1, 4, 12), (1, 1, 4, 12))
+    x = randn(Float32, 6, 6, 8, 2)
+    @test pw(x) ≈ cat(pw.convs[1](x[:, :, 1:4, :]), pw.convs[2](x[:, :, 5:8, :]); dims = 3)
+    @test_throws "CondConv" create_conv2d(8, 8, [3, 5]; num_experts = 4)
+    @test_throws "depthwise" create_conv2d(8, 8, [3, 5]; groups = 2)
+
+    # CondConv2d mixes the expert kernels of each sample by its routing weights
+    cc = create_conv2d(4, 6, 3; num_experts = 3, stride = 2)
+    @test cc isa CondConv2d && size(cc.weight) == (3 * 3 * 4 * 6, 3)
+    x, r = randn(Float32, 7, 7, 4, 2), rand(Float32, 3, 2)
+    y = cc(x, r)
+    for b in 1:2
+        conv = Conv(reshape(cc.weight * r[:, b], 3, 3, 4, 6); stride = 2, pad = 1)
+        conv.weight .= reverse(conv.weight; dims = (1, 2))  # torch cross-correlates
+        @test y[:, :, :, b] ≈ conv(x[:, :, :, b:b])[:, :, :, 1]
+    end
 
     @test [round_channels(args...) for args in [(16, 0.25), (24, 1.1), (40, 1.2),
         (1280, 1.4), (320, 0.35), (1280, 0.35), (10, 1.0), (1792, 1.0), (272, 1.2)]] ==
@@ -169,9 +214,6 @@ end
     using Metalhead.Timm: decode_block_str, EfficientNetBuilder, decode_arch_def
     using Flux: relu
 
-    @test_throws "MixedConv" decode_block_str("ir_r1_k3.5_s1_e6_c24")
-    @test_throws "MixedConv" decode_block_str("ir_r1_k3_a1.1_s1_e6_c24")
-    @test_throws "CondConv" decode_block_str("ir_r1_k3_s1_e6_c24_cc4")
     @test_throws "MobileNetV4" decode_block_str("uir_r1_a3_k5_s2_e4_c80")
     @test_throws "unknown block type" decode_block_str("xx_r1_k3_s1_e6_c24")
     builder = EfficientNetBuilder(; act_layer = relu)
@@ -184,13 +226,16 @@ end
     @test_throws "features_only" create_model("efficientnet_b0"; features_only = true)
     @test_throws "norm_layer" create_model("efficientnet_b0"; norm_layer = "groupnorm")
     @test_throws "not supported" create_model("efficientnet_b0"; act_layer = "evo")
-    @test_throws "not been ported" create_model("mixnet_s")
+    @test_throws "not been ported" create_model("efficientnet_x_b5")
+    @test_throws "not been ported" create_model("efficientnet_b1_pruned")
 end
 
 TEST_NETWORK && @testset "references" begin
     for file in reference_files("efficientnet") ∪ reference_files("tf_efficientnet") ∪
                 reference_files("mobilenetv1") ∪ reference_files("mobilenetv2") ∪
-                reference_files("mnasnet") ∪ reference_files("test_efficientnet")
+                reference_files("mnasnet") ∪ reference_files("test_efficientnet") ∪
+                reference_files("mixnet") ∪ reference_files("tf_mixnet") ∪
+                reference_files("fbnetc") ∪ reference_files("mobilenet_edgetpu")
         meta=SafeTensors.deserialize(file).metadata
         ref=Metalhead.Checkpoint(file)
         model=create_model(meta["repo"]; pretrained = true, revision = meta["revision"])

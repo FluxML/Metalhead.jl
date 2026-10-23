@@ -2,8 +2,8 @@
 # Validated against test/fixtures/efficientnet_* and the parameter counts of every
 # registered architecture.
 #
-# Not ported: CondConv (`cc`), MixedConv (kernel lists such as `k3.5.7`), UIR/MobileNetV4
-# (`uir`, `mha`, `mqa`), space-to-depth (`d`), anti-aliasing and feature extraction.
+# Not ported: UIR/MobileNetV4 (`uir`, `mha`, `mqa`), space-to-depth (`d`), anti-aliasing
+# and feature extraction.
 
 const BN_MOMENTUM_TF_DEFAULT = 1 - 0.99
 const BN_EPS_TF_DEFAULT = 1e-3
@@ -33,11 +33,8 @@ function round_channels(channels, multiplier = 1.0, divisor = 8, channel_min = n
         round_limit)
 end
 
-function parse_ksize(ss)
-    all(isdigit, ss) && return parse(Int, ss)
-    return error("MixedConv (the kernel size list `$ss`) is not supported by the " *
-                 "Metalhead ports of the EfficientNet family")
-end
+# A kernel size, or a list of them (`3.5.7`) for a MixedConv2d.
+parse_ksize(ss) = all(isdigit, ss) ? parse(Int, ss) : [parse(Int, k) for k in split(ss, '.')]
 
 # Decode a block definition string such as `ir_r2_k3_s2_e1_c16_se0.25_noskip` into a
 # `(block args, number of repeats)` pair.
@@ -65,8 +62,6 @@ function decode_block_str(block_str::AbstractString)
     end_kernel_size = haskey(options, "p") ? parse_ksize(options["p"]) : 1
     force_in_chs = haskey(options, "fc") ? parse(Int, options["fc"]) : 0
     num_repeat = parse(Int, options["r"])
-    haskey(options, "cc") && error("CondConv (`cc`) is not supported by the Metalhead " *
-          "ports of the EfficientNet family")
 
     block_args = Dict{Symbol, Any}(:block_type => block_type,
         :out_chs => parse(Int, options["c"]), :stride => parse(Int, options["s"]),
@@ -79,6 +74,7 @@ function decode_block_str(block_str::AbstractString)
                 :exp_kernel_size => start_kernel_size, :pw_kernel_size => end_kernel_size,
                 :exp_ratio => parse(Float64, options["e"]), :se_ratio => se_ratio,
                 :noskip => skip === false, :s2d => s2d))
+        haskey(options, "cc") && (block_args[:num_experts] = parse(Int, options["cc"]))
     elseif block_type == "ds" || block_type == "dsa"
         merge!(block_args,
             Dict(:dw_kernel_size => parse_ksize(options["k"]),
@@ -130,14 +126,14 @@ end
 
 """
     decode_arch_def(arch_def, depth_multiplier = 1.0; depth_trunc = "ceil",
-                    fix_first_last = false, group_size = nothing)
+                    experts_multiplier = 1, fix_first_last = false, group_size = nothing)
 
 Decode the block definition strings of the stages of `arch_def` (a vector of vectors of
 strings) into a vector of vectors of block arguments. `depth_multiplier` is a number or one
-per stage.
+per stage; `experts_multiplier` scales the number of CondConv experts.
 """
 function decode_arch_def(arch_def, depth_multiplier = 1.0; depth_trunc = "ceil",
-        fix_first_last = false, group_size = nothing)
+        experts_multiplier = 1, fix_first_last = false, group_size = nothing)
     if depth_multiplier isa Union{Tuple, AbstractVector}
         length(depth_multiplier) == length(arch_def) ||
             error("`depth_multiplier` needs one value per stage")
@@ -151,6 +147,7 @@ function decode_arch_def(arch_def, depth_multiplier = 1.0; depth_trunc = "ceil",
         repeats = Int[]
         for block_str in block_strings
             ba, rep = decode_block_str(block_str)
+            haskey(ba, :num_experts) && (ba[:num_experts] *= experts_multiplier)
             group_size === nothing || get!(ba, :group_size, group_size)
             push!(stack_args, ba)
             push!(repeats, rep)
@@ -214,7 +211,8 @@ function make_block!(b::EfficientNetBuilder, ba, block_idx, block_count)
             channels; rd_ratio = se_ratio, kwargs...)
     end
     haskey(BLOCK_TYPES, block_type) || error("unknown block type `$block_type`")
-    block = BLOCK_TYPES[block_type](in_chs, out_chs; ba...)
+    block_cls = get(ba, :num_experts, 0) > 0 ? CondConvResidual : BLOCK_TYPES[block_type]
+    block = block_cls(in_chs, out_chs; ba...)
     b.in_chs = out_chs
     return block
 end
@@ -269,6 +267,13 @@ function efficientnet_init_weights!(model)
             m.weight .= (2 .* rand(Float32, size(m.weight)) .- 1) .* init_range
             m.bias isa AbstractArray && fill!(m.bias, 0)
         end
+    end
+    # CondConv routing layers: fan-in plus fan-out (CondConv2d inits itself)
+    for m in Flux.modules(model)
+        m isa CondConvResidual || continue
+        init_range = 1.0f0 / sqrt(Float32(sum(size(m.routing_fn.weight))))
+        m.routing_fn.weight .= (2 .* rand(Float32, size(m.routing_fn.weight)) .- 1) .*
+                               init_range
     end
     return model
 end

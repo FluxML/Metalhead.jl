@@ -1,8 +1,8 @@
 # Ported from timm.models._efficientnet_blocks (timm 1.0.30, Apache-2.0, Ross Wightman).
 # Validated against test/fixtures/efficientnet_* and test/references/timm--*efficientnet*.
 #
-# Not ported: CondConvResidual, UniversalInvertedResidual, MobileAttention, anti-aliasing,
-# space-to-depth, and norm layers other than BatchNorm2d.
+# Not ported: UniversalInvertedResidual, MobileAttention, anti-aliasing, space-to-depth,
+# and norm layers other than BatchNorm2d.
 
 # The arguments of timm's `partial(nn.BatchNorm2d, eps = ..., momentum = ...)` norm_layer.
 const BATCHNORM2D = (; eps = 1e-5, momentum = 0.1)
@@ -143,6 +143,49 @@ function (m::InvertedResidual)(x)
     x = m.bn1(m.conv_pw(x))
     x = m.bn2(m.conv_dw(x))
     x = m.bn3(m.conv_pwl(m.se(x)))
+    return m.has_skip ? m.drop_path(x) .+ shortcut : x
+end
+
+# Inverted residual block whose convs are CondConv2d, mixed per sample by routing weights
+# computed from the pooled input.
+@concrete struct CondConvResidual
+    conv_pw
+    bn1
+    conv_dw
+    bn2
+    se
+    conv_pwl
+    bn3
+    drop_path
+    routing_fn
+    has_skip
+end
+Flux.@layer CondConvResidual
+
+function CondConvResidual(in_chs, out_chs; dw_kernel_size = 3, stride = 1, dilation = 1,
+        group_size = 1, pad_type = "", noskip = false, exp_ratio = 1.0, exp_kernel_size = 1,
+        pw_kernel_size = 1, act_layer = relu, norm_layer = BATCHNORM2D, se_layer = nothing,
+        num_experts = 0, drop_path_rate = 0.0)
+    mid_chs = make_divisible(in_chs * exp_ratio)
+    conv_dw = create_conv2d(mid_chs, mid_chs, dw_kernel_size; stride, dilation,
+        padding = pad_type, groups = num_groups(group_size, mid_chs), num_experts)
+    se = se_layer === nothing ? identity : se_layer(mid_chs; act_layer)
+    return CondConvResidual(
+        create_conv2d(in_chs, mid_chs, exp_kernel_size; padding = pad_type, num_experts),
+        norm_act(norm_layer, mid_chs, act_layer), conv_dw,
+        norm_act(norm_layer, mid_chs, act_layer), se,
+        create_conv2d(mid_chs, out_chs, pw_kernel_size; padding = pad_type, num_experts),
+        norm_act(norm_layer, out_chs, act_layer; apply_act = false),
+        dropout_or_identity(drop_path_rate; dims = 4), Dense(in_chs => num_experts),
+        in_chs == out_chs && stride == 1 && !noskip)
+end
+
+function (m::CondConvResidual)(x)
+    shortcut = x
+    routing_weights = sigmoid.(m.routing_fn(reshape(mean(x; dims = (1, 2)), size(x, 3), :)))
+    x = m.bn1(m.conv_pw(x, routing_weights))
+    x = m.bn2(m.conv_dw(x, routing_weights))
+    x = m.bn3(m.conv_pwl(m.se(x), routing_weights))
     return m.has_skip ? m.drop_path(x) .+ shortcut : x
 end
 
