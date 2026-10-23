@@ -48,6 +48,8 @@ model = create_model("resnet50"; drop_path_rate = 0.1)            # timm's model
 
 list_models()                     # the ported architectures
 list_models(; pretrained = true)  # the checkpoints validated against PyTorch
+list_models(; byfamily = true)    # a dictionary of architectures by family
+list_models(; byfamily = true)["resnet"]
 ```
 
 Any Hub repository whose architecture has been ported can be loaded, not only the validated

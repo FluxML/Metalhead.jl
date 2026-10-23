@@ -8,6 +8,9 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
 
 ### Added
 
+- `list_models(; byfamily = true)` returns a dictionary of architectures by family. Combine
+  with `pretrained = true` to group validated checkpoints. The documentation uses the same
+  registry metadata.
 - Flux ports of [timm](https://github.com/huggingface/pytorch-image-models) models that load
   their weights directly from the Hugging Face Hub (#305, #307, #319, #320):
   - `create_model` builds a model from a Hub repository (`"timm/resnet50.a1_in1k"`), a bare

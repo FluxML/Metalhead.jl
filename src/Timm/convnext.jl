@@ -161,6 +161,6 @@ for (name, args) in [
     "convnext_base" => (depths = (3, 3, 27, 3), dims = (128, 256, 512, 1024)),
     "convnext_large" => (depths = (3, 3, 27, 3), dims = (192, 384, 768, 1536))
 ]
-    register!(ArchSpec(TIMM, name, convnext; defaults = args,
+    register!(ArchSpec(TIMM, name, convnext; family = "convnext", defaults = args,
         references = get(CONVNEXT_REFERENCES, name, [])))
 end
