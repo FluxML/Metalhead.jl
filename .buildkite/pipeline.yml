@@ -12,9 +12,7 @@ steps:
     agents:
       queue: "cuda"
     env:
-      GROUP: "All"
-      TEST_FAST: true
-      RETESTITEMS_NWORKERS: 2
+      PTR_NUM_JOBS: 2
       # JULIA_CUDA_HARD_MEMORY_LIMIT: "50%"
     if: build.message !~ /\[skip tests\]/
     timeout_in_minutes: 180

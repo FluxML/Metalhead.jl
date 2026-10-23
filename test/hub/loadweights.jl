@@ -1,14 +1,16 @@
-@testitem "Hub: torch keys from model structure" begin
-    using Metalhead: torch_params
-    using Flux, ConcreteStructs
+using Metalhead, Test
+using Flux, ConcreteStructs
 
-    @concrete struct Block
-        conv
-        norm
-        proj
-        scale
-    end
-    Flux.@layer Block
+@concrete struct Block
+    conv
+    norm
+    proj
+    scale
+end
+Flux.@layer Block
+
+@testset "torch keys from model structure" begin
+    using Metalhead: torch_params
 
     m = Chain(
         Block(Conv((3, 3), 2 => 4), BatchNorm(4), Dense(4 => 4; bias = false), ones(Float32, 4)),
@@ -35,7 +37,7 @@
     @test_throws "no PyTorch mapping" torch_params(Chain(Flux.Scale(3)))
 end
 
-@testitem "Hub: loading PyTorch-layout tensors" begin
+@testset "loading PyTorch-layout tensors" begin
     using Metalhead: Checkpoint, load_state!
     using Flux, SafeTensors
 
@@ -68,7 +70,7 @@ end
     @test y[:, :, 2, 1] ≈ [torch_out(2, i, j) for j in 1:3, i in 1:3]
 end
 
-@testitem "Hub: strict loading errors" begin
+@testset "strict loading errors" begin
     using Metalhead: Checkpoint, load_state!
     using Flux, SafeTensors
 
@@ -102,7 +104,7 @@ end
     @test m.head.weight == w
 end
 
-@testitem "Hub: create_model" begin
+@testset "create_model" begin
     using Flux
     @test "resnet50" in list_models()
     m = create_model("resnet18"; num_classes = 7)

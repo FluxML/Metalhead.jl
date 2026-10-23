@@ -1,4 +1,8 @@
-@testitem "Models: timm res2net fixtures" setup=[ParitySetup] begin
+using Metalhead, Test
+include("../parity_setup.jl")
+using .ParitySetup
+
+@testset "fixtures" begin
     for name in ["res2net", "res2next_deep"]
         r = check_fixture(fixture(name))
         @test r.output <= 1e-8
@@ -7,14 +11,14 @@
     end
 end
 
-@testitem "Models: timm res2net architectures" setup=[ParitySetup] begin
+@testset "architectures" begin
     for arch in list_models()
         startswith(arch, "res2ne") || continue
         @test check_param_counts(arch)
     end
 end
 
-@testitem "Models: timm res2net gradient" setup=[ParitySetup] begin
+@testset "gradient" begin
     using Flux
     m = Flux.trainmode!(create_model(fixture("res2net"); pretrained = true))
     x = rand(Float32, 32, 32, 3, 2)
@@ -26,7 +30,7 @@ end
     @test all(isfinite, g.conv1.weight)
 end
 
-@testitem "Models: timm res2net block arguments" begin
+@testset "block arguments" begin
     using Metalhead: create_model
 
     tiny = (; layers = (1, 1, 1, 1), channels = (8, 16, 32, 64), num_classes = 10)
@@ -38,7 +42,7 @@ end
     @test_throws "block_args" block(block_args = (width = 2,))
 end
 
-@testitem "Models: timm res2net references" tags=[:network] setup=[ParitySetup] begin
+TEST_NETWORK && @testset "references" begin
     for file in reference_files("res2ne")
         meta = SafeTensors.deserialize(file).metadata
         ref = Metalhead.Checkpoint(file)

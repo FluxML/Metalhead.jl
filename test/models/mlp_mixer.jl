@@ -1,4 +1,8 @@
-@testitem "Models: timm mlp_mixer fixtures" setup=[ParitySetup] begin
+using Metalhead, Test
+include("../parity_setup.jl")
+using .ParitySetup
+
+@testset "fixtures" begin
     for name in ["mixer", "gmixer", "resmlp", "gmlp"]
         r = check_fixture(fixture(name))
         @test r.output <= 1e-8
@@ -7,14 +11,14 @@
     end
 end
 
-@testitem "Models: timm mlp_mixer architectures" setup=[ParitySetup] begin
+@testset "architectures" begin
     for arch in list_models()
         startswith(arch, r"(mixer|gmixer|resmlp|gmlp)_") || continue
         @test check_param_counts(arch)
     end
 end
 
-@testitem "Models: timm mlp_mixer options" setup=[ParitySetup] begin
+@testset "options" begin
     using Flux
     @test_throws "not supported" create_model("mixer_b16_224"; stem_norm = true)
     @test_throws "not supported" create_model("mixer_b16_224"; global_pool = "max")
@@ -41,7 +45,7 @@ end
     @test size(m(rand(Float32, 32, 16, 3, 2))) == (5, 8 * 4, 2)
 end
 
-@testitem "Models: timm mlp_mixer gradient" setup=[ParitySetup] begin
+@testset "gradient" begin
     using Flux, Functors
     for (name, channels) in ["mixer" => 2, "gmixer" => 3, "resmlp" => 3, "gmlp" => 2]
         m = Flux.trainmode!(create_model(fixture(name); pretrained = true))
@@ -63,7 +67,7 @@ end
     @test all(isfinite, g.blocks.layers[1].mlp_channels.gate.norm.diag.scale)
 end
 
-@testitem "Models: timm mlp_mixer references" tags=[:network] setup=[ParitySetup] begin
+TEST_NETWORK && @testset "references" begin
     for prefix in ["mixer_", "resmlp_", "gmlp_"], file in reference_files(prefix)
         meta = SafeTensors.deserialize(file).metadata
         ref = Metalhead.Checkpoint(file)

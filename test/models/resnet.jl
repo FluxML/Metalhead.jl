@@ -1,4 +1,8 @@
-@testitem "Models: timm resnet fixtures" setup=[ParitySetup] begin
+using Metalhead, Test
+include("../parity_setup.jl")
+using .ParitySetup
+
+@testset "fixtures" begin
     for name in ["resnet_basic", "resnet_bottleneck", "resnext",
         "resnet_deep_avgdown", "resnet_tiered", "senet", "seresnet_basic", "ecaresnet"]
         r = check_fixture(fixture(name))
@@ -8,21 +12,21 @@
     end
 end
 
-@testitem "Models: timm resnet architectures" setup=[ParitySetup] begin
+@testset "architectures" begin
     for arch in list_models()
         startswith(arch, r"resne|wide_resnet|seresne|senet|ecaresne") || continue
         @test check_param_counts(arch)
     end
 end
 
-@testitem "Models: timm resnet gradient" setup=[ParitySetup] begin
+@testset "gradient" begin
     x = rand(Float32, 32, 32, 3, 2)
     for name in ["resnet_basic", "senet", "seresnet_basic", "ecaresnet"]
         @test check_gradient(fixture_model(fixture(name); eltype = Float32), x)
     end
 end
 
-@testitem "Models: timm resnet attention layers" begin
+@testset "attention layers" begin
     using Metalhead.Timm: SEModule, EcaModule, create_attn
     using Metalhead: create_model
 
@@ -50,7 +54,7 @@ end
         block_args = (attn_layer = "se",))
 end
 
-@testitem "Models: timm resnet references" tags=[:network] setup=[ParitySetup] begin
+TEST_NETWORK && @testset "references" begin
     prefixes = ["resnet", "resnext", "wide_resnet", "seresne", "ecaresne"]
     for file in reduce(∪, reference_files.(prefixes))
         meta=SafeTensors.deserialize(file).metadata

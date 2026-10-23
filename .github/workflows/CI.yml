@@ -22,14 +22,11 @@ concurrency:
 
 jobs:
   test:
-    name: ${{ matrix.suite }} - Julia ${{ matrix.version }} - ${{ matrix.os }}
+    name: Julia ${{ matrix.version }} - ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     # a failing prerelease must not turn the CI badge red
     continue-on-error: ${{ matrix.version == 'pre' }}
-    env:
-      GROUP: ${{ matrix.suite }}
-      TEST_FAST: ${{ matrix.version != '1' }}
     strategy:
       fail-fast: false
       matrix:
@@ -39,22 +36,6 @@ jobs:
           - 'pre'
         os:
           - ubuntu-latest
-        suite:
-          - 'Hub'
-          - 'Models'
-          - 'AlexNet|VGG'
-          - 'GoogLeNet|SqueezeNet|MobileNet|MNASNet'
-          - 'EfficientNet'
-          - '^ResNet|WideResNet'
-          - '^ResNeXt' # split off from ResNet to reduce overall runtime
-          - 'SEResNet|SEResNeXt'
-          - 'Res2Net|Res2NeXt'
-          - 'Inception'
-          - 'DenseNet'
-          - 'UNet'
-          - 'ConvNeXt|ConvMixer'
-          - 'MLP-Mixer|ResMLP|gMLP'
-          - 'ViT'
     steps:
       - uses: actions/checkout@v7
       - uses: julia-actions/setup-julia@v3

@@ -1,4 +1,6 @@
-@testitem "Models: timm layers" begin
+using Metalhead, Test
+
+@testset "timm layers" begin
     using Metalhead: torch_params
     using Metalhead.Timm: create_conv2d, conv_norm_act, make_divisible, Conv2dSame
     using Flux

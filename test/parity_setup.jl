@@ -1,4 +1,4 @@
-@testsetup module ParitySetup
+module ParitySetup
 using Metalhead
 include(joinpath(pkgdir(Metalhead), "test", "parity.jl"))
 using .Parity
@@ -7,7 +7,11 @@ using SafeTensors: SafeTensors
 using Flux, Functors
 
 export Parity, check_fixture, fixture_model, shrink_channels, reference_input, relerr, tapify,
-       fixture, reference_files, check_param_counts, check_gradient
+       fixture, reference_files, check_param_counts, check_gradient, JSON, SafeTensors,
+       TEST_NETWORK
+
+# The reference tests download pretrained weights from the Hub.
+const TEST_NETWORK = parse(Bool, get(ENV, "METALHEAD_TEST_NETWORK", "false"))
 
 const TEST_DIR = joinpath(pkgdir(Metalhead), "test")
 

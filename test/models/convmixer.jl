@@ -1,4 +1,8 @@
-@testitem "Models: timm convmixer fixtures" setup=[ParitySetup] begin
+using Metalhead, Test
+include("../parity_setup.jl")
+using .ParitySetup
+
+@testset "fixtures" begin
     for name in ["convmixer", "convmixer_even_kernel"]
         r = check_fixture(fixture(name))
         @test r.output <= 1e-8
@@ -7,14 +11,14 @@
     end
 end
 
-@testitem "Models: timm convmixer architectures" setup=[ParitySetup] begin
+@testset "architectures" begin
     for arch in list_models()
         startswith(arch, "convmixer_") || continue
         @test check_param_counts(arch)
     end
 end
 
-@testitem "Models: timm convmixer options" setup=[ParitySetup] begin
+@testset "options" begin
     @test_throws "not supported" create_model("convmixer_768_32"; act_layer = "silu")
     @test_throws "not supported" create_model("convmixer_768_32"; global_pool = "")
     @test_throws "not supported" create_model("convmixer_768_32"; global_pool = "max")
@@ -23,7 +27,7 @@ end
     @test size(m(rand(Float32, 16, 16, 3, 2))) == (8, 2)
 end
 
-@testitem "Models: timm convmixer gradient" setup=[ParitySetup] begin
+@testset "gradient" begin
     using Flux, Functors
     # the even kernel is a Conv2dSame, which wraps its Conv
     inputs = ["convmixer" => (32, 16, 2, 2), "convmixer_even_kernel" => (16, 16, 3, 2)]
@@ -40,7 +44,7 @@ end
     end
 end
 
-@testitem "Models: timm convmixer references" tags=[:network] setup=[ParitySetup] begin
+TEST_NETWORK && @testset "references" begin
     for file in reference_files("convmixer_")
         meta = SafeTensors.deserialize(file).metadata
         ref = Metalhead.Checkpoint(file)

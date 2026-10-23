@@ -1,4 +1,8 @@
-@testitem "Models: timm inception fixtures" setup=[ParitySetup] begin
+using Metalhead, Test
+include("../parity_setup.jl")
+using .ParitySetup
+
+@testset "fixtures" begin
     for name in ["inception_v3", "inception_v4", "inception_resnet_v2"]
         r = check_fixture(fixture(name))
         @test r.output <= 1e-8
@@ -7,7 +11,7 @@
     end
 end
 
-@testitem "Models: timm inception architectures" setup=[ParitySetup] begin
+@testset "architectures" begin
     for arch in ["inception_v3", "inception_v4", "inception_resnet_v2"]
         @test arch in list_models()
         @test check_param_counts(arch)
@@ -15,7 +19,7 @@ end
     @test_throws "aux_logits" create_model("inception_v3"; aux_logits = true)
 end
 
-@testitem "Models: timm inception gradient" setup=[ParitySetup] begin
+@testset "gradient" begin
     using Flux, Functors
     for (name, in_chans) in ["inception_v3" => 1, "inception_resnet_v2" => 2]
         m = Flux.trainmode!(fixture_model(fixture(name); eltype = Float32))
@@ -27,7 +31,7 @@ end
     end
 end
 
-@testitem "Models: shrink_channels" setup=[ParitySetup] begin
+@testset "shrink_channels" begin
     using Flux
     m = create_model("resnet18"; num_classes = 10)
     s = shrink_channels(m, 8; keep = (3, 10))
@@ -44,7 +48,7 @@ end
           (3, 3, 1, 32)
 end
 
-@testitem "Models: timm inception references" tags=[:network] setup=[ParitySetup] begin
+TEST_NETWORK && @testset "references" begin
     for file in reference_files("inception_v") ∪ reference_files("inception_resnet")
         meta = SafeTensors.deserialize(file).metadata
         ref = Metalhead.Checkpoint(file)
