@@ -100,10 +100,10 @@ function shrink_channels(model, k::Integer; keep = ())
     end
     isshrinkable(x) = x isa Union{Conv, BatchNorm, Dense}
     return fmap(model; exclude = x -> isshrinkable(x) || x isa AbstractArray{<:Number}) do l
-        l isa Conv ? shrink_conv(l, shrink) :
-        l isa BatchNorm ? shrink_batchnorm(l, shrink) :
-        l isa Dense ? shrink_dense(l, shrink) :
-        error("cannot shrink a parameter array of size $(size(l))")
+        return l isa Conv ? shrink_conv(l, shrink) :
+               l isa BatchNorm ? shrink_batchnorm(l, shrink) :
+               l isa Dense ? shrink_dense(l, shrink) :
+               error("cannot shrink a parameter array of size $(size(l))")
     end
 end
 
@@ -160,7 +160,8 @@ Returns the relative errors, with the taps in PyTorch call order.
 """
 function check_fixture(dir; rtol = 1e-8, model = fixture_model(dir))
     acts = Checkpoint(joinpath(dir, "acts.safetensors"))
-    order = Metalhead.JSON.parse(SafeTensors.deserialize(joinpath(dir, "acts.safetensors")).metadata["call_order"])
+    meta = SafeTensors.deserialize(joinpath(dir, "acts.safetensors")).metadata
+    order = Metalhead.JSON.parse(meta["call_order"])
     x = acts["input"]
     output = relerr(model(x), acts["output"])
     features = relerr(forward_features(model, x), acts["features"])
@@ -177,7 +178,7 @@ function check_fixture(dir; rtol = 1e-8, model = fixture_model(dir))
         err = y === nothing ? missing : size(y) == size(ref) ? relerr(y, ref) : Inf
         return (; name = k, err, tol = TAP_RTOL[eltype(ref)])
     end
-    intermediates = check_intermediates(model, x, acts)
+    intermediates = check_intermediates(model, x, acts, meta)
     return (; output,
         features,
         taps,
@@ -195,13 +196,18 @@ vision transformers) with the references "intermediates/<i>", "intermediates_nor
 "intermediates_prefix/<i>" of a fixture, and its features with "features". Without
 "intermediates_norm", the normed intermediates must equal the plain references.
 """
-function check_intermediates(model, x, acts)
+function check_intermediates(model, x, acts, meta = Dict())
     n = count(startswith("intermediates/"), keys(acts))
     n == 0 && return NamedTuple[]
     errs = NamedTuple[]
     record!(name, y, ref, tol) = push!(errs,
         (; name, err = size(y) == size(ref) ? relerr(y, ref) : Inf, tol))
-    tol = TAP_RTOL[Float32]
+    tol = TAP_RTOL[eltype(acts["intermediates/1"])]
+    if haskey(meta, "feature_info")
+        ref = [Metalhead.nt(f) for f in Metalhead.JSON.parse(meta["feature_info"])]
+        push!(errs, (; name = "feature_info", err = feature_info(model) == ref ? 0.0 : Inf,
+            tol = 0.0))
+    end
     features, plain = forward_intermediates(model, x)
     record!("features", features, acts["features"], 1e-8)
     _, normed = forward_intermediates(model, x; norm = true)
@@ -212,6 +218,15 @@ function check_intermediates(model, x, acts)
               "intermediates/$i"
         record!("intermediates_norm/$i", normed[i], acts[key], tol)
     end
+    take = unique([1, n])
+    selected = forward_intermediates(model, x; indices = reverse(take),
+        intermediates_only = true)
+    early = forward_intermediates(model, x; indices = [1], stop_early = true,
+        intermediates_only = true)
+    for (i, y) in zip(take, selected)
+        record!("selected/$i", y, acts["intermediates/$i"], tol)
+    end
+    record!("early/1", only(early), acts["intermediates/1"], tol)
     if haskey(acts, "intermediates_prefix/1")
         _, pairs = forward_intermediates(model, x; return_prefix_tokens = true)
         for i in 1:n

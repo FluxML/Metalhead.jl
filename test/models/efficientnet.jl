@@ -14,6 +14,13 @@ using .ParitySetup
     end
 end
 
+@testset "feature extraction" begin
+    for name in ["efficientnet_tf_same", "efficientnet_grouped_os16",
+        "efficientnetv2_base_tf", "efficientnet_cc_os16", "mixnet_s", "mobilenetv1_nohead"]
+        check_intermediate_api(name)
+    end
+end
+
 @testset "architectures" begin
     # the L2 models have 480M parameters (2 GB each): their counts were checked once
     for arch in setdiff(Metalhead.Timm.EFFICIENTNET_ARCHS,
@@ -135,7 +142,8 @@ end
         @test y[:, :, :, b] ≈ conv(x[:, :, :, b:b])[:, :, :, 1]
     end
 
-    @test [round_channels(args...) for args in [(16, 0.25), (24, 1.1), (40, 1.2),
+    @test [round_channels(args...)
+           for args in [(16, 0.25), (24, 1.1), (40, 1.2),
         (1280, 1.4), (320, 0.35), (1280, 0.35), (10, 1.0), (1792, 1.0), (272, 1.2)]] ==
           [8, 24, 48, 1792, 112, 448, 16, 1792, 328]
     @test round_channels(112, 1.8, 16) == 208
@@ -237,6 +245,7 @@ TEST_NETWORK && @testset "references" begin
                 reference_files("mnasnet") ∪ reference_files("test_efficientnet") ∪
                 reference_files("mixnet") ∪ reference_files("tf_mixnet") ∪
                 reference_files("fbnetc") ∪ reference_files("mobilenet_edgetpu")
+
         meta=SafeTensors.deserialize(file).metadata
         ref=Metalhead.Checkpoint(file)
         model=create_model(meta["repo"]; pretrained = true, revision = meta["revision"])

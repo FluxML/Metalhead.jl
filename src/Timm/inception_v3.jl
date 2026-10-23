@@ -239,6 +239,34 @@ end
 
 (m::InceptionV3)(x) = forward_head(m, forward_features(m, x))
 
+function inception_v3_stages(m::InceptionV3)
+    return (Chain(m.Conv2d_1a_3x3, m.Conv2d_2a_3x3, m.Conv2d_2b_3x3),
+        Chain(m.Pool1, m.Conv2d_3b_1x1, m.Conv2d_4a_3x3),
+        Chain(m.Pool2, m.Mixed_5b, m.Mixed_5c, m.Mixed_5d),
+        Chain(m.Mixed_6a, m.Mixed_6b, m.Mixed_6c, m.Mixed_6d, m.Mixed_6e),
+        Chain(m.Mixed_7a, m.Mixed_7b, m.Mixed_7c))
+end
+
+function forward_intermediates(m::InceptionV3, x; kwargs...)
+    return sequential_intermediates(inception_v3_stages(m), x, 1:5; kwargs...)
+end
+
+function feature_info(m::InceptionV3)
+    chs = (m.Conv2d_2b_3x3[:bn].chs, m.Conv2d_4a_3x3[:bn].chs,
+        sum(b -> b[:bn].chs,
+            (m.Mixed_5d.branch1x1, m.Mixed_5d.branch5x5_2,
+                m.Mixed_5d.branch3x3dbl_3, m.Mixed_5d.branch_pool)),
+        sum(b -> b[:bn].chs,
+            (m.Mixed_6e.branch1x1, m.Mixed_6e.branch7x7_3,
+                m.Mixed_6e.branch7x7dbl_5, m.Mixed_6e.branch_pool)),
+        sum(b -> b[:bn].chs,
+            (m.Mixed_7c.branch1x1, m.Mixed_7c.branch3x3_2a,
+                m.Mixed_7c.branch3x3_2b, m.Mixed_7c.branch3x3dbl_3a,
+                m.Mixed_7c.branch3x3dbl_3b, m.Mixed_7c.branch_pool)))
+    names = ("Conv2d_2b_3x3", "Conv2d_4a_3x3", "Mixed_5d", "Mixed_6e", "Mixed_7c")
+    return [(; num_chs = chs[i], reduction = 2^i, module_name = names[i]) for i in 1:5]
+end
+
 # The torchvision checkpoint also holds the auxiliary classifier, which timm drops on load.
 register!(ArchSpec(TIMM, "inception_v3", inception_v3; family = "inception_v3",
     references = ["timm/inception_v3.tv_in1k" =>

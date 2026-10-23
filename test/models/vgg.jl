@@ -11,6 +11,12 @@ using .ParitySetup
     end
 end
 
+@testset "feature extraction" begin
+    for name in ["vgg_plain", "vgg_bn_adaptive_h"]
+        check_intermediate_api(name)
+    end
+end
+
 @testset "architectures" begin
     for arch in list_models()
         startswith(arch, "vgg") || continue

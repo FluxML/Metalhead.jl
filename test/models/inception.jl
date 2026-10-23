@@ -11,6 +11,12 @@ using .ParitySetup
     end
 end
 
+@testset "feature extraction" begin
+    for name in ["inception_v3", "inception_resnet_v2"]
+        check_intermediate_api(name)
+    end
+end
+
 @testset "architectures" begin
     for arch in ["inception_v3", "inception_v4", "inception_resnet_v2"]
         @test arch in list_models()
@@ -76,7 +82,8 @@ TEST_NETWORK && @testset "references" begin
         model = create_model(meta["repo"]; pretrained = true, revision = meta["revision"])
         x = reference_input(Tuple(JSON.parse(meta["input_shape"])))
         @test relerr(model(x), ref["logits"]) <= 1e-4
-        @test relerr(forward_head(model, forward_features(model, x); pre_logits = true),
+        @test relerr(
+            forward_head(model, forward_features(model, x); pre_logits = true),
             ref["pre_logits"]) <= 1e-4
     end
 end

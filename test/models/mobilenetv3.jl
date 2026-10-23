@@ -3,12 +3,21 @@ include("../parity_setup.jl")
 using .ParitySetup
 
 @testset "fixtures" begin
-    for name in ["mobilenetv3_large", "mobilenetv3_tf_large", "mobilenetv3_small_head_norm",
+    for name in [
+        "mobilenetv3_large", "mobilenetv3_tf_large", "mobilenetv3_small_head_norm",
         "mobilenetv3_tf_small_minimal", "mobilenetv3_rw", "lcnet", "fbnetv3"]
         r = check_fixture(fixture(name))
         @test r.output <= 1e-8
         @test r.features <= 1e-8
         @test r.pass
+    end
+end
+
+@testset "feature extraction" begin
+    for name in [
+        "mobilenetv3_large", "mobilenetv3_small_head_norm", "mobilenetv4_conv_small",
+        "mobilenetv4_hybrid_medium"]
+        check_intermediate_api(name)
     end
 end
 
@@ -143,6 +152,7 @@ TEST_NETWORK && @testset "references" begin
     for file in reference_files("mobilenetv3") ∪ reference_files("tf_mobilenetv3") ∪
                 reference_files("lcnet") ∪ reference_files("fbnetv3") ∪
                 reference_files("mobilenetv4")
+
         meta = SafeTensors.deserialize(file).metadata
         ref = Metalhead.Checkpoint(file)
         model = create_model(meta["repo"]; pretrained = true, revision = meta["revision"])

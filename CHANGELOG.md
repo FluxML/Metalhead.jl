@@ -24,7 +24,9 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
     a `Metalhead.ConfigFormat`, which says how its `config.json` names an architecture; timm's
     is in `src/Timm/config.jl`.
   - `forward_intermediates` and `feature_info`, for the multi-scale features of segmentation
-    and depth heads (ResNet and its variants, ConvNeXt, ViT, the MLP mixers, Inception v4).
+    and depth heads (ResNet and its variants, ConvNeXt, ViT, the MLP mixers, DenseNet, VGG,
+    Inception v3/v4, Inception-ResNet-v2, aligned Xception, and the EfficientNet and MobileNet
+    families, including MixNet, MNASNet, FBNet and LCNet) (#309).
   - ViT options of DINOv2, CLIP and SigLIP: layer scale, register tokens, pre-norm,
     QuickGELU, attention pooling (`global_pool = "map"`), average/max pooling, and
     `dynamic_img_size`, which resamples the position embedding like PyTorch's antialiased
@@ -42,6 +44,8 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
   models (#305, #307).
 - Documentation: getting started, a model list grouped by family, validation, porting and a
   [migration guide](https://fluxml.ai/Metalhead.jl/dev/migration/) from 0.9 (#307).
+- A tutorial on vision models covering image preprocessing, classification, transfer learning,
+  multi-scale features and vision transformer tokens.
 
 ### Changed
 

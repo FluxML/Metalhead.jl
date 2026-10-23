@@ -4,7 +4,7 @@
 #
 # Not ported: EfficientNet-X/H (space-to-depth), the pruned EfficientNet-B1/B2/B3 (their
 # channels come from timm's `_pruned/*.txt` files), GroupNorm/EvoNorm variants, the blur and
-# global-context variants, feature extraction, and the registered architectures that need
+# global-context variants, and the registered architectures that need
 # them. `fbnetc_100` defaults to `bn_eps = 1e-3`, the epsilon of its pretrained weights,
 # which timm only sets when it loads them (a Hub config does not say so).
 
@@ -17,6 +17,7 @@
     global_pool
     drop
     classifier
+    feature_stages
 end
 Flux.@layer EfficientNet
 
@@ -58,7 +59,8 @@ function efficientnet(; block_args, num_classes = 1000, num_features = 1280, in_
     end
     global_pool, classifier = create_classifier(num_features, num_classes)
     model = EfficientNet(conv_stem, bn1, blocks, conv_head, bn2, global_pool,
-        dropout_or_identity(drop_rate), classifier)
+        dropout_or_identity(drop_rate), classifier,
+        (; ends = Tuple(builder.stage_ends), reductions = Tuple(builder.reductions)))
     return efficientnet_init_weights!(model)
 end
 
@@ -73,8 +75,17 @@ end
 
 (m::EfficientNet)(x) = forward_head(m, forward_features(m, x))
 
+feature_info(m::EfficientNet) = efficientnet_feature_info(m)
+function forward_intermediates(m::EfficientNet, x; kwargs...)
+    return efficientnet_intermediates(m, x; kwargs...)
+end
+function efficientnet_final_features(m::EfficientNet, x, stop)
+    return stop == length(m.blocks) ? m.bn2(m.conv_head(x)) : x
+end
+
 # timm's _create_effnet; `bn_momentum` and `bn_eps` are resolved here, not in each _gen_*.
-function create_effnet(; features_only = false, norm_layer = nothing, bn_momentum = nothing,
+function create_effnet(;
+        features_only = false, norm_layer = nothing, bn_momentum = nothing,
         bn_eps = nothing, kwargs...)
     check_unsupported("EfficientNet"; features_only = (features_only, false))
     norm_layer = norm_layer === nothing ? resolve_bn_args(bn_momentum, bn_eps) : norm_layer
