@@ -507,7 +507,7 @@ const EFFICIENTNET_ARCHS = String[]
 
 function register_effnet!(name, build; args...)
     push!(EFFICIENTNET_ARCHS, name)
-    return register!(ArchSpec(:timm, name, build; defaults = (; args...),
+    return register!(ArchSpec(TIMM, name, build; defaults = (; args...),
         references = get(EFFICIENTNET_REFERENCES, name, [])))
 end
 

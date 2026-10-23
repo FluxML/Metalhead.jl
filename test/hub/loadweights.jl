@@ -113,7 +113,7 @@ end
     @test size(forward_features(m, rand(Float32, 64, 64, 3, 1))) == (2, 2, 512, 1)
     @test eltype(create_model("resnet18"; eltype = Float64).fc.weight) == Float64
     @test create_model("resnet18"; num_classes = 0).fc === identity
-    @test_throws "not been ported" create_model("not_a_model")
+    @test_throws "neither a ported architecture" create_model("not_a_model")
     @test_throws "not supported" create_model("resnet18"; aa_layer = "blur")
     @test_throws MethodError create_model("resnet18"; not_a_kwarg = 1)
 end

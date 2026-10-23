@@ -3,12 +3,11 @@
 ## Creating a model
 
 [`create_model`](@ref) builds a ported model. Its first argument names the model in one of
-four ways:
+three ways:
 
 | Argument | Example | Meaning |
 |:--|:--|:--|
 | Hub repository | `"timm/resnet50.a1_in1k"` | the architecture and weights of that repository |
-| timm name with a pretrained tag | `"resnet50.a1_in1k"` | the same, in the `timm` organisation |
 | architecture | `"resnet50"` | the bare architecture; with `pretrained = true`, its default checkpoint |
 | local directory | `"path/to/dir"` | a `config.json` and `model.safetensors` laid out like a Hub repository |
 
@@ -16,11 +15,12 @@ four ways:
 using Metalhead
 
 model = create_model("resnet50")                                 # random weights, no download
+model = create_model("timm/resnet50.a1_in1k")                   # that repository's architecture, random weights
 model = create_model("timm/resnet50.a1_in1k"; pretrained = true) # weights from the Hub
 ```
 
-With `pretrained = true`, Metalhead downloads and caches the repository's `config.json` and
-safetensors weights (sharded checkpoints too). The cache is shared with Python's
+Weights are random unless `pretrained = true`. Then Metalhead downloads and caches the
+repository's `config.json` and safetensors weights (sharded checkpoints too). The cache is shared with Python's
 `huggingface_hub` (`~/.cache/huggingface/hub`, or `HF_HUB_CACHE`), and so are `HF_TOKEN` for
 private or gated repositories and `HF_HUB_OFFLINE` to use only cached files.
 The [model list](@ref models) shows the checkpoints each architecture was validated against.
@@ -31,8 +31,8 @@ Other repositories load from their `main` branch, or from `revision`:
 model = create_model("timm/resnet50.a1_in1k"; pretrained = true, revision = "main")
 ```
 
-The other keyword arguments are timm's model arguments, such as `num_classes`, `drop_rate` or
-`drop_path_rate`. They override the repository's configuration. Use `eltype` to build the
+The other keyword arguments are the original library's model arguments (timm's, for now), such
+as `num_classes`, `drop_rate` or `drop_path_rate`. They override the repository's configuration. Use `eltype` to build the
 model in another precision (`Float16`, `Float32` or `Float64`).
 
 [`list_models`](@ref) lists the ported architectures, or with `pretrained = true` the
@@ -45,7 +45,7 @@ list_models(; pretrained = true)
 
 ## Inputs
 
-Models take Flux's layout: width × height × channels × batch, in `Float32` unless you chose
+Image models take Flux's layout: width × height × channels × batch, in `Float32` unless you chose
 another `eltype`. PyTorch's `(N, C, H, W)` is the same memory layout with the dimensions
 reversed. Sizes in timm configurations, such as `input_size = (3, 224, 224)`, are in PyTorch
 order.
@@ -56,7 +56,7 @@ statistics. Call `Flux.trainmode!(model)` before training.
 ## Classifying an image
 
 The preprocessing a checkpoint expects (image size, crop, normalisation) is in its
-configuration; [`Metalhead.pretrained_cfg`](@ref) returns it. The steps below follow timm's
+configuration; [`Metalhead.Timm.pretrained_cfg`](@ref) returns it. The steps below follow timm's
 evaluation transform: resize the shorter side to `input_size / crop_pct`, crop the centre, and
 normalise. They use [Images.jl](https://github.com/JuliaImages/Images.jl).
 
@@ -65,7 +65,7 @@ using Metalhead, Flux, Images
 
 repo = "timm/convnext_tiny.fb_in1k"
 model = create_model(repo; pretrained = true)
-cfg = Metalhead.pretrained_cfg(repo)
+cfg = Metalhead.Timm.pretrained_cfg(repo)
 
 function preprocess(img, cfg)
     _, h, w = cfg.input_size
@@ -90,7 +90,7 @@ model silently sees a transposed image.
 
 ## Features and the classifier
 
-Ported models follow timm's split into a feature extractor and a head:
+Image models follow timm's split into a feature extractor and a head:
 
 ```julia
 x = rand(Float32, 224, 224, 3, 2)

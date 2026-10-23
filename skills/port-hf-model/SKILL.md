@@ -32,7 +32,7 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
    the conventions below. Before defining a helper, search `src/Timm/` for it: two files
    defining the same method fail precompilation ("Method overwriting is not permitted").
 3. **Register** every architecture you support with
-   `register!(ArchSpec(:timm, "<arch>", builder; defaults = (...), references = [...]))`.
+   `register!(ArchSpec(TIMM, "<arch>", builder; defaults = (...), references = [...]))`.
    `defaults` must reproduce what `timm.create_model("<arch>")` builds: the `model_args` of
    the entry point, plus `num_classes = 0` when the default pretrained cfg has no classifier.
    `param_counts.py` prints `num_classes` to check this. Register only architectures whose

@@ -143,7 +143,7 @@ function fixture_model(dir; eltype = Float64)
     keep = (config["pretrained_cfg"]["input_size"][1], config["num_classes"])
     model = shrink_channels(create_model(dir), config["shrink"]; keep)
     model = Metalhead.ELTYPE_CONVERTERS[eltype](model)
-    spec = Metalhead.lookup(:timm, config["architecture"])
+    spec = Metalhead.lookup(config["architecture"])
     Metalhead.load_state!(model, Checkpoint(joinpath(dir, "model.safetensors"));
         ignore = [Metalhead.DEFAULT_IGNORE; spec.ignore])
     return Flux.testmode!(model)

@@ -9,7 +9,10 @@ This page is about adding a model. Metalhead admits models whose weights are on 
 [Hugging Face Hub](https://huggingface.co/models). For now these are
 [timm](https://github.com/huggingface/pytorch-image-models) vision models. A port is a Flux
 reimplementation of the PyTorch code, validated as described in
-[How models are validated](@ref validation).
+[How models are validated](@ref validation). The registry and `create_model` are not specific
+to timm: a library other than timm gets its own module, `src/<Name>/`, and a
+[`Metalhead.ConfigFormat`](@ref) saying how its `config.json` names an architecture, like
+`src/Timm/config.jl`.
 
 ## Setup
 

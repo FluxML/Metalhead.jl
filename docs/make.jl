@@ -5,45 +5,54 @@ open(joinpath(@__DIR__, "src", "index.md"), "w") do io
     write(io, read(joinpath(@__DIR__, "..", "README.md"), String))
 end
 
-# The model list is generated from the registry, grouped by the source file of the builders.
-# A family built by several functions (timm's `_gen_*`) is titled by its file.
+# The model list is generated from the registry, grouped by config format and by the source file
+# of the builders. A family built by several functions (timm's `_gen_*`) is titled by its file.
 function write_model_list(path)
-    groups = Dict{String, Vector{Metalhead.ArchSpec}}()
+    ArchSpec = Metalhead.ArchSpec
+    groups = Dict{String, Dict{String, Vector{ArchSpec}}}()
     for spec in values(Metalhead.REGISTRY)
-        file = basename(string(first(methods(spec.build)).file))
-        push!(get!(groups, file, Metalhead.ArchSpec[]), spec)
+        file = relpath(string(first(methods(spec.build)).file), pkgdir(Metalhead))
+        by_file = get!(groups, string(spec.format), Dict{String, Vector{ArchSpec}}())
+        push!(get!(by_file, file, ArchSpec[]), spec)
     end
-    builders(file) = sort!(unique(string(nameof(s.build)) for s in groups[file]))
-    title(file) = length(builders(file)) == 1 ? only(builders(file)) : splitext(file)[1]
+    builders(specs) = sort!(unique(string(parentmodule(s.build), ".", nameof(s.build))
+                                   for s in specs))
+    function title(specs, file)
+        names = builders(specs)
+        return length(names) == 1 ? last(split(only(names), '.')) : splitext(basename(file))[1]
+    end
     narchs = length(Metalhead.REGISTRY)
     nrefs = sum(length(s.references) for s in values(Metalhead.REGISTRY))
     open(path, "w") do io
         println(io, """
             # [Models](@id models)
 
-            Metalhead has $narchs ported timm architectures. Build one with
-            `create_model("<architecture>")`, or load any Hub checkpoint of it with
-            `create_model("timm/<architecture>.<tag>"; pretrained = true)`.
+            Metalhead has $narchs ported architectures. Build one with
+            `create_model("<architecture>")`, or load a Hub checkpoint of it with
+            `create_model("<organisation>/<repository>"; pretrained = true)`.
 
             The $nrefs checkpoints listed here were compared with PyTorch's outputs (see
             [How models are validated](@ref validation)). Bare architecture names load the first
-            one with `pretrained = true`. Other checkpoints of the same architectures, such as
-            those in the [timm organisation](https://huggingface.co/timm), load with the same
-            strict checks.
+            one with `pretrained = true`. Other checkpoints of the same architectures load with
+            the same strict checks.
             """)
-        for file in sort!(collect(keys(groups)); by = title)
-            specs = sort!(groups[file]; by = s -> s.name)
-            println(io, "## `$(title(file))`\n")
-            built_by = join(("`Metalhead.Timm.$b`" for b in builders(file)), ", ")
-            println(io, "Built by $built_by ",
-                "([source](https://github.com/FluxML/Metalhead.jl/blob/master/src/Timm/$file)).\n")
-            println(io, "| Architecture | Validated checkpoints |\n|:--|:--|")
-            for s in specs
-                refs = join(("[`$repo`](https://huggingface.co/$repo/tree/$sha)"
-                             for (repo, sha) in s.references), ", ")
-                println(io, "| `$(s.name)` | $refs |")
+        for format in sort!(collect(keys(groups)))
+            println(io, "## $format\n")
+            by_file = groups[format]
+            for file in sort!(collect(keys(by_file)); by = f -> title(by_file[f], f))
+                specs = sort!(by_file[file]; by = s -> s.name)
+                println(io, "### `$(title(specs, file))`\n")
+                built_by = join(("`$b`" for b in builders(specs)), ", ")
+                println(io, "Built by $built_by ",
+                    "([source](https://github.com/FluxML/Metalhead.jl/blob/master/$file)).\n")
+                println(io, "| Architecture | Validated checkpoints |\n|:--|:--|")
+                for s in specs
+                    refs = join(("[`$repo`](https://huggingface.co/$repo/tree/$sha)"
+                                 for (repo, sha) in s.references), ", ")
+                    println(io, "| `$(s.name)` | $refs |")
+                end
+                println(io)
             end
-            println(io)
         end
     end
 end

@@ -351,7 +351,7 @@ let deep = (stem_width = 32, stem_type = "deep"),
         "ecaresnext50t_32x4d" => (; bottleneck..., layers = (2, 2, 2, 2),
             cardinality = 32, base_width = 4, tiered_avg..., eca...)
     ]
-        register!(ArchSpec(:timm, name, resnet; defaults = args,
+        register!(ArchSpec(TIMM, name, resnet; defaults = args,
             references = get(RESNET_REFERENCES, name, [])))
     end
 end

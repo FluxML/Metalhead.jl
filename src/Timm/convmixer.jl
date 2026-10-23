@@ -67,6 +67,6 @@ for (name, args) in [
     "convmixer_1024_20_ks9_p14" => (; dim = 1024, depth = 20, kernel_size = 9,
         patch_size = 14)
 ]
-    register!(ArchSpec(:timm, name, convmixer; defaults = args,
+    register!(ArchSpec(TIMM, name, convmixer; defaults = args,
         references = get(CONVMIXER_REFERENCES, name, [])))
 end

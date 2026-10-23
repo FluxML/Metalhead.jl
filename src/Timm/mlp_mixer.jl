@@ -270,7 +270,7 @@ let mixer = (; patch_size = 16),
         "gmlp_s16_224" => (; gmlp..., embed_dim = 256, mlp_ratio = 6),
         "gmlp_b16_224" => (; gmlp..., embed_dim = 512, mlp_ratio = 6)
     ]
-        register!(ArchSpec(:timm, name, mlp_mixer; defaults = args,
+        register!(ArchSpec(TIMM, name, mlp_mixer; defaults = args,
             references = get(MIXER_REFERENCES, name, [])))
     end
 end

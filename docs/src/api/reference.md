@@ -2,14 +2,22 @@
 
 ## Models
 
+`create_model` and `list_models` apply to every ported model. The other functions are the
+interface of image backbones and classifiers, which are all the ported models so far.
+
 ```@docs
 create_model
 list_models
-Metalhead.pretrained_cfg
 forward_features
 forward_head
 forward_intermediates
 feature_info
+```
+
+## timm
+
+```@docs
+Metalhead.Timm.pretrained_cfg
 ```
 
 ## Builders
@@ -20,6 +28,7 @@ checkpoint's configuration and your keyword arguments. They take timm's keyword 
 ```@autodocs
 Modules = [Metalhead.Timm]
 Order = [:function]
+Filter = f -> f !== Metalhead.Timm.pretrained_cfg
 ```
 
 ## Porting internals
@@ -32,6 +41,10 @@ Metalhead.Timm.EfficientNetBuilder
 Metalhead.Timm.MixedConv2d
 Metalhead.Timm.CondConv2d
 Metalhead.ArchSpec
+Metalhead.ConfigFormat
+Metalhead.architecture_of
+Metalhead.model_args
+Metalhead.skip_prefix
 Metalhead.Checkpoint
 Metalhead.load_state!
 Metalhead.torch_params

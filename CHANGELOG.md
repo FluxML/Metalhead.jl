@@ -10,11 +10,15 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
 
 - Flux ports of [timm](https://github.com/huggingface/pytorch-image-models) models that load
   their weights directly from the Hugging Face Hub (#305, #307, #319, #320):
-  - `create_model` builds a model from a Hub repository (`"timm/resnet50.a1_in1k"`), a timm
-    name with its pretrained tag, a bare architecture (`"resnet50"`) or a local directory.
-    It takes timm's keyword arguments (`num_classes`, `in_chans`, ...), plus `pretrained`,
-    `revision` and `eltype`.
-  - `list_models`, `forward_features`, `forward_head` and `Metalhead.pretrained_cfg`.
+  - `create_model` builds a model from a Hub repository (`"timm/resnet50.a1_in1k"`), a bare
+    architecture (`"resnet50"`) or a local directory. Weights are random unless
+    `pretrained = true`. It takes timm's keyword arguments (`num_classes`, `in_chans`, ...),
+    plus `pretrained`, `revision` and `eltype`.
+  - `list_models`, `forward_features`, `forward_head` and `Metalhead.Timm.pretrained_cfg`,
+    which returns the preprocessing settings of a checkpoint.
+  - Architecture names are unique across libraries. A library registers its architectures with
+    a `Metalhead.ConfigFormat`, which says how its `config.json` names an architecture; timm's
+    is in `src/Timm/config.jl`.
   - `forward_intermediates` and `feature_info`, for the multi-scale features of segmentation
     and depth heads (ResNet and its variants, ConvNeXt, ViT, the MLP mixers, Inception v4).
   - ViT options of DINOv2, CLIP and SigLIP: layer scale, register tokens, pre-norm,

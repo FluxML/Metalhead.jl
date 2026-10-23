@@ -13,10 +13,11 @@ using ConcreteStructs: @concrete
 using MLUtils: chunk
 using Statistics: mean
 using ChainRulesCore: ChainRulesCore
-using ..Metalhead: ArchSpec, register!
-import ..Metalhead: layer_params
+using ..Metalhead: ArchSpec, ConfigFormat, JSON, register!, model_source, nt, source_file
+import ..Metalhead: layer_params, architecture_of, model_args, skip_prefix
 import ..Metalhead: forward_features, forward_head, forward_intermediates, feature_info
 
+include("config.jl")
 include("layers.jl")
 include("pos_embed.jl")
 include("features.jl")

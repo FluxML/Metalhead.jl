@@ -205,7 +205,7 @@ let entry = ((in_chs = 64, out_chs = 128, stride = 2),
         "xception65p" => (; block_cfg = (entry..., middle(16)..., exit_flow_p...),
             preact = true, norm_eps = 1e-3)
     ]
-        register!(ArchSpec(:timm, name, xception_aligned; defaults = args,
+        register!(ArchSpec(TIMM, name, xception_aligned; defaults = args,
             references = get(XCEPTION_REFERENCES, name, [])))
     end
 end
