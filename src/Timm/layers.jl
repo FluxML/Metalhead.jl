@@ -291,7 +291,6 @@ function GatedMlp(
 end
 
 (m::GatedMlp)(x) = m.drop2(m.fc2(m.norm(m.gate(m.drop1(m.act(m.fc1(x)))))))
-
 # timm.layers.ClassifierHead (avg pool, dropout, Linear) of the `use_conv = false` kind.
 @concrete struct ClassifierHead
     global_pool
@@ -309,4 +308,31 @@ end
 function (m::ClassifierHead)(x; pre_logits::Bool = false)
     x = m.drop(m.global_pool(x))
     return pre_logits ? m.flatten(x) : m.flatten(m.fc(x))
+end
+# timm.layers.BlurPool2d with reflect padding: a depthwise binomial blur, then subsampling.
+# timm keeps the filter in a non-persistent buffer, so it is rebuilt here and has no keys.
+@concrete struct BlurPool2d
+    channels
+    filt_size
+    stride
+    pad
+end
+Flux.@layer BlurPool2d
+
+function BlurPool2d(channels = nothing; filt_size = 3, stride = 2)
+    filt_size > 1 || error("`filt_size` must be larger than 1")
+    return BlurPool2d(channels, filt_size, stride, get_padding(filt_size, stride))
+end
+
+function blur_filter(T, k, c)
+    coeffs = T[binomial(k - 1, i) / T(2)^(k - 1) for i in 0:(k - 1)]
+    return repeat(reshape(coeffs * coeffs', k, k, 1, 1), 1, 1, 1, c)
+end
+ChainRulesCore.@non_differentiable blur_filter(::Any, ::Any, ::Any)
+
+function (m::BlurPool2d)(x)
+    c = something(m.channels, size(x, 3))
+    filt = blur_filter(eltype(x), m.filt_size, c)
+    x = NNlib.pad_reflect(x, ntuple(_ -> m.pad, 4); dims = (1, 2))
+    return NNlib.conv(x, filt; stride = m.stride, groups = c)
 end

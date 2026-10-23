@@ -1,0 +1,34 @@
+{
+ "vgg11": {
+  "num_params": 132863336,
+  "num_tensors": 22
+ },
+ "vgg11_bn": {
+  "num_params": 132868840,
+  "num_tensors": 54
+ },
+ "vgg13": {
+  "num_params": 133047848,
+  "num_tensors": 26
+ },
+ "vgg13_bn": {
+  "num_params": 133053736,
+  "num_tensors": 66
+ },
+ "vgg16": {
+  "num_params": 138357544,
+  "num_tensors": 32
+ },
+ "vgg16_bn": {
+  "num_params": 138365992,
+  "num_tensors": 84
+ },
+ "vgg19": {
+  "num_params": 143667240,
+  "num_tensors": 38
+ },
+ "vgg19_bn": {
+  "num_params": 143678248,
+  "num_tensors": 102
+ }
+}

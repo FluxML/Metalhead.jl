@@ -1,0 +1,1 @@
+{"architecture": "vgg13_bn", "builder": "vgg_builders:vgg_bn", "kwargs": {"cfg": [4, 4, "M", 6, "M", 8, "M"], "mlp_ratio": 0.001953125, "in_chans": 2, "num_classes": 5}, "input_shape": [2, 2, 40, 64]}
