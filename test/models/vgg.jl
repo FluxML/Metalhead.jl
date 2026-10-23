@@ -1,4 +1,8 @@
-@testitem "Models: timm vgg fixtures" setup=[ParitySetup] begin
+using Metalhead, Test
+include("../parity_setup.jl")
+using .ParitySetup
+
+@testset "fixtures" begin
     for name in ["vgg_plain", "vgg_bn_adaptive_h", "vgg_adaptive_w"]
         r = check_fixture(fixture(name))
         @test r.output <= 1e-8
@@ -7,14 +11,14 @@
     end
 end
 
-@testitem "Models: timm vgg architectures" setup=[ParitySetup] begin
+@testset "architectures" begin
     for arch in list_models()
         startswith(arch, "vgg") || continue
         @test check_param_counts(arch)
     end
 end
 
-@testitem "Models: timm vgg gradient" setup=[ParitySetup] begin
+@testset "gradient" begin
     using Flux
     for (name, x) in [("vgg_bn_adaptive_h", rand(Float32, 64, 40, 2, 2)),
         ("vgg_adaptive_w", rand(Float32, 20, 64, 3, 2))]
@@ -27,7 +31,7 @@ end
     end
 end
 
-@testitem "Models: timm vgg options" begin
+@testset "options" begin
     using Metalhead.Timm: adaptive_avg_pool2d, ClassifierHead
     using Flux
 
@@ -58,7 +62,7 @@ end
     @test ClassifierHead(8, 0)(feats) == head(feats; pre_logits = true)
 end
 
-@testitem "Models: timm vgg references" tags=[:network] setup=[ParitySetup] begin
+TEST_NETWORK && @testset "references" begin
     for file in reference_files("vgg")
         meta=SafeTensors.deserialize(file).metadata
         ref=Metalhead.Checkpoint(file)

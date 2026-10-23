@@ -1,4 +1,8 @@
-@testitem "Models: timm vit fixtures" setup=[ParitySetup] begin
+using Metalhead, Test
+include("../parity_setup.jl")
+using .ParitySetup
+
+@testset "fixtures" begin
     for name in ["vit_tiny", "vit_options"]
         r = check_fixture(fixture(name))
         @test r.output <= 1e-8
@@ -7,21 +11,21 @@
     end
 end
 
-@testitem "Models: timm vit architectures" setup=[ParitySetup] begin
+@testset "architectures" begin
     for arch in list_models()
         startswith(arch, "vit_") || continue
         @test check_param_counts(arch)
     end
 end
 
-@testitem "Models: timm vit unsupported options" setup=[ParitySetup] begin
+@testset "unsupported options" begin
     @test_throws "not supported" create_model("vit_tiny_patch16_224"; qk_norm = true)
     @test_throws "not supported" create_model("vit_tiny_patch16_224"; init_values = 1e-5)
     @test_throws "not supported" create_model("vit_tiny_patch16_224"; global_pool = "avg")
     @test_throws "not supported" create_model("vit_tiny_patch16_224"; reg_tokens = 4)
 end
 
-@testitem "Models: timm vit gradient" setup=[ParitySetup] begin
+@testset "gradient" begin
     using Flux
     m = Flux.trainmode!(create_model(fixture("vit_options"); pretrained = true))
     x = rand(Float32, 32, 16, 2, 2)
@@ -33,7 +37,7 @@ end
     @test all(isfinite, g.head.weight)
 end
 
-@testitem "Models: timm vit references" tags=[:network] setup=[ParitySetup] begin
+TEST_NETWORK && @testset "references" begin
     for file in reference_files("vit_")
         meta=SafeTensors.deserialize(file).metadata
         ref=Metalhead.Checkpoint(file)

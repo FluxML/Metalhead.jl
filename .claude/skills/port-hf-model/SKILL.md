@@ -59,15 +59,15 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
    error. To tell that noise from a port error, compare a Julia model with `eltype = Float64`
    against torch in float64 (`timm.create_model('local-dir:' + snapshot, pretrained=True).double()`).
    If both show the same error against the reference, the port is exact.
-7. **Tests.** Add `test/models/<family>_tests.jl`, modelled on `test/models/resnet_tests.jl`:
-   fixtures, parameter counts, a gradient test with `check_gradient`, and network-tagged
-   references. Name every item `Models: timm <family> ...`. Make the
+7. **Tests.** Add `test/models/<family>.jl`, modelled on `test/models/resnet.jl`:
+   fixtures, parameter counts, a gradient test with `check_gradient`, and the references,
+   which download weights and so run only under `TEST_NETWORK &&`. Make the
    architecture filter (`startswith(arch, "vit_")`) and `reference_files(prefix)` specific
    enough not to catch another family.
-8. **Run the tests** of your family only, by item-name prefix:
-   `GROUP="Models: timm <family>" julia --project -e 'using Pkg; Pkg.test()'` (a regex, e.g.
-   `"Models: timm (mlp_mixer|convmixer)"`). Run the whole `GROUP=Models` (several minutes,
-   all families) and `GROUP=Hub` once, at the end. Don't edit `src/` while a test run is going.
+8. **Run the tests** of your family only, by file path prefix:
+   `julia --project -e 'using Pkg; Pkg.test(test_args = ["models/<family>"])'` (several are
+   allowed, e.g. `["models/mlp_mixer", "models/convmixer"]`). Run all of `["hub", "models"]`
+   (several minutes) once, at the end. Don't edit `src/` while a test run is going.
 
 ## Iterating quickly
 
@@ -227,9 +227,8 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
   mutated, or Zygote fails: build them with comprehensions and mark the builder
   `ChainRulesCore.@non_differentiable`. Broadcasting functions like `binomial.` also breaks
   under Zygote.
-- Test items are isolated modules: a file-level `const` in a test file is not visible inside
-  an item, and helpers go in `test/parity_testsetup.jl`. Statistics is not in the test
-  environment.
+- Each test file runs in a module of its own, so helpers shared by several files go in
+  `test/parity_setup.jl`, exported. Statistics is not in the test environment.
 - Zygote gradients mirror the model, with `Chain` entries under `.layers`, `LayerNorm` weights
   under `.diag.scale` and a `Conv2dSame`'s under `.conv.weight`. `check_gradient(model, x)`
   avoids writing these paths: it checks that every trainable array gets a finite gradient,

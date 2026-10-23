@@ -1,4 +1,8 @@
-@testitem "ViT" setup=[TestModels] begin
+using Metalhead, Test
+include("setup.jl")
+using .TestModels
+
+@testset "ViT" begin
     configs = TEST_FAST ? [:tiny] : [:tiny, :small, :base, :large, :huge] # :giant, :gigantic]
     @testset for config in configs
         m = ViT(config) |> gpu

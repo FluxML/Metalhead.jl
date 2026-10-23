@@ -1,4 +1,8 @@
-@testitem "Models: timm densenet fixtures" setup=[ParitySetup] begin
+using Metalhead, Test
+include("../parity_setup.jl")
+using .ParitySetup
+
+@testset "fixtures" begin
     for name in ["densenet_basic", "densenet_blur", "densenet_tiered",
         "densenet_tiered_narrow"]
         r = check_fixture(fixture(name))
@@ -8,14 +12,14 @@
     end
 end
 
-@testitem "Models: timm densenet architectures" setup=[ParitySetup] begin
+@testset "architectures" begin
     for arch in list_models()
         startswith(arch, "densenet") || continue
         @test check_param_counts(arch)
     end
 end
 
-@testitem "Models: timm densenet gradient" setup=[ParitySetup] begin
+@testset "gradient" begin
     using Flux
     for (name, x) in [("densenet_basic", rand(Float32, 48, 64, 3, 2)),
         ("densenet_blur", rand(Float32, 64, 64, 2, 2))]
@@ -29,7 +33,7 @@ end
     end
 end
 
-@testitem "Models: timm densenet options" begin
+@testset "options" begin
     using Metalhead.Timm: BlurPool2d
     using Metalhead: torch_params
     using Flux
@@ -51,7 +55,7 @@ end
     @test_throws "not supported" create_model("densenet121"; global_pool = "max")
 end
 
-@testitem "Models: timm densenet references" tags=[:network] setup=[ParitySetup] begin
+TEST_NETWORK && @testset "references" begin
     for file in reference_files("densenet")
         meta=SafeTensors.deserialize(file).metadata
         ref=Metalhead.Checkpoint(file)

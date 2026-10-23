@@ -1,4 +1,8 @@
-@testitem "Models: timm convnext fixtures" setup=[ParitySetup] begin
+using Metalhead, Test
+include("../parity_setup.jl")
+using .ParitySetup
+
+@testset "fixtures" begin
     for name in ["convnext_conv_mlp", "convnext_linear_mlp"]
         r = check_fixture(fixture(name))
         @test r.output <= 1e-8
@@ -7,14 +11,14 @@
     end
 end
 
-@testitem "Models: timm convnext architectures" setup=[ParitySetup] begin
+@testset "architectures" begin
     for arch in list_models()
         startswith(arch, "convnext") || continue
         @test check_param_counts(arch)
     end
 end
 
-@testitem "Models: timm convnext gradient" setup=[ParitySetup] begin
+@testset "gradient" begin
     using Flux
     x = rand(Float32, 64, 64, 3, 2)
     for name in ["convnext_conv_mlp", "convnext_linear_mlp"]
@@ -28,7 +32,7 @@ end
     end
 end
 
-@testitem "Models: timm convnext references" tags=[:network] setup=[ParitySetup] begin
+TEST_NETWORK && @testset "references" begin
     for file in reference_files("convnext")
         meta=SafeTensors.deserialize(file).metadata
         ref=Metalhead.Checkpoint(file)

@@ -1,4 +1,4 @@
-@testsetup module TestModels
+module TestModels
 using Metalhead, Images, TestImages
 using Flux: gradient, gpu
 using CUDA: CUDA, has_cuda
@@ -16,6 +16,7 @@ export PRETRAINED_MODELS,
     acctest,
     x_224,
     x_256,
+    WIDTH_MULTS,
     gpu,
     has_cuda
 
@@ -46,6 +47,8 @@ const PRETRAINED_MODELS = [
 ]
 
 const TEST_FAST = get(ENV, "TEST_FAST", "false") == "true"
+
+const WIDTH_MULTS = TEST_FAST ? [0.5] : [0.5, 0.75, 1.0, 1.3]
 
 function _gc()
     GC.safepoint()

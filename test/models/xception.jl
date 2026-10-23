@@ -1,4 +1,8 @@
-@testitem "Models: timm xception fixtures" setup=[ParitySetup] begin
+using Metalhead, Test
+include("../parity_setup.jl")
+using .ParitySetup
+
+@testset "fixtures" begin
     for name in
         ["xception_aligned", "xception_aligned_dilated", "xception41p", "xception65p"]
         r = check_fixture(fixture(name))
@@ -8,7 +12,7 @@
     end
 end
 
-@testitem "Models: timm xception architectures" setup=[ParitySetup] begin
+@testset "architectures" begin
     for arch in ["xception41", "xception65", "xception71", "xception41p", "xception65p"]
         @test arch in list_models()
         @test check_param_counts(arch)
@@ -16,7 +20,7 @@ end
     @test_throws "act_layer" create_model("xception41"; act_layer = "gelu")
 end
 
-@testitem "Models: timm xception gradient" setup=[ParitySetup] begin
+@testset "gradient" begin
     using Flux
     for (name, in_chans) in ["xception_aligned" => 2, "xception41p" => 3]
         m = Flux.trainmode!(fixture_model(fixture(name); eltype = Float32))
@@ -28,7 +32,7 @@ end
     end
 end
 
-@testitem "Models: timm xception references" tags=[:network] setup=[ParitySetup] begin
+TEST_NETWORK && @testset "references" begin
     for file in reference_files("xception")
         meta = SafeTensors.deserialize(file).metadata
         ref = Metalhead.Checkpoint(file)

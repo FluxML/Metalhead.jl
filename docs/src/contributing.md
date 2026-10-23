@@ -55,8 +55,8 @@ The skill is also the reference for porting by hand. In short:
 6. **Make references** for one or two real checkpoints with
    `uv run dump_reference.py timm/<repo>`, check them with `check_reference.jl`, and add the
    printed `repo => sha` to the architecture's `references`.
-7. **Add tests** in `test/models/<family>_tests.jl`, following the existing ones, and run
-   `GROUP=Models julia --project -e 'using Pkg; Pkg.test()'`.
+7. **Add tests** in `test/models/<family>.jl`, following the existing ones, and run
+   `julia --project -e 'using Pkg; Pkg.test(test_args = ["models"])'`.
 
 When a fixture fails, `uv run dump.py specs/<name>.json --all-taps --out out/<name>` records
 the output of every module, and `check.jl out/<name>` shows the first one that differs.

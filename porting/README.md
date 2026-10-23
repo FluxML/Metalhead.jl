@@ -14,7 +14,7 @@ julia --project=.. check.jl out/resnet_basic
 uv run param_counts.py resnet resnet18 resnet50   # -> test/references/param_counts/resnet.json
 uv run dump_reference.py timm/resnet18.a1_in1k   # real weights -> test/references/
 julia --project=.. check_reference.jl ../test/references/timm--resnet18.a1_in1k.safetensors
-GROUP="Models: timm resnet" julia --project=.. -e 'using Pkg; Pkg.test()'   # one family's tests
+julia --project=.. -e 'using Pkg; Pkg.test(test_args = ["models/resnet"])'   # one family's tests
 ```
 
 Optional keys of a spec, for models too large for a fixture of 1 MB:
