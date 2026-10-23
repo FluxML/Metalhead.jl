@@ -26,7 +26,7 @@ uv sync
 ## With Claude Code
 
 The repository includes a [Claude Code](https://claude.com/claude-code) skill,
-[`port-hf-model`](https://github.com/FluxML/Metalhead.jl/tree/master/.claude/skills/port-hf-model/SKILL.md).
+[`port-hf-model`](https://github.com/FluxML/Metalhead.jl/tree/master/skills/port-hf-model/SKILL.md).
 It describes the workflow below, the conventions, and the numerical pitfalls met in earlier
 ports. Start Claude Code in the repository and ask for the port, for example:
 

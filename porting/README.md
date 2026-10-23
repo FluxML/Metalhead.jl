@@ -25,4 +25,4 @@ Optional keys of a spec, for models too large for a fixture of 1 MB:
 - `"weight_dtype": "float16"` stores the weights in half precision (PyTorch uses the rounded values).
 - `"tap_depth": d` records only the modules with at most `d` dots in their name (default 1).
 
-The workflow for porting a model is in `.claude/skills/port-hf-model/SKILL.md`.
+The workflow for porting a model is in `skills/port-hf-model/SKILL.md`.
