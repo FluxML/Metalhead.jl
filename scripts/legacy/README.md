@@ -2,6 +2,9 @@
 
 This directory contains scripts that are used to manage the project.
 
+These scripts produce the weights of the deprecated models in `src/legacy/`. They are kept until
+those models are removed; new models are ported with the tools in `porting/`.
+
 ## pytorch2flux.jl
 
 Contains utility function for loading the weights of a pytorch model into the corresponding Flux model.

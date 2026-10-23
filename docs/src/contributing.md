@@ -39,4 +39,4 @@ All Metalhead.jl model artifacts are hosted on HuggingFace. You can find the Flu
 
 If you want to fix existing weights, then you can follow the same set of steps.
 
-See the [scripts/](https://github.com/FluxML/Metalhead.jl/tree/master/scripts) folder in the repo for some helpful scripts that can be used to automate some of these steps.
+See the [scripts/legacy/](https://github.com/FluxML/Metalhead.jl/tree/master/scripts/legacy) folder in the repo for some helpful scripts that can be used to automate some of these steps.
