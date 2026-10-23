@@ -5,6 +5,8 @@
 .vscode/
 .DS_Store
 .CondaPkg/
+.venv/
+.claude/
 scripts/legacy/weights/
 scripts/legacy/Artifacts.toml
 Manifest*.toml
