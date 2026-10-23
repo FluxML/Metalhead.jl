@@ -1,42 +1,84 @@
-# [Contribute to Metalhead.jl](@id contributing)
+# [Porting a model](@id contributing)
 
-We welcome contributions from anyone to Metalhead.jl! Thank you for taking the time to make our ecosystem better.
+Contributions are welcome: bug reports and feature requests as
+[issues](https://github.com/FluxML/Metalhead.jl/issues/new/choose), fixes and new models as
+[pull requests](https://github.com/FluxML/Metalhead.jl/pulls). See also the
+[FluxML contributing guide](https://github.com/FluxML/Flux.jl/blob/master/CONTRIBUTING.md).
 
-You can contribute by fixing bugs, adding new models, or adding pre-trained weights. If you aren't ready to write some code, but you think you found a bug or have a feature request, please [post an issue](https://github.com/FluxML/Metalhead.jl/issues/new/choose).
+This page is about adding a model. Metalhead admits models whose weights are on the
+[Hugging Face Hub](https://huggingface.co/models). For now these are
+[timm](https://github.com/huggingface/pytorch-image-models) vision models. A port is a Flux
+reimplementation of the PyTorch code, validated as described in
+[How models are validated](@ref validation).
 
-Before continuing, make sure you read the [FluxML contributing guide](https://github.com/FluxML/Flux.jl/blob/master/CONTRIBUTING.md) for general guidelines and tips.
+## Setup
 
-## Fixing bugs
+The porting tools in [`porting/`](https://github.com/FluxML/Metalhead.jl/tree/master/porting)
+are a Python project managed with [uv](https://docs.astral.sh/uv/). It pins timm and a CPU
+build of PyTorch. Python is only needed to port a model: the package and its tests don't use
+it.
 
-To fix a bug in Metalhead.jl, you can [open a PR](https://github.com/FluxML/Metalhead.jl/pulls). It would be helpful to file an issue first so that we can confirm the bug.
+```sh
+cd porting
+uv sync
+```
 
-## Adding models
+## With Claude Code
 
-To add a new model architecture to Metalhead.jl, you can [open a PR](https://github.com/FluxML/Metalhead.jl/pulls). Keep in mind a few guiding principles for how this package is designed:
+The repository includes a [Claude Code](https://claude.com/claude-code) skill,
+[`port-hf-model`](https://github.com/FluxML/Metalhead.jl/tree/master/.claude/skills/port-hf-model/SKILL.md).
+It describes the workflow below, the conventions, and the numerical pitfalls met in earlier
+ports. Start Claude Code in the repository and ask for the port, for example:
 
-- reuse layers from Flux as much as possible (e.g. use `Parallel` before defining a `Bottleneck` struct)
-- adhere as closely as possible to a reference such as a published paper (i.e. the structure of your model should follow intuitively from the paper)
-- use generic functional builders (e.g. [`Metalhead.resnet`](@ref) is the underlying function that builds "ResNet-like" models)
-- use multiple dispatch to add convenience constructors that wrap your functional builder
+```
+Port timm's RegNet family to Metalhead.
+```
 
-When in doubt, just open a PR! We are more than happy to help review your code to help it align with the rest of the library. After adding a model, you might consider adding some pre-trained weights (see below).
+The skill is loaded automatically. Review the result like any pull request: the port is done
+when its tests pass, and the tests compare against PyTorch rather than relying on the agent's
+claims.
 
-## Adding pre-trained weights
+## The workflow
 
-To add pre-trained weights for an existing model or new model, you can [open a PR](https://github.com/FluxML/Metalhead.jl/pulls). Below, we describe the steps you should follow to get there.
+The skill is also the reference for porting by hand. In short:
 
-All Metalhead.jl model artifacts are hosted on HuggingFace. You can find the FluxML account [here](https://huggingface.co/FluxML). This [documentation from HuggingFace](https://huggingface.co/docs/hub/models) will provide you with an introduction to their ModelHub. In short, the Model Hub is a collection of Git repositories, similar to Julia packages on GitHub. This means you can [make a pull request to our HuggingFace repositories](https://huggingface.co/docs/hub/repositories-pull-requests-discussions) to upload updated weight artifacts just like you would make a PR on GitHub to upload code.
+1. **Inspect** the model. `uv run inspect_model.py resnet18` prints the PyTorch module tree
+   and the `state_dict`. Read the timm source of the family, including the constructors'
+   branches: some modules exist only for non-default arguments.
+2. **Write the port** in `src/Timm/<family>.jl`, mirroring the module tree (see below).
+3. **Register** each supported architecture with `register!(ArchSpec(...))`, with the default
+   arguments of its timm entry point.
+4. **Make tiny fixtures**: one `porting/specs/<name>.json` per code path, then
+   `uv run dump.py specs/<name>.json` and `julia --project=.. check.jl specs/<name>.json`
+   until it prints PASS.
+5. **Record parameter counts** with `uv run param_counts.py <family> <architectures...>`.
+6. **Make references** for one or two real checkpoints with
+   `uv run dump_reference.py timm/<repo>`, check them with `check_reference.jl`, and add the
+   printed `repo => sha` to the architecture's `references`.
+7. **Add tests** in `test/models/<family>_tests.jl`, following the existing ones, and run
+   `GROUP=Models julia --project -e 'using Pkg; Pkg.test()'`.
 
-1. Train your model or port the weights from another framework.
-2. Save the model state using [BSON.jl](https://github.com/JuliaIO/BSON.jl) with `BSON.@save "modelname.bson" model_state=Flux.state(model)`. It is important that your model is saved under the key `model_state`.
-3. Compress the saved model as a tarball using `tar -cvzf modelname.tar.gz modelname.bson`.
-4. Obtain the SHAs (see the [Pkg docs](https://pkgdocs.julialang.org/v1/artifacts/#Basic-Usage)). Edit the `Artifacts.toml` file in the Metalhead.jl repository and add entry for your model. You can leave the URL empty for now.
-5. Open a PR on Metalhead.jl. Be sure to ping a maintainer (e.g. `@darsnack` or `@theabhirath`) to let us know that you are adding a pre-trained weight. We will create a model repository on HuggingFace if it does not already exist.
-6. Open a PR to the [corresponding HuggingFace repo](https://huggingface.co/FluxML). Do this by going to the "Community" tab in the HuggingFace repository. PRs and discussions are shown as the same thing in the HuggingFace web app. You can use your local Git program to make clone the repo and make PRs if you wish. Check out the [guide on PRs to HuggingFace](https://huggingface.co/docs/hub/repositories-pull-requests-discussions) for more information.
-7. Copy the download URL for the model file that you added to HuggingFace. Make sure to grab the URL for a specific commit and not for the `main` branch.
-8. Update your Metalhead.jl PR by adding the URL to the Artifacts.toml.
-9. If the tests pass for your weights, we will merge your PR! Your model should pass the `acctest` function in the Metalhead.jl test suite. If your model already exists in the repo, then these tests are already in place, and you can add your model configuration to the `PRETRAINED_MODELS` list in the `test/model_tests.jl` file. Please refer to the ResNet tests as an example.
+When a fixture fails, `uv run dump.py specs/<name>.json --all-taps --out out/<name>` records
+the output of every module, and `check.jl out/<name>` shows the first one that differs.
 
-If you want to fix existing weights, then you can follow the same set of steps.
+## Conventions
 
-See the [scripts/legacy/](https://github.com/FluxML/Metalhead.jl/tree/master/scripts/legacy) folder in the repo for some helpful scripts that can be used to automate some of these steps.
+- **Mirror the PyTorch module tree.** Struct fields have the names of the PyTorch submodule
+  attributes. `nn.Sequential` becomes a `Chain` with the same entries, keeping parameter-free
+  placeholders so that indices line up. Weights then load by name.
+- **Use Flux layers and NNlib functions.** Helpers that timm shares between families
+  (`timm.layers`) are ported once, in `src/Timm/layers.jl`.
+- **Define structs with `@concrete`** (from ConcreteStructs.jl) and `Flux.@layer`.
+- **Keep timm's keyword arguments.** Builders accept timm's names and defaults, and raise an
+  error for options the port doesn't implement.
+- **Follow timm's API.** Each model defines `forward_features` and `forward_head`.
+- **Use Flux's layout.** It is PyTorch's with the dimensions reversed, so reshapes carry over
+  with reversed sizes.
+
+## Pull request checklist
+
+- Every fixture passes at 1e-8, and the references pass at 1e-4.
+- The parameter counts of every registered architecture match timm.
+- A gradient test runs.
+- The file header names the timm module and version it was ported from.
+- Fixtures are under 1 MB each.
