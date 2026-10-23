@@ -23,10 +23,11 @@ Metalhead.Timm.pretrained_cfg
 ## Builders
 
 `create_model` calls these with the architecture's default arguments, merged with the
-checkpoint's configuration and your keyword arguments. They take timm's keyword arguments.
+checkpoint's configuration and your keyword arguments. The timm builders take timm's keyword
+arguments, and the transformers builders the fields of the model's `config.json`.
 
 ```@autodocs
-Modules = [Metalhead.Timm]
+Modules = [Metalhead.Timm, Metalhead.Transformers]
 Order = [:function]
 Filter = f -> f !== Metalhead.Timm.pretrained_cfg
 ```
@@ -40,6 +41,7 @@ Metalhead.Timm
 Metalhead.Timm.EfficientNetBuilder
 Metalhead.Timm.MixedConv2d
 Metalhead.Timm.CondConv2d
+Metalhead.Transformers
 Metalhead.ArchSpec
 Metalhead.ConfigFormat
 Metalhead.architecture_of

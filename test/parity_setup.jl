@@ -8,10 +8,9 @@ using Flux, Functors
 using Test
 using ChainRulesCore: unthunk
 
-export Parity, check_fixture, fixture_model, shrink_channels, reference_input, relerr,
-       tapify,
-       fixture, reference_files, check_param_counts, check_gradient, JSON, SafeTensors,
-       TEST_NETWORK, check_intermediate_api
+export Parity, check_fixture, check_lm_reference, fixture_model, shrink_channels,
+       reference_input, relerr, tapify, fixture, reference_files, check_param_counts,
+       check_gradient, JSON, SafeTensors, TEST_NETWORK, check_intermediate_api
 
 # The reference tests download pretrained weights from the Hub.
 const TEST_NETWORK = parse(Bool, get(ENV, "METALHEAD_TEST_NETWORK", "false"))
@@ -20,9 +19,9 @@ const TEST_DIR = joinpath(pkgdir(Metalhead), "test")
 
 fixture(name) = joinpath(TEST_DIR, "fixtures", name)
 
-function reference_files(prefix)
+function reference_files(prefix; org = "timm")
     return filter(
-        f -> startswith(basename(f), "timm--$prefix") && endswith(f, ".safetensors"),
+        f -> startswith(basename(f), "$org--$prefix") && endswith(f, ".safetensors"),
         readdir(joinpath(TEST_DIR, "references"); join = true))
 end
 

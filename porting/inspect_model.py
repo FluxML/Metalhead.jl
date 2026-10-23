@@ -1,6 +1,7 @@
-"""Print the module tree and state_dict of a timm model, the starting point of a port.
+"""Print the module tree and state_dict of a model, the starting point of a port.
 
     uv run inspect_model.py <timm architecture> [key=value ...]   e.g. resnet18 layers=[1,1,1,1]
+    uv run inspect_model.py specs/<name>.json                       any spec, e.g. a transformers one
 """
 import json
 import sys
@@ -10,8 +11,13 @@ from common import build
 
 def main():
     arch, *pairs = sys.argv[1:]
-    kwargs = {k: json.loads(v) for k, v in (p.split("=", 1) for p in pairs)}
-    model = build({"architecture": arch, "kwargs": kwargs})
+    if arch.endswith(".json"):
+        with open(arch) as f:
+            spec = json.load(f)
+    else:
+        spec = {"architecture": arch,
+                "kwargs": {k: json.loads(v) for k, v in (p.split("=", 1) for p in pairs)}}
+    model = build(spec)
     print(model)
     print("\nstate_dict:")
     for k, v in model.state_dict().items():

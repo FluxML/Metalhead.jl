@@ -50,15 +50,17 @@ end
 
 Build a ported model.
 
-`name` is a Hub repository (`"timm/resnet50.a1_in1k"`), a bare architecture (`"resnet50"`; see
-[`list_models`](@ref)), or a local directory containing a `config.json` and `model.safetensors`.
+`name` is a Hub repository (`"timm/resnet50.a1_in1k"`, `"HuggingFaceTB/SmolLM2-135M"`), a bare
+architecture (`"resnet50"`, `"LlamaForCausalLM"`; see [`list_models`](@ref)), or a local
+directory containing a `config.json` and `model.safetensors`.
 
 By default the weights are random and nothing is downloaded, except the `config.json` of a
 repository or directory. With `pretrained = true` they are loaded from the repository (for a
 bare architecture, from its default validated checkpoint). `revision` selects a branch, tag or
 commit of the repository; validated checkpoints default to the commit they were validated at.
 The remaining keyword arguments are the original library's model arguments, e.g. timm's
-`num_classes`. Changing `num_classes` of a pretrained model re-initialises its classifier.
+`num_classes`, or the fields of a transformers model's `config.json`, e.g. `num_hidden_layers`.
+Changing `num_classes` of a pretrained model re-initialises its classifier.
 
 The model is returned in test mode; call `Flux.trainmode!` before training.
 """

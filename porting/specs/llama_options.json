@@ -1,0 +1,1 @@
+{"library": "transformers", "architecture": "LlamaForCausalLM", "model_type": "llama", "config": {"vocab_size": 40, "hidden_size": 24, "intermediate_size": 20, "num_hidden_layers": 3, "num_attention_heads": 3, "head_dim": 12, "attention_bias": true, "mlp_bias": true, "attention_dropout": 0.1, "tie_word_embeddings": false}, "input_shape": [3, 6], "tap_depth": 3, "seed": 1}

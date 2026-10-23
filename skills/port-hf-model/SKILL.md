@@ -1,11 +1,13 @@
 ---
 name: port-hf-model
-description: Port a timm model from the Hugging Face Hub to Metalhead.jl (Flux), validated numerically against PyTorch. Use when asked to port, add or fix a model in src/Timm/, to write or debug a parity fixture (porting/dump.py, test/fixtures/), or to compare a Flux model with its PyTorch original.
+description: Port a timm or transformers model from the Hugging Face Hub to Metalhead.jl (Flux), validated numerically against PyTorch. Use when asked to port, add or fix a model in src/Timm/ or src/Transformers/ (e.g. a language model such as Llama, Qwen or Mistral), to write or debug a parity fixture (porting/dump.py, test/fixtures/), or to compare a Flux model with its PyTorch original.
 ---
 
-# Porting a timm model to Metalhead
+# Porting a timm or transformers model to Metalhead
 
-A port is a Julia file in `src/Timm/` that mirrors the PyTorch module tree of a timm model.
+A port is a Julia file in `src/Timm/` that mirrors the PyTorch module tree of a timm model, or
+in `src/Transformers/` for a transformers model (see "transformers models" at the end, which
+says what differs).
 Weights load by name, with no hand-written mapping. A port is done when its tiny fixtures and
 its real-weight references pass. `src/Timm/resnet.jl` is the reference port; read it first.
 
@@ -311,3 +313,54 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
   for parameter-free `nn.Identity` placeholders of options the port rejects, and for the
   `drop` and `act` children of timm's `BatchNormAct2d`, which Flux's `BatchNorm` holds inside.
   Real submodules of the supported code path must exist under their torch name.
+
+## transformers models
+
+`src/Transformers/llama.jl` is the reference port; read it and `src/Transformers/layers.jl`
+first. The workflow is the one above, with these differences.
+
+- **Source.** Read `porting/.venv/lib/python3.*/site-packages/transformers/models/<model>/`
+  `modeling_<model>.py` and `configuration_<model>.py`. Many models are Llama with a few
+  changes (`# Copied from` or `modular_<model>.py` say which): reuse `RMSNorm`,
+  `RotaryEmbedding` and `rotary_tables` (for `NNlib.apply_rotary_embedding`), `TiedLMHead`
+  and `rope_theta_of` from `layers.jl`, and add shared blocks there.
+- **Registry.** Register the class name with the transformers `ConfigFormat`
+  (`src/Transformers/config.jl`) and its model module as the family, e.g.
+  `register!(ArchSpec(TRANSFORMERS, "Qwen2ForCausalLM", builder; family = "qwen2", references = [...]))`.
+  `create_model` looks it up from `config.json`'s `architectures`. The builder takes the
+  fields of the config class as keywords, with their names and defaults. `model_args` passes
+  it only the keys of `config.json` it declares, as transformers ignores the generic ones
+  (token ids, `transformers_version`, ...), so declare every field the model reads. Older
+  checkpoints have `rope_theta` and `rope_scaling` where transformers 5 writes
+  `rope_parameters`: accept all three (`rope_theta_of`).
+- **No parameter counts.** A transformers configuration is a checkpoint, not a named
+  architecture, so the registry has no defaults to check. Strict loading of the reference
+  checks the real configuration.
+- **Layout.** Token ids `(B, L)` become indices `(L, B)`, 1-based (`dump.py` and the harness
+  add 1). Hidden states are `(D, L, B)`, so `nn.Linear` is `Dense` with no reshaping, and
+  `view(B, L, H, hd)` is `reshape(x, hd, H, L, B)`, the layout of
+  `NNlib.scaled_dot_product_attention` (use `is_causal = true`; it repeats key/value heads for
+  grouped-query attention like transformers' `repeat_kv`). `nn.ModuleList` is a plain
+  `Vector` when its layers take extra arguments (the rotary tables).
+- **Tied embeddings.** With `tie_word_embeddings`, `lm_head` is a `TiedLMHead` holding the
+  `Embedding`'s own weight array. `torch_params` then lists `lm_head.weight` as an alias, which
+  checkpoints usually omit, and `f16`/`gpu` keep the tie.
+- **Buffers.** Non-persistent buffers (`inv_freq`) have no `state_dict` key, so they must not be
+  array fields: compute them in the forward pass inside `ChainRulesCore.ignore_derivatives`,
+  on the device of the input.
+- **Float32 inside float64.** transformers computes RMSNorm and the rotary tables in float32
+  even in a float64 model, and its eager attention takes the softmax in float32. The fixtures
+  use `attn_implementation="sdpa"` and `exact_float64` (`porting/common.py`) to compute in
+  float64; patch any new float32 cast the same way, or the fixture misses 1e-8.
+  `bfloat16` checkpoints load into Float32 arrays without any special handling.
+- **Specs.** `{"library": "transformers", "architecture": "LlamaForCausalLM",
+  "model_type": "llama", "config": {...}, "input_shape": [B, L], "tap_depth": 3}`. `dump.py`
+  writes the fixture with `save_pretrained`, and taps the modules that have parameters
+  (`model.layers.0.self_attn`, `...mlp`, the norms). Cover each option of the config (bias,
+  `head_dim`, grouped and plain attention, tied and untied head) in at least one spec, and
+  error on the others (`rope_type`, `hidden_act`).
+- **References.** `uv run dump_reference.py <org>/<repo>` tokenizes `PROMPTS` with the repo's
+  tokenizer and stores the ids, the hidden states, the last-position logits and the greedy
+  continuation (`check_lm_reference` in `test/parity.jl`). Prefer the smallest checkpoint of
+  the architecture. Tokenizers are not part of Metalhead; HuggingFaceTokenizers.jl loads
+  them for end-to-end checks outside the test suite.
