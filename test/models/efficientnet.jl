@@ -227,8 +227,8 @@ end
     @test_throws "features_only" create_model("efficientnet_b0"; features_only = true)
     @test_throws "norm_layer" create_model("efficientnet_b0"; norm_layer = "groupnorm")
     @test_throws "not supported" create_model("efficientnet_b0"; act_layer = "evo")
-    @test_throws "not been ported" create_model("efficientnet_x_b5")
-    @test_throws "not been ported" create_model("efficientnet_b1_pruned")
+    @test_throws "neither a ported architecture" create_model("efficientnet_x_b5")
+    @test_throws "neither a ported architecture" create_model("efficientnet_b1_pruned")
 end
 
 TEST_NETWORK && @testset "references" begin

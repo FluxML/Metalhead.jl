@@ -5,50 +5,80 @@ open(joinpath(@__DIR__, "src", "index.md"), "w") do io
     write(io, read(joinpath(@__DIR__, "..", "README.md"), String))
 end
 
-# The model list is generated from the registry, grouped by config format and by the source file
-# of the builders. A family built by several functions (timm's `_gen_*`) is titled by its file.
+# Res2Net shares the ResNet builder but is a separate upstream family.
+function family_file(spec)
+    if spec.build === Metalhead.Timm.resnet &&
+       get(spec.defaults, :block, nothing) === :Bottle2neck
+        return "src/Timm/res2net.jl"
+    end
+    return relpath(string(first(methods(spec.build)).file), pkgdir(Metalhead))
+end
+
 function write_model_list(path)
+    titles = Dict(
+        "convmixer" => "ConvMixer",
+        "convnext" => "ConvNeXt",
+        "densenet" => "DenseNet",
+        "efficientnet" => "EfficientNet, MobileNetV1/V2, MNASNet and MixNet",
+        "inception_resnet_v2" => "Inception-ResNet-v2",
+        "inception_v3" => "Inception-v3",
+        "inception_v4" => "Inception-v4",
+        "mlp_mixer" => "MLP-Mixer, ResMLP and gMLP",
+        "mobilenetv3" => "MobileNetV3/V4, FBNetV3 and LCNet",
+        "res2net" => "Res2Net",
+        "resnet" => "ResNet",
+        "vgg" => "VGG",
+        "vit" => "Vision Transformer (ViT)",
+        "xception" => "Aligned Xception")
+    title(file) = get(titles, splitext(basename(file))[1], splitext(basename(file))[1])
     ArchSpec = Metalhead.ArchSpec
     groups = Dict{String, Dict{String, Vector{ArchSpec}}}()
     for spec in values(Metalhead.REGISTRY)
-        file = relpath(string(first(methods(spec.build)).file), pkgdir(Metalhead))
+        file = family_file(spec)
         by_file = get!(groups, string(spec.format), Dict{String, Vector{ArchSpec}}())
         push!(get!(by_file, file, ArchSpec[]), spec)
     end
-    builders(specs) = sort!(unique(string(parentmodule(s.build), ".", nameof(s.build))
-                                   for s in specs))
-    function title(specs, file)
-        names = builders(specs)
-        return length(names) == 1 ? last(split(only(names), '.')) : splitext(basename(file))[1]
-    end
     narchs = length(Metalhead.REGISTRY)
+    nfamilies = sum(length, values(groups))
     nrefs = sum(length(s.references) for s in values(Metalhead.REGISTRY))
     open(path, "w") do io
         println(io, """
             # [Models](@id models)
 
-            Metalhead has $narchs ported architectures. Build one with
-            `create_model("<architecture>")`, or load a Hub checkpoint of it with
+            Metalhead has $narchs ported architectures in $nfamilies families. Build one
+            with `create_model("<architecture>")`, or load a Hub checkpoint of it with
             `create_model("<organisation>/<repository>"; pretrained = true)`.
 
+            Models are grouped by library and family, following the original library's model
+            modules. Wide ResNet, ResNeXt and SE-ResNet belong to the ResNet family;
+            Res2Net and aligned Xception have their own families.
+
             The $nrefs checkpoints listed here were compared with PyTorch's outputs (see
-            [How models are validated](@ref validation)). Bare architecture names load the first
-            one with `pretrained = true`. Other checkpoints of the same architectures load with
-            the same strict checks.
+            [How models are validated](@ref validation)). Bare architecture names load the
+            first one with `pretrained = true`. Other checkpoints of the same architectures
+            load with the same strict checks. A dash means no checkpoint has been validated
+            for that architecture.
+
+            ```@contents
+            Pages = ["models.md"]
+            Depth = 3
+            ```
             """)
         for format in sort!(collect(keys(groups)))
             println(io, "## $format\n")
             by_file = groups[format]
-            for file in sort!(collect(keys(by_file)); by = f -> title(by_file[f], f))
+            for file in sort!(collect(keys(by_file)); by = title)
                 specs = sort!(by_file[file]; by = s -> s.name)
-                println(io, "### `$(title(specs, file))`\n")
-                built_by = join(("`$b`" for b in builders(specs)), ", ")
-                println(io, "Built by $built_by ",
-                    "([source](https://github.com/FluxML/Metalhead.jl/blob/master/$file)).\n")
+                println(io, "### $(title(file))\n")
+                count = length(specs)
+                noun = count == 1 ? "architecture" : "architectures"
+                println(io, "$count $noun. ",
+                    "[Source](https://github.com/FluxML/Metalhead.jl/blob/master/$file).\n")
                 println(io, "| Architecture | Validated checkpoints |\n|:--|:--|")
                 for s in specs
                     refs = join(("[`$repo`](https://huggingface.co/$repo/tree/$sha)"
                                  for (repo, sha) in s.references), ", ")
+                    isempty(refs) && (refs = "—")
                     println(io, "| `$(s.name)` | $refs |")
                 end
                 println(io)
@@ -75,23 +105,7 @@ makedocs(; modules = [Metalhead],
         "How models are validated" => "validation.md",
         "Porting a model" => "contributing.md",
         "Migrating from 0.9" => "migration.md",
-        "API reference" => "api/reference.md",
-        "Deprecated API (0.9)" => [
-            "Using ResNets" => "howto/resnet.md",
-            "Convolutional Neural Networks" => [
-                "api/resnet.md",
-                "api/densenet.md",
-                "api/efficientnet.md",
-                "api/mobilenet.md",
-                "api/inception.md",
-                "api/hybrid.md",
-                "api/others.md"
-            ],
-            "Mixers" => "api/mixers.md",
-            "Vision Transformers" => "api/vit.md",
-            "Layers" => ["api/layers_intro.md", "api/layers_adv.md"],
-            "Model Utilities" => "api/utilities.md"
-        ]
+        "API reference" => "api/reference.md"
     ],
     warnonly = [:example_block, :missing_docs, :cross_references],
     format = Documenter.HTML(canonical = "https://fluxml.ai/Metalhead.jl/stable/",

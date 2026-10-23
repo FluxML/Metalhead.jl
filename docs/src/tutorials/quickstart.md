@@ -43,6 +43,9 @@ list_models()
 list_models(; pretrained = true)
 ```
 
+Browse the [model list](@ref models) for architectures grouped by family and links to their
+validated checkpoints.
+
 ## Inputs
 
 Image models take Flux's layout: width × height × channels × batch, in `Float32` unless you chose

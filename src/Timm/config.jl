@@ -36,7 +36,7 @@ end
 Preprocessing settings of a timm checkpoint (`mean`, `std`, `input_size`, `crop_pct`,
 `interpolation`, ...), as stored in its `config.json`. `name` is a Hub repository, a bare
 architecture (for its default checkpoint) or a local directory, as for
-[`create_model`](@ref). `input_size` is in PyTorch order (C, H, W).
+[`Metalhead.create_model`](@ref). `input_size` is in PyTorch order (C, H, W).
 """
 function pretrained_cfg(
         name::AbstractString; revision::Union{Nothing, AbstractString} = nothing)
