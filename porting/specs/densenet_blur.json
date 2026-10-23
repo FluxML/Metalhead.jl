@@ -1,0 +1,1 @@
+{"architecture": "densenetblur121d", "kwargs": {"growth_rate": 8, "block_config": [2, 1, 2], "bn_size": 2, "in_chans": 2, "aa_stem_only": false, "num_classes": 10}, "input_shape": [2, 2, 64, 64]}

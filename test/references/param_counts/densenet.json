@@ -1,0 +1,26 @@
+{
+ "densenet121": {
+  "num_params": 7978856,
+  "num_tensors": 606
+ },
+ "densenet161": {
+  "num_params": 28681000,
+  "num_tensors": 806
+ },
+ "densenet169": {
+  "num_params": 14149480,
+  "num_tensors": 846
+ },
+ "densenet201": {
+  "num_params": 20013928,
+  "num_tensors": 1006
+ },
+ "densenet264d": {
+  "num_params": 72736216,
+  "num_tensors": 1336
+ },
+ "densenetblur121d": {
+  "num_params": 7998088,
+  "num_tensors": 616
+ }
+}

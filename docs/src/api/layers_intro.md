@@ -1,5 +1,8 @@
 # [An introduction to the `Layers` module in Metalhead.jl](@id layers-intro)
 
+!!! warning "Deprecated"
+    This API is deprecated in Metalhead 0.10 and will be removed in 0.11. See [Migrating from 0.9](@ref migration).
+
 Since v0.8, Metalhead.jl exports a `Layers` module that contains a number of useful layers and utilities for building neural networks. This guide will walk you through the most commonly used layers and utilities present in the `Layers` module, and how to use them. It also contains some examples of how these layers are used in Metalhead.jl as well as a comprehensive API reference.
 
 !!! warning

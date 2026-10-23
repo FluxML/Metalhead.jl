@@ -1,4 +1,40 @@
 {
+ "ecaresnet101d": {
+  "num_params": 44568563,
+  "num_tensors": 565
+ },
+ "ecaresnet200d": {
+  "num_params": 64693400,
+  "num_tensors": 1093
+ },
+ "ecaresnet269d": {
+  "num_params": 102093077,
+  "num_tensors": 1461
+ },
+ "ecaresnet26t": {
+  "num_params": 16011916,
+  "num_tensors": 165
+ },
+ "ecaresnet50d": {
+  "num_params": 25576350,
+  "num_tensors": 293
+ },
+ "ecaresnet50t": {
+  "num_params": 25573814,
+  "num_tensors": 293
+ },
+ "ecaresnetlight": {
+  "num_params": 30162046,
+  "num_tensors": 283
+ },
+ "ecaresnext26t_32x4d": {
+  "num_params": 15406220,
+  "num_tensors": 165
+ },
+ "ecaresnext50t_32x4d": {
+  "num_params": 15406220,
+  "num_tensors": 165
+ },
  "resnet101": {
   "num_params": 44549160,
   "num_tensors": 522
@@ -118,6 +154,74 @@
  "resnext50d_32x4d": {
   "num_params": 25048136,
   "num_tensors": 277
+ },
+ "senet154": {
+  "num_params": 115088984,
+  "num_tensors": 987
+ },
+ "seresnet101": {
+  "num_params": 49326872,
+  "num_tensors": 654
+ },
+ "seresnet152": {
+  "num_params": 66821848,
+  "num_tensors": 977
+ },
+ "seresnet152d": {
+  "num_params": 66841080,
+  "num_tensors": 987
+ },
+ "seresnet18": {
+  "num_params": 11779624,
+  "num_tensors": 134
+ },
+ "seresnet200d": {
+  "num_params": 71855096,
+  "num_tensors": 1291
+ },
+ "seresnet269d": {
+  "num_params": 113672760,
+  "num_tensors": 1728
+ },
+ "seresnet34": {
+  "num_params": 21960416,
+  "num_tensors": 246
+ },
+ "seresnet50": {
+  "num_params": 28088024,
+  "num_tensors": 331
+ },
+ "seresnet50t": {
+  "num_params": 28104720,
+  "num_tensors": 341
+ },
+ "seresnext101_32x4d": {
+  "num_params": 48955416,
+  "num_tensors": 654
+ },
+ "seresnext101_32x8d": {
+  "num_params": 93569048,
+  "num_tensors": 654
+ },
+ "seresnext101_64x4d": {
+  "num_params": 88232984,
+  "num_tensors": 654
+ },
+ "seresnext101d_32x8d": {
+  "num_params": 93588280,
+  "num_tensors": 664
+ },
+ "seresnext26d_32x4d": {
+  "num_params": 16809512,
+  "num_tensors": 189
+ },
+ "seresnext26t_32x4d": {
+  "num_params": 16806976,
+  "num_tensors": 189
+ },
+ "seresnext50_32x4d": {
+  "num_params": 27559896,
+  "num_tensors": 331
  },
  "wide_resnet101_2": {
   "num_params": 126886696,

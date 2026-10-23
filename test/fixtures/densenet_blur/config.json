@@ -1,0 +1,23 @@
+{
+  "architecture": "densenetblur121d",
+  "num_classes": 10,
+  "model_args": {
+    "growth_rate": 8,
+    "block_config": [
+      2,
+      1,
+      2
+    ],
+    "bn_size": 2,
+    "in_chans": 2,
+    "aa_stem_only": false
+  },
+  "pretrained_cfg": {
+    "input_size": [
+      2,
+      64,
+      64
+    ],
+    "classifier": "classifier"
+  }
+}

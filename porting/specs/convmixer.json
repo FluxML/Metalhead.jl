@@ -1,0 +1,1 @@
+{"architecture": "convmixer_768_32", "builder": "mixers:conv_mixer", "kwargs": {"dim": 16, "depth": 2, "kernel_size": [3, 5], "patch_size": [2, 4], "in_chans": 2, "act_layer": "relu", "num_classes": 10}, "input_shape": [2, 2, 16, 32]}

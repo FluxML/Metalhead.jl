@@ -1,0 +1,28 @@
+{
+  "architecture": "gmixer_12_224",
+  "num_classes": 5,
+  "model_args": {
+    "img_size": [
+      16,
+      32
+    ],
+    "patch_size": 4,
+    "num_blocks": 2,
+    "embed_dim": 24,
+    "mlp_ratio": [
+      1.0,
+      3.0
+    ],
+    "mlp_layer": "GluMlp",
+    "act_layer": "silu",
+    "global_pool": ""
+  },
+  "pretrained_cfg": {
+    "input_size": [
+      3,
+      16,
+      32
+    ],
+    "classifier": "head"
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "architecture": "xception65p",
+  "num_classes": 10,
+  "model_args": {
+    "block_cfg": [
+      {
+        "in_chs": 64,
+        "out_chs": 24,
+        "stride": 2
+      },
+      {
+        "in_chs": 24,
+        "out_chs": 32,
+        "stride": 2
+      },
+      {
+        "in_chs": 32,
+        "out_chs": 40,
+        "stride": 2
+      },
+      {
+        "in_chs": 40,
+        "out_chs": 40,
+        "stride": 1
+      },
+      {
+        "in_chs": 40,
+        "out_chs": [
+          40,
+          48,
+          48
+        ],
+        "stride": 2
+      },
+      {
+        "in_chs": 48,
+        "out_chs": [
+          56,
+          56,
+          64
+        ],
+        "stride": 1,
+        "no_skip": true
+      }
+    ]
+  },
+  "pretrained_cfg": {
+    "input_size": [
+      3,
+      35,
+      35
+    ],
+    "classifier": "head.fc"
+  }
+}

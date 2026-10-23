@@ -1,0 +1,31 @@
+{
+  "architecture": "resmlp_24_224",
+  "num_classes": 6,
+  "model_args": {
+    "img_size": [
+      16,
+      32
+    ],
+    "patch_size": [
+      8,
+      4
+    ],
+    "num_blocks": 3,
+    "embed_dim": 24,
+    "mlp_ratio": 2.5,
+    "block_layer": "ResBlock",
+    "norm_layer": "affine",
+    "init_values": 0.2,
+    "drop_rate": 0.1,
+    "proj_drop_rate": 0.1,
+    "drop_path_rate": 0.2
+  },
+  "pretrained_cfg": {
+    "input_size": [
+      3,
+      16,
+      32
+    ],
+    "classifier": "head"
+  }
+}

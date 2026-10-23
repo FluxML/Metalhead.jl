@@ -1,0 +1,1 @@
+{"architecture": "senet154", "kwargs": {"layers": [2, 1, 1, 1], "channels": [4, 8, 16, 32], "stem_width": 8, "cardinality": 2, "base_width": 32, "num_classes": 10}, "input_shape": [2, 3, 32, 32]}

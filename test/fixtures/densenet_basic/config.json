@@ -1,0 +1,25 @@
+{
+  "architecture": "densenet121",
+  "num_classes": 10,
+  "model_args": {
+    "growth_rate": 8,
+    "block_config": [
+      2,
+      1,
+      3,
+      2
+    ],
+    "bn_size": 2,
+    "drop_rate": 0.1,
+    "proj_drop_rate": 0.1,
+    "memory_efficient": true
+  },
+  "pretrained_cfg": {
+    "input_size": [
+      3,
+      64,
+      48
+    ],
+    "classifier": "classifier"
+  }
+}

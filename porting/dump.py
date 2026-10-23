@@ -1,6 +1,12 @@
 """Write a tiny parity fixture for a Metalhead port.
 
-    uv run dump.py specs/<name>.json [--out DIR] [--all-taps]
+    uv run dump.py specs/<name>.json [specs/<other>.json ...] [--all-taps]
+    uv run dump.py specs/<name>.json --out DIR --all-taps     # a debug dump
+
+Optional spec keys: "shrink": k divides every channel count by k (see `shrunk_channels` in
+common.py; the Julia side applies `shrink_channels` from config.json), and
+"weight_dtype": "float16" stores the weights in half precision, and "tap_depth": d records the
+modules with at most d dots in their name (default 1), to keep large fixtures small.
 
 The fixture directory looks like a Hub repository (config.json + model.safetensors), so the Julia
 side loads it with `create_model(dir; pretrained = true)`, plus acts.safetensors with the input,
@@ -20,15 +26,22 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("spec")
-    p.add_argument("--out", help="output directory (default: test/fixtures/<spec name>)")
+    p.add_argument("specs", nargs="+", metavar="spec")
+    p.add_argument("--out", help="output directory, for a single spec (default: test/fixtures/<spec name>)")
     p.add_argument("--all-taps", action="store_true", help="record every module, not only depth <= 2")
     p.add_argument("--max-bytes", type=int, default=1_000_000)
     p.add_argument("--tap-dtype", choices=["float16", "float32"],
                    help="storage type of the taps (default: float16, or float32 with --all-taps)")
     args = p.parse_args()
+    if args.out and len(args.specs) > 1:
+        p.error("--out takes a single spec")
+    too_large = [s for s in args.specs if not dump(pathlib.Path(s), args)]
+    if too_large:
+        raise SystemExit(f"fixtures larger than {args.max_bytes} bytes, shrink their specs: {too_large}")
 
-    spec_path = pathlib.Path(args.spec)
+
+def dump(spec_path, args):
+    """Write the fixture of one spec; return whether it fits in `args.max_bytes`."""
     spec = json.loads(spec_path.read_text())
     out = pathlib.Path(args.out) if args.out else ROOT / "test" / "fixtures" / spec_path.stem
     out.mkdir(parents=True, exist_ok=True)
@@ -37,6 +50,10 @@ def main():
     model = build(spec).eval()
     rerandomize(model, spec.get("seed", 0))
     weights = state_dict_f32(model)
+    if spec.get("weight_dtype") == "float16":  # halves the file; torch gets the rounded values
+        weights = {k: v.half() if v.is_floating_point() else v for k, v in weights.items()}
+        model.load_state_dict({k: v.float() if v.is_floating_point() else v
+                               for k, v in weights.items()})
     model = model.double()
 
     tap_dtype = getattr(torch, args.tap_dtype or ("float32" if args.all_taps else "float16"))
@@ -54,7 +71,7 @@ def main():
         return fn
 
     handles = [m.register_forward_hook(hook(n)) for n, m in model.named_modules()
-               if n and (args.all_taps or n.count(".") < 2)]
+               if n and (args.all_taps or n.count(".") <= spec.get("tap_depth", 1))]
     gen = torch.Generator().manual_seed(spec.get("seed", 0) + 1)
     x = torch.randn(spec["input_shape"], generator=gen, dtype=torch.float64)
     with torch.no_grad():
@@ -71,6 +88,8 @@ def main():
         "model_args": kwargs,
         "pretrained_cfg": {"input_size": spec["input_shape"][1:], "classifier": classifier_name(model)},
     }
+    if spec.get("shrink"):
+        config["shrink"] = spec["shrink"]
     write_json(out / "config.json", config)
     save_file(weights, out / "model.safetensors")
     acts = {"input": x, "output": logits.contiguous(), "features": features.contiguous(), **taps}
@@ -80,8 +99,7 @@ def main():
 
     size = sum(f.stat().st_size for f in out.iterdir())
     print(f"{out}: {len(weights)} tensors, {len(taps)} taps, {size / 1e6:.2f} MB")
-    if size > args.max_bytes and not args.out:
-        raise SystemExit(f"fixture is larger than {args.max_bytes} bytes; shrink the spec")
+    return size <= args.max_bytes or bool(args.out)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,8 @@
 # More advanced layers
 
+!!! warning "Deprecated"
+    This API is deprecated in Metalhead 0.10 and will be removed in 0.11. See [Migrating from 0.9](@ref migration).
+
 This page contains the API reference for some more advanced layers present in the `Layers` module. These layers are used in Metalhead.jl to build more complex models, and can also be used by the user to build custom models. For a more basic introduction to the `Layers` module, please refer to the [introduction guide](@ref layers-intro) for the `Layers` module.
 
 ## Squeeze-and-excitation blocks

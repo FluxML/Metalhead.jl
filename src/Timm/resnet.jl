@@ -17,7 +17,8 @@ Flux.@layer BasicBlock
 const BASIC_EXPANSION = 1
 
 function BasicBlock(inplanes, planes; stride = 1, downsample = nothing, cardinality = 1,
-        base_width = 64, reduce_first = 1, act_layer = relu, drop_path_rate = 0.0)
+        base_width = 64, reduce_first = 1, act_layer = relu, attn_layer = nothing,
+        drop_path_rate = 0.0)
     cardinality == 1 || error("BasicBlock only supports cardinality of 1")
     base_width == 64 || error("BasicBlock does not support changing base width")
     first_planes = planes ÷ reduce_first
@@ -26,7 +27,8 @@ function BasicBlock(inplanes, planes; stride = 1, downsample = nothing, cardinal
         Conv((3, 3), inplanes => first_planes; stride, pad = 1, bias = false),
         BatchNorm(first_planes), act_layer,
         Conv((3, 3), first_planes => outplanes; pad = 1, bias = false),
-        BatchNorm(outplanes), nothing, act_layer, downsample, drop_path(drop_path_rate))
+        BatchNorm(outplanes), create_attn(attn_layer, outplanes), act_layer, downsample,
+        drop_path(drop_path_rate))
 end
 
 function (b::BasicBlock)(x)
@@ -58,7 +60,8 @@ Flux.@layer Bottleneck
 const BOTTLENECK_EXPANSION = 4
 
 function Bottleneck(inplanes, planes; stride = 1, downsample = nothing, cardinality = 1,
-        base_width = 64, reduce_first = 1, act_layer = relu, drop_path_rate = 0.0)
+        base_width = 64, reduce_first = 1, act_layer = relu, attn_layer = nothing,
+        drop_path_rate = 0.0)
     width = floor(Int, planes * (base_width / 64)) * cardinality
     first_planes = width ÷ reduce_first
     outplanes = planes * BOTTLENECK_EXPANSION
@@ -68,7 +71,8 @@ function Bottleneck(inplanes, planes; stride = 1, downsample = nothing, cardinal
             pad = 1, groups = cardinality, bias = false),
         BatchNorm(width), act_layer,
         Conv((1, 1), width => outplanes; bias = false), BatchNorm(outplanes),
-        nothing, act_layer, downsample, drop_path(drop_path_rate))
+        create_attn(attn_layer, outplanes), act_layer, downsample,
+        drop_path(drop_path_rate))
 end
 
 function (b::Bottleneck)(x)
@@ -82,11 +86,21 @@ function (b::Bottleneck)(x)
     return b.act3(x .+ shortcut)
 end
 
+# Block name => (constructor, expansion, accepted `block_args`); other files add blocks.
+const RESNET_BLOCKS = Dict{String, Any}(
+    "BasicBlock" => (BasicBlock, BASIC_EXPANSION, (:attn_layer,)),
+    "Bottleneck" => (Bottleneck, BOTTLENECK_EXPANSION, (:attn_layer,)))
+
 function block_type(name)
-    return name in (:BasicBlock, "BasicBlock") ? (BasicBlock, BASIC_EXPANSION) :
-           name in (:Bottleneck, "Bottleneck") ? (Bottleneck, BOTTLENECK_EXPANSION) :
-           error("unknown ResNet block $name")
+    return get(RESNET_BLOCKS, String(name)) do
+        return error("unknown ResNet block $name")
+    end
 end
+
+# `block_args` is a NamedTuple (from config.json), a Dict or `nothing`.
+block_kwargs(::Nothing) = (;)
+block_kwargs(args::NamedTuple) = args
+block_kwargs(args::AbstractDict) = (; (Symbol(k) => v for (k, v) in args)...)
 
 function downsample_conv(in_channels, out_channels, kernel_size; stride = 1)
     kernel_size = stride == 1 ? 1 : kernel_size
@@ -148,8 +162,10 @@ Flux.@layer ResNet
 """
     resnet(; block, layers, num_classes = 1000, in_chans = 3, kwargs...)
 
-Port of timm's `ResNet` (ResNet, ResNeXt, Wide ResNet and the c/d/s/t stem variants).
-Keyword arguments are those of the timm class.
+Port of timm's `ResNet` (ResNet, ResNeXt, Wide ResNet, SE-ResNet, ECA-ResNet, Res2Net and
+the c/d/s/t stem variants). Keyword arguments are those of the timm class.
+`block_args` is a `NamedTuple` of keywords for the blocks: `attn_layer = "se"` or `"eca"`
+for `BasicBlock` and `Bottleneck`, `scale` for `Bottle2neck`.
 """
 function resnet(; block, layers, num_classes = 1000, in_chans = 3, output_stride = 32,
         global_pool = "avg", cardinality = 1, base_width = 64, stem_width = 64,
@@ -162,9 +178,14 @@ function resnet(; block, layers, num_classes = 1000, in_chans = 3, output_stride
         "ResNet"; output_stride = (output_stride, 32), global_pool = (global_pool, "avg"),
         replace_stem_pool = (replace_stem_pool, false), act_layer = (act_layer, "relu"),
         norm_layer = (norm_layer, "batchnorm2d"), aa_layer = (aa_layer, nothing),
-        drop_block_rate = (drop_block_rate, 0.0), block_args = (block_args, nothing))
+        drop_block_rate = (drop_block_rate, 0.0))
     length(layers) == length(channels) == 4 || error("ResNet ports have exactly 4 stages")
-    block_fn, expansion = block_type(block)
+    block_fn, expansion, accepted = block_type(block)
+    block_args = block_kwargs(block_args)
+    for k in keys(block_args)
+        k in accepted ||
+            error("`block_args` entry `$k` is not supported by the port of block $block")
+    end
     deep_stem = occursin("deep", stem_type)
     inplanes = deep_stem ? stem_width * 2 : 64
     if deep_stem
@@ -179,7 +200,8 @@ function resnet(; block, layers, num_classes = 1000, in_chans = 3, output_stride
     end
     stages = make_blocks(
         block_fn, expansion, channels, layers, inplanes; cardinality, base_width,
-        reduce_first = block_reduce_first, down_kernel_size, avg_down, drop_path_rate)
+        reduce_first = block_reduce_first, down_kernel_size, avg_down, drop_path_rate,
+        block_args...)
     num_features = channels[end] * expansion
     fc = num_classes > 0 ? Dense(num_features => num_classes) : identity
     return ResNet(
@@ -210,13 +232,18 @@ const RESNET_REFERENCES = Dict(
     "resnext50_32x4d" =>
         ["timm/resnext50_32x4d.a1h_in1k" => "cc736cb0940158d05966023116d90fca4c38dae3"],
     "wide_resnet50_2" =>
-        ["timm/wide_resnet50_2.tv2_in1k" => "ffb9dc0ac74364ad268e066aa4aea75089bf383d"]
+        ["timm/wide_resnet50_2.tv2_in1k" => "ffb9dc0ac74364ad268e066aa4aea75089bf383d"],
+    "seresnext26d_32x4d" =>
+        ["timm/seresnext26d_32x4d.bt_in1k" => "1214c4b9e7470f613b1ffb1f3c0243ce2736b925"],
+    "ecaresnet26t" =>
+        ["timm/ecaresnet26t.ra2_in1k" => "ab90506b283999a8fe6f795c3150e32c7688d791"]
 )
 
 let deep = (stem_width = 32, stem_type = "deep"),
     deep_avg = (stem_width = 32, stem_type = "deep", avg_down = true),
     tiered_avg = (stem_width = 32, stem_type = "deep_tiered", avg_down = true),
-    basic = (; block = :BasicBlock), bottleneck = (; block = :Bottleneck)
+    basic = (; block = :BasicBlock), bottleneck = (; block = :Bottleneck),
+    se = (; block_args = (attn_layer = "se",)), eca = (; block_args = (attn_layer = "eca",))
 
     for (name, args) in [
         "resnet10t" => (; basic..., layers = (1, 1, 1, 1), tiered_avg...),
@@ -260,7 +287,45 @@ let deep = (stem_width = 32, stem_type = "deep"),
         "resnext101_32x32d" =>
             (; bottleneck..., layers = (3, 4, 23, 3), cardinality = 32, base_width = 32),
         "resnext101_64x4d" =>
-            (; bottleneck..., layers = (3, 4, 23, 3), cardinality = 64, base_width = 4)
+            (; bottleneck..., layers = (3, 4, 23, 3), cardinality = 64, base_width = 4),
+        "seresnet18" => (; basic..., layers = (2, 2, 2, 2), se...),
+        "seresnet34" => (; basic..., layers = (3, 4, 6, 3), se...),
+        "seresnet50" => (; bottleneck..., layers = (3, 4, 6, 3), se...),
+        "seresnet50t" => (; bottleneck..., layers = (3, 4, 6, 3), tiered_avg..., se...),
+        "seresnet101" => (; bottleneck..., layers = (3, 4, 23, 3), se...),
+        "seresnet152" => (; bottleneck..., layers = (3, 8, 36, 3), se...),
+        "seresnet152d" => (; bottleneck..., layers = (3, 8, 36, 3), deep_avg..., se...),
+        "seresnet200d" => (; bottleneck..., layers = (3, 24, 36, 3), deep_avg..., se...),
+        "seresnet269d" => (; bottleneck..., layers = (3, 30, 48, 8), deep_avg..., se...),
+        "seresnext26d_32x4d" => (; bottleneck..., layers = (2, 2, 2, 2),
+            cardinality = 32, base_width = 4, deep_avg..., se...),
+        "seresnext26t_32x4d" => (; bottleneck..., layers = (2, 2, 2, 2),
+            cardinality = 32, base_width = 4, tiered_avg..., se...),
+        "seresnext50_32x4d" => (; bottleneck..., layers = (3, 4, 6, 3),
+            cardinality = 32, base_width = 4, se...),
+        "seresnext101_32x4d" => (; bottleneck..., layers = (3, 4, 23, 3),
+            cardinality = 32, base_width = 4, se...),
+        "seresnext101_32x8d" => (; bottleneck..., layers = (3, 4, 23, 3),
+            cardinality = 32, base_width = 8, se...),
+        "seresnext101d_32x8d" => (; bottleneck..., layers = (3, 4, 23, 3),
+            cardinality = 32, base_width = 8, deep_avg..., se...),
+        "seresnext101_64x4d" => (; bottleneck..., layers = (3, 4, 23, 3),
+            cardinality = 64, base_width = 4, se...),
+        "senet154" => (; bottleneck..., layers = (3, 8, 36, 3), cardinality = 64,
+            base_width = 4, stem_type = "deep", down_kernel_size = 3,
+            block_reduce_first = 2, se...),
+        "ecaresnet26t" => (; bottleneck..., layers = (2, 2, 2, 2), tiered_avg..., eca...),
+        "ecaresnet50d" => (; bottleneck..., layers = (3, 4, 6, 3), deep_avg..., eca...),
+        "ecaresnet50t" => (; bottleneck..., layers = (3, 4, 6, 3), tiered_avg..., eca...),
+        "ecaresnetlight" => (; bottleneck..., layers = (1, 1, 11, 3),
+            stem_width = 32, avg_down = true, eca...),
+        "ecaresnet101d" => (; bottleneck..., layers = (3, 4, 23, 3), deep_avg..., eca...),
+        "ecaresnet200d" => (; bottleneck..., layers = (3, 24, 36, 3), deep_avg..., eca...),
+        "ecaresnet269d" => (; bottleneck..., layers = (3, 30, 48, 8), deep_avg..., eca...),
+        "ecaresnext26t_32x4d" => (; bottleneck..., layers = (2, 2, 2, 2),
+            cardinality = 32, base_width = 4, tiered_avg..., eca...),
+        "ecaresnext50t_32x4d" => (; bottleneck..., layers = (2, 2, 2, 2),
+            cardinality = 32, base_width = 4, tiered_avg..., eca...)
     ]
         register!(ArchSpec(:timm, name, resnet; defaults = args,
             references = get(RESNET_REFERENCES, name, [])))

@@ -10,12 +10,25 @@ module Timm
 using Flux
 using NNlib
 using ConcreteStructs: @concrete
+using MLUtils: chunk
+using Statistics: mean
+using ChainRulesCore: ChainRulesCore
 using ..Metalhead: ArchSpec, register!
+import ..Metalhead: layer_params
 import ..Metalhead: forward_features, forward_head
 
 include("layers.jl")
 include("resnet.jl")
+include("res2net.jl")
 include("vit.jl")
 include("convnext.jl")
+include("mlp_mixer.jl")
+include("convmixer.jl")
+include("inception_v3.jl")
+include("inception_v4.jl")
+include("inception_resnet_v2.jl")
+include("xception.jl")
+include("vgg.jl")
+include("densenet.jl")
 
 end # module

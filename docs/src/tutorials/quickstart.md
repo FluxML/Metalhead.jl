@@ -1,48 +1,145 @@
-# A guide to getting started with Metalhead
+# [Getting started](@id quickstart)
 
-Metalhead.jl is a library written in Flux.jl that is a collection of image models, layers and utilities for deep learning in computer vision.
+## Creating a model
 
-## Model architectures and pre-trained models
+[`create_model`](@ref) builds a ported model. Its first argument names the model in one of
+four ways:
 
-In Metalhead.jl, camel-cased functions mimicking the naming style followed in the paper such as [`ResNet`](@ref) or [`MobileNetv3`](@ref) are considered the "higher" level API for models. These are the functions that end-users who do not want to experiment much with model architectures should use. To use these models, simply call the function of the model:
-
-```julia
-using Metalhead
-
-model = ResNet(18);
-```
-
-The API reference contains the documentation and options for each model function. These models also support the option for loading pre-trained weights from ImageNet.
-
-!!! note
-
-	Metalhead is still under active development and thus not all models have pre-trained weights supported. While we are working on expanding the footprint of the pre-trained models, if you would like to help contribute model weights yourself, please check out the [contributing guide](@ref contributing).
-
-To use a pre-trained model, just instantiate the model with the `pretrain` keyword argument set to `true`:
+| Argument | Example | Meaning |
+|:--|:--|:--|
+| Hub repository | `"timm/resnet50.a1_in1k"` | the architecture and weights of that repository |
+| timm name with a pretrained tag | `"resnet50.a1_in1k"` | the same, in the `timm` organisation |
+| architecture | `"resnet50"` | the bare architecture; with `pretrained = true`, its default checkpoint |
+| local directory | `"path/to/dir"` | a `config.json` and `model.safetensors` laid out like a Hub repository |
 
 ```julia
 using Metalhead
-  
-model = ResNet(18; pretrain = true);
+
+model = create_model("resnet50")                                 # random weights, no download
+model = create_model("timm/resnet50.a1_in1k"; pretrained = true) # weights from the Hub
 ```
 
-Refer to the [pretraining guide](@ref pretrained) for more details on how to use pre-trained models.
+With `pretrained = true`, Metalhead downloads and caches the repository's `config.json` and
+safetensors weights (sharded checkpoints too).
+The [model list](@ref models) shows the checkpoints each architecture was validated against.
+Bare architecture names use the first of them and load it at the commit it was validated at.
+Other repositories load from their `main` branch, or from `revision`:
 
-To run a model on an NVIDIA GPU, install and load [CUDA.jl](https://github.com/JuliaGPU/CUDA.jl) and [cuDNN.jl](https://github.com/JuliaGPU/CUDA.jl/tree/master/lib/cudnn) alongside Flux, and move the model (and its inputs) to the device. See the [Flux GPU guide](https://fluxml.ai/Flux.jl/stable/guide/gpu/) for details.
+```julia
+model = create_model("timm/resnet50.a1_in1k"; pretrained = true, revision = "main")
+```
+
+The other keyword arguments are timm's model arguments, such as `num_classes`, `drop_rate` or
+`drop_path_rate`. They override the repository's configuration. Use `eltype` to build the
+model in another precision (`Float16`, `Float32` or `Float64`).
+
+[`list_models`](@ref) lists the ported architectures, or with `pretrained = true` the
+validated checkpoints:
+
+```julia
+list_models()
+list_models(; pretrained = true)
+```
+
+## Inputs
+
+Models take Flux's layout: width × height × channels × batch, in `Float32` unless you chose
+another `eltype`. PyTorch's `(N, C, H, W)` is the same memory layout with the dimensions
+reversed. Sizes in timm configurations, such as `input_size = (3, 224, 224)`, are in PyTorch
+order.
+
+The model is returned in test mode: dropout is off and batch normalisation uses its running
+statistics. Call `Flux.trainmode!(model)` before training.
+
+## Classifying an image
+
+The preprocessing a checkpoint expects (image size, crop, normalisation) is in its
+configuration; [`Metalhead.pretrained_cfg`](@ref) returns it. The steps below follow timm's
+evaluation transform: resize the shorter side to `input_size / crop_pct`, crop the centre, and
+normalise. They use [Images.jl](https://github.com/JuliaImages/Images.jl).
+
+```julia
+using Metalhead, Flux, Images
+
+repo = "timm/convnext_tiny.fb_in1k"
+model = create_model(repo; pretrained = true)
+cfg = Metalhead.pretrained_cfg(repo)
+
+function preprocess(img, cfg)
+    _, h, w = cfg.input_size
+    scale = floor(Int, h / cfg.crop_pct) / minimum(size(img))
+    img = imresize(img; ratio = scale)
+    top, left = (size(img) .- (h, w)) .÷ 2
+    img = img[(top + 1):(top + h), (left + 1):(left + w)]
+    x = permutedims(Float32.(channelview(RGB.(img))), (3, 2, 1))  # C × H × W to W × H × C
+    x = (x .- reshape(Float32.(collect(cfg.mean)), 1, 1, 3)) ./
+        reshape(Float32.(collect(cfg.std)), 1, 1, 3)
+    return reshape(x, size(x)..., 1)
+end
+
+img = load(download("https://upload.wikimedia.org/wikipedia/commons/2/26/YellowLabradorLooking_new.jpg"))
+probs = softmax(model(preprocess(img, cfg)))
+labels = readlines(download("https://raw.githubusercontent.com/pytorch/hub/master/imagenet_classes.txt"))
+labels[sortperm(vec(probs); rev = true)[1:5]]
+```
+
+`channelview` gives channels × height × width, so the permutation is needed. Without it the
+model silently sees a transposed image.
+
+## Features and the classifier
+
+Ported models follow timm's split into a feature extractor and a head:
+
+```julia
+x = rand(Float32, 224, 224, 3, 2)
+features = forward_features(model, x)                       # e.g. 7 × 7 × 768 × 2 for ConvNeXt-T
+pooled = forward_head(model, features; pre_logits = true)   # 768 × 2
+logits = forward_head(model, features)                      # 1000 × 2
+```
+
+## Fine-tuning
+
+Pass a new `num_classes` to load the pretrained weights with a freshly initialised classifier:
+
+```julia
+using Flux
+
+model = create_model("timm/convnext_tiny.fb_in1k"; pretrained = true, num_classes = 10)
+Flux.trainmode!(model)
+
+loss(m, x, y) = Flux.logitcrossentropy(m(x), y)
+data = [(rand(Float32, 224, 224, 3, 4), Flux.onehotbatch(rand(1:10, 4), 1:10))]
+opt_state = Flux.setup(AdamW(1e-4), model)
+Flux.train!(loss, model, data, opt_state)
+```
+
+With `num_classes = 0` the model has no classifier and returns the pooled features.
+
+## Model structure
+
+A ported model mirrors the PyTorch module tree: its fields have the names of the PyTorch
+submodules, and `nn.Sequential`s are `Chain`s with Julia index `i` for PyTorch index `i - 1`.
+PyTorch's `model.layer1[0].conv1` is `model.layer1[1].conv1`:
+
+```julia
+model = create_model("resnet50")
+model.layer1[1].conv1     # Conv((1, 1), 64 => 64, bias=false)
+model.fc                  # Dense(2048 => 1000)
+```
+
+The layers are ordinary Flux layers, so `Flux.freeze!`, `Flux.state` and `Flux.loadmodel!` work
+as usual.
+
+## GPU
+
+Load [CUDA.jl](https://github.com/JuliaGPU/CUDA.jl) and cuDNN, or another GPU backend, and move
+the model and its inputs to the device. See the
+[Flux GPU guide](https://fluxml.ai/Flux.jl/stable/guide/gpu/).
 
 ```julia
 using Flux, Metalhead, CUDA, cuDNN
 
 device = gpu_device()
-model = ResNet(18; pretrain = true) |> device;
+model = create_model("timm/convnext_tiny.fb_in1k"; pretrained = true) |> device
+logits = model(device(rand(Float32, 224, 224, 3, 8)))
 ```
-
-## More model configuration options
-
-For users who want to use more options for model configuration, Metalhead provides a "mid-level" API for models. These are the model functions that are in lowercase such as [`Metalhead.resnet`](@ref) or [`Metalhead.mobilenetv3`](@ref). End-users who want to experiment with model architectures should use these functions. These models do not support the option for loading pre-trained weights from ImageNet out of the box, although one can always load weights explicitly using the `loadmodel!` function from Flux.
-
-To use any of these models, check out the docstrings for the model functions (these are documented in the API reference). Note that these functions typically require more configuration options to be passed in, but offer a lot more flexibility in terms of model architecture. Metalhead defines as many default options as possible so as to make it easier for the user to pick and choose specific options to customise.
-
-## Builders for the advanced user
-
-For users who want the ability to customise their models as much as possible, Metalhead offers a powerful low-level interface. These are known as **builders** and allow the user to hack into the core of models and build them up as per their liking. Most users will not need to use builders since a large number of configuration options are exposed at the mid-level API. However, for package developers and users who want to build customised versions of their own models, the low-level API provides the customisability required while still reducing user code.

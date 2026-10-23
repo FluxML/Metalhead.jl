@@ -1,0 +1,1 @@
+{"architecture": "mixer_b16_224", "builder": "mixers:mixer", "kwargs": {"img_size": [16, 32], "patch_size": [4, 8], "in_chans": 2, "num_blocks": 2, "embed_dim": 24, "mlp_ratio": [0.75, 2.5], "drop_rate": 0.1, "proj_drop_rate": 0.1, "drop_path_rate": 0.2, "nlhb": true, "num_classes": 7}, "input_shape": [2, 2, 16, 32]}

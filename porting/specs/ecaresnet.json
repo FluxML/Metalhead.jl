@@ -1,0 +1,1 @@
+{"architecture": "ecaresnet26t", "kwargs": {"layers": [2, 1, 1, 1], "channels": [4, 8, 16, 32], "stem_width": 8, "num_classes": 10}, "input_shape": [2, 3, 32, 32]}

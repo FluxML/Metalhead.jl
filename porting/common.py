@@ -1,5 +1,9 @@
 """Shared helpers for the Metalhead porting scripts."""
+import contextlib
+import copy
+import functools
 import importlib
+import inspect
 import json
 
 import numpy as np
@@ -16,12 +20,75 @@ def reference_input(shape):
 
 
 def build(spec, **extra):
-    """Build the model described by a spec: `timm.create_model` or a named builder."""
-    kwargs = dict(spec.get("kwargs", {}), **extra)
-    if spec.get("builder"):
-        module, fn = spec["builder"].split(":")
-        return getattr(importlib.import_module(module), fn)(**kwargs)
-    return timm.create_model(spec["architecture"], pretrained=False, **kwargs)
+    """Build the model described by a spec: `timm.create_model` or a named builder.
+
+    With `"shrink": k` in the spec, every channel count is divided by k (see `shrunk_channels`).
+    """
+    kwargs = copy.deepcopy(dict(spec.get("kwargs", {}), **extra))  # some builders mutate them
+    shrink = spec.get("shrink")
+    keep = {spec["input_shape"][1], kwargs.get("num_classes", 1000)} if shrink else set()
+    with shrunk_channels(shrink, keep) if shrink else contextlib.nullcontext():
+        if spec.get("builder"):
+            module, fn = spec["builder"].split(":")
+            model = getattr(importlib.import_module(module), fn)(**kwargs)
+        else:
+            model = timm.create_model(spec["architecture"], pretrained=False, **kwargs)
+    if shrink:
+        unknown = {type(m).__name__ for m in model.modules() if not isinstance(m, SHRUNK)
+                   and any(True for _ in m.parameters(recurse=False))}
+        assert not unknown, f"shrink does not handle the parameters of {sorted(unknown)}"
+    return model
+
+
+SHRUNK = (nn.Conv2d, nn.modules.batchnorm._NormBase, nn.Linear)
+
+
+@contextlib.contextmanager
+def shrunk_channels(k, keep=()):
+    """Build models with every channel count divided by `k`, for fixtures of fixed-width models.
+
+    Patches the constructors of `nn.Conv2d` (in and out channels), `nn.BatchNorm*d` (features)
+    and `nn.Linear` (in and out features), subclasses included. A count in `keep` stays as is
+    (the image channels and `num_classes`), every other count must be divisible by `k`.
+    A depthwise conv (groups == in_channels) keeps groups == in_channels; other `groups` stay.
+    """
+    def shrink(n):
+        if n in keep:
+            return n
+        assert n % k == 0, f"channel count {n} is not divisible by shrink = {k}"
+        return n // k
+
+    def patch(cls, fn):
+        init = cls.__init__
+        sig = inspect.signature(init)
+
+        @functools.wraps(init)
+        def wrapper(self, *args, **kwargs):
+            bound = sig.bind(self, *args, **kwargs)
+            fn(bound.arguments)
+            return init(*bound.args, **bound.kwargs)
+        cls.__init__ = wrapper
+        return lambda: setattr(cls, "__init__", init)
+
+    def conv(a):
+        depthwise = a.get("groups", 1) > 1 and a.get("groups") == a["in_channels"]
+        a["in_channels"], a["out_channels"] = shrink(a["in_channels"]), shrink(a["out_channels"])
+        if depthwise:
+            a["groups"] = a["in_channels"]
+
+    def norm(a):
+        a["num_features"] = shrink(a["num_features"])
+
+    def linear(a):
+        a["in_features"], a["out_features"] = shrink(a["in_features"]), shrink(a["out_features"])
+
+    restores = [patch(nn.Conv2d, conv), patch(nn.modules.batchnorm._NormBase, norm),
+                patch(nn.Linear, linear)]
+    try:
+        yield
+    finally:
+        for restore in reversed(restores):
+            restore()
 
 
 NORMS = (nn.modules.batchnorm._NormBase, nn.LayerNorm, nn.GroupNorm)

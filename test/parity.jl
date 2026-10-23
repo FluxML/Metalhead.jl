@@ -5,7 +5,8 @@ module Parity
 using Metalhead, Flux, Functors, LinearAlgebra, SafeTensors
 using Metalhead: Checkpoint, join_key, layer_params
 
-export Tap, tapify, check_fixture, check_reference, reference_input, relerr
+export Tap, tapify, check_fixture, fixture_model, shrink_channels, check_reference,
+       reference_input, relerr
 
 relerr(a, b) = norm(a .- b) / max(norm(b), floatmin(Float64))
 
@@ -82,14 +83,81 @@ function parse_tap(key)
 end
 
 """
-    check_fixture(dir; rtol = 1e-8, model = create_model(dir; pretrained = true, eltype = Float64)) -> NamedTuple
+    shrink_channels(model, k; keep = ()) -> model
 
-Load the tiny fixture in `dir` with `create_model(dir; pretrained = true, eltype = Float64)` and
+Rebuild the `Conv`, `BatchNorm` and `Dense` layers of `model` with every channel count
+divided by `k`, like `shrunk_channels` in porting/common.py does for the PyTorch model. A count
+in `keep` stays as is (the image channels and `num_classes`), every other count must be
+divisible by `k`. Strides, padding, dilation, activations and `eps` are kept, and so is `groups` of a
+depthwise convolution (`groups == in channels`); other `groups` stay as they are. The new
+layers are zero-initialised, to be filled by `load_state!`. Fails on any other parameter.
+"""
+function shrink_channels(model, k::Integer; keep = ())
+    function shrink(n)
+        n in keep && return n
+        n % k == 0 || error("channel count $n is not divisible by shrink = $k")
+        return n ÷ k
+    end
+    isshrinkable(x) = x isa Union{Conv, BatchNorm, Dense}
+    return fmap(model; exclude = x -> isshrinkable(x) || x isa AbstractArray{<:Number}) do l
+        l isa Conv ? shrink_conv(l, shrink) :
+        l isa BatchNorm ? shrink_batchnorm(l, shrink) :
+        l isa Dense ? shrink_dense(l, shrink) :
+        error("cannot shrink a parameter array of size $(size(l))")
+    end
+end
+
+function shrink_conv(l::Conv, shrink)
+    (; weight, bias, groups) = l
+    cin, cout = size(weight, ndims(weight) - 1) * groups, size(weight, ndims(weight))
+    new_cin, new_cout = shrink(cin), shrink(cout)
+    new_groups = groups > 1 && groups == cin ? new_cin : groups
+    weight = zeros(
+        eltype(weight), size(weight)[1:(end - 2)]..., new_cin ÷ new_groups, new_cout)
+    bias = bias isa AbstractArray ? zeros(eltype(bias), new_cout) : bias
+    return Conv(l.σ, weight, bias, l.stride, l.pad, l.dilation, new_groups, l.pad_mode)
+end
+
+function shrink_batchnorm(l::BatchNorm, shrink)
+    new = BatchNorm(shrink(l.chs), l.λ; eps = l.ϵ, momentum = l.momentum,
+        affine = l.affine, track_stats = l.track_stats)
+    return Metalhead.ELTYPE_CONVERTERS[eltype(l.γ)](new)
+end
+
+function shrink_dense(l::Dense, shrink)
+    out, in = size(l.weight)
+    new = Dense(shrink(in) => shrink(out), l.σ; bias = l.bias isa AbstractArray)
+    return Metalhead.ELTYPE_CONVERTERS[eltype(l.weight)](new)
+end
+
+"""
+    fixture_model(dir; eltype = Float64)
+
+The model of the fixture in `dir` with the weights of `model.safetensors`, in test mode. For
+a fixture made from a `"shrink": k` spec, the model of `config.json` is built at full size,
+shrunk with [`shrink_channels`](@ref) and then loaded.
+"""
+function fixture_model(dir; eltype = Float64)
+    config = Metalhead.JSON.parsefile(joinpath(dir, "config.json"))
+    haskey(config, "shrink") || return create_model(dir; pretrained = true, eltype)
+    keep = (config["pretrained_cfg"]["input_size"][1], config["num_classes"])
+    model = shrink_channels(create_model(dir), config["shrink"]; keep)
+    model = Metalhead.ELTYPE_CONVERTERS[eltype](model)
+    spec = Metalhead.lookup(:timm, config["architecture"])
+    Metalhead.load_state!(model, Checkpoint(joinpath(dir, "model.safetensors"));
+        ignore = [Metalhead.DEFAULT_IGNORE; spec.ignore])
+    return Flux.testmode!(model)
+end
+
+"""
+    check_fixture(dir; rtol = 1e-8, model = fixture_model(dir)) -> NamedTuple
+
+Load the tiny fixture in `dir` with [`fixture_model`](@ref) (in float64) and
 compare its logits and features (float64, relative error `rtol`) and every recorded module output
 with PyTorch's. Module outputs are stored in float16 or float32 and compared at a tolerance set
 by their precision. Returns the relative errors, with the taps in PyTorch call order.
 """
-function check_fixture(dir; rtol = 1e-8, model = create_model(dir; pretrained = true, eltype = Float64))
+function check_fixture(dir; rtol = 1e-8, model = fixture_model(dir))
     acts = Checkpoint(joinpath(dir, "acts.safetensors"))
     order = Metalhead.JSON.parse(SafeTensors.deserialize(joinpath(dir, "acts.safetensors")).metadata["call_order"])
     x = acts["input"]
