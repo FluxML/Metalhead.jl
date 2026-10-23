@@ -91,7 +91,8 @@ end
 
 function mbconv_stage_builder(block_configs::AbstractVector{<:Tuple}, inplanes::Integer,
                               scalings::NTuple{2, Real}; kwargs...)
-    bxs = [invresbuilder(block_configs[idx][1], block_configs, inplanes, idx, scalings;
-                         kwargs...) for idx in eachindex(block_configs)]
+    # `Any` avoids a TypeError from `collect` on Julia 1.13, which asserts the inferred eltype
+    bxs = Any[invresbuilder(block_configs[idx][1], block_configs, inplanes, idx, scalings;
+                            kwargs...) for idx in eachindex(block_configs)]
     return (stage_idx, block_idx) -> first.(bxs)[stage_idx](block_idx), last.(bxs)
 end

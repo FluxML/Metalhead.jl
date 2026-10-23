@@ -79,7 +79,7 @@ const TEST_LBLS = readlines(Downloads.download(
 
 function acctest(model)
     ypred = gpu(model)(TEST_X) |> collect |> vec
-    top5 = TEST_LBLS[sortperm(ypred; rev = true)]
+    top5 = TEST_LBLS[sortperm(ypred; rev = true)[1:5]]
     return "monarch" in top5
 end
 
