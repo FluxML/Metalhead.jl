@@ -1,0 +1,74 @@
+{
+ "lcnet_035": {
+  "num_params": 1644370,
+  "num_tensors": 147
+ },
+ "lcnet_050": {
+  "num_params": 1880856,
+  "num_tensors": 147
+ },
+ "lcnet_075": {
+  "num_params": 2358288,
+  "num_tensors": 147
+ },
+ "lcnet_100": {
+  "num_params": 2953800,
+  "num_tensors": 147
+ },
+ "lcnet_150": {
+  "num_params": 4501112,
+  "num_tensors": 147
+ },
+ "mobilenetv3_large_075": {
+  "num_params": 3993528,
+  "num_tensors": 266
+ },
+ "mobilenetv3_large_100": {
+  "num_params": 5483032,
+  "num_tensors": 266
+ },
+ "mobilenetv3_large_150d": {
+  "num_params": 14622320,
+  "num_tensors": 368
+ },
+ "mobilenetv3_rw": {
+  "num_params": 5479918,
+  "num_tensors": 265
+ },
+ "mobilenetv3_small_050": {
+  "num_params": 1593224,
+  "num_tensors": 210
+ },
+ "mobilenetv3_small_075": {
+  "num_params": 2041872,
+  "num_tensors": 210
+ },
+ "mobilenetv3_small_100": {
+  "num_params": 2542856,
+  "num_tensors": 210
+ },
+ "tf_mobilenetv3_large_075": {
+  "num_params": 3993528,
+  "num_tensors": 266
+ },
+ "tf_mobilenetv3_large_100": {
+  "num_params": 5483032,
+  "num_tensors": 266
+ },
+ "tf_mobilenetv3_large_minimal_100": {
+  "num_params": 3924288,
+  "num_tensors": 234
+ },
+ "tf_mobilenetv3_small_075": {
+  "num_params": 2041872,
+  "num_tensors": 210
+ },
+ "tf_mobilenetv3_small_100": {
+  "num_params": 2542856,
+  "num_tensors": 210
+ },
+ "tf_mobilenetv3_small_minimal_100": {
+  "num_params": 2044736,
+  "num_tensors": 174
+ }
+}

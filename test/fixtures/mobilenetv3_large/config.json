@@ -1,0 +1,17 @@
+{
+  "architecture": "mobilenetv3_large_100",
+  "num_classes": 4,
+  "model_args": {
+    "drop_rate": 0.2,
+    "drop_path_rate": 0.1
+  },
+  "pretrained_cfg": {
+    "input_size": [
+      3,
+      32,
+      32
+    ],
+    "classifier": "classifier"
+  },
+  "shrink": 8
+}

@@ -1,0 +1,1 @@
+{"architecture": "mobilenetv1_100h", "builder": "timm.models.efficientnet:_gen_mobilenet_v1", "kwargs": {"variant": "mobilenetv1_100h", "channel_multiplier": 0.02, "depth_multiplier": 0.5, "head_conv": true, "group_size": 2, "num_classes": 4}, "input_shape": [2, 3, 32, 32]}

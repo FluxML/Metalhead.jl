@@ -1,0 +1,17 @@
+{
+  "architecture": "efficientnet_es",
+  "num_classes": 4,
+  "model_args": {
+    "variant": "efficientnet_es",
+    "channel_multiplier": 0.1,
+    "depth_multiplier": 0.3
+  },
+  "pretrained_cfg": {
+    "input_size": [
+      3,
+      32,
+      32
+    ],
+    "classifier": "classifier"
+  }
+}

@@ -1,0 +1,1 @@
+{"architecture": "tf_efficientnet_b0", "builder": "timm.models.efficientnet:_gen_efficientnet", "kwargs": {"variant": "tf_efficientnet_b0", "channel_multiplier": 0.1, "channel_divisor": 4, "depth_multiplier": 0.4, "num_classes": 4, "bn_eps": 0.001, "bn_momentum": 0.05, "pad_type": "same"}, "input_shape": [2, 3, 24, 32]}

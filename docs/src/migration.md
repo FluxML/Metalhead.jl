@@ -65,7 +65,12 @@ the [model list](@ref models).
 | `Res2NeXt(depth; ...)` | `create_model("res2next50")` |
 | `DenseNet(config)` | `create_model("densenet121")`, `"densenet161"`, `"densenet169"`, `"densenet201"` |
 | `VGG(depth; batchnorm)` | `create_model("vgg16")`, or `"vgg16_bn"` with batch normalisation |
-| `MobileNetv1`, `MobileNetv2`, `MobileNetv3`, `MNASNet`, `EfficientNet`, `EfficientNetv2` | ports of timm's EfficientNet and MobileNetV3 families are in progress |
+| `MobileNetv1(width_mult)` | `create_model("mobilenetv1_100")`, `"mobilenetv1_125"` |
+| `MobileNetv2(width_mult)` | `create_model("mobilenetv2_100")`, `"mobilenetv2_050"`, `"mobilenetv2_140"`, ... |
+| `MobileNetv3(config; width_mult)` | `create_model("mobilenetv3_small_100")`, `"mobilenetv3_large_100"`, ... |
+| `MNASNet(:B1)`, `MNASNet(:A1)` | `create_model("mnasnet_100")`, `create_model("semnasnet_100")` |
+| `EfficientNet(:b0)` ... `(:b8)` | `create_model("efficientnet_b0")`, or `"tf_efficientnet_b0"` with TensorFlow's padding |
+| `EfficientNetv2(:small)` ... `(:xlarge)` | `create_model("tf_efficientnetv2_s")`, `"tf_efficientnetv2_m"`, `"tf_efficientnetv2_l"`, `"tf_efficientnetv2_xl"` |
 | `Inceptionv3()` | `create_model("inception_v3")` |
 | `Inceptionv4()` | `create_model("inception_v4")` |
 | `InceptionResNetv2()` | `create_model("inception_resnet_v2")` |

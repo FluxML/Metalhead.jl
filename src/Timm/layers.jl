@@ -336,3 +336,18 @@ function (m::BlurPool2d)(x)
     x = NNlib.pad_reflect(x, ntuple(_ -> m.pad, 4); dims = (1, 2))
     return NNlib.conv(x, filt; stride = m.stride, groups = c)
 end
+
+# timm.layers.get_act_layer for the activations given by name (a function passes through).
+const ACT_LAYERS = Dict(
+    "relu" => relu, "relu6" => relu6, "silu" => swish, "swish" => swish, "mish" => mish,
+    "hard_sigmoid" => hardsigmoid, "hard_swish" => hardswish, "sigmoid" => sigmoid,
+    "gelu" => gelu_erf)
+
+get_act_layer(name::Nothing) = nothing
+get_act_layer(f::Function) = f
+function get_act_layer(name::AbstractString)
+    return get(ACT_LAYERS, lowercase(name)) do
+        error("activation `$name` is not supported by the Metalhead ports; " *
+              "use one of $(join(sort!(collect(keys(ACT_LAYERS))), ", "))")
+    end
+end
