@@ -1,0 +1,14 @@
+{
+ "convmixer_1024_20_ks9_p14": {
+  "num_params": 24383464,
+  "num_tensors": 248
+ },
+ "convmixer_1536_20": {
+  "num_params": 51625960,
+  "num_tensors": 248
+ },
+ "convmixer_768_32": {
+  "num_params": 21110248,
+  "num_tensors": 392
+ }
+}

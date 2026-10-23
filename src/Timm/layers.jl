@@ -181,3 +181,58 @@ function (m::NormMlpClassifierHead)(x; pre_logits::Bool = false)
     x = m.drop(m.pre_logits(m.flatten(m.norm(m.global_pool(x)))))
     return pre_logits ? x : m.fc(x)
 end
+
+# timm.layers.GluMlp with `gate_last = true` and no `use_conv`: fc1 gives a value half and a
+# gate half along the features, `x1 * act(x2)`.
+@concrete struct GluMlp
+    fc1
+    act
+    drop1
+    norm
+    fc2
+    drop2
+end
+Flux.@layer GluMlp
+
+function GluMlp(
+        in_features, hidden_features, out_features = in_features; act_layer = sigmoid,
+        bias = true, drop = 0.0, init = TRUNC_NORMAL)
+    iseven(hidden_features) || error("`hidden_features` ($hidden_features) must be even")
+    return GluMlp(Dense(in_features => hidden_features; bias, init),
+        act_layer, dropout_or_identity(drop), identity,
+        Dense(hidden_features ÷ 2 => out_features; bias, init), dropout_or_identity(drop))
+end
+
+function (m::GluMlp)(x)
+    x1, x2 = Flux.chunk(m.fc1(x), 2; dims = 1)
+    return m.drop2(m.fc2(m.norm(m.drop1(x1 .* m.act(x2)))))
+end
+
+# timm.layers.GatedMlp: `gate_layer(hidden_features)` builds the gate (e.g. a spatial gating
+# unit), which halves the features before fc2.
+@concrete struct GatedMlp
+    fc1
+    act
+    drop1
+    gate
+    norm
+    fc2
+    drop2
+end
+Flux.@layer GatedMlp
+
+function GatedMlp(
+        in_features, hidden_features, out_features = in_features; act_layer = gelu_erf,
+        gate_layer = nothing, bias = true, drop = 0.0, init = TRUNC_NORMAL)
+    gate, fc2_in = identity, hidden_features
+    if gate_layer !== nothing
+        iseven(hidden_features) ||
+            error("`hidden_features` ($hidden_features) must be even")
+        gate, fc2_in = gate_layer(hidden_features), hidden_features ÷ 2
+    end
+    return GatedMlp(Dense(in_features => hidden_features; bias, init), act_layer,
+        dropout_or_identity(drop), gate, identity,
+        Dense(fc2_in => out_features; bias, init), dropout_or_identity(drop))
+end
+
+(m::GatedMlp)(x) = m.drop2(m.fc2(m.norm(m.gate(m.drop1(m.act(m.fc1(x)))))))

@@ -1,0 +1,26 @@
+{
+  "architecture": "convmixer_768_32",
+  "num_classes": 10,
+  "model_args": {
+    "dim": 16,
+    "depth": 2,
+    "kernel_size": [
+      3,
+      5
+    ],
+    "patch_size": [
+      2,
+      4
+    ],
+    "in_chans": 2,
+    "act_layer": "relu"
+  },
+  "pretrained_cfg": {
+    "input_size": [
+      2,
+      16,
+      32
+    ],
+    "classifier": "head"
+  }
+}

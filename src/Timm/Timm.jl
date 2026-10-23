@@ -18,5 +18,7 @@ include("layers.jl")
 include("resnet.jl")
 include("vit.jl")
 include("convnext.jl")
+include("mlp_mixer.jl")
+include("convmixer.jl")
 
 end # module
