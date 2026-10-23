@@ -38,7 +38,7 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
     v3 and v4; MobileNet-EdgeTPU; MNASNet, SemNASNet, SPNASNet and TinyNet; MixNet; FBNet-C
     and FBNetV3; LCNet.
 - Flux ports of [transformers](https://github.com/huggingface/transformers) language models,
-  `LlamaForCausalLM` (#327), `Qwen2ForCausalLM` and `Qwen3ForCausalLM`, validated against
+  `LlamaForCausalLM` (#327), `Qwen2ForCausalLM` and `Qwen3ForCausalLM` (#329), validated against
   `HuggingFaceTB/SmolLM2-135M`, `Qwen/Qwen2.5-0.5B` and `Qwen/Qwen3-0.6B`.
   `create_model` loads them from their Hub repository, and takes the fields of `config.json`
   as keyword arguments. They take token indices starting at 1 and return logits; there is no
