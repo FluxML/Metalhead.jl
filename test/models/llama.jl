@@ -1,4 +1,5 @@
 using Metalhead, Test
+using Flux: BFloat16
 include("../parity_setup.jl")
 using .ParitySetup
 
@@ -42,8 +43,8 @@ end
         eltype = Float16)
     @test half.lm_head.weight === half.model.embed_tokens.weight
     @test eltype(half(rand(1:16, 5))) == Float16
-    bf16 = create_model("LlamaForCausalLM"; tiny..., eltype = Flux.BFloat16)
-    @test eltype(bf16(rand(1:16, 5))) == Flux.BFloat16
+    bf16 = create_model("LlamaForCausalLM"; tiny..., eltype = BFloat16)
+    @test eltype(bf16(rand(1:16, 5))) == BFloat16
 
     # config.json has `rope_theta` and `rope_scaling` (transformers 4) or `rope_parameters` (5)
     theta(; kw...) = create_model("LlamaForCausalLM"; tiny..., kw...).model.rotary_emb.rope_theta
