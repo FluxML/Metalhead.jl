@@ -73,11 +73,10 @@ jobs:
   docs:
     name: Documentation
     runs-on: ubuntu-latest
-    # contents/statuses: write are needed by deploydocs for gh-pages and PR previews
+    # deploydocs pushes to gh-pages (contents) and reports the deployment (statuses)
     permissions:
       actions: write
       contents: write
-      pull-requests: read
       statuses: write
     steps:
       - uses: actions/checkout@v7
