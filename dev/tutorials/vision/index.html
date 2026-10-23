@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Vision models · Metalhead.jl</title><meta name="title" content="Vision models · Metalhead.jl"/><meta property="og:title" content="Vision models · Metalhead.jl"/><meta property="twitter:title" content="Vision models · Metalhead.jl"/><meta name="description" content="Documentation for Metalhead.jl."/><meta property="og:description" content="Documentation for Metalhead.jl."/><meta property="twitter:description" content="Documentation for Metalhead.jl."/><meta property="og:url" content="https://fluxml.ai/Metalhead.jl/stable/tutorials/vision/"/><meta property="twitter:url" content="https://fluxml.ai/Metalhead.jl/stable/tutorials/vision/"/><link rel="canonical" href="https://fluxml.ai/Metalhead.jl/stable/tutorials/vision/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script><link href="../../assets/flux.css" rel="stylesheet" type="text/css"/></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">Metalhead.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../quickstart/">Getting started</a></li><li class="is-active"><a class="tocitem" href>Vision models</a><ul class="internal"><li><a class="tocitem" href="#Set-up"><span>Set up</span></a></li><li><a class="tocitem" href="#Prepare-a-photograph"><span>Prepare a photograph</span></a></li><li><a class="tocitem" href="#Classify-the-image"><span>Classify the image</span></a></li><li><a class="tocitem" href="#Extract-features"><span>Extract features</span></a></li><li><a class="tocitem" href="#Use-a-backbone-for-dense-prediction"><span>Use a backbone for dense prediction</span></a></li><li><a class="tocitem" href="#Vision-transformers-return-tokens"><span>Vision transformers return tokens</span></a></li></ul></li><li><a class="tocitem" href="../../models/">Models</a></li><li><a class="tocitem" href="../../validation/">How models are validated</a></li><li><a class="tocitem" href="../../contributing/">Porting a model</a></li><li><a class="tocitem" href="../../migration/">Migrating from 0.9</a></li><li><a class="tocitem" href="../../api/reference/">API reference</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Vision models</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Vision models</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/FluxML/Metalhead.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/FluxML/Metalhead.jl/blob/master/docs/src/tutorials/vision.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="vision_models"><a class="docs-heading-anchor" href="#vision_models">Working with vision models</a><a id="vision_models-1"></a><a class="docs-heading-anchor-permalink" href="#vision_models" title="Permalink"></a></h1><p>This tutorial uses a pretrained ResNet to classify a photograph, extract image features, and learn a classifier for your own images. It then shows how to fine-tune the backbone and how a vision transformer&#39;s features differ from a convolutional network&#39;s.</p><p>Run the Julia blocks in order. The first model load downloads weights from the Hugging Face Hub; later loads use the cache. The dataset sections use your own photographs.</p><h2 id="Set-up"><a class="docs-heading-anchor" href="#Set-up">Set up</a><a id="Set-up-1"></a><a class="docs-heading-anchor-permalink" href="#Set-up" title="Permalink"></a></h2><p>The examples use Metalhead&#39;s <code>create_model</code> API. When following the development documentation, install Metalhead from GitHub in the Julia environment for this tutorial:</p><pre><code class="language-julia hljs">using Pkg
+Pkg.add(url = &quot;https://github.com/FluxML/Metalhead.jl&quot;)
+Pkg.add([&quot;Flux&quot;, &quot;FileIO&quot;, &quot;ImageIO&quot;, &quot;ImageCore&quot;,
+    &quot;ImageTransformations&quot;, &quot;Interpolations&quot;])</code></pre><pre><code class="language-julia hljs">using Metalhead, Flux
+using FileIO, ImageIO, ImageCore, ImageTransformations, Interpolations
+using Downloads: download
+using Random: seed!, shuffle!
+using Statistics: mean
+
+seed!(42)
+repo = &quot;timm/resnet18.a1_in1k&quot;
+model = create_model(repo; pretrained = true)
+cfg = Metalhead.Timm.pretrained_cfg(repo)</code></pre><p>ResNet-18 is a convolutional neural network (CNN). Its successive stages reduce the spatial resolution and increase the number of feature channels. Global pooling turns the last feature map into one vector per image, and a linear classifier maps that vector to class scores. This checkpoint was trained for ImageNet&#39;s 1,000 classes. The <a href="../../models/#models">model list</a> links to its checkpoint and to other ported architectures.</p><h2 id="Prepare-a-photograph"><a class="docs-heading-anchor" href="#Prepare-a-photograph">Prepare a photograph</a><a id="Prepare-a-photograph-1"></a><a class="docs-heading-anchor-permalink" href="#Prepare-a-photograph" title="Permalink"></a></h2><p>An image loaded by JuliaImages is a height × width matrix of colour values. A Metalhead vision model takes a width × height × channels × batch array. The checkpoint configuration specifies its input size in PyTorch order, along with the crop and channel normalisation:</p><pre><code class="language-julia hljs">cfg.input_size                 # (3, 224, 224): channels, height, width
+cfg.crop_pct                   # fraction retained by the centre crop
+cfg.interpolation
+cfg.mean, cfg.std</code></pre><p>For this checkpoint, resize the shorter side while preserving the aspect ratio, crop a 224 × 224 square from the centre, then normalise each RGB channel. This helper handles square RGB inputs with a centre crop and bilinear or bicubic interpolation:</p><pre><code class="language-julia hljs">function preprocess(img, cfg)
+    channels, h, w = cfg.input_size
+    @assert channels == 3 &amp;&amp; h == w
+    @assert get(cfg, :crop_mode, &quot;center&quot;) == &quot;center&quot;
+    method = if cfg.interpolation == &quot;bicubic&quot;
+        Cubic(Line(OnGrid()))
+    elseif cfg.interpolation == &quot;bilinear&quot;
+        Linear()
+    else
+        error(&quot;Unsupported interpolation: $(cfg.interpolation)&quot;)
+    end
+
+    img = RGB{Float32}.(img)
+    ih, iw = size(img)
+    short = floor(Int, h / cfg.crop_pct)
+    new_size = ih &lt;= iw ? (short, floor(Int, iw * short / ih)) :
+               (floor(Int, ih * short / iw), short)
+    resized = imresize(img, new_size; method)
+    top, left = round.(Int, (size(resized) .- (h, w)) ./ 2)
+    cropped = resized[(top + 1):(top + h), (left + 1):(left + w)]
+
+    x = permutedims(Float32.(channelview(cropped)), (3, 2, 1))
+    x = clamp.(x, 0f0, 1f0)
+    μ = reshape(Float32.(collect(cfg.mean)), 1, 1, 3)
+    σ = reshape(Float32.(collect(cfg.std)), 1, 1, 3)
+    return reshape((x .- μ) ./ σ, w, h, 3, 1)
+end
+
+photo_url = &quot;https://upload.wikimedia.org/wikipedia/commons/2/26/YellowLabradorLooking_new.jpg&quot;
+img = load(download(photo_url))
+x = preprocess(img, cfg)
+size(x)                        # (224, 224, 3, 1)</code></pre><p><img src="../../assets/vision-photo.jpg" alt="The example Labrador photograph"/></p><p>The <a href="https://commons.wikimedia.org/wiki/File:YellowLabradorLooking_new.jpg">example photograph</a> is also used by the classification example in the getting started guide.</p><p><code>RGB{Float32}</code> converts the colour channels to floating-point values on the usual 0–1 scale. <code>channelview</code> produces channels × height × width; the permutation puts the axes in Flux&#39;s order, and the last dimension adds a batch of one image. An RGB matrix and a numeric three-dimensional array have different representations, so keep this conversion explicit.</p><p>The resize uses <a href="https://juliaimages.org/ImageTransformations.jl/stable/reference/#ImageTransformations.imresize">JuliaImages interpolation</a>. Its cubic kernel and downsampling differ from Pillow&#39;s, so this helper does not reproduce timm&#39;s input pixels exactly. Reproducing benchmark scores requires matching the checkpoint&#39;s full evaluation transform, including its interpolation and antialiasing.</p><h2 id="Classify-the-image"><a class="docs-heading-anchor" href="#Classify-the-image">Classify the image</a><a id="Classify-the-image-1"></a><a class="docs-heading-anchor-permalink" href="#Classify-the-image" title="Permalink"></a></h2><p>Models returned by <code>create_model</code> are in test mode: dropout is disabled and batch normalisation uses the stored statistics. A classifier returns logits, one column per image. Apply softmax over the class dimension to obtain probabilities:</p><pre><code class="language-julia hljs">logits = model(x)
+size(logits)                   # (1000, 1)
+probabilities = softmax(logits; dims = 1)
+
+labels_url = &quot;https://raw.githubusercontent.com/pytorch/hub/master/imagenet_classes.txt&quot;
+imagenet_labels = readlines(download(labels_url))
+top5 = sortperm(vec(probabilities); rev = true)[1:5]
+[(; label = imagenet_labels[i], probability = probabilities[i, 1]) for i in top5]</code></pre><p>Those labels match this checkpoint&#39;s ImageNet class order. When using a different dataset or checkpoint, use its label order. Softmax scores describe the model&#39;s prediction over its classes; an image from a new class still receives one of these labels.</p><p>To classify a batch, preprocess each photograph separately and concatenate along dimension 4:</p><pre><code class="language-julia hljs">images = [img, reverse(img; dims = 2)]
+xbatch = cat((preprocess(image, cfg) for image in images)...; dims = 4)
+size(model(xbatch))            # (1000, 2)</code></pre><h2 id="Extract-features"><a class="docs-heading-anchor" href="#Extract-features">Extract features</a><a id="Extract-features-1"></a><a class="docs-heading-anchor-permalink" href="#Extract-features" title="Permalink"></a></h2><p>The same backbone can supply features to a new task. The interface separates the spatial features, the pooled embedding and the classifier:</p><pre><code class="language-julia hljs">spatial = forward_features(model, x)
+embedding = forward_head(model, spatial; pre_logits = true)
+reconstructed_logits = forward_head(model, spatial)
+
+size(spatial)                  # (7, 7, 512, 1)
+size(embedding)                # (512, 1)
+reconstructed_logits ≈ logits  # true</code></pre><p>Each column of <code>embedding</code> represents an entire image. A linear classifier can learn from these vectors while the backbone stays fixed. Spatial features preserve the image grid and are useful when a task needs positions as well as an image-level representation.</p><h3 id="Train-a-classifier-on-your-images"><a class="docs-heading-anchor" href="#Train-a-classifier-on-your-images">Train a classifier on your images</a><a id="Train-a-classifier-on-your-images-1"></a><a class="docs-heading-anchor-permalink" href="#Train-a-classifier-on-your-images" title="Permalink"></a></h3><p>Arrange your labelled photographs into separate training and validation directories, with one subdirectory per class. For example:</p><pre><code class="language-text hljs">data/
+  train/
+    daisy/
+      image1.jpg
+      ...
+    rose/
+      image2.jpg
+      ...
+  val/
+    daisy/
+      ...
+    rose/
+      ...</code></pre><p>Use different photographs in the two splits. The following helpers load JPEG or PNG files and build batches with a consistent class order:</p><pre><code class="language-julia hljs">function image_samples(root, classes)
+    return [(; path = joinpath(root, label, file), label)
+            for label in classes for file in sort(readdir(joinpath(root, label)))
+            if lowercase(splitext(file)[2]) in (&quot;.jpg&quot;, &quot;.jpeg&quot;, &quot;.png&quot;)]
+end
+
+function image_batch(samples, cfg, classes)
+    x = cat((preprocess(load(sample.path), cfg) for sample in samples)...; dims = 4)
+    y = Flux.onehotbatch([sample.label for sample in samples], classes)
+    return x, y
+end
+
+function embed_images(model, samples, cfg, classes; batchsize = 8)
+    isempty(samples) &amp;&amp; error(&quot;No images found&quot;)
+    chunks = map(collect(Iterators.partition(samples, batchsize))) do batch
+        x, _ = image_batch(batch, cfg, classes)
+        return forward_head(model, forward_features(model, x); pre_logits = true)
+    end
+    y = Flux.onehotbatch([sample.label for sample in samples], classes)
+    return reduce(hcat, chunks), y
+end
+
+train_root, val_root = &quot;data/train&quot;, &quot;data/val&quot;
+classes = sort(filter(name -&gt; isdir(joinpath(train_root, name)), readdir(train_root)))
+train_samples = image_samples(train_root, classes)
+val_samples = image_samples(val_root, classes)
+train_z, train_y = embed_images(model, train_samples, cfg, classes)
+val_z, val_y = embed_images(model, val_samples, cfg, classes)</code></pre><p>Keep the backbone in test mode while computing these embeddings. Caching the vectors means the training loop only runs the new classifier; it does not repeatedly run the images through ResNet. This is often called a <em>linear probe</em>:</p><pre><code class="language-julia hljs">head = Dense(size(train_z, 1) =&gt; length(classes))
+loader = Flux.DataLoader((train_z, train_y); batchsize = 32, shuffle = true)
+opt_state = Flux.setup(Adam(1e-3), head)
+classification_loss(m, x, y) = Flux.logitcrossentropy(m(x), y)
+
+for epoch in 1:10
+    Flux.train!(classification_loss, head, loader, opt_state)
+    predicted = Flux.onecold(head(val_z), classes)
+    expected = Flux.onecold(val_y, classes)
+    validation_accuracy = mean(predicted .== expected)
+    @info &quot;Linear probe&quot; epoch validation_accuracy
+end</code></pre><p><code>logitcrossentropy</code> takes logits directly. The targets use the same <code>classes</code> order for training, validation and prediction. Only <code>head</code> is passed to the optimiser, so the pretrained backbone&#39;s weights stay fixed. See the <a href="https://fluxml.ai/Flux.jl/v0.16/guide/training/training/">Flux training guide</a> for training loops, optimiser state and data loaders.</p><h3 id="Fine-tune-the-backbone"><a class="docs-heading-anchor" href="#Fine-tune-the-backbone">Fine-tune the backbone</a><a id="Fine-tune-the-backbone-1"></a><a class="docs-heading-anchor-permalink" href="#Fine-tune-the-backbone" title="Permalink"></a></h3><p>To adapt the representation as well, create a pretrained model with a new classifier. Changing <code>num_classes</code> loads the backbone weights and initialises a classifier of the right size. Here the model is ResNet-18, whose classifier is the <code>fc</code> field, so we can copy in the linear probe we just trained:</p><pre><code class="language-julia hljs">tuned = create_model(repo; pretrained = true, num_classes = length(classes))
+Flux.loadmodel!(tuned.fc, Flux.state(head))
+Flux.trainmode!(tuned)
+opt_state = Flux.setup(Adam(1e-5), tuned)
+
+for epoch in 1:3
+    shuffle!(train_samples)
+    for batch in Iterators.partition(train_samples, 8)
+        xb, yb = image_batch(batch, cfg, classes)
+        Flux.train!(classification_loss, tuned, [(xb, yb)], opt_state)
+    end
+end
+
+Flux.testmode!(tuned)
+xb, _ = image_batch(val_samples[1:1], cfg, classes)
+Flux.onecold(tuned(xb), classes)</code></pre><p>Fine-tuning uses image batches, because gradients must flow through the backbone. Switching to train mode enables dropout and batch-normalisation updates; switch back to test mode for validation and inference. Classifier field names differ between model families, so inspect the model before copying a head from another architecture.</p><p>The examples run on the CPU. To train on a GPU, move the model and every input and target batch to the same device before setting up its optimiser; see the <a href="https://fluxml.ai/Flux.jl/stable/guide/gpu/">Flux GPU guide</a>.</p><h2 id="Use-a-backbone-for-dense-prediction"><a class="docs-heading-anchor" href="#Use-a-backbone-for-dense-prediction">Use a backbone for dense prediction</a><a id="Use-a-backbone-for-dense-prediction-1"></a><a class="docs-heading-anchor-permalink" href="#Use-a-backbone-for-dense-prediction" title="Permalink"></a></h2><p>Segmentation and detection heads commonly combine features at several resolutions. <code>feature_info</code> describes the taps, and <code>forward_intermediates</code> returns their tensors:</p><pre><code class="language-julia hljs">info = feature_info(model)
+maps = forward_intermediates(model, x; indices = 2:5, intermediates_only = true)
+[(; channels = f.num_chs, reduction = f.reduction, shape = size(y))
+ for (f, y) in zip(info[2:5], maps)]</code></pre><p>For ResNet-18 and a 224 × 224 input, these maps have shapes 56 × 56 × 64 × batch, 28 × 28 × 128 × batch, 14 × 14 × 256 × batch and 7 × 7 × 512 × batch. They are backbone features; segmentation or detection needs a task-specific head and training data.</p><p>Collections of <code>indices</code> use 1-based positions in <code>feature_info</code>. An integer <code>k</code> selects the last <code>k</code> taps. Use <code>stop_early = true</code> to stop at the last requested tap. The <a href="../quickstart/#quickstart">getting started guide</a> lists the supported families and their tap conventions.</p><h2 id="Vision-transformers-return-tokens"><a class="docs-heading-anchor" href="#Vision-transformers-return-tokens">Vision transformers return tokens</a><a id="Vision-transformers-return-tokens-1"></a><a class="docs-heading-anchor-permalink" href="#Vision-transformers-return-tokens" title="Permalink"></a></h2><p>A vision transformer (ViT) divides the image into patches and processes a sequence of patch embeddings. Its <code>forward_features</code> returns channels × tokens × batch, rather than a CNN&#39;s spatial grid. This randomly initialised tiny ViT illustrates the shapes:</p><pre><code class="language-julia hljs">vit = create_model(&quot;vit_tiny_patch16_224&quot;)
+tokens = forward_features(vit, x)
+size(tokens)                   # (192, 197, 1): 196 patches and one class token
+
+grid = only(forward_intermediates(vit, x; indices = 1, norm = true,
+    intermediates_only = true))
+size(grid)                     # (14, 14, 192, 1)</code></pre><p><code>forward_intermediates</code> removes prefix tokens when it reshapes patches into a spatial map. With <code>output_fmt = &quot;NLC&quot;</code> it keeps patch tokens as channels × tokens × batch; with <code>return_prefix_tokens = true</code> it also returns the prefix tokens separately. The integer <code>indices = 1</code> above selects the last transformer block.</p><p>For useful pretrained embeddings, load a ViT checkpoint with <code>pretrained = true</code> and use that checkpoint&#39;s own preprocessing configuration. DINOv2, CLIP and SigLIP variants have different pooling and prefix-token conventions; <code>forward_head(...; pre_logits = true)</code> applies the model&#39;s own pooling to its final features.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../quickstart/">« Getting started</a><a class="docs-footer-nextpage" href="../../models/">Models »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Friday 23 October 2026 16:32">Friday 23 October 2026</span>. Using Julia version 1.13.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
