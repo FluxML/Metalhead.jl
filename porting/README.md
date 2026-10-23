@@ -16,4 +16,12 @@ uv run dump_reference.py timm/resnet18.a1_in1k   # real weights -> test/referenc
 julia --project=.. check_reference.jl ../test/references/timm--resnet18.a1_in1k.safetensors
 ```
 
+Optional keys of a spec, for models too large for a fixture of 1 MB:
+
+- `"shrink": k` builds the timm model with every channel count divided by `k` (the image channels
+  and `num_classes` stay). `dump.py` records it in `config.json`, and `check_fixture` rebuilds the
+  full-size Julia model, shrinks it with `shrink_channels` (test/parity.jl) and loads the weights.
+- `"weight_dtype": "float16"` stores the weights in half precision (PyTorch uses the rounded values).
+- `"tap_depth": d` records only the modules with at most `d` dots in their name (default 1).
+
 The workflow for porting a model is in `.claude/skills/port-hf-model/SKILL.md`.

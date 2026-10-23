@@ -1,0 +1,14 @@
+{
+ "inception_resnet_v2": {
+  "num_params": 55843464,
+  "num_tensors": 1102
+ },
+ "inception_v3": {
+  "num_params": 23834568,
+  "num_tensors": 472
+ },
+ "inception_v4": {
+  "num_params": 42679816,
+  "num_tensors": 747
+ }
+}

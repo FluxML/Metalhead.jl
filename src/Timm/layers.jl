@@ -181,3 +181,22 @@ function (m::NormMlpClassifierHead)(x; pre_logits::Bool = false)
     x = m.drop(m.pre_logits(m.flatten(m.norm(m.global_pool(x)))))
     return pre_logits ? x : m.fc(x)
 end
+
+# timm.layers.ClassifierHead (avg pool, dropout, Linear) of the `use_conv = false` kind.
+@concrete struct ClassifierHead
+    global_pool
+    drop
+    fc
+    flatten
+end
+Flux.@layer ClassifierHead
+
+function ClassifierHead(in_features, num_classes; pool_type = "avg", drop_rate = 0.0)
+    global_pool, drop, fc = create_classifier(in_features, num_classes; pool_type, drop_rate)
+    return ClassifierHead(global_pool, drop, fc, identity)
+end
+
+function (m::ClassifierHead)(x; pre_logits::Bool = false)
+    x = m.drop(m.global_pool(x))
+    return pre_logits ? m.flatten(x) : m.flatten(m.fc(x))
+end

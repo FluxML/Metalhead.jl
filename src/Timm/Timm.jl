@@ -18,5 +18,9 @@ include("layers.jl")
 include("resnet.jl")
 include("vit.jl")
 include("convnext.jl")
+include("inception_v3.jl")
+include("inception_v4.jl")
+include("inception_resnet_v2.jl")
+include("xception.jl")
 
 end # module

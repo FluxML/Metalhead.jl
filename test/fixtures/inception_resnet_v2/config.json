@@ -1,0 +1,17 @@
+{
+  "architecture": "inception_resnet_v2",
+  "num_classes": 10,
+  "model_args": {
+    "in_chans": 2,
+    "drop_rate": 0.5
+  },
+  "pretrained_cfg": {
+    "input_size": [
+      2,
+      83,
+      83
+    ],
+    "classifier": "classif"
+  },
+  "shrink": 16
+}

@@ -1,0 +1,17 @@
+{
+  "architecture": "inception_v4",
+  "num_classes": 10,
+  "model_args": {
+    "in_chans": 1,
+    "drop_rate": 0.5
+  },
+  "pretrained_cfg": {
+    "input_size": [
+      1,
+      107,
+      107
+    ],
+    "classifier": "last_linear"
+  },
+  "shrink": 32
+}

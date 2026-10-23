@@ -5,8 +5,8 @@ using .Parity
 using JSON: JSON
 using SafeTensors: SafeTensors
 
-export Parity, check_fixture, reference_input, relerr, tapify, fixture, reference_files,
-       check_param_counts
+export Parity, check_fixture, fixture_model, shrink_channels, reference_input, relerr, tapify,
+       fixture, reference_files, check_param_counts
 
 const TEST_DIR = joinpath(pkgdir(Metalhead), "test")
 
