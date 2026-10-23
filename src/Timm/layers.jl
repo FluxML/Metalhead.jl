@@ -12,6 +12,65 @@ end
 to_2tuple(x::Integer) = (x, x)
 to_2tuple(x) = Tuple(x)
 
+# timm.layers.make_divisible: round a channel count to a multiple of `divisor`.
+function make_divisible(v, divisor = 8; min_value = nothing, round_limit = 0.9)
+    min_value = isnothing(min_value) || iszero(min_value) ? divisor : min_value
+    new_v = max(min_value, trunc(Int, v + divisor / 2) ÷ divisor * divisor)
+    return new_v < round_limit * v ? new_v + divisor : new_v
+end
+
+# TF "SAME" padding of one spatial dimension of size n (timm.layers.get_same_padding).
+get_same_padding(n, k, s, d) = max((cld(n, s) - 1) * s + (k - 1) * d + 1 - n, 0)
+
+# timm.layers.Conv2dSame: a Conv with TF "SAME" padding computed from the input size, the
+# extra pixel going last. It subclasses nn.Conv2d, so its keys are those of the wrapped Conv.
+@concrete struct Conv2dSame
+    conv
+end
+Flux.@layer Conv2dSame
+layer_params(m::Conv2dSame) = layer_params(m.conv)
+
+function (m::Conv2dSame)(x)
+    (; weight, stride, dilation) = m.conv
+    pad = ntuple(4) do i
+        d = (i + 1) ÷ 2
+        p = get_same_padding(size(x, d), size(weight, d), stride[d], dilation[d])
+        isodd(i) ? p ÷ 2 : p - p ÷ 2
+    end
+    return m.conv(NNlib.pad_zeros(x, pad; dims = (1, 2)))
+end
+
+"""
+    create_conv2d(in_chs, out_chs, kernel_size; stride, dilation, padding = "", groups, depthwise, bias = false)
+
+timm.layers.create_conv2d for one kernel size (no MixedConv2d/CondConv2d). Sizes are Ints or
+torch-order `(h, w)` pairs. `padding` is `""` (PyTorch-style symmetric), `"same"` (TF-style,
+a [`Conv2dSame`](@ref) unless it is static), `"valid"`, or an explicit torch padding.
+"""
+function create_conv2d(in_chs, out_chs, kernel_size; stride = 1, dilation = 1,
+        padding = "", groups = 1, depthwise = false, bias = false)
+    k, s, d = (reverse(to_2tuple(v)) for v in (kernel_size, stride, dilation))
+    conv(pad) = Conv(k, in_chs => out_chs; stride = s, pad, dilation = d,
+        groups = depthwise ? in_chs : groups, bias)
+    padding isa AbstractString || return conv(reverse(to_2tuple(padding)))
+    padding = lowercase(padding)
+    padding == "valid" && return conv(0)
+    is_static = all(@. s == 1 && iseven(d * (k - 1)))
+    padding == "same" && !is_static && return Conv2dSame(conv(0))
+    return conv(get_padding.(k, s, d))
+end
+
+# timm.layers.ConvNormAct without anti-aliasing: create_conv2d, then BatchNormAct2d, which
+# is Flux's BatchNorm with the activation inside (its keys are at the BatchNorm level).
+function conv_norm_act(in_chs, out_chs, kernel_size = 1; stride = 1, padding = "",
+        dilation = 1, groups = 1, bias = false, apply_act = true, act_layer = relu,
+        eps = 1.0f-5)
+    return Chain(;
+        conv = create_conv2d(
+            in_chs, out_chs, kernel_size; stride, padding, dilation, groups, bias),
+        bn = BatchNorm(out_chs, apply_act ? act_layer : identity; eps = Float32(eps)))
+end
+
 # nn.AvgPool2d(k, stride, ceil_mode=True, count_include_pad=False)
 function avg_pool_ceil(x, k::Int, stride::Int)
     pad(n) = max(0, cld(n - k, stride) * stride + k - n)
@@ -23,6 +82,15 @@ end
 # timm's SelectAdaptivePool2d(pool_type="avg")
 function select_adaptive_pool2d(; flatten::Bool)
     return Chain(; pool = GlobalMeanPool(), flatten = flatten ? Flux.flatten : identity)
+end
+
+# timm.layers.create_classifier with a Linear classifier: (global_pool, fc), or
+# (global_pool, dropout, fc) when `drop_rate` is given.
+function create_classifier(num_features, num_classes; pool_type = "avg", drop_rate = nothing)
+    pool_type == "avg" || error("global pool `$pool_type` is not supported")
+    global_pool = select_adaptive_pool2d(; flatten = true)
+    fc = num_classes > 0 ? Dense(num_features => num_classes) : identity
+    return drop_rate === nothing ? (global_pool, fc) : (global_pool, Dropout(drop_rate), fc)
 end
 
 # timm's DropPath (stochastic depth) drops whole samples: `dims` is the batch dimension

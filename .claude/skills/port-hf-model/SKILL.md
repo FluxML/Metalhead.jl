@@ -72,13 +72,21 @@ its real-weight references pass. `src/Timm/resnet.jl` is the reference port; rea
     names with the family (`ViTBlock`, `ViTAttention`, `ConvNeXtStage`).
   - Classes from `timm.layers` are ported once, in `src/Timm/layers.jl`, under their timm
     names. Reuse them, and add new ones there: `Mlp`, `LayerNorm2d`, `PatchEmbed`,
-    `NormMlpClassifierHead`, `select_adaptive_pool2d`, `drop_path`, `dropout_or_identity`,
-    `to_2tuple`, `avg_pool_ceil`.
+    `NormMlpClassifierHead`, `select_adaptive_pool2d`, `create_classifier`,
+    `create_conv2d` (with `Conv2dSame` for TF "SAME" padding), `conv_norm_act`
+    (`ConvNormAct`), `make_divisible`, `drop_path`, `dropout_or_identity`, `to_2tuple`,
+    `avg_pool_ceil`.
+  - A torch class that subclasses a torch layer (`Conv2dSame` is an `nn.Conv2d`) has that
+    layer's keys. Wrap the Flux layer and forward its keys with
+    `layer_params(m::Wrapper) = layer_params(m.conv)`, as `Conv2dSame` does.
 - **Use Flux layers and NNlib functions.** Only add a helper to `src/Timm/layers.jl` when no
   combination of them matches the torch module. Prefer a function over a new layer type.
   - `nn.Conv2d` → `Conv`, `nn.Linear` → `Dense`, `nn.BatchNorm2d` → `BatchNorm`,
     `nn.LayerNorm` → `LayerNorm`, `nn.GroupNorm` → `GroupNorm`, `nn.Embedding` → `Embedding`,
     `nn.MaxPool2d` → `MaxPool`, `nn.Dropout` → `Dropout`, `nn.Identity` → `identity`.
+  - timm's `BatchNormAct2d` (a BatchNorm2d with `act` and `drop` children and no parameters
+    of its own) → `BatchNorm(c, act; eps = 1f-5)`. Flux's `BatchNorm` requires a `Float32`
+    `eps`.
   - Activation modules (`nn.ReLU`, `nn.GELU`, ...) become fields holding the NNlib function
     (`relu`, `gelu_erf`, ...). NNlib activations accept whole arrays, so `m.act(x)` works and the
     tap is recorded.

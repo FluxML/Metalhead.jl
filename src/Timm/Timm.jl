@@ -11,6 +11,7 @@ using Flux
 using NNlib
 using ConcreteStructs: @concrete
 using ..Metalhead: ArchSpec, register!
+import ..Metalhead: layer_params
 import ..Metalhead: forward_features, forward_head
 
 include("layers.jl")
