@@ -1,0 +1,1 @@
+{"architecture": "vgg16", "builder": "timm.models.vgg:VGG", "kwargs": {"cfg": [4, "M", 4, "M", 8, "M"], "mlp_ratio": 0.001953125, "num_classes": 5}, "input_shape": [2, 3, 64, 20]}

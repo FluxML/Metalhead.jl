@@ -1,0 +1,23 @@
+{
+  "architecture": "densenet169",
+  "num_classes": 10,
+  "model_args": {
+    "growth_rate": 8,
+    "block_config": [
+      1,
+      1,
+      2,
+      1
+    ],
+    "bn_size": 2,
+    "stem_type": "deep_tiered_narrow"
+  },
+  "pretrained_cfg": {
+    "input_size": [
+      3,
+      32,
+      32
+    ],
+    "classifier": "classifier"
+  }
+}

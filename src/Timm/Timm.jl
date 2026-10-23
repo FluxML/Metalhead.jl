@@ -20,5 +20,7 @@ include("resnet.jl")
 include("res2net.jl")
 include("vit.jl")
 include("convnext.jl")
+include("vgg.jl")
+include("densenet.jl")
 
 end # module
