@@ -385,7 +385,8 @@ const MOBILENETV3_ARCHS = String[]
 
 function register_mnv3!(name, build; args...)
     push!(MOBILENETV3_ARCHS, name)
-    return register!(ArchSpec(TIMM, name, build; defaults = (; args...),
+    return register!(ArchSpec(TIMM, name, build; family = "mobilenetv3",
+        defaults = (; args...),
         references = get(MOBILENETV3_REFERENCES, name, [])))
 end
 

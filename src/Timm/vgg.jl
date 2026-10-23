@@ -125,6 +125,6 @@ for depth in (11, 13, 16, 19), bn in (false, true)
     name = string("vgg", depth, bn ? "_bn" : "")
     defaults = (; cfg = VGG_CFGS["vgg$depth"],
         (bn ? (; norm_layer = "batchnorm2d") : (;))...)
-    register!(ArchSpec(TIMM, name, vgg; defaults,
+    register!(ArchSpec(TIMM, name, vgg; family = "vgg", defaults,
         references = get(VGG_REFERENCES, name, [])))
 end

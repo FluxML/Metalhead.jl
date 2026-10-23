@@ -50,7 +50,8 @@ The skill is also the reference for porting by hand. In short:
    branches: some modules exist only for non-default arguments.
 2. **Write the port** in `src/Timm/<family>.jl`, mirroring the module tree (see below).
 3. **Register** each supported architecture with `register!(ArchSpec(...))`, with the default
-   arguments of its timm entry point.
+   arguments of its timm entry point and `family = "<timm module>"`. The family identifier
+   groups models in `list_models(; byfamily = true)` and the documentation.
 4. **Make tiny fixtures**: one `porting/specs/<name>.json` per code path, then
    `uv run dump.py specs/<name>.json` and `julia --project=.. check.jl specs/<name>.json`
    until it prints PASS.

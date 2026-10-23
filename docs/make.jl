@@ -5,11 +5,11 @@ open(joinpath(@__DIR__, "src", "index.md"), "w") do io
     write(io, read(joinpath(@__DIR__, "..", "README.md"), String))
 end
 
-# Res2Net shares the ResNet builder but is a separate upstream family.
 function family_file(spec)
-    if spec.build === Metalhead.Timm.resnet &&
-       get(spec.defaults, :block, nothing) === :Bottle2neck
-        return "src/Timm/res2net.jl"
+    if spec.format == Metalhead.Timm.TIMM
+        aliases = Dict("vision_transformer" => "vit", "xception_aligned" => "xception")
+        file = get(aliases, spec.family, spec.family)
+        return "src/Timm/$file.jl"
     end
     return relpath(string(first(methods(spec.build)).file), pkgdir(Metalhead))
 end
@@ -28,15 +28,17 @@ function write_model_list(path)
         "res2net" => "Res2Net",
         "resnet" => "ResNet",
         "vgg" => "VGG",
-        "vit" => "Vision Transformer (ViT)",
-        "xception" => "Aligned Xception")
-    title(file) = get(titles, splitext(basename(file))[1], splitext(basename(file))[1])
+        "vision_transformer" => "Vision Transformer (ViT)",
+        "xception_aligned" => "Aligned Xception")
+    title(family) = get(titles, family, family)
     ArchSpec = Metalhead.ArchSpec
     groups = Dict{String, Dict{String, Vector{ArchSpec}}}()
-    for spec in values(Metalhead.REGISTRY)
-        file = family_file(spec)
-        by_file = get!(groups, string(spec.format), Dict{String, Vector{ArchSpec}}())
-        push!(get!(by_file, file, ArchSpec[]), spec)
+    for (family, names) in list_models(; byfamily = true)
+        for name in names
+            spec = Metalhead.REGISTRY[name]
+            by_family = get!(groups, string(spec.format), Dict{String, Vector{ArchSpec}}())
+            push!(get!(by_family, family, ArchSpec[]), spec)
+        end
     end
     narchs = length(Metalhead.REGISTRY)
     nfamilies = sum(length, values(groups))
@@ -53,6 +55,14 @@ function write_model_list(path)
             modules. Wide ResNet, ResNeXt and SE-ResNet belong to the ResNet family;
             Res2Net and aligned Xception have their own families.
 
+            Browse the same families from Julia with [`list_models`](@ref):
+
+            ```julia
+            families = list_models(; byfamily = true)
+            families["resnet"]
+            list_models(; byfamily = true, pretrained = true)["resnet"]
+            ```
+
             The $nrefs checkpoints listed here were compared with PyTorch's outputs (see
             [How models are validated](@ref validation)). Bare architecture names load the
             first one with `pretrained = true`. Other checkpoints of the same architectures
@@ -66,13 +76,14 @@ function write_model_list(path)
             """)
         for format in sort!(collect(keys(groups)))
             println(io, "## $format\n")
-            by_file = groups[format]
-            for file in sort!(collect(keys(by_file)); by = title)
-                specs = sort!(by_file[file]; by = s -> s.name)
-                println(io, "### $(title(file))\n")
+            by_family = groups[format]
+            for family in sort!(collect(keys(by_family)); by = title)
+                specs = sort!(by_family[family]; by = s -> s.name)
+                println(io, "### $(title(family))\n")
                 count = length(specs)
                 noun = count == 1 ? "architecture" : "architectures"
-                println(io, "$count $noun. ",
+                file = family_file(first(specs))
+                println(io, "`$family`: $count $noun. ",
                     "[Source](https://github.com/FluxML/Metalhead.jl/blob/master/$file).\n")
                 println(io, "| Architecture | Validated checkpoints |\n|:--|:--|")
                 for s in specs

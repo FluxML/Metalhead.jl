@@ -85,7 +85,7 @@ let deep_avg = (stem_width = 32, stem_type = "deep", avg_down = true),
         "res2net101d" => (; block..., layers = layers101, base_width = 26, deep_avg...,
             block_args = (scale = 4,))
     ]
-        register!(ArchSpec(TIMM, name, resnet; defaults = args,
+        register!(ArchSpec(TIMM, name, resnet; family = "res2net", defaults = args,
             references = get(RES2NET_REFERENCES, name, [])))
     end
 end

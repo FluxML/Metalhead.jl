@@ -43,6 +43,16 @@ list_models()
 list_models(; pretrained = true)
 ```
 
+Use `byfamily = true` to return a dictionary keyed by family identifiers, such as `"resnet"`
+and `"xception_aligned"`:
+
+```julia
+families = list_models(; byfamily = true)
+keys(families)
+families["resnet"]
+list_models(; byfamily = true, pretrained = true)["resnet"]
+```
+
 Browse the [model list](@ref models) for architectures grouped by family and links to their
 validated checkpoints.
 
