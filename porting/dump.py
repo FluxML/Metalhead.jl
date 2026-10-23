@@ -99,6 +99,18 @@ def dump(spec_path, args):
             **intermediates}
     meta = {"spec": json.dumps(spec), "call_order": json.dumps(order),
             "num_params": str(sum(p.numel() for p in model.parameters())), **versions()}
+    if intermediates:
+        info = model.feature_info
+        info = info.get_dicts() if hasattr(info, "get_dicts") else info
+        table = []
+        for i, f in enumerate(info):
+            channels = f["num_chs"]
+            actual = intermediates[f"intermediates/{i + 1}"].shape[1]
+            if channels != actual:
+                assert spec.get("shrink") and channels == actual * spec["shrink"], (f, actual)
+                channels = actual
+            table.append(dict(num_chs=channels, reduction=f["reduction"], module_name=f["module"]))
+        meta["feature_info"] = json.dumps(table)
     save_file(acts, out / "acts.safetensors", metadata=meta)
 
     size = sum(f.stat().st_size for f in out.iterdir())
@@ -108,15 +120,30 @@ def dump(spec_path, args):
 
 
 def dump_intermediates(model, x):
-    """The outputs of `forward_intermediates`, if the model has it, in float32.
+    """The native intermediates, or feature_info hook outputs, in float64.
 
     "intermediates/<i>" (1-based) are the NCHW intermediates, "intermediates_norm/<i>" those with
     `norm=True` when they differ, and "intermediates_prefix/<i>" the prefix (class and register)
     tokens of vision transformers.
     """
+    store = lambda y: y.detach().clone().contiguous()
     if not hasattr(model, "forward_intermediates"):
-        return {}
-    store = lambda y: y.to(torch.float32).contiguous()
+        info = getattr(model, "feature_info", [])
+        if not info:
+            return {}
+        taps = {}
+        def hook(i):
+            def fn(module, inputs, output):
+                taps[f"intermediates/{i + 1}"] = store(output)
+            return fn
+        handles = [model.get_submodule(f["module"]).register_forward_hook(hook(i))
+                   for i, f in enumerate(info)]
+        try:
+            model.forward_features(x)
+        finally:
+            for handle in handles:
+                handle.remove()
+        return taps
     _, plain = model.forward_intermediates(x)
     out = {f"intermediates/{i + 1}": store(y) for i, y in enumerate(plain)}
     _, normed = model.forward_intermediates(x, norm=True)

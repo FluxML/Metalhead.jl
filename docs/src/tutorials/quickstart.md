@@ -1,5 +1,8 @@
 # [Getting started](@id quickstart)
 
+For a worked example with photographs, a custom image dataset and transfer learning, see
+[Working with vision models](@ref vision_models).
+
 ## Creating a model
 
 [`create_model`](@ref) builds a ported model. Its first argument names the model in one of
@@ -125,6 +128,21 @@ size.(maps)                       # 56 × 56 × 256 × 2, 28 × 28 × 512 × 2, 
 ```
 
 `indices` are 1-based positions in `feature_info`, or an integer `k` for the last `k`.
+`stop_early = true` stops at the last selected tap; `norm = true` applies a final norm
+where the architecture supports it. Convolutional models accept `output_fmt = "NCHW"`
+(WHCN arrays in Julia).
+
+Feature extraction covers ResNet and its variants (including Res2Net), ConvNeXt, ViT,
+the MLP mixers, DenseNet, VGG, Inception v3/v4, Inception-ResNet-v2, aligned Xception,
+and all ported EfficientNet and MobileNet families (including MixNet, MNASNet, FBNet
+and LCNet). ConvMixer has no upstream feature tap table and is unsupported. The
+`create_model(...; features_only = true, out_indices = ...)` convenience interface is
+not implemented; use `forward_intermediates` on the existing model.
+
+Taps follow timm's definitions: VGG includes a reduction-1 tap, ConvNeXt starts at
+reduction 4, and Xception taps inside its strided blocks before downsampling. Dilated
+EfficientNet and Xception models can have several taps with the same reduction.
+
 Vision transformers return the tokens of their blocks as feature maps of the patch grid
 (`output_fmt = "NLC"` keeps them as tokens), and with `dynamic_img_size = true` accept any
 input size that is a multiple of the patch size:

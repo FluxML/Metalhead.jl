@@ -3,12 +3,19 @@ include("../parity_setup.jl")
 using .ParitySetup
 
 @testset "fixtures" begin
-    for name in
-        ["xception_aligned", "xception_aligned_dilated", "xception41p", "xception65p"]
+    for name in [
+        "xception_aligned", "xception_aligned_dilated", "xception41p", "xception65p"]
         r = check_fixture(fixture(name))
         @test r.output <= 1e-8
         @test r.features <= 1e-8
         @test r.pass
+    end
+end
+
+@testset "feature extraction" begin
+    for name in [
+        "xception_aligned", "xception_aligned_dilated", "xception41p", "xception65p"]
+        check_intermediate_api(name)
     end
 end
 
@@ -39,7 +46,8 @@ TEST_NETWORK && @testset "references" begin
         model = create_model(meta["repo"]; pretrained = true, revision = meta["revision"])
         x = reference_input(Tuple(JSON.parse(meta["input_shape"])))
         @test relerr(model(x), ref["logits"]) <= 1e-4
-        @test relerr(forward_head(model, forward_features(model, x); pre_logits = true),
+        @test relerr(
+            forward_head(model, forward_features(model, x); pre_logits = true),
             ref["pre_logits"]) <= 1e-4
     end
 end

@@ -35,6 +35,11 @@ names have at most one dot (`stem`, `stages.0`, `blocks.3`, ...), in float16. Th
 with the same names, so a failing fixture shows the first module that differs from PyTorch.
 For debugging, `dump.py --all-taps` records every module.
 
+Feature intermediates are compared at the tolerance of their stored precision (1e-8 for
+float64), along with timm's channels, reductions and module names. For families without a
+native `forward_intermediates`, `dump.py` records hooks at the modules in `feature_info`.
+The tests check selected indices, early stopping and gradients through the selected taps.
+
 Fixtures are under 1 MB each. They run without Python and without network access.
 
 ## References

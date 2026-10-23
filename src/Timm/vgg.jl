@@ -116,12 +116,30 @@ function forward_head(m::VGG, x; pre_logits::Bool = false)
 end
 (m::VGG)(x) = forward_head(m, forward_features(m, x))
 
+function vgg_stage_ends(m::VGG)
+    return [findall(l -> l isa MaxPool, m.features.layers) .- 1; length(m.features)]
+end
+ChainRulesCore.@non_differentiable vgg_stage_ends(::Any)
+
+function forward_intermediates(m::VGG, x; kwargs...)
+    return sequential_intermediates(m.features.layers, x, vgg_stage_ends(m); kwargs...)
+end
+
+function feature_info(m::VGG)
+    return map(enumerate(vgg_stage_ends(m))) do (i, e)
+        conv = findlast(l -> l isa Conv, m.features.layers[1:e])
+        return (; num_chs = size(m.features[conv].weight, 4), reduction = 2^(i - 1),
+            module_name = "features.$(e - 1)")
+    end
+end
+
 const VGG_REFERENCES = Dict(
     "vgg11" => ["timm/vgg11.tv_in1k" => "de67e844ca0254353694aba9167f0aac078cc29c"],
     "vgg11_bn" => ["timm/vgg11_bn.tv_in1k" => "d1b4a6d788dbf60b7dd034952e34dfda1d52404d"]
 )
 
 for depth in (11, 13, 16, 19), bn in (false, true)
+
     name = string("vgg", depth, bn ? "_bn" : "")
     defaults = (; cfg = VGG_CFGS["vgg$depth"],
         (bn ? (; norm_layer = "batchnorm2d") : (;))...)

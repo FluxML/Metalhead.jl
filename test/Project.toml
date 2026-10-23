@@ -1,4 +1,5 @@
 [deps]
+ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
 ConcreteStructs = "2569d6c7-a4a2-43d3-a901-331e8e4be471"
 Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
 Functors = "d9f16b24-f501-4c13-a1f2-28368ffc5196"
@@ -9,6 +10,7 @@ SafeTensors = "eeda0dda-7046-4914-a807-2495fc7abb89"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
+ChainRulesCore = "1"
 ConcreteStructs = "0.2"
 Flux = "0.16"
 Functors = "0.5"

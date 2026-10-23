@@ -201,6 +201,26 @@ end
 
 (m::InceptionResNetV2)(x) = forward_head(m, forward_features(m, x))
 
+function inception_resnet_v2_stages(m::InceptionResNetV2)
+    return (Chain(m.conv2d_1a, m.conv2d_2a, m.conv2d_2b),
+        Chain(m.maxpool_3a, m.conv2d_3b, m.conv2d_4a),
+        Chain(m.maxpool_5a, m.mixed_5b, m.repeat),
+        Chain(m.mixed_6a, m.repeat_1),
+        Chain(m.mixed_7a, m.repeat_2, m.block8, m.conv2d_7b))
+end
+
+function forward_intermediates(m::InceptionResNetV2, x; kwargs...)
+    return sequential_intermediates(inception_resnet_v2_stages(m), x, 1:5; kwargs...)
+end
+
+function feature_info(m::InceptionResNetV2)
+    chs = (m.conv2d_2b[:bn].chs, m.conv2d_4a[:bn].chs,
+        size(m.repeat[end].conv2d.weight, 4), size(m.repeat_1[end].conv2d.weight, 4),
+        m.conv2d_7b[:bn].chs)
+    names = ("conv2d_2b", "conv2d_4a", "repeat", "repeat_1", "conv2d_7b")
+    return [(; num_chs = chs[i], reduction = 2^i, module_name = names[i]) for i in 1:5]
+end
+
 register!(ArchSpec(TIMM, "inception_resnet_v2", inception_resnet_v2;
     family = "inception_resnet_v2",
     references = ["timm/inception_resnet_v2.tf_in1k" =>

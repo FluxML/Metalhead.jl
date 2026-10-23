@@ -98,8 +98,9 @@ function densenet(;
             :norm2 => stem_norm(num_init_features),
             :pool0 => stem_pool]
     else
-        stem = [:conv0 => stem_conv(
-                    (7, 7), in_chans => num_init_features; stride = 2, pad = 3),
+        stem = [
+            :conv0 => stem_conv(
+                (7, 7), in_chans => num_init_features; stride = 2, pad = 3),
             :norm0 => stem_norm(num_init_features), :pool0 => stem_pool]
     end
 
@@ -130,6 +131,33 @@ function forward_head(m::DenseNet, x; pre_logits::Bool = false)
 end
 (m::DenseNet)(x) = forward_head(m, forward_features(m, x))
 
+function densenet_stage_ends(m::DenseNet)
+    names = keys(m.features.layers)
+    stem_end = findfirst(==(:pool0), names) - 1
+    blocks = findall(n -> startswith(string(n), "denseblock"), names)
+    return [stem_end; blocks[1:(end - 1)]; length(names)]
+end
+ChainRulesCore.@non_differentiable densenet_stage_ends(::Any)
+
+function forward_intermediates(m::DenseNet, x; kwargs...)
+    return sequential_intermediates(m.features.layers, x, densenet_stage_ends(m); kwargs...)
+end
+
+function feature_info(m::DenseNet)
+    ends = densenet_stage_ends(m)
+    return map(enumerate(ends)) do (i, e)
+        layer = m.features[e]
+        chs = if layer isa BatchNorm
+            layer.chs
+        else
+            first_layer = first(layer).layers
+            first_layer.norm1.chs + sum(l -> size(l.layers.conv2.weight, 4), layer)
+        end
+        return (; num_chs = chs, reduction = 2^i,
+            module_name = "features.$(keys(m.features.layers)[e])")
+    end
+end
+
 const DENSENET_REFERENCES = Dict(
     "densenet121" =>
         ["timm/densenet121.tv_in1k" => "f0d0f2698a02cb133b09d48396db6e1e46fe9f3b"],
@@ -144,7 +172,8 @@ for (name, args) in [
     "densenet169" => (growth_rate = 32, block_config = (6, 12, 32, 32)),
     "densenet201" => (growth_rate = 32, block_config = (6, 12, 48, 32)),
     "densenet161" => (growth_rate = 48, block_config = (6, 12, 36, 24)),
-    "densenet264d" => (growth_rate = 48, block_config = (6, 12, 64, 48), stem_type = "deep")
+    "densenet264d" =>
+        (growth_rate = 48, block_config = (6, 12, 64, 48), stem_type = "deep")
 ]
     register!(ArchSpec(TIMM, name, densenet; family = "densenet", defaults = args,
         references = get(DENSENET_REFERENCES, name, [])))

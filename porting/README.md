@@ -26,4 +26,9 @@ Optional keys of a spec, for models too large for a fixture of 1 MB:
 - `"tap_depth": d` records only the modules with at most `d` dots in their name (default 1;
   `-1` records none).
 
+Feature intermediates are always stored in float64, with timm's tap metadata, independently
+of `tap_depth`. Models without `forward_intermediates` use hooks at their `feature_info`
+modules. The Julia harness checks these tensors at 1e-8 relative error and compares the tap
+table, selected indices and early stopping.
+
 The workflow for porting a model is in `skills/port-hf-model/SKILL.md`.

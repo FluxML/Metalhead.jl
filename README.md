@@ -146,6 +146,9 @@ See the [getting started guide](https://fluxml.ai/Metalhead.jl/dev/tutorials/qui
 more, and the [list of models](https://fluxml.ai/Metalhead.jl/dev/models/) for the ported
 architectures and their validated checkpoints.
 
+The [vision models tutorial](https://fluxml.ai/Metalhead.jl/dev/tutorials/vision/) walks through
+classifying a photograph, training a classifier on your images and fine-tuning a backbone.
+
 ## Validated against PyTorch
 
 A model is added to Metalhead only after it [reproduces PyTorch](https://fluxml.ai/Metalhead.jl/dev/validation/):

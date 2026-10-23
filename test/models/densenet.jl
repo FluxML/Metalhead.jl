@@ -12,6 +12,12 @@ using .ParitySetup
     end
 end
 
+@testset "feature extraction" begin
+    for name in ["densenet_basic", "densenet_blur"]
+        check_intermediate_api(name)
+    end
+end
+
 @testset "architectures" begin
     for arch in list_models()
         startswith(arch, "densenet") || continue

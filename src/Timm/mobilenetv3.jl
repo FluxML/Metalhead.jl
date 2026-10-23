@@ -3,7 +3,7 @@
 # and test/references/timm--{mobilenetv3,tf_mobilenetv3,lcnet,mobilenetv4,fbnetv3}*.
 #
 # Blocks and builder are those of the EfficientNet family (efficientnet_blocks.jl,
-# efficientnet_builder.jl). Not ported: feature extraction.
+# efficientnet_builder.jl).
 
 @concrete struct MobileNetV3
     conv_stem
@@ -16,6 +16,7 @@
     flatten
     drop
     classifier
+    feature_stages
 end
 Flux.@layer MobileNetV3
 
@@ -66,7 +67,8 @@ function mobilenetv3(; block_args, num_classes = 1000, in_chans = 3, stem_size =
     classifier = num_classes > 0 ? Dense(num_features => num_classes) : identity
     model = MobileNetV3(conv_stem, bn1, blocks, select_adaptive_pool2d(; flatten = false),
         conv_head, norm_head, act2, Flux.flatten, dropout_or_identity(drop_rate),
-        classifier)
+        classifier,
+        (; ends = Tuple(builder.stage_ends), reductions = Tuple(builder.reductions)))
     return efficientnet_init_weights!(model)
 end
 
@@ -79,6 +81,12 @@ function forward_head(m::MobileNetV3, x; pre_logits::Bool = false)
 end
 
 (m::MobileNetV3)(x) = forward_head(m, forward_features(m, x))
+
+feature_info(m::MobileNetV3) = efficientnet_feature_info(m)
+function forward_intermediates(m::MobileNetV3, x; kwargs...)
+    return efficientnet_intermediates(m, x; kwargs...)
+end
+efficientnet_final_features(::MobileNetV3, x, stop) = x
 
 # timm's _create_mnv3; `bn_momentum` and `bn_eps` are resolved here, not in each _gen_*.
 function create_mnv3(; features_only = false, norm_layer = nothing, bn_momentum = nothing,
@@ -394,7 +402,8 @@ let tf = (bn_eps = BN_EPS_TF_DEFAULT, pad_type = "same")
     for (name, cm, dm) in [("large_075", 0.75, 1.0), ("large_100", 1.0, 1.0),
         ("large_150d", 1.5, 1.2), ("small_050", 0.5, 1.0), ("small_075", 0.75, 1.0),
         ("small_100", 1.0, 1.0)]
-        register_mnv3!("mobilenetv3_$name", gen_mobilenet_v3; variant = "mobilenetv3_$name",
+        register_mnv3!(
+            "mobilenetv3_$name", gen_mobilenet_v3; variant = "mobilenetv3_$name",
             channel_multiplier = cm, depth_multiplier = dm)
     end
     for (name, cm) in [("large_075", 0.75), ("large_100", 1.0), ("large_minimal_100", 1.0),
@@ -407,8 +416,8 @@ let tf = (bn_eps = BN_EPS_TF_DEFAULT, pad_type = "same")
     for name in ["fbnetv3_b", "fbnetv3_d", "fbnetv3_g"]
         register_mnv3!(name, gen_fbnetv3; variant = name)
     end
-    for (name, cm) in
-        [("035", 0.35), ("050", 0.5), ("075", 0.75), ("100", 1.0), ("150", 1.5)]
+    for (name, cm) in [
+        ("035", 0.35), ("050", 0.5), ("075", 0.75), ("100", 1.0), ("150", 1.5)]
         register_mnv3!("lcnet_$name", gen_lcnet; channel_multiplier = cm)
     end
     for (name, cm, aa) in [("conv_small_035", 0.35, nothing),
