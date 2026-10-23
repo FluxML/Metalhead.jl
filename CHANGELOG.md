@@ -34,7 +34,7 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
 - Validation against PyTorch: float64 parity fixtures for every code path, run in CI without
   Python or network access, and float32 references for 56 pretrained checkpoints. Weights load
   strictly by name.
-- `porting/` tools and a Claude Code skill (`skills/port-hf-model`) for porting new
+- `porting/` tools and an agent skill (`skills/port-hf-model`) for porting new
   models (#305, #307).
 - Documentation: getting started, a model list grouped by family, validation, porting and a
   [migration guide](https://fluxml.ai/Metalhead.jl/dev/migration/) from 0.9 (#307).

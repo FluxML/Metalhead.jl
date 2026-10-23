@@ -22,7 +22,6 @@ against PyTorch. `create_model` is the entry point.
 - `porting/`: the Python (uv) project that writes the fixtures and references. The package
   and its tests never run Python.
 - `skills/port-hf-model/SKILL.md`: the porting workflow, conventions and numerical pitfalls.
-  `.claude/skills` links to `skills/`.
 - `docs/`: Documenter. `docs/make.jl` generates `index.md` (from the README) and `models.md`
   (from the registry), and checks that the migration guide names only ported architectures.
 
