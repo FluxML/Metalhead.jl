@@ -1,0 +1,17 @@
+{
+  "architecture": "mobilenetv4_hybrid_large",
+  "num_classes": 4,
+  "model_args": {
+    "variant": "mobilenetv4_hybrid_large",
+    "channel_multiplier": 0.05,
+    "in_chans": 1
+  },
+  "pretrained_cfg": {
+    "input_size": [
+      1,
+      64,
+      48
+    ],
+    "classifier": "classifier"
+  }
+}

@@ -1,11 +1,9 @@
 # Ported from timm.models.mobilenetv3 (timm 1.0.30, Apache-2.0, Ross Wightman).
-# Validated against test/fixtures/mobilenetv3_*, test/fixtures/lcnet_* and
-# test/references/timm--*mobilenetv3*, test/references/timm--lcnet*.
+# Validated against test/fixtures/{mobilenetv3,lcnet,mobilenetv4}_*, test/fixtures/fbnetv3
+# and test/references/timm--{mobilenetv3,tf_mobilenetv3,lcnet,mobilenetv4,fbnetv3}*.
 #
 # Blocks and builder are those of the EfficientNet family (efficientnet_blocks.jl,
-# efficientnet_builder.jl). Not ported: MobileNetV4 (UIR and attention blocks, anti-
-# aliasing), FBNet-V3 (`se_from_exp = false` and `rd_round_fn` work, but no fixture
-# covers its tables) and feature extraction.
+# efficientnet_builder.jl). Not ported: feature extraction.
 
 @concrete struct MobileNetV3
     conv_stem
@@ -24,9 +22,10 @@ Flux.@layer MobileNetV3
 """
     mobilenetv3(; block_args, num_classes = 1000, num_features = 1280, kwargs...)
 
-Port of timm's `MobileNetV3` class (MobileNet-V3, LCNet): the `EfficientNet` stem and blocks
-with the "efficient head", where global pooling comes before the head convolution and there
-is no norm layer before the classifier. `num_features` is the width of the head convolution.
+Port of timm's `MobileNetV3` class (MobileNet-V3, LCNet, MobileNet-V4): the `EfficientNet`
+stem and blocks with the "efficient head", where global pooling comes before the head
+convolution and there is no norm layer before the classifier (but one after the head
+convolution with `head_norm`). `num_features` is the width of the head convolution.
 `block_args` comes from [`decode_arch_def`](@ref), `norm_layer` is `nothing` or the
 arguments of BatchNorm2d, and `se_layer(channels; act_layer, rd_ratio)` creates the
 squeeze-and-excitation modules. Other keyword arguments are those of the timm class.
@@ -37,9 +36,7 @@ function mobilenetv3(; block_args, num_classes = 1000, in_chans = 3, stem_size =
         se_layer = nothing, se_from_exp = true, round_chs_fn = round_channels,
         drop_rate = 0.0, drop_path_rate = 0.0, layer_scale_init_value = nothing,
         global_pool = "avg")
-    check_unsupported("MobileNetV3"; global_pool = (global_pool, "avg"),
-        aa_layer = (aa_layer, nothing),
-        layer_scale_init_value = (layer_scale_init_value, nothing))
+    check_unsupported("MobileNetV3"; global_pool = (global_pool, "avg"))
     act_layer = something(get_act_layer(act_layer), relu)
     norm_layer = resolve_norm_layer(norm_layer)
     se_layer = something(se_layer, SqueezeExcite)
@@ -49,7 +46,8 @@ function mobilenetv3(; block_args, num_classes = 1000, in_chans = 3, stem_size =
     bn1 = norm_act(norm_layer, stem_size, act_layer)
 
     builder = EfficientNetBuilder(; output_stride = 32, pad_type, round_chs_fn,
-        se_from_exp, act_layer, norm_layer, se_layer, drop_path_rate)
+        se_from_exp, act_layer, norm_layer, aa_layer, se_layer, drop_path_rate,
+        layer_scale_init_value)
     blocks = Chain(builder(stem_size, block_args))
     num_pooled_chs = builder.in_chs
 
@@ -170,6 +168,56 @@ function gen_mobilenet_v3(; variant, channel_multiplier = 1.0, depth_multiplier 
         kwargs...)
 end
 
+# `variant` selects the table, as in timm.
+function gen_fbnetv3(; variant, channel_multiplier = 1.0, act_layer = nothing, kwargs...)
+    vl = last(split(variant, '_'))
+    if vl in ("a", "b")
+        stem_size = 16
+        arch_def = [
+            ["ds_r2_k3_s1_e1_c16"],
+            ["ir_r1_k5_s2_e4_c24", "ir_r3_k5_s1_e2_c24"],
+            ["ir_r1_k5_s2_e5_c40_se0.25", "ir_r4_k5_s1_e3_c40_se0.25"],
+            ["ir_r1_k5_s2_e5_c72", "ir_r4_k3_s1_e3_c72"],
+            ["ir_r1_k3_s1_e5_c120_se0.25", "ir_r5_k5_s1_e3_c120_se0.25"],
+            ["ir_r1_k3_s2_e6_c184_se0.25", "ir_r5_k5_s1_e4_c184_se0.25",
+                "ir_r1_k5_s1_e6_c224_se0.25"],
+            ["cn_r1_k1_s1_c1344"]
+        ]
+    elseif vl == "d"
+        stem_size = 24
+        arch_def = [
+            ["ds_r2_k3_s1_e1_c16"],
+            ["ir_r1_k3_s2_e5_c24", "ir_r5_k3_s1_e2_c24"],
+            ["ir_r1_k5_s2_e4_c40_se0.25", "ir_r4_k3_s1_e3_c40_se0.25"],
+            ["ir_r1_k3_s2_e5_c72", "ir_r4_k3_s1_e3_c72"],
+            ["ir_r1_k3_s1_e5_c128_se0.25", "ir_r6_k5_s1_e3_c128_se0.25"],
+            ["ir_r1_k3_s2_e6_c208_se0.25", "ir_r5_k5_s1_e5_c208_se0.25",
+                "ir_r1_k5_s1_e6_c240_se0.25"],
+            ["cn_r1_k1_s1_c1440"]
+        ]
+    elseif vl == "g"
+        stem_size = 32
+        arch_def = [
+            ["ds_r3_k3_s1_e1_c24"],
+            ["ir_r1_k5_s2_e4_c40", "ir_r4_k5_s1_e2_c40"],
+            ["ir_r1_k5_s2_e4_c56_se0.25", "ir_r4_k5_s1_e3_c56_se0.25"],
+            ["ir_r1_k5_s2_e5_c104", "ir_r4_k3_s1_e3_c104"],
+            ["ir_r1_k3_s1_e5_c160_se0.25", "ir_r8_k5_s1_e3_c160_se0.25"],
+            ["ir_r1_k3_s2_e6_c264_se0.25", "ir_r6_k5_s1_e5_c264_se0.25",
+                "ir_r2_k5_s1_e6_c288_se0.25"],
+            ["cn_r1_k1_s1_c1728"]
+        ]
+    else
+        error("unknown FBNet-V3 variant `$variant`")
+    end
+    round_chs_fn = c -> round_channels(c, channel_multiplier; round_limit = 0.95)
+    se_layer = (channels; kw...) -> SqueezeExcite(channels; gate_layer = hardsigmoid,
+        rd_round_fn = round_chs_fn, kw...)
+    return create_mnv3(; block_args = decode_arch_def(arch_def), num_features = 1984,
+        head_bias = false, stem_size, round_chs_fn, se_from_exp = false,
+        act_layer = something(act_layer, "hard_swish"), se_layer, kwargs...)
+end
+
 function gen_lcnet(; variant = nothing, channel_multiplier = 1.0, kwargs...)
     arch_def = [
         ["dsa_r1_k3_s1_c32"],
@@ -184,6 +232,112 @@ function gen_lcnet(; variant = nothing, channel_multiplier = 1.0, kwargs...)
     return create_mnv3(; block_args = decode_arch_def(arch_def), stem_size = 16,
         round_chs_fn = c -> round_channels(c, channel_multiplier), act_layer = "hard_swish",
         se_layer, num_features = 1280, kwargs...)
+end
+
+function gen_mobilenet_v4(; variant, channel_multiplier = 1.0, group_size = nothing,
+        act_layer = nothing, kwargs...)
+    if occursin("hybrid", variant)
+        layer_scale_init_value = 1e-5
+        if occursin("medium", variant)
+            stem_size = 32
+            act_layer = something(act_layer, "relu")
+            arch_def = [
+                ["er_r1_k3_s2_e4_c48"],
+                ["uir_r1_a3_k5_s2_e4_c80", "uir_r1_a3_k3_s1_e2_c80"],
+                ["uir_r1_a3_k5_s2_e6_c160", "uir_r1_a0_k0_s1_e2_c160",
+                    "uir_r1_a3_k3_s1_e4_c160", "uir_r1_a3_k5_s1_e4_c160",
+                    "mqa_r1_k3_h4_s1_v2_d64_c160", "uir_r1_a3_k3_s1_e4_c160",
+                    "mqa_r1_k3_h4_s1_v2_d64_c160", "uir_r1_a3_k0_s1_e4_c160",
+                    "mqa_r1_k3_h4_s1_v2_d64_c160", "uir_r1_a3_k3_s1_e4_c160",
+                    "mqa_r1_k3_h4_s1_v2_d64_c160", "uir_r1_a3_k0_s1_e4_c160"],
+                ["uir_r1_a5_k5_s2_e6_c256", "uir_r1_a5_k5_s1_e4_c256",
+                    "uir_r2_a3_k5_s1_e4_c256", "uir_r1_a0_k0_s1_e2_c256",
+                    "uir_r1_a3_k5_s1_e2_c256", "uir_r1_a0_k0_s1_e2_c256",
+                    "uir_r1_a0_k0_s1_e4_c256", "mqa_r1_k3_h4_s1_d64_c256",
+                    "uir_r1_a3_k0_s1_e4_c256", "mqa_r1_k3_h4_s1_d64_c256",
+                    "uir_r1_a5_k5_s1_e4_c256", "mqa_r1_k3_h4_s1_d64_c256",
+                    "uir_r1_a5_k0_s1_e4_c256", "mqa_r1_k3_h4_s1_d64_c256",
+                    "uir_r1_a5_k0_s1_e4_c256"],
+                ["cn_r1_k1_s1_c960"]
+            ]
+        elseif occursin("large", variant)
+            stem_size = 24
+            act_layer = something(act_layer, "gelu")
+            arch_def = [
+                ["er_r1_k3_s2_e4_c48"],
+                ["uir_r1_a3_k5_s2_e4_c96", "uir_r1_a3_k3_s1_e4_c96"],
+                ["uir_r1_a3_k5_s2_e4_c192", "uir_r3_a3_k3_s1_e4_c192",
+                    "uir_r1_a3_k5_s1_e4_c192", "uir_r2_a5_k3_s1_e4_c192",
+                    "mqa_r1_k3_h8_s1_v2_d48_c192", "uir_r1_a5_k3_s1_e4_c192",
+                    "mqa_r1_k3_h8_s1_v2_d48_c192", "uir_r1_a5_k3_s1_e4_c192",
+                    "mqa_r1_k3_h8_s1_v2_d48_c192", "uir_r1_a5_k3_s1_e4_c192",
+                    "mqa_r1_k3_h8_s1_v2_d48_c192", "uir_r1_a3_k0_s1_e4_c192"],
+                ["uir_r4_a5_k5_s2_e4_c512", "uir_r1_a5_k0_s1_e4_c512",
+                    "uir_r1_a5_k3_s1_e4_c512", "uir_r2_a5_k0_s1_e4_c512",
+                    "uir_r1_a5_k3_s1_e4_c512", "uir_r1_a5_k5_s1_e4_c512",
+                    "mqa_r1_k3_h8_s1_d64_c512", "uir_r1_a5_k0_s1_e4_c512",
+                    "mqa_r1_k3_h8_s1_d64_c512", "uir_r1_a5_k0_s1_e4_c512",
+                    "mqa_r1_k3_h8_s1_d64_c512", "uir_r1_a5_k0_s1_e4_c512",
+                    "mqa_r1_k3_h8_s1_d64_c512", "uir_r1_a5_k0_s1_e4_c512"],
+                ["cn_r1_k1_s1_c960"]
+            ]
+        else
+            error("unknown MobileNetV4 variant `$variant`")
+        end
+    else
+        layer_scale_init_value = nothing
+        act_layer = something(act_layer, "relu")
+        if occursin("small", variant)
+            stem_size = 32
+            arch_def = [
+                ["cn_r1_k3_s2_e1_c32", "cn_r1_k1_s1_e1_c32"],
+                ["cn_r1_k3_s2_e1_c96", "cn_r1_k1_s1_e1_c64"],
+                ["uir_r1_a5_k5_s2_e3_c96", "uir_r4_a0_k3_s1_e2_c96",
+                    "uir_r1_a3_k0_s1_e4_c96"],
+                ["uir_r1_a3_k3_s2_e6_c128", "uir_r1_a5_k5_s1_e4_c128",
+                    "uir_r1_a0_k5_s1_e4_c128", "uir_r1_a0_k5_s1_e3_c128",
+                    "uir_r2_a0_k3_s1_e4_c128"],
+                ["cn_r1_k1_s1_c960"]
+            ]
+        elseif occursin("medium", variant)
+            stem_size = 32
+            arch_def = [
+                ["er_r1_k3_s2_e4_c48"],
+                ["uir_r1_a3_k5_s2_e4_c80", "uir_r1_a3_k3_s1_e2_c80"],
+                ["uir_r1_a3_k5_s2_e6_c160", "uir_r2_a3_k3_s1_e4_c160",
+                    "uir_r1_a3_k5_s1_e4_c160", "uir_r1_a3_k3_s1_e4_c160",
+                    "uir_r1_a3_k0_s1_e4_c160", "uir_r1_a0_k0_s1_e2_c160",
+                    "uir_r1_a3_k0_s1_e4_c160"],
+                ["uir_r1_a5_k5_s2_e6_c256", "uir_r1_a5_k5_s1_e4_c256",
+                    "uir_r2_a3_k5_s1_e4_c256", "uir_r1_a0_k0_s1_e4_c256",
+                    "uir_r1_a3_k0_s1_e4_c256", "uir_r1_a3_k5_s1_e2_c256",
+                    "uir_r1_a5_k5_s1_e4_c256", "uir_r2_a0_k0_s1_e4_c256",
+                    "uir_r1_a5_k0_s1_e2_c256"],
+                ["cn_r1_k1_s1_c960"]
+            ]
+        elseif occursin("large", variant)
+            stem_size = 24
+            arch_def = [
+                ["er_r1_k3_s2_e4_c48"],
+                ["uir_r1_a3_k5_s2_e4_c96", "uir_r1_a3_k3_s1_e4_c96"],
+                ["uir_r1_a3_k5_s2_e4_c192", "uir_r3_a3_k3_s1_e4_c192",
+                    "uir_r1_a3_k5_s1_e4_c192", "uir_r5_a5_k3_s1_e4_c192",
+                    "uir_r1_a3_k0_s1_e4_c192"],
+                ["uir_r4_a5_k5_s2_e4_c512", "uir_r1_a5_k0_s1_e4_c512",
+                    "uir_r1_a5_k3_s1_e4_c512", "uir_r2_a5_k0_s1_e4_c512",
+                    "uir_r1_a5_k3_s1_e4_c512", "uir_r1_a5_k5_s1_e4_c512",
+                    "uir_r3_a5_k0_s1_e4_c512"],
+                ["cn_r1_k1_s1_c960"]
+            ]
+        else
+            error("unknown MobileNetV4 variant `$variant`")
+        end
+    end
+    return create_mnv3(; block_args = decode_arch_def(arch_def; group_size),
+        head_bias = false, head_norm = true, num_features = 1280, stem_size,
+        fix_stem = channel_multiplier < 1.0,
+        round_chs_fn = c -> round_channels(c, channel_multiplier), act_layer,
+        layer_scale_init_value, kwargs...)
 end
 
 const MOBILENETV3_REFERENCES = Dict(
@@ -201,7 +355,30 @@ const MOBILENETV3_REFERENCES = Dict(
     ],
     "mobilenetv3_rw" =>
         ["timm/mobilenetv3_rw.rmsp_in1k" => "d29d2e0bdcc626b1bc989aba56d45bab17eb2275"],
-    "lcnet_050" => ["timm/lcnet_050.ra2_in1k" => "7d724d70bd001f453d812e733aa9b1931a69f6c2"]
+    "lcnet_050" => [
+        "timm/lcnet_050.ra2_in1k" => "7d724d70bd001f453d812e733aa9b1931a69f6c2"
+    ],
+    "mobilenetv4_conv_small" => [
+        "timm/mobilenetv4_conv_small.e2400_r224_in1k" => "331fb803779522b685cf942e15f914fb6741c1eb"
+    ],
+    "mobilenetv4_conv_small_050" => [
+        "timm/mobilenetv4_conv_small_050.e3000_r224_in1k" => "0ca27fbda87631d17b5a3d348af8e6b150dd9282"
+    ],
+    "mobilenetv4_conv_medium" => [
+        "timm/mobilenetv4_conv_medium.e500_r224_in1k" => "02a09fbfb82b289e871ba8255f9da58c056fb13b"
+    ],
+    "mobilenetv4_conv_blur_medium" => [
+        "timm/mobilenetv4_conv_blur_medium.e500_r224_in1k" => "cba2cf973d7f50e3c7467ec018605e4c834bf5d7"
+    ],
+    "mobilenetv4_hybrid_medium" => [
+        "timm/mobilenetv4_hybrid_medium.e500_r224_in1k" => "1c009cc8df7c61fdf96c43b2fa60d8ccc4c5ec8f"
+    ],
+    "mobilenetv4_hybrid_large" => [
+        "timm/mobilenetv4_hybrid_large.e600_r384_in1k" => "ae042c0e5f824262508e6f973bb53b55e51cd876"
+    ],
+    "fbnetv3_b" => [
+        "timm/fbnetv3_b.ra2_in1k" => "41fc9b427ca1b8a2293e1e79b54ccd30b22bc536"
+    ]
 )
 
 const MOBILENETV3_ARCHS = String[]
@@ -226,8 +403,22 @@ let tf = (bn_eps = BN_EPS_TF_DEFAULT, pad_type = "same")
     end
     register_mnv3!("mobilenetv3_rw", gen_mobilenet_v3_rw; channel_multiplier = 1.0,
         bn_eps = BN_EPS_TF_DEFAULT)
+    for name in ["fbnetv3_b", "fbnetv3_d", "fbnetv3_g"]
+        register_mnv3!(name, gen_fbnetv3; variant = name)
+    end
     for (name, cm) in
         [("035", 0.35), ("050", 0.5), ("075", 0.75), ("100", 1.0), ("150", 1.5)]
         register_mnv3!("lcnet_$name", gen_lcnet; channel_multiplier = cm)
+    end
+    for (name, cm, aa) in [("conv_small_035", 0.35, nothing),
+        ("conv_small_050", 0.5, nothing), ("conv_small", 1.0, nothing),
+        ("conv_medium", 1.0, nothing), ("conv_large", 1.0, nothing),
+        ("hybrid_medium", 1.0, nothing), ("hybrid_large", 1.0, nothing),
+        ("conv_aa_medium", 1.0, "avg"), ("conv_blur_medium", 1.0, "blurpc"),
+        ("conv_aa_large", 1.0, "avg"), ("hybrid_medium_075", 0.75, nothing),
+        ("hybrid_large_075", 0.75, nothing)]
+        aa_layer = aa === nothing ? (;) : (; aa_layer = aa)
+        register_mnv3!("mobilenetv4_$name", gen_mobilenet_v4;
+            variant = "mobilenetv4_$name", channel_multiplier = cm, aa_layer...)
     end
 end

@@ -2,10 +2,11 @@
 # Validated against test/fixtures/efficientnet_*, test/fixtures/mobilenet*,
 # test/fixtures/mnasnet* and test/references/timm--*.
 #
-# Not ported: CondConv, MixNet, EfficientNet-X/H, GroupNorm/EvoNorm variants, the blur and
+# Not ported: EfficientNet-X/H (space-to-depth), the pruned EfficientNet-B1/B2/B3 (their
+# channels come from timm's `_pruned/*.txt` files), GroupNorm/EvoNorm variants, the blur and
 # global-context variants, feature extraction, and the registered architectures that need
-# them. `fbnetc_100` is missing too: timm builds it with `bn_eps = 1e-3` only when loading
-# pretrained weights, and a Hub config does not say so.
+# them. `fbnetc_100` defaults to `bn_eps = 1e-3`, the epsilon of its pretrained weights,
+# which timm only sets when it loads them (a Hub config does not say so).
 
 @concrete struct EfficientNet
     conv_stem
@@ -165,6 +166,22 @@ function gen_mobilenet_v2(; variant = nothing, channel_multiplier = 1.0,
         kwargs...)
 end
 
+function gen_fbnetc(; variant = nothing, channel_multiplier = 1.0, kwargs...)
+    arch_def = [
+        ["ir_r1_k3_s1_e1_c16"],
+        ["ir_r1_k3_s2_e6_c24", "ir_r2_k3_s1_e1_c24"],
+        ["ir_r1_k5_s2_e6_c32", "ir_r1_k5_s1_e3_c32", "ir_r1_k5_s1_e6_c32",
+            "ir_r1_k3_s1_e6_c32"],
+        ["ir_r1_k5_s2_e6_c64", "ir_r1_k5_s1_e3_c64", "ir_r2_k5_s1_e6_c64"],
+        ["ir_r3_k5_s1_e6_c112", "ir_r1_k5_s1_e3_c112"],
+        ["ir_r4_k5_s2_e6_c184"],
+        ["ir_r1_k3_s1_e6_c352"]
+    ]
+    return create_effnet(; block_args = decode_arch_def(arch_def), stem_size = 16,
+        num_features = 1984, round_chs_fn = c -> round_channels(c, channel_multiplier),
+        kwargs...)
+end
+
 function gen_spnasnet(; variant = nothing, channel_multiplier = 1.0, kwargs...)
     arch_def = [
         ["ds_r1_k3_s1_c16_noskip"],
@@ -212,6 +229,24 @@ function gen_efficientnet_edge(; variant = nothing, channel_multiplier = 1.0,
         block_args = decode_arch_def(arch_def, depth_multiplier; group_size),
         num_features = round_chs_fn(1280), stem_size = 32, round_chs_fn,
         act_layer = "relu", kwargs...)
+end
+
+function gen_efficientnet_condconv(; variant = nothing, channel_multiplier = 1.0,
+        depth_multiplier = 1.0, experts_multiplier = 1, kwargs...)
+    arch_def = [
+        ["ds_r1_k3_s1_e1_c16_se0.25"],
+        ["ir_r2_k3_s2_e6_c24_se0.25"],
+        ["ir_r2_k5_s2_e6_c40_se0.25"],
+        ["ir_r3_k3_s2_e6_c80_se0.25"],
+        ["ir_r3_k5_s1_e6_c112_se0.25_cc4"],
+        ["ir_r4_k5_s2_e6_c192_se0.25_cc4"],
+        ["ir_r1_k3_s1_e6_c320_se0.25_cc4"]
+    ]
+    round_chs_fn = c -> round_channels(c, channel_multiplier)
+    return create_effnet(;
+        block_args = decode_arch_def(arch_def, depth_multiplier; experts_multiplier),
+        num_features = round_chs_fn(1280), stem_size = 32, round_chs_fn,
+        act_layer = "swish", kwargs...)
 end
 
 function gen_efficientnet_lite(; variant = nothing, channel_multiplier = 1.0,
@@ -326,6 +361,39 @@ function gen_efficientnetv2_xl(; variant = nothing, channel_multiplier = 1.0,
         kwargs...)
 end
 
+function gen_mixnet_s(; variant = nothing, channel_multiplier = 1.0, kwargs...)
+    arch_def = [
+        ["ds_r1_k3_s1_e1_c16"],
+        ["ir_r1_k3_a1.1_p1.1_s2_e6_c24", "ir_r1_k3_a1.1_p1.1_s1_e3_c24"],
+        ["ir_r1_k3.5.7_s2_e6_c40_se0.5_nsw", "ir_r3_k3.5_a1.1_p1.1_s1_e6_c40_se0.5_nsw"],
+        ["ir_r1_k3.5.7_p1.1_s2_e6_c80_se0.25_nsw", "ir_r2_k3.5_p1.1_s1_e6_c80_se0.25_nsw"],
+        ["ir_r1_k3.5.7_a1.1_p1.1_s1_e6_c120_se0.5_nsw",
+            "ir_r2_k3.5.7.9_a1.1_p1.1_s1_e3_c120_se0.5_nsw"],
+        ["ir_r1_k3.5.7.9.11_s2_e6_c200_se0.5_nsw",
+            "ir_r2_k3.5.7.9_p1.1_s1_e6_c200_se0.5_nsw"]
+    ]
+    return create_effnet(; block_args = decode_arch_def(arch_def), num_features = 1536,
+        stem_size = 16, round_chs_fn = c -> round_channels(c, channel_multiplier), kwargs...)
+end
+
+function gen_mixnet_m(; variant = nothing, channel_multiplier = 1.0,
+        depth_multiplier = 1.0, kwargs...)
+    arch_def = [
+        ["ds_r1_k3_s1_e1_c24"],
+        ["ir_r1_k3.5.7_a1.1_p1.1_s2_e6_c32", "ir_r1_k3_a1.1_p1.1_s1_e3_c32"],
+        ["ir_r1_k3.5.7.9_s2_e6_c40_se0.5_nsw", "ir_r3_k3.5_a1.1_p1.1_s1_e6_c40_se0.5_nsw"],
+        ["ir_r1_k3.5.7_s2_e6_c80_se0.25_nsw",
+            "ir_r3_k3.5.7.9_a1.1_p1.1_s1_e6_c80_se0.25_nsw"],
+        ["ir_r1_k3_s1_e6_c120_se0.5_nsw", "ir_r3_k3.5.7.9_a1.1_p1.1_s1_e3_c120_se0.5_nsw"],
+        ["ir_r1_k3.5.7.9_s2_e6_c200_se0.5_nsw",
+            "ir_r3_k3.5.7.9_p1.1_s1_e6_c200_se0.5_nsw"]
+    ]
+    return create_effnet(;
+        block_args = decode_arch_def(arch_def, depth_multiplier; depth_trunc = "round"),
+        num_features = 1536, stem_size = 24,
+        round_chs_fn = c -> round_channels(c, channel_multiplier), kwargs...)
+end
+
 function gen_tinynet(; variant = nothing, model_width = 1.0, depth_multiplier = 1.0,
         kwargs...)
     arch_def = [
@@ -339,6 +407,55 @@ function gen_tinynet(; variant = nothing, model_width = 1.0, depth_multiplier = 
         num_features = max(1280, round_channels(1280, model_width, 8, nothing)),
         stem_size = 32, fix_stem = true,
         round_chs_fn = c -> round_channels(c, model_width), act_layer = "swish", kwargs...)
+end
+
+# `variant` selects the table, as in timm.
+function gen_mobilenet_edgetpu(; variant, channel_multiplier = 1.0, depth_multiplier = 1.0,
+        act_layer = nothing, kwargs...)
+    if occursin("edgetpu_v2", variant)
+        stem_size, stem_kernel_size, group_size, num_features = 64, 5, 64, 1280
+        if occursin("edgetpu_v2_xs", variant)
+            stem_size, stem_kernel_size = 32, 3
+            chs = [16, 32, 48, 96, 144, 160, 192]
+        elseif occursin("edgetpu_v2_s", variant)
+            chs = [24, 48, 64, 128, 160, 192, 256]
+        elseif occursin("edgetpu_v2_m", variant)
+            chs = [32, 64, 80, 160, 192, 240, 320]
+            num_features = 1344
+        elseif occursin("edgetpu_v2_l", variant)
+            stem_kernel_size, group_size = 7, 128
+            chs = [32, 64, 96, 192, 240, 256, 384]
+            num_features = 1408
+        else
+            error("unknown MobileNet-EdgeTPU-v2 variant `$variant`")
+        end
+        gs = group_size
+        arch_def = [
+            ["cn_r1_k1_s1_c$(chs[1])"],
+            ["er_r1_k3_s2_e8_c$(chs[2])", "er_r1_k3_s1_e4_gs$(gs)_c$(chs[2])"],
+            ["er_r1_k3_s2_e8_c$(chs[3])", "er_r1_k3_s1_e4_gs$(gs)_c$(chs[3])",
+                "er_r1_k3_s1_e4_c$(chs[3])", "er_r1_k3_s1_e4_gs$(gs)_c$(chs[3])"],
+            ["er_r1_k3_s2_e8_c$(chs[4])", "ir_r3_k3_s1_e4_c$(chs[4])"],
+            ["ir_r1_k3_s1_e8_c$(chs[5])", "ir_r3_k3_s1_e4_c$(chs[5])"],
+            ["ir_r1_k3_s2_e8_c$(chs[6])", "ir_r3_k3_s1_e4_c$(chs[6])"],
+            ["ir_r1_k3_s1_e8_c$(chs[7])"]
+        ]
+    else
+        stem_size, stem_kernel_size, num_features = 32, 3, 1280
+        arch_def = [
+            ["cn_r1_k1_s1_c16"],
+            ["er_r1_k3_s2_e8_c32", "er_r3_k3_s1_e4_c32"],
+            ["er_r1_k3_s2_e8_c48", "er_r3_k3_s1_e4_c48"],
+            ["ir_r1_k3_s2_e8_c96", "ir_r3_k3_s1_e4_c96"],
+            ["ir_r1_k3_s1_e8_c96_noskip", "ir_r3_k3_s1_e4_c96"],
+            ["ir_r1_k5_s2_e8_c160", "ir_r3_k5_s1_e4_c160"],
+            ["ir_r1_k3_s1_e8_c192"]
+        ]
+    end
+    return create_effnet(; block_args = decode_arch_def(arch_def, depth_multiplier),
+        num_features, stem_size, stem_kernel_size,
+        round_chs_fn = c -> round_channels(c, channel_multiplier),
+        act_layer = something(act_layer, "relu"), kwargs...)
 end
 
 function gen_test_efficientnet(; variant = nothing, channel_multiplier = 1.0,
@@ -372,7 +489,18 @@ const EFFICIENTNET_REFERENCES = Dict(
     "tf_efficientnetv2_b0" =>
         ["timm/tf_efficientnetv2_b0.in1k" => "30b1df5883752d711e047538d9b01db797782818"],
     "test_efficientnet" =>
-        ["timm/test_efficientnet.r160_in1k" => "8e9bd84a0b17d27dd068b461fe255b94543d073b"]
+        ["timm/test_efficientnet.r160_in1k" => "8e9bd84a0b17d27dd068b461fe255b94543d073b"],
+    "fbnetc_100" =>
+        ["timm/fbnetc_100.rmsp_in1k" => "d48d5c1d41488815cf985be3aebeb2641f5ca280"],
+    "tf_efficientnet_cc_b0_4e" => [
+        "timm/tf_efficientnet_cc_b0_4e.in1k" => "24a51c54adf6261a3e5048d1b68e9baaedb85c5b"
+    ],
+    "mixnet_s" => ["timm/mixnet_s.ft_in1k" => "94149f6f14da590e98eeaa4dd9867b97a23bd3f4"],
+    "tf_mixnet_s" =>
+        ["timm/tf_mixnet_s.in1k" => "1ed2d414d345ab199428f7ea1e3851fac9a920ed"],
+    "mobilenet_edgetpu_v2_m" => [
+        "timm/mobilenet_edgetpu_v2_m.ra4_e3600_r224_in1k" => "cc85d63502632dc168d9472cd6af9f733fb01b17"
+    ]
 )
 
 const EFFICIENTNET_ARCHS = String[]
@@ -393,6 +521,8 @@ let tf = (bn_eps = BN_EPS_TF_DEFAULT, pad_type = "same")
         register_effnet!(name, gen_mnasnet_a1; channel_multiplier = cm)
     end
     register_effnet!("mnasnet_small", gen_mnasnet_small; channel_multiplier = 1.0)
+    register_effnet!("fbnetc_100", gen_fbnetc; channel_multiplier = 1.0,
+        bn_eps = BN_EPS_TF_DEFAULT)
     register_effnet!("spnasnet_100", gen_spnasnet; channel_multiplier = 1.0)
 
     register_effnet!("mobilenetv1_100", gen_mobilenet_v1; channel_multiplier = 1.0)
@@ -419,6 +549,16 @@ let tf = (bn_eps = BN_EPS_TF_DEFAULT, pad_type = "same")
             depth_multiplier = dm)
         register_effnet!("tf_efficientnet_b$i", gen_efficientnet; channel_multiplier = cm,
             depth_multiplier = dm, tf...)
+    end
+    register_effnet!("efficientnet_l2", gen_efficientnet; channel_multiplier = 4.3,
+        depth_multiplier = 5.3)
+    register_effnet!("tf_efficientnet_l2", gen_efficientnet; channel_multiplier = 4.3,
+        depth_multiplier = 5.3, tf...)
+    for (name, dm, em) in [("b0_4e", 1.0, 1), ("b0_8e", 1.0, 2), ("b1_8e", 1.1, 2)]
+        register_effnet!("efficientnet_cc_$name", gen_efficientnet_condconv;
+            depth_multiplier = dm, experts_multiplier = em)
+        register_effnet!("tf_efficientnet_cc_$name", gen_efficientnet_condconv;
+            depth_multiplier = dm, experts_multiplier = em, tf...)
     end
     for (i, cm, dm) in [(0, 1.0, 1.0), (1, 1.0, 1.1), (2, 1.1, 1.2), (3, 1.2, 1.4),
         (4, 1.4, 1.8)]
@@ -450,6 +590,19 @@ let tf = (bn_eps = BN_EPS_TF_DEFAULT, pad_type = "same")
     for (i, cm, dm) in [(0, 1.0, 1.0), (1, 1.0, 1.1), (2, 1.1, 1.2), (3, 1.2, 1.4)]
         register_effnet!("tf_efficientnetv2_b$i", gen_efficientnetv2_base;
             channel_multiplier = cm, depth_multiplier = dm, tf...)
+    end
+    register_effnet!("mixnet_s", gen_mixnet_s)
+    register_effnet!("tf_mixnet_s", gen_mixnet_s; tf...)
+    for (name, cm, dm) in [("m", 1.0, 1.0), ("l", 1.3, 1.0), ("xl", 1.6, 1.2),
+        ("xxl", 2.4, 1.3)]
+        register_effnet!("mixnet_$name", gen_mixnet_m; channel_multiplier = cm,
+            depth_multiplier = dm)
+        name in ("m", "l") && register_effnet!("tf_mixnet_$name", gen_mixnet_m;
+            channel_multiplier = cm, tf...)
+    end
+    for name in ["mobilenet_edgetpu_100", "mobilenet_edgetpu_v2_xs",
+        "mobilenet_edgetpu_v2_s", "mobilenet_edgetpu_v2_m", "mobilenet_edgetpu_v2_l"]
+        register_effnet!(name, gen_mobilenet_edgetpu; variant = name)
     end
     register_effnet!("test_efficientnet", gen_test_efficientnet)
 end

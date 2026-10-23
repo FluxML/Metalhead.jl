@@ -1,0 +1,1 @@
+{"architecture": "tf_mixnet_m", "builder": "timm.models.efficientnet:_gen_mixnet_m", "kwargs": {"variant": "tf_mixnet_m", "channel_multiplier": 0.1, "depth_multiplier": 0.5, "num_classes": 4, "bn_eps": 0.001, "pad_type": "same"}, "input_shape": [2, 3, 36, 44]}

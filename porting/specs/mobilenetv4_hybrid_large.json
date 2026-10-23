@@ -1,0 +1,1 @@
+{"architecture": "mobilenetv4_hybrid_large", "builder": "timm.models.mobilenetv3:_gen_mobilenet_v4", "kwargs": {"variant": "mobilenetv4_hybrid_large", "channel_multiplier": 0.05, "num_classes": 4, "in_chans": 1}, "weight_dtype": "float16", "tap_depth": -1, "input_shape": [2, 1, 64, 48]}

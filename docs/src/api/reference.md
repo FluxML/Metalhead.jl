@@ -27,6 +27,8 @@ These are used by the ported models and the porting tools. Using the models does
 ```@docs
 Metalhead.Timm
 Metalhead.Timm.EfficientNetBuilder
+Metalhead.Timm.MixedConv2d
+Metalhead.Timm.CondConv2d
 Metalhead.ArchSpec
 Metalhead.Checkpoint
 Metalhead.load_state!

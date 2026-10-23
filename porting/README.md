@@ -23,6 +23,7 @@ Optional keys of a spec, for models too large for a fixture of 1 MB:
   and `num_classes` stay). `dump.py` records it in `config.json`, and `check_fixture` rebuilds the
   full-size Julia model, shrinks it with `shrink_channels` (test/parity.jl) and loads the weights.
 - `"weight_dtype": "float16"` stores the weights in half precision (PyTorch uses the rounded values).
-- `"tap_depth": d` records only the modules with at most `d` dots in their name (default 1).
+- `"tap_depth": d` records only the modules with at most `d` dots in their name (default 1;
+  `-1` records none).
 
 The workflow for porting a model is in `skills/port-hf-model/SKILL.md`.

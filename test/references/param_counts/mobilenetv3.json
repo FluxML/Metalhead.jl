@@ -1,4 +1,16 @@
 {
+ "fbnetv3_b": {
+  "num_params": 8598464,
+  "num_tensors": 510
+ },
+ "fbnetv3_d": {
+  "num_params": 10306272,
+  "num_tensors": 559
+ },
+ "fbnetv3_g": {
+  "num_params": 16623888,
+  "num_tensors": 630
+ },
  "lcnet_035": {
   "num_params": 1644370,
   "num_tensors": 147
@@ -46,6 +58,54 @@
  "mobilenetv3_small_100": {
   "num_params": 2542856,
   "num_tensors": 210
+ },
+ "mobilenetv4_conv_aa_large": {
+  "num_params": 32590864,
+  "num_tensors": 512
+ },
+ "mobilenetv4_conv_aa_medium": {
+  "num_params": 9715512,
+  "num_tensors": 387
+ },
+ "mobilenetv4_conv_blur_medium": {
+  "num_params": 9715512,
+  "num_tensors": 387
+ },
+ "mobilenetv4_conv_large": {
+  "num_params": 32590864,
+  "num_tensors": 512
+ },
+ "mobilenetv4_conv_medium": {
+  "num_params": 9715512,
+  "num_tensors": 387
+ },
+ "mobilenetv4_conv_small": {
+  "num_params": 3774024,
+  "num_tensors": 232
+ },
+ "mobilenetv4_conv_small_035": {
+  "num_params": 1905384,
+  "num_tensors": 232
+ },
+ "mobilenetv4_conv_small_050": {
+  "num_params": 2238952,
+  "num_tensors": 232
+ },
+ "mobilenetv4_hybrid_large": {
+  "num_params": 37764624,
+  "num_tensors": 666
+ },
+ "mobilenetv4_hybrid_large_075": {
+  "num_params": 22754984,
+  "num_tensors": 666
+ },
+ "mobilenetv4_hybrid_medium": {
+  "num_params": 11074648,
+  "num_tensors": 536
+ },
+ "mobilenetv4_hybrid_medium_075": {
+  "num_params": 7313528,
+  "num_tensors": 536
  },
  "tf_mobilenetv3_large_075": {
   "num_params": 3993528,

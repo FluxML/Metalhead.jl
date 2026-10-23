@@ -37,9 +37,10 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
    the entry point, plus `num_classes = 0` when the default pretrained cfg has no classifier.
    `param_counts.py` prints `num_classes` to check this. Register only architectures whose
    code paths your fixtures cover. Checkpoint tensors of modules the port omits on purpose
-   (e.g. Inception's `AuxLogits`) go in `ignore`. Skip entry points whose arguments change
-   with `pretrained = True` (`fbnetc_100` sets `bn_eps` only then): one `defaults` can't
-   reproduce both.
+   (e.g. Inception's `AuxLogits`) go in `ignore`. An entry point whose arguments change with
+   `pretrained = True` (`fbnetc_100` sets `bn_eps` only then) gets the pretrained values in
+   `defaults`, since the weights need them; say so in the file header, and pass them
+   explicitly in its fixture specs.
 4. **Tiny fixtures.** For each distinct code path (block type, stem type, optional branch),
    write `porting/specs/<name>.json` (see "Fixtures" below). Give every
    keyword the builder accepts a non-default value in at least one spec. Two or three fixtures
@@ -128,6 +129,9 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
   - A torch class that subclasses a torch layer (`Conv2dSame` is an `nn.Conv2d`) has that
     layer's keys. Wrap the Flux layer and forward its keys with
     `layer_params(m::Wrapper) = layer_params(m.conv)`, as `Conv2dSame` does.
+  - A torch container whose children have no key segment of their own (timm's `MixedConv2d`
+    is an `nn.ModuleDict`: `conv_dw.0.weight`) gets a `layer_params` method that returns its
+    children's parameters under `"0.weight"`, `"1.weight"`, ... (see `MixedConv2d`).
 - **Use Flux layers and NNlib functions.** Only add a helper to `src/Timm/layers.jl` when no
   combination of them matches the torch module. Prefer a function over a new layer type.
   - `nn.Conv2d` → `Conv`, `nn.Linear` → `Dense`, `nn.BatchNorm2d` → `BatchNorm`,
@@ -148,7 +152,9 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
     y = reshape(NNlib.scaled_dot_product_attention(q, k, v; fdrop = m.attn_drop), :, n, b)
     ```
     A torch `(B, H, N, hd)` tensor reversed is `(hd, N, H, B)`. It needs
-    `permutedims(x, (1, 3, 2, 4))` before the call.
+    `permutedims(x, (1, 3, 2, 4))` before the call. Multi-query attention (one key/value
+    head shared by all query heads, MobileNetV4) is the call with keys and values of 1 head
+    (`MultiQueryAttention2d` in `layers.jl`).
 - **Parameters that aren't in a submodule** (`cls_token`, `pos_embed`, layer-scale `gamma`)
   become array fields named like the torch attribute. They load with the torch shape
   reversed, e.g. `(1, 1, D)` becomes `(D, 1, 1)`.
@@ -218,6 +224,9 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
     stores `None`.
   - Pass `dims = 3` for `(C, L, B)` tokens.
 - **Embedding indices** are 1-based in Julia.
+- **Raw kernels.** Only `Conv` weights are flipped on load. A kernel kept as a plain array
+  (CondConv2d's per-expert kernels, mixed per sample) is torch's, so apply it with
+  `NNlib.conv(x, w; flipped = true)`, torch's cross-correlation.
 
 ## Julia and Flux pitfalls
 
@@ -232,6 +241,9 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
   mutated, or Zygote fails: build them with comprehensions and mark the builder
   `ChainRulesCore.@non_differentiable`. Broadcasting functions like `binomial.` also breaks
   under Zygote.
+- Zygote can't differentiate `cumsum` of a Tuple of Ints (it fails with
+  `length(::ZeroTangent)`): compute such channel ranges in a helper marked
+  `ChainRulesCore.@non_differentiable` (`split_ranges` in `layers.jl`).
 - Each test file runs in a module of its own, so helpers shared by several files go in
   `test/parity_setup.jl`, exported. Statistics is not in the test environment.
 - Zygote gradients mirror the model, with `Chain` entries under `.layers`, `LayerNorm` weights
@@ -259,15 +271,28 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
   (`shrunk_channels` in `porting/common.py`, `shrink_channels` in `test/parity.jl`), and
   `fixture_model` builds the full-size Julia model, shrinks it and loads the weights strictly.
   Every other channel count must be divisible by `k` (multiples of 8 from `round_channels`
-  allow `k = 8`). Only depthwise `groups` are rescaled, so `shrink` can't be combined with
-  `group_size`. `shrink` also suits generators that hard-code a wide head (MobileNetV3's
+  allow `k = 8`). Only depthwise `groups` are rescaled: other convs keep their number of
+  groups, so the shrunk channels must stay divisible by it. `shrink` patches the
+  constructors of torch layers, so it can't shrink a module that splits channels by its own
+  full-size count (`MixedConv2d`) or owns parameters (`CondConv2d`): use a width multiplier. `shrink` also suits generators that hard-code a wide head (MobileNetV3's
   1280 features), and it builds the registered architecture at full size, so the fixture
   checks the registered `defaults` too. `"weight_dtype": "float16"` halves the
   weights (PyTorch then uses the rounded values, so the check stays exact), and
-  `"tap_depth": d` taps modules with at most `d` dots (default 1).
+  `"tap_depth": d` taps modules with at most `d` dots (default 1; `-1` records no taps).
+  `shrink` only rescales Conv, BatchNorm and Linear layers, so it fails on modules that
+  hold a width elsewhere: attention head dims (`MultiQueryAttention2d`'s `key_dim`), layer
+  scale `gamma`s and `BlurPool2d` (its `channels`). Shrink such models with a small
+  `channel_multiplier` through a generator builder instead (MobileNetV4's hybrid and blur
+  fixtures).
+- **Taps of the stem** are often the largest: a full-resolution `BatchNormAct2d` records
+  three taps (`bn1`, `bn1.drop`, `bn1.act`). With a fixed-width stem, lower the input's
+  channels and size, or `tap_depth`, before the model's width.
 - **Generator builders.** A `"builder"` spec calling timm's `_gen_*` passes its `variant`
   argument, which then lands in the fixture's `model_args`: the Julia `gen_*` must accept
   `variant`, and use it where timm reads it (MobileNetV3's `"small"`, `"minimal"`).
+- **Attention fixtures** need several tokens at every attention block: with one key token
+  the softmax is constant and the query and key weights go unchecked. Pick an input size
+  that leaves at least 2×2 positions at the last attention stage.
 - **What `dump.py` does:** it re-randomises every parameter and BN statistic, runs PyTorch in
   float64, and stores in float16 the outputs ("taps") of modules whose names have at most
   one `.` (`blocks.0`, `patch_embed.proj`). `--all-taps` records every module. `check.jl`

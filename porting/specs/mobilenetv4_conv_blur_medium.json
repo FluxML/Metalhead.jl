@@ -1,0 +1,1 @@
+{"architecture": "mobilenetv4_conv_blur_medium", "builder": "timm.models.mobilenetv3:_gen_mobilenet_v4", "kwargs": {"variant": "mobilenetv4_conv_blur_medium", "channel_multiplier": 0.05, "aa_layer": "blurpc", "group_size": 8, "bn_eps": 0.001, "num_classes": 4, "in_chans": 1}, "weight_dtype": "float16", "input_shape": [2, 1, 48, 40]}

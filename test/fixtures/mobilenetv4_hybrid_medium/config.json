@@ -1,0 +1,20 @@
+{
+  "architecture": "mobilenetv4_hybrid_medium",
+  "num_classes": 4,
+  "model_args": {
+    "variant": "mobilenetv4_hybrid_medium",
+    "channel_multiplier": 0.05,
+    "pad_type": "same",
+    "bn_eps": 0.001,
+    "drop_path_rate": 0.1,
+    "in_chans": 1
+  },
+  "pretrained_cfg": {
+    "input_size": [
+      1,
+      64,
+      48
+    ],
+    "classifier": "classifier"
+  }
+}

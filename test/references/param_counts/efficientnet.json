@@ -35,6 +35,18 @@
   "num_params": 87413142,
   "num_tensors": 1151
  },
+ "efficientnet_cc_b0_4e": {
+  "num_params": 13314116,
+  "num_tensors": 327
+ },
+ "efficientnet_cc_b0_8e": {
+  "num_params": 24013284,
+  "num_tensors": 327
+ },
+ "efficientnet_cc_b1_8e": {
+  "num_params": 39715968,
+  "num_tensors": 461
+ },
  "efficientnet_el": {
   "num_params": 10589712,
   "num_tensors": 362
@@ -54,6 +66,10 @@
  "efficientnet_es_pruned": {
   "num_params": 5438392,
   "num_tensors": 247
+ },
+ "efficientnet_l2": {
+  "num_params": 480309308,
+  "num_tensors": 1654
  },
  "efficientnet_lite0": {
   "num_params": 4652008,
@@ -103,6 +119,30 @@
   "num_params": 208119808,
   "num_tensors": 1712
  },
+ "fbnetc_100": {
+  "num_params": 5572200,
+  "num_tensors": 327
+ },
+ "mixnet_l": {
+  "num_params": 7329252,
+  "num_tensors": 421
+ },
+ "mixnet_m": {
+  "num_params": 5014382,
+  "num_tensors": 421
+ },
+ "mixnet_s": {
+  "num_params": 4134606,
+  "num_tensors": 347
+ },
+ "mixnet_xl": {
+  "num_params": 11896768,
+  "num_tensors": 514
+ },
+ "mixnet_xxl": {
+  "num_params": 23961752,
+  "num_tensors": 531
+ },
  "mnasnet_050": {
   "num_params": 2218512,
   "num_tensors": 262
@@ -122,6 +162,26 @@
  "mnasnet_small": {
   "num_params": 2030264,
   "num_tensors": 272
+ },
+ "mobilenet_edgetpu_100": {
+  "num_params": 4091432,
+  "num_tensors": 292
+ },
+ "mobilenet_edgetpu_v2_l": {
+  "num_params": 10921640,
+  "num_tensors": 267
+ },
+ "mobilenet_edgetpu_v2_m": {
+  "num_params": 8462888,
+  "num_tensors": 267
+ },
+ "mobilenet_edgetpu_v2_s": {
+  "num_params": 5986456,
+  "num_tensors": 267
+ },
+ "mobilenet_edgetpu_v2_xs": {
+  "num_params": 4459880,
+  "num_tensors": 267
  },
  "mobilenetv1_100": {
   "num_params": 4231976,
@@ -223,6 +283,18 @@
   "num_params": 87413142,
   "num_tensors": 1151
  },
+ "tf_efficientnet_cc_b0_4e": {
+  "num_params": 13314116,
+  "num_tensors": 327
+ },
+ "tf_efficientnet_cc_b0_8e": {
+  "num_params": 24013284,
+  "num_tensors": 327
+ },
+ "tf_efficientnet_cc_b1_8e": {
+  "num_params": 39715968,
+  "num_tensors": 461
+ },
  "tf_efficientnet_el": {
   "num_params": 10589712,
   "num_tensors": 362
@@ -234,6 +306,10 @@
  "tf_efficientnet_es": {
   "num_params": 5438392,
   "num_tensors": 247
+ },
+ "tf_efficientnet_l2": {
+  "num_params": 480309308,
+  "num_tensors": 1654
  },
  "tf_efficientnet_lite0": {
   "num_params": 4652008,
@@ -286,6 +362,18 @@
  "tf_efficientnetv2_xl": {
   "num_params": 208119808,
   "num_tensors": 1712
+ },
+ "tf_mixnet_l": {
+  "num_params": 7329252,
+  "num_tensors": 421
+ },
+ "tf_mixnet_m": {
+  "num_params": 5014382,
+  "num_tensors": 421
+ },
+ "tf_mixnet_s": {
+  "num_params": 4134606,
+  "num_tensors": 347
  },
  "tinynet_a": {
   "num_params": 6187972,

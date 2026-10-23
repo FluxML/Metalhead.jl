@@ -1,0 +1,1 @@
+{"architecture": "tf_efficientnet_cc_b0_8e", "builder": "timm.models.efficientnet:_gen_efficientnet_condconv", "kwargs": {"variant": "tf_efficientnet_cc_b0_8e", "channel_multiplier": 0.1, "depth_multiplier": 0.3, "experts_multiplier": 2, "num_classes": 4, "bn_eps": 0.001, "pad_type": "same"}, "input_shape": [2, 3, 36, 44], "weight_dtype": "float16"}

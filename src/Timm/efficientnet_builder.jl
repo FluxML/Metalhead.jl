@@ -2,8 +2,8 @@
 # Validated against test/fixtures/efficientnet_* and the parameter counts of every
 # registered architecture.
 #
-# Not ported: CondConv (`cc`), MixedConv (kernel lists such as `k3.5.7`), UIR/MobileNetV4
-# (`uir`, `mha`, `mqa`), space-to-depth (`d`), anti-aliasing and feature extraction.
+# Not ported: multi-head attention (`mha`), space-to-depth (`d`), anti-aliasing in `ir`
+# and `ds` blocks, and feature extraction.
 
 const BN_MOMENTUM_TF_DEFAULT = 1 - 0.99
 const BN_EPS_TF_DEFAULT = 1e-3
@@ -33,11 +33,8 @@ function round_channels(channels, multiplier = 1.0, divisor = 8, channel_min = n
         round_limit)
 end
 
-function parse_ksize(ss)
-    all(isdigit, ss) && return parse(Int, ss)
-    return error("MixedConv (the kernel size list `$ss`) is not supported by the " *
-                 "Metalhead ports of the EfficientNet family")
-end
+# A kernel size, or a list of them (`3.5.7`) for a MixedConv2d.
+parse_ksize(ss) = all(isdigit, ss) ? parse(Int, ss) : [parse(Int, k) for k in split(ss, '.')]
 
 # Decode a block definition string such as `ir_r2_k3_s2_e1_c16_se0.25_noskip` into a
 # `(block args, number of repeats)` pair.
@@ -65,8 +62,6 @@ function decode_block_str(block_str::AbstractString)
     end_kernel_size = haskey(options, "p") ? parse_ksize(options["p"]) : 1
     force_in_chs = haskey(options, "fc") ? parse(Int, options["fc"]) : 0
     num_repeat = parse(Int, options["r"])
-    haskey(options, "cc") && error("CondConv (`cc`) is not supported by the Metalhead " *
-          "ports of the EfficientNet family")
 
     block_args = Dict{Symbol, Any}(:block_type => block_type,
         :out_chs => parse(Int, options["c"]), :stride => parse(Int, options["s"]),
@@ -79,6 +74,7 @@ function decode_block_str(block_str::AbstractString)
                 :exp_kernel_size => start_kernel_size, :pw_kernel_size => end_kernel_size,
                 :exp_ratio => parse(Float64, options["e"]), :se_ratio => se_ratio,
                 :noskip => skip === false, :s2d => s2d))
+        haskey(options, "cc") && (block_args[:num_experts] = parse(Int, options["cc"]))
     elseif block_type == "ds" || block_type == "dsa"
         merge!(block_args,
             Dict(:dw_kernel_size => parse_ksize(options["k"]),
@@ -95,8 +91,24 @@ function decode_block_str(block_str::AbstractString)
     elseif block_type == "cn"
         merge!(block_args,
             Dict(:kernel_size => parse(Int, options["k"]), :skip => skip === true))
-    elseif block_type in ("uir", "mha", "mqa")
-        error("block type `$block_type` (MobileNetV4) is not supported by the Metalhead " *
+    elseif block_type == "uir"
+        # `a` and `p` are the kernel sizes of the optional start and end depthwise convs
+        dw_start = haskey(options, "a") ? parse_ksize(options["a"]) : 0
+        dw_end = haskey(options, "p") ? parse_ksize(options["p"]) : 0
+        merge!(block_args,
+            Dict(:dw_kernel_size_start => dw_start,
+                :dw_kernel_size_mid => parse_ksize(options["k"]),
+                :dw_kernel_size_end => dw_end, :exp_ratio => parse(Float64, options["e"]),
+                :se_ratio => se_ratio, :noskip => skip === false))
+    elseif block_type == "mqa"
+        kv_dim = parse(Int, options["d"])
+        merge!(block_args,
+            Dict(:dw_kernel_size => parse_ksize(options["k"]),
+                :num_heads => parse(Int, options["h"]), :key_dim => kv_dim,
+                :value_dim => kv_dim, :kv_stride => parse(Int, get(options, "v", "1")),
+                :noskip => skip === false))
+    elseif block_type == "mha"
+        error("block type `mha` (multi-head attention) is not supported by the Metalhead " *
               "ports of the EfficientNet family")
     else
         error("unknown block type `$block_type`")
@@ -130,14 +142,14 @@ end
 
 """
     decode_arch_def(arch_def, depth_multiplier = 1.0; depth_trunc = "ceil",
-                    fix_first_last = false, group_size = nothing)
+                    experts_multiplier = 1, fix_first_last = false, group_size = nothing)
 
 Decode the block definition strings of the stages of `arch_def` (a vector of vectors of
 strings) into a vector of vectors of block arguments. `depth_multiplier` is a number or one
-per stage.
+per stage; `experts_multiplier` scales the number of CondConv experts.
 """
 function decode_arch_def(arch_def, depth_multiplier = 1.0; depth_trunc = "ceil",
-        fix_first_last = false, group_size = nothing)
+        experts_multiplier = 1, fix_first_last = false, group_size = nothing)
     if depth_multiplier isa Union{Tuple, AbstractVector}
         length(depth_multiplier) == length(arch_def) ||
             error("`depth_multiplier` needs one value per stage")
@@ -151,6 +163,7 @@ function decode_arch_def(arch_def, depth_multiplier = 1.0; depth_trunc = "ceil",
         repeats = Int[]
         for block_str in block_strings
             ba, rep = decode_block_str(block_str)
+            haskey(ba, :num_experts) && (ba[:num_experts] *= experts_multiplier)
             group_size === nothing || get!(ba, :group_size, group_size)
             push!(stack_args, ba)
             push!(repeats, rep)
@@ -164,12 +177,15 @@ end
 """
     EfficientNetBuilder(; output_stride = 32, pad_type = "", round_chs_fn = round_channels,
                         se_from_exp = false, act_layer = nothing, norm_layer = BATCHNORM2D,
-                        se_layer = nothing, drop_path_rate = 0.0)
+                        aa_layer = nothing, se_layer = nothing, drop_path_rate = 0.0,
+                        layer_scale_init_value = nothing)
 
 Builds the stages of blocks from decoded block arguments. Calling it as
 `builder(in_chs, block_args)` returns a vector of `Chain`s, and leaves the channel count of
 the last block in `builder.in_chs`. `se_layer(channels; act_layer, rd_ratio)` creates the
-squeeze-and-excitation module of a block.
+squeeze-and-excitation module of a block. `aa_layer` (anti-aliasing, see `create_aa`) is
+supported by the `cn`, `er`, `uir` and `mqa` blocks, and `layer_scale_init_value` applies
+to the `uir` and `mqa` blocks of MobileNetV4.
 """
 mutable struct EfficientNetBuilder
     output_stride::Int
@@ -178,23 +194,25 @@ mutable struct EfficientNetBuilder
     se_from_exp::Bool
     act_layer::Any
     norm_layer::Any
+    aa_layer::Any
     se_layer::Any
     drop_path_rate::Float64
+    layer_scale_init_value::Any
     in_chs::Int
 end
 
 function EfficientNetBuilder(; output_stride = 32, pad_type = "",
         round_chs_fn = round_channels, se_from_exp = false, act_layer = nothing,
         norm_layer = BATCHNORM2D, aa_layer = nothing, se_layer = nothing,
-        drop_path_rate = 0.0)
-    aa_layer === nothing || error("`aa_layer` is not supported by the Metalhead ports of " *
-          "the EfficientNet family")
+        drop_path_rate = 0.0, layer_scale_init_value = nothing)
     return EfficientNetBuilder(output_stride, pad_type, round_chs_fn, se_from_exp,
-        act_layer, norm_layer, se_layer, drop_path_rate, 0)
+        act_layer, norm_layer, aa_layer, se_layer, drop_path_rate,
+        layer_scale_init_value, 0)
 end
 
 const BLOCK_TYPES = Dict("ir" => InvertedResidual, "ds" => DepthwiseSeparableConv,
-    "dsa" => DepthwiseSeparableConv, "er" => EdgeResidual, "cn" => ConvBnAct)
+    "dsa" => DepthwiseSeparableConv, "er" => EdgeResidual, "cn" => ConvBnAct,
+    "uir" => UniversalInvertedResidual, "mqa" => MobileAttention)
 
 function make_block!(b::EfficientNetBuilder, ba, block_idx, block_count)
     drop_path_rate = b.drop_path_rate * block_idx / block_count
@@ -206,6 +224,16 @@ function make_block!(b::EfficientNetBuilder, ba, block_idx, block_count)
     ba[:act_layer] = something(ba[:act_layer], b.act_layer)
     ba[:norm_layer] = b.norm_layer
     ba[:drop_path_rate] = drop_path_rate
+    if b.aa_layer !== nothing
+        block_type in ("cn", "er", "uir", "mqa") ||
+            error("`aa_layer` is not supported in `$block_type` blocks by the Metalhead " *
+                  "ports of the EfficientNet family")
+        ba[:aa_layer] = b.aa_layer
+    end
+    if block_type in ("uir", "mqa")
+        ba[:layer_scale_init_value] = b.layer_scale_init_value
+        block_type == "mqa" && (ba[:use_multi_query] = true)
+    end
 
     se_ratio = pop!(ba, :se_ratio, nothing)
     if se_ratio !== nothing && !iszero(se_ratio) && b.se_layer !== nothing
@@ -214,7 +242,8 @@ function make_block!(b::EfficientNetBuilder, ba, block_idx, block_count)
             channels; rd_ratio = se_ratio, kwargs...)
     end
     haskey(BLOCK_TYPES, block_type) || error("unknown block type `$block_type`")
-    block = BLOCK_TYPES[block_type](in_chs, out_chs; ba...)
+    block_cls = get(ba, :num_experts, 0) > 0 ? CondConvResidual : BLOCK_TYPES[block_type]
+    block = block_cls(in_chs, out_chs; ba...)
     b.in_chs = out_chs
     return block
 end
@@ -269,6 +298,13 @@ function efficientnet_init_weights!(model)
             m.weight .= (2 .* rand(Float32, size(m.weight)) .- 1) .* init_range
             m.bias isa AbstractArray && fill!(m.bias, 0)
         end
+    end
+    # CondConv routing layers: fan-in plus fan-out (CondConv2d inits itself)
+    for m in Flux.modules(model)
+        m isa CondConvResidual || continue
+        init_range = 1.0f0 / sqrt(Float32(sum(size(m.routing_fn.weight))))
+        m.routing_fn.weight .= (2 .* rand(Float32, size(m.routing_fn.weight)) .- 1) .*
+                               init_range
     end
     return model
 end

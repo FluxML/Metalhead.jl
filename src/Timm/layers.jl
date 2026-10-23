@@ -30,28 +30,44 @@ end
 Flux.@layer Conv2dSame
 layer_params(m::Conv2dSame) = layer_params(m.conv)
 
-function (m::Conv2dSame)(x)
-    (; weight, stride, dilation) = m.conv
-    pad = ntuple(4) do i
+# The (left, right, top, bottom) TF "SAME" padding of a WHCN input, in Flux order.
+function pad_same(x, kernel_size, stride, dilation)
+    return ntuple(4) do i
         d = (i + 1) ÷ 2
-        p = get_same_padding(size(x, d), size(weight, d), stride[d], dilation[d])
+        p = get_same_padding(size(x, d), kernel_size[d], stride[d], dilation[d])
         isodd(i) ? p ÷ 2 : p - p ÷ 2
     end
+end
+ChainRulesCore.@non_differentiable pad_same(::Any...)
+
+function (m::Conv2dSame)(x)
+    (; weight, stride, dilation) = m.conv
+    pad = pad_same(x, size(weight), stride, dilation)
     return m.conv(NNlib.pad_zeros(x, pad; dims = (1, 2)))
 end
 
 """
-    create_conv2d(in_chs, out_chs, kernel_size; stride, dilation, padding = "", groups, depthwise, bias = false)
+    create_conv2d(in_chs, out_chs, kernel_size; stride, dilation, padding = "", groups, depthwise, bias = false, num_experts = 0)
 
-timm.layers.create_conv2d for one kernel size (no MixedConv2d/CondConv2d). Sizes are Ints or
-torch-order `(h, w)` pairs. `padding` is `""` (PyTorch-style symmetric), `"same"` (TF-style,
-a `Conv2dSame` unless it is static), `"valid"`, or an explicit torch padding.
+timm.layers.create_conv2d. Sizes are Ints or torch-order `(h, w)` pairs; a vector of kernel
+sizes gives a [`MixedConv2d`](@ref) and `num_experts > 0` a [`CondConv2d`](@ref). `padding`
+is `""` (PyTorch-style symmetric), `"same"` (TF-style, a `Conv2dSame` unless it is static),
+`"valid"`, or an explicit torch padding.
 """
 function create_conv2d(in_chs, out_chs, kernel_size; stride = 1, dilation = 1,
-        padding = "", groups = 1, depthwise = false, bias = false)
+        padding = "", groups = 1, depthwise = false, bias = false, num_experts = 0)
+    if kernel_size isa AbstractVector
+        num_experts > 0 && error("MixedConv2d with CondConv is not supported")
+        groups == 1 || groups == in_chs ||
+            error("MixedConv2d is a normal or a depthwise conv, not $groups groups")
+        return MixedConv2d(in_chs, out_chs, kernel_size; stride, dilation, padding,
+            depthwise = depthwise || groups == in_chs, bias)
+    end
+    groups = depthwise ? in_chs : groups
+    num_experts > 0 && return CondConv2d(in_chs, out_chs, kernel_size; stride, dilation,
+        padding, groups, bias, num_experts)
     k, s, d = (reverse(to_2tuple(v)) for v in (kernel_size, stride, dilation))
-    conv(pad) = Conv(k, in_chs => out_chs; stride = s, pad, dilation = d,
-        groups = depthwise ? in_chs : groups, bias)
+    conv(pad) = Conv(k, in_chs => out_chs; stride = s, pad, dilation = d, groups, bias)
     padding isa AbstractString || return conv(reverse(to_2tuple(padding)))
     padding = lowercase(padding)
     padding == "valid" && return conv(0)
@@ -60,15 +76,111 @@ function create_conv2d(in_chs, out_chs, kernel_size; stride = 1, dilation = 1,
     return conv(get_padding.(k, s, d))
 end
 
-# timm.layers.ConvNormAct without anti-aliasing: create_conv2d, then BatchNormAct2d, which
-# is Flux's BatchNorm with the activation inside (its keys are at the BatchNorm level).
+# timm's _split_channels: equal splits, the first one taking the remainder.
+function split_channels(channels, num_groups)
+    return ntuple(num_groups) do i
+        return channels ÷ num_groups + (i == 1) * (channels % num_groups)
+    end
+end
+
+"""
+    MixedConv2d(in_chs, out_chs, kernel_sizes; stride, dilation, padding, depthwise, bias)
+
+timm.layers.MixedConv2d (MixConv): the channels are split into one group per kernel size,
+each convolved with its own kernel size, and concatenated. A `ModuleDict` in timm, so the
+convs' keys are `0.weight`, `1.weight`, ... with no segment for the container.
+"""
+@concrete struct MixedConv2d
+    convs
+    splits
+end
+Flux.@layer MixedConv2d
+
+function layer_params(m::MixedConv2d)
+    return [(string(i - 1, ".", name), array, kind)
+            for (i, conv) in enumerate(m.convs)
+            for (name, array, kind) in layer_params(conv)]
+end
+
+function MixedConv2d(in_chs, out_chs, kernel_sizes::AbstractVector; stride = 1,
+        dilation = 1, padding = "", depthwise = false, bias = false)
+    in_splits = split_channels(in_chs, length(kernel_sizes))
+    out_splits = split_channels(out_chs, length(kernel_sizes))
+    convs = map(Tuple(kernel_sizes), in_splits, out_splits) do k, in_ch, out_ch
+        create_conv2d(in_ch, out_ch, k; stride, dilation, padding,
+            groups = depthwise ? in_ch : 1, bias)
+    end
+    return MixedConv2d(convs, in_splits)
+end
+
+# Zygote can't differentiate `cumsum` of a tuple of Ints, hence a non-differentiable helper.
+split_ranges(splits) = map((stop, n) -> (stop - n + 1):stop, cumsum(splits), splits)
+ChainRulesCore.@non_differentiable split_ranges(::Any)
+
+function (m::MixedConv2d)(x)
+    xs = map(r -> x[:, :, r, :], split_ranges(m.splits))
+    return cat(map((conv, xi) -> conv(xi), m.convs, xs)...; dims = 3)
+end
+
+"""
+    CondConv2d(in_chs, out_chs, kernel_size; num_experts, stride, dilation, padding, groups, bias)
+
+timm.layers.CondConv2d: a conv whose kernel (and bias) is a per-sample mixture of
+`num_experts` kernels, called as `m(x, routing_weights)` with routing weights of size
+`(num_experts, batch)`. `weight` is torch's `(num_experts, params)` reversed: column `e` is
+the flattened kernel of expert `e`. The samples are convolved at once, as one grouped conv.
+"""
+@concrete struct CondConv2d
+    weight
+    bias
+    kernel_size
+    stride
+    pad
+    dilation
+    groups
+end
+Flux.@layer CondConv2d trainable=(weight, bias)
+
+function CondConv2d(in_chs, out_chs, kernel_size; num_experts, stride = 1, dilation = 1,
+        padding = "", groups = 1, bias = false)
+    k, s, d = (reverse(to_2tuple(v)) for v in (kernel_size, stride, dilation))
+    lowercase(padding) in ("", "same") ||
+        error("CondConv2d padding `$padding` is not supported")
+    is_static = padding == "" || all(@. s == 1 && iseven(d * (k - 1)))
+    # `nothing` is the dynamic TF "SAME" padding, computed from the input size
+    pad = is_static ? Tuple(Iterators.flatten((p, p) for p in get_padding.(k, s, d))) :
+          nothing
+    # the normal(0, sqrt(2 / fan_out)) init of timm's _init_weight_goog, which all the
+    # models using CondConv2d apply
+    weight = randn(Float32, prod(k) * (in_chs ÷ groups) * out_chs, num_experts) .*
+             sqrt(2.0f0 / (prod(k) * out_chs ÷ groups))
+    return CondConv2d(weight, bias ? zeros(Float32, out_chs, num_experts) : false, k, s,
+        pad, d, groups)
+end
+
+function (m::CondConv2d)(x, routing_weights)
+    w, h, c, b = size(x)
+    weight = reshape(m.weight * routing_weights, m.kernel_size..., c ÷ m.groups, :)
+    pad = something(m.pad, pad_same(x, m.kernel_size, m.stride, m.dilation))
+    y = NNlib.conv(reshape(x, w, h, c * b, 1), weight; stride = m.stride, pad,
+        dilation = m.dilation, groups = m.groups * b, flipped = true)
+    y = reshape(y, size(y, 1), size(y, 2), :, b)
+    return m.bias isa AbstractArray ? y .+ reshape(m.bias * routing_weights, 1, 1, :, b) : y
+end
+
+# timm.layers.ConvNormAct: create_conv2d, then BatchNormAct2d, which is Flux's BatchNorm
+# with the activation inside (its keys are at the BatchNorm level). With `aa_layer` and a
+# stride, the conv doesn't stride and an anti-aliasing `aa` (see `create_aa`) downsamples.
 function conv_norm_act(in_chs, out_chs, kernel_size = 1; stride = 1, padding = "",
         dilation = 1, groups = 1, bias = false, apply_act = true, act_layer = relu,
-        eps = 1.0f-5)
-    return Chain(;
-        conv = create_conv2d(
-            in_chs, out_chs, kernel_size; stride, padding, dilation, groups, bias),
-        bn = BatchNorm(out_chs, apply_act ? act_layer : identity; eps = Float32(eps)))
+        eps = 1.0f-5, momentum = 0.1f0, aa_layer = nothing)
+    use_aa = aa_layer !== nothing && stride > 1
+    conv = create_conv2d(in_chs, out_chs, kernel_size; stride = use_aa ? 1 : stride,
+        padding, dilation, groups, bias)
+    bn = BatchNorm(out_chs, apply_act ? act_layer : identity; eps = Float32(eps),
+        momentum = Float32(momentum))
+    use_aa || return Chain(; conv, bn)
+    return Chain(; conv, bn, aa = create_aa(aa_layer, out_chs; stride))
 end
 
 # nn.AvgPool2d(k, stride, ceil_mode=True, count_include_pad=False)
@@ -309,19 +421,24 @@ function (m::ClassifierHead)(x; pre_logits::Bool = false)
     x = m.drop(m.global_pool(x))
     return pre_logits ? m.flatten(x) : m.flatten(m.fc(x))
 end
-# timm.layers.BlurPool2d with reflect padding: a depthwise binomial blur, then subsampling.
-# timm keeps the filter in a non-persistent buffer, so it is rebuilt here and has no keys.
+# timm.layers.BlurPool2d: a depthwise binomial blur, then subsampling, after reflect or
+# zero ("constant") padding. timm keeps the filter in a non-persistent buffer, so it is
+# rebuilt here and has no keys.
 @concrete struct BlurPool2d
     channels
     filt_size
     stride
     pad
+    pad_mode
 end
 Flux.@layer BlurPool2d
 
-function BlurPool2d(channels = nothing; filt_size = 3, stride = 2)
+function BlurPool2d(channels = nothing; filt_size = 3, stride = 2, pad_mode = "reflect")
     filt_size > 1 || error("`filt_size` must be larger than 1")
-    return BlurPool2d(channels, filt_size, stride, get_padding(filt_size, stride))
+    pad_mode in ("reflect", "constant") ||
+        error("`pad_mode = $(repr(pad_mode))` is not supported; use \"reflect\" or " *
+              "\"constant\"")
+    return BlurPool2d(channels, filt_size, stride, get_padding(filt_size, stride), pad_mode)
 end
 
 function blur_filter(T, k, c)
@@ -333,8 +450,99 @@ ChainRulesCore.@non_differentiable blur_filter(::Any, ::Any, ::Any)
 function (m::BlurPool2d)(x)
     c = something(m.channels, size(x, 3))
     filt = blur_filter(eltype(x), m.filt_size, c)
-    x = NNlib.pad_reflect(x, ntuple(_ -> m.pad, 4); dims = (1, 2))
+    pad = ntuple(_ -> m.pad, 4)
+    x = m.pad_mode == "reflect" ? NNlib.pad_reflect(x, pad; dims = (1, 2)) :
+        NNlib.pad_zeros(x, pad; dims = (1, 2))
     return NNlib.conv(x, filt; stride = m.stride, groups = c)
+end
+
+# timm.layers.create_aa for the anti-aliasing layers given by name: "avg" is
+# nn.AvgPool2d(stride), "blurpool" a BlurPool2d, "blurpc" one with zero padding. Gives
+# `identity` (timm's nn.Identity) when there is no aa_layer or it isn't enabled.
+function create_aa(aa_layer, channels = nothing; stride = 2, enable = true)
+    (aa_layer === nothing || !enable) && return identity
+    aa_layer isa AbstractString ||
+        error("`aa_layer = $(repr(aa_layer))` is not supported; use \"avg\", " *
+              "\"blurpool\" or \"blurpc\"")
+    key = replace(lowercase(aa_layer), "_" => "", "-" => "")
+    key in ("avg", "avgpool") && return MeanPool((stride, stride))
+    key in ("blur", "blurpool") && return BlurPool2d(channels; stride)
+    key == "blurpc" && return BlurPool2d(channels; stride, pad_mode = "constant")
+    return error("anti-aliasing layer `$aa_layer` is not supported; use \"avg\", " *
+                 "\"blurpool\" or \"blurpc\"")
+end
+
+# timm.layers.LayerScale2d: a learned per-channel scale of a WHCN feature map.
+@concrete struct LayerScale2d
+    gamma
+end
+Flux.@layer LayerScale2d
+
+function LayerScale2d(dim::Integer, init_values = 1e-5)
+    return LayerScale2d(fill(Float32(init_values), dim))
+end
+
+(m::LayerScale2d)(x) = x .* reshape(m.gamma, 1, 1, :, 1)
+
+"""
+    MultiQueryAttention2d(dim, dim_out = dim; num_heads = 8, key_dim, value_dim,
+                          kv_stride = 1, dw_kernel_size = 3, dilation = 1, padding = "",
+                          attn_drop = 0.0, proj_drop = 0.0,
+                          norm_layer = (; eps = 1e-5, momentum = 0.1), use_bias = false)
+
+timm.layers.MultiQueryAttention2d on WHCN feature maps, without query strides: `num_heads`
+query heads share a single key and value head, whose inputs are downsampled by a strided
+depthwise conv and a BatchNorm (with the `eps` and `momentum` of `norm_layer`) when
+`kv_stride > 1`.
+"""
+@concrete struct MultiQueryAttention2d
+    query
+    key
+    value
+    attn_drop
+    output
+    num_heads
+end
+Flux.@layer MultiQueryAttention2d
+
+function MultiQueryAttention2d(dim, dim_out = dim; num_heads = 8, key_dim = nothing,
+        value_dim = nothing, query_strides = 1, kv_stride = 1, dw_kernel_size = 3,
+        dilation = 1, padding = "", attn_drop = 0.0, proj_drop = 0.0,
+        norm_layer = (; eps = 1e-5, momentum = 0.1), use_bias = false)
+    all(==(1), to_2tuple(query_strides)) ||
+        error("`query_strides` larger than 1 are not supported by the Metalhead port of " *
+              "MultiQueryAttention2d")
+    key_dim = something(key_dim, dim ÷ num_heads)
+    value_dim = something(value_dim, dim ÷ num_heads)
+    function kv_branch(out_dim; proj_padding = "")
+        proj = create_conv2d(dim, out_dim, 1; padding = proj_padding, bias = use_bias)
+        kv_stride > 1 || return Chain(; proj)
+        down_conv = create_conv2d(dim, dim, dw_kernel_size; stride = kv_stride, dilation,
+            padding, depthwise = true)
+        norm = BatchNorm(dim; eps = Float32(norm_layer.eps),
+            momentum = Float32(norm_layer.momentum))
+        return Chain(; down_conv, norm, proj)
+    end
+    query = Chain(; proj = create_conv2d(dim, num_heads * key_dim, 1; bias = use_bias))
+    output = Chain(;
+        proj = create_conv2d(value_dim * num_heads, dim_out, 1; bias = use_bias),
+        drop = dropout_or_identity(proj_drop))
+    return MultiQueryAttention2d(query, kv_branch(key_dim; proj_padding = padding),
+        kv_branch(value_dim), dropout_or_identity(attn_drop), output, num_heads)
+end
+
+function (m::MultiQueryAttention2d)(x)
+    q, k, v = m.query(x), m.key(x), m.value(x)
+    w, h, _, b = size(q)
+    key_dim, value_dim = size(k, 3), size(v, 3)
+    # torch's (B, heads, key_dim, H * W) query and (B, 1, H' * W', dim) keys and values,
+    # in NNlib's (dim, heads, length, batch) layout
+    q = permutedims(reshape(q, w * h, key_dim, m.num_heads, b), (2, 3, 1, 4))
+    k = permutedims(reshape(k, :, key_dim, 1, b), (2, 3, 1, 4))
+    v = permutedims(reshape(v, :, value_dim, 1, b), (2, 3, 1, 4))
+    o = NNlib.scaled_dot_product_attention(q, k, v; fdrop = m.attn_drop)
+    o = reshape(permutedims(o, (3, 1, 2, 4)), w, h, value_dim * m.num_heads, b)
+    return m.output(o)
 end
 
 # timm.layers.get_act_layer for the activations given by name (a function passes through).

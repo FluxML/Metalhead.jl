@@ -1,0 +1,1 @@
+{"architecture": "mobilenetv4_hybrid_medium", "builder": "timm.models.mobilenetv3:_gen_mobilenet_v4", "kwargs": {"variant": "mobilenetv4_hybrid_medium", "channel_multiplier": 0.05, "pad_type": "same", "bn_eps": 0.001, "drop_path_rate": 0.1, "num_classes": 4, "in_chans": 1}, "weight_dtype": "float16", "input_shape": [2, 1, 64, 48]}
