@@ -22,13 +22,11 @@ concurrency:
 
 jobs:
   test:
-    name: ${{ matrix.suite }} - Julia ${{ matrix.version }} - ${{ matrix.os }}
+    name: Julia ${{ matrix.version }} - ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     # a failing prerelease must not turn the CI badge red
     continue-on-error: ${{ matrix.version == 'pre' }}
-    env:
-      TEST_FAST: ${{ matrix.version != '1' }}
     strategy:
       fail-fast: false
       matrix:
@@ -38,22 +36,6 @@ jobs:
           - 'pre'
         os:
           - ubuntu-latest
-        # test files by path prefix, see test/runtests.jl
-        suite:
-          - 'hub models'
-          - 'legacy/alexnet legacy/vgg'
-          - 'legacy/googlenet legacy/squeezenet legacy/mobilenet legacy/mnasnet'
-          - 'legacy/efficientnet'
-          - 'legacy/resnet legacy/wideresnet'
-          - 'legacy/resnext' # split off from ResNet to reduce overall runtime
-          - 'legacy/seresnet legacy/seresnext'
-          - 'legacy/res2net legacy/res2next'
-          - 'legacy/inception'
-          - 'legacy/densenet'
-          - 'legacy/unet'
-          - 'legacy/convnext legacy/convmixer'
-          - 'legacy/mlpmixer legacy/resmlp legacy/gmlp'
-          - 'legacy/vit'
     steps:
       - uses: actions/checkout@v7
       - uses: julia-actions/setup-julia@v3
@@ -62,8 +44,6 @@ jobs:
       - uses: julia-actions/cache@v3
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
-        with:
-          test_args: ${{ matrix.suite }}
       - uses: julia-actions/julia-processcoverage@v1
       - uses: codecov/codecov-action@v7
         with:
