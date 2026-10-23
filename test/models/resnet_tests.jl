@@ -16,23 +16,9 @@ end
 end
 
 @testitem "Models: timm resnet gradient" setup=[ParitySetup] begin
-    using Flux
-    m = Flux.trainmode!(create_model(fixture("resnet_basic"); pretrained = true))
     x = rand(Float32, 32, 32, 3, 2)
-    g = Flux.gradient(m -> sum(abs2, m(x)), m)[1]
-    @test all(isfinite, g.layer1.layers[1].conv1.weight)
-    @test all(isfinite, g.conv1.weight)
-end
-
-@testitem "Models: timm resnet attention gradient" setup=[ParitySetup] begin
-    using Flux
-    x = rand(Float32, 32, 32, 3, 2)
-    for (name, weight) in [("senet", se -> se.fc1.weight),
-        ("seresnet_basic", se -> se.fc2.weight), ("ecaresnet", se -> se.conv.weight)]
-        m = Flux.trainmode!(create_model(fixture(name); pretrained = true))
-        g = Flux.gradient(m -> sum(abs2, m(x)), m)[1]
-        w = weight(g.layer1.layers[1].se)
-        @test all(isfinite, w) && !all(iszero, w)
+    for name in ["resnet_basic", "senet", "seresnet_basic", "ecaresnet"]
+        @test check_gradient(fixture_model(fixture(name); eltype = Float32), x)
     end
 end
 

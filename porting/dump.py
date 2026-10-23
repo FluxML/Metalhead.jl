@@ -1,6 +1,7 @@
 """Write a tiny parity fixture for a Metalhead port.
 
-    uv run dump.py specs/<name>.json [--out DIR] [--all-taps]
+    uv run dump.py specs/<name>.json [specs/<other>.json ...] [--all-taps]
+    uv run dump.py specs/<name>.json --out DIR --all-taps     # a debug dump
 
 Optional spec keys: "shrink": k divides every channel count by k (see `shrunk_channels` in
 common.py; the Julia side applies `shrink_channels` from config.json), and
@@ -25,15 +26,22 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("spec")
-    p.add_argument("--out", help="output directory (default: test/fixtures/<spec name>)")
+    p.add_argument("specs", nargs="+", metavar="spec")
+    p.add_argument("--out", help="output directory, for a single spec (default: test/fixtures/<spec name>)")
     p.add_argument("--all-taps", action="store_true", help="record every module, not only depth <= 2")
     p.add_argument("--max-bytes", type=int, default=1_000_000)
     p.add_argument("--tap-dtype", choices=["float16", "float32"],
                    help="storage type of the taps (default: float16, or float32 with --all-taps)")
     args = p.parse_args()
+    if args.out and len(args.specs) > 1:
+        p.error("--out takes a single spec")
+    too_large = [s for s in args.specs if not dump(pathlib.Path(s), args)]
+    if too_large:
+        raise SystemExit(f"fixtures larger than {args.max_bytes} bytes, shrink their specs: {too_large}")
 
-    spec_path = pathlib.Path(args.spec)
+
+def dump(spec_path, args):
+    """Write the fixture of one spec; return whether it fits in `args.max_bytes`."""
     spec = json.loads(spec_path.read_text())
     out = pathlib.Path(args.out) if args.out else ROOT / "test" / "fixtures" / spec_path.stem
     out.mkdir(parents=True, exist_ok=True)
@@ -91,8 +99,7 @@ def main():
 
     size = sum(f.stat().st_size for f in out.iterdir())
     print(f"{out}: {len(weights)} tensors, {len(taps)} taps, {size / 1e6:.2f} MB")
-    if size > args.max_bytes and not args.out:
-        raise SystemExit(f"fixture is larger than {args.max_bytes} bytes; shrink the spec")
+    return size <= args.max_bytes or bool(args.out)
 
 
 if __name__ == "__main__":

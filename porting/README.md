@@ -7,13 +7,14 @@ This folder is not part of the Julia package API, and the Julia tests never run 
 cd porting
 uv sync                                   # torch (CPU), timm, safetensors
 uv run inspect_model.py resnet18          # module tree and state_dict of a timm model
-uv run dump.py specs/resnet_basic.json    # tiny fixture -> test/fixtures/resnet_basic/
-julia --project=.. check.jl specs/resnet_basic.json      # per-module parity report
+uv run dump.py specs/resnet_basic.json specs/resnext.json     # tiny fixtures -> test/fixtures/<name>/
+julia --project=.. check.jl specs/resnet_basic.json specs/resnext.json   # parity reports, one session
 uv run dump.py specs/resnet_basic.json --all-taps --out out/resnet_basic   # debug: every module, float32
 julia --project=.. check.jl out/resnet_basic
 uv run param_counts.py resnet resnet18 resnet50   # -> test/references/param_counts/resnet.json
 uv run dump_reference.py timm/resnet18.a1_in1k   # real weights -> test/references/
 julia --project=.. check_reference.jl ../test/references/timm--resnet18.a1_in1k.safetensors
+GROUP="Models: timm resnet" julia --project=.. -e 'using Pkg; Pkg.test()'   # one family's tests
 ```
 
 Optional keys of a spec, for models too large for a fixture of 1 MB:
