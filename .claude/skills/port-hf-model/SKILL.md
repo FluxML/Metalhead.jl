@@ -12,7 +12,8 @@ its real-weight references pass. `src/Timm/resnet.jl` is the reference port; rea
 ## Workflow
 
 Most of a port's time goes into waiting for Julia: every new process spends 20–30 s loading
-Metalhead before it checks anything. Batch work per process, and see "Iterating quickly" below.
+Metalhead before it checks anything. Run Julia in one persistent session instead (see
+"Iterating quickly" below).
 
 0. **Set up first, in the background.** Start
    `julia --project=. -e 'using Pkg; Pkg.instantiate(); using Metalhead'` in the background
@@ -40,9 +41,9 @@ Metalhead before it checks anything. Batch work per process, and see "Iterating 
 4. **Tiny fixtures.** For each distinct code path (block type, stem type, optional branch),
    write `porting/specs/<name>.json` (see "Fixtures" below). Give every
    keyword the builder accepts a non-default value in at least one spec. Two or three fixtures
-   per family are cheap. Dump and check them all at once, one process each side:
-   `uv run dump.py specs/a.json specs/b.json ...`, then
-   `julia --project=.. check.jl specs/a.json specs/b.json ...` until all PASS.
+   per family are cheap. Dump them all with one command,
+   `uv run dump.py specs/a.json specs/b.json ...`, and check them in the Julia session with
+   `Parity.check_fixture` until all pass (or `julia --project=.. check.jl specs/a.json ...`).
 5. **Parameter counts.** Run `uv run param_counts.py <family> <arch> ...` for every registered
    architecture. It writes `test/references/param_counts/<family>.json`. Run this before the
    tests: until then, `check_param_counts` raises a KeyError.
@@ -50,7 +51,9 @@ Metalhead before it checks anything. Batch work per process, and see "Iterating 
    when they replace a legacy Metalhead model), then run
    `uv run dump_reference.py timm/<repo> timm/<other> ...`.
    Add the printed `repo => sha` to the architecture's `references`. Then run
-   `julia --project=.. check_reference.jl ../test/references/timm--<repo>.safetensors ...`.
+   `julia --project=.. check_reference.jl ../test/references/timm--<repo>.safetensors ...`
+   from the command line, once for all references (the script exits, so don't `include` it in
+   the session).
    It loads the checkpoint from the Python Hub cache that `dump_reference.py` filled. Correct
    ports land at 1e-7 to 1e-5 in float32, since deeper nets accumulate torch's own float32
    error. To tell that noise from a port error, compare a Julia model with `eltype = Float64`
@@ -68,17 +71,27 @@ Metalhead before it checks anything. Batch work per process, and see "Iterating 
 
 ## Iterating quickly
 
-- **Keep one Julia session** when a persistent Julia REPL is available (e.g. a Julia MCP tool),
-  with Revise loaded before Metalhead, from `porting/`:
+- **Run Julia in a persistent session: the Julia MCP tool** (`mcp__julia__julia_eval`), for all
+  Julia code except `Pkg.test`. If it is listed only as a deferred tool, load it first with
+  ToolSearch (`select:mcp__julia__julia_eval,mcp__julia__julia_restart`). Pass
+  `env_path` = the repository root (your worktree): each `env_path` has its own session, with
+  Revise loaded, so edits to `src/` are picked up without restarting. A warm session checks a
+  fixture in under a second; a new `julia` process spends 20–30 s loading first.
   ```julia
-  using Revise, Metalhead
-  include("../test/parity.jl"); using .Parity
-  r = check_fixture("../test/fixtures/<name>"); r.pass, r.output
+  using Metalhead
+  includet(joinpath(pkgdir(Metalhead), "test", "parity.jl"))  # once per session, tracked by Revise
+  fixture(name) = joinpath(pkgdir(Metalhead), "test", "fixtures", name)
+  r = Parity.check_fixture(fixture("<name>")); println(r.pass, " ", r.output)
   ```
-  Revise picks up edits to functions and constructors in `src/`. Changing a struct's fields
-  needs a restart.
-- **Without one**, batch: `check.jl` and `check_reference.jl` take any number of fixtures, and
-  `dump.py` and `dump_reference.py` any number of specs or repos.
+  - The tool shows only printed output: `println` or `display` the results.
+  - Call `Parity.` names qualified, and never `include` `parity.jl` a second time: each include
+    makes a new module, and the exported names become ambiguous.
+  - Restart (`julia_restart` with the same `env_path`) only after changing the fields of a
+    struct, which Revise cannot do, or when the session is broken.
+- **Without the tool**, batch: `check.jl` and `check_reference.jl` take any number of
+  fixtures, and `dump.py` and `dump_reference.py` any number of specs or repos.
+- `Pkg.test` builds a new test environment each time (a few minutes): run it for your family
+  when the fixtures pass, not as part of the edit loop.
 - Keep shell commands simple. Write spec files with your file-writing tool rather than heredocs,
   and put scratch files in a subdirectory of your own (scratch space may be shared).
 
