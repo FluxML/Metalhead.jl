@@ -240,7 +240,7 @@ end
 (m::InceptionV3)(x) = forward_head(m, forward_features(m, x))
 
 # The torchvision checkpoint also holds the auxiliary classifier, which timm drops on load.
-register!(ArchSpec(:timm, "inception_v3", inception_v3;
+register!(ArchSpec(TIMM, "inception_v3", inception_v3;
     references = ["timm/inception_v3.tv_in1k" =>
         "393d84cc85c467d8fbc0dc81a65c04e87a32572c"],
     ignore = [r"^AuxLogits\."]))

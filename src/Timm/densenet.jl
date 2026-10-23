@@ -146,6 +146,6 @@ for (name, args) in [
     "densenet161" => (growth_rate = 48, block_config = (6, 12, 36, 24)),
     "densenet264d" => (growth_rate = 48, block_config = (6, 12, 64, 48), stem_type = "deep")
 ]
-    register!(ArchSpec(:timm, name, densenet; defaults = args,
+    register!(ArchSpec(TIMM, name, densenet; defaults = args,
         references = get(DENSENET_REFERENCES, name, [])))
 end

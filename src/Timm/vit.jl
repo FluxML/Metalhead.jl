@@ -279,7 +279,7 @@ for (name, args) in [
         (; patch_size = 16, embed_dim = 1024, depth = 24, num_heads = 16, img_size = 384)
 ]
     register!(ArchSpec(
-        :timm, name, vit; defaults = args, references = get(VIT_REFERENCES, name, [])))
+        TIMM, name, vit; defaults = args, references = get(VIT_REFERENCES, name, [])))
 end
 
 const DINOV2 = (; patch_size = 14, init_values = 1e-5, img_size = 518, num_classes = 0)
@@ -297,7 +297,7 @@ for (name, args) in [
         (; DINOV2..., REG4..., embed_dim = 1024, depth = 24, num_heads = 16)
 ]
     register!(ArchSpec(
-        :timm, name, vit; defaults = args, references = get(VIT_REFERENCES, name, [])))
+        TIMM, name, vit; defaults = args, references = get(VIT_REFERENCES, name, [])))
 end
 
 const CLIP = (; pre_norm = true, norm_eps = 1e-5)
@@ -327,7 +327,7 @@ for (name, args) in [
     "vit_huge_patch14_clip_quickgelu_224" => (; QUICKGELU..., CLIP_H..., num_classes = 1024)
 ]
     register!(ArchSpec(
-        :timm, name, vit; defaults = args, references = get(VIT_REFERENCES, name, [])))
+        TIMM, name, vit; defaults = args, references = get(VIT_REFERENCES, name, [])))
 end
 
 const SIGLIP = (; class_token = false, global_pool = "map", num_classes = 0)
@@ -367,5 +367,5 @@ for (name, args) in [
         (; SIGLIP_GAP..., SIGLIP_SO400M..., patch_size = 14)
 ]
     register!(ArchSpec(
-        :timm, name, vit; defaults = args, references = get(VIT_REFERENCES, name, [])))
+        TIMM, name, vit; defaults = args, references = get(VIT_REFERENCES, name, [])))
 end

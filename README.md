@@ -32,17 +32,17 @@ logits = model(x)                   # 1000 × 1
 
 ### Creating a model
 
-`create_model` takes the name of a model in one of four forms:
+`create_model` takes the name of a model in one of three forms:
 
 | Argument | Example | Meaning |
 |:--|:--|:--|
 | Hub repository | `"timm/resnet50.a1_in1k"` | the architecture and weights of that repository |
-| timm name with a pretrained tag | `"resnet50.a1_in1k"` | the same, in the `timm` organisation |
 | architecture | `"resnet50"` | the bare architecture; with `pretrained = true`, its default checkpoint |
 | local directory | `"path/to/dir"` | a `config.json` and `model.safetensors` laid out like a Hub repository |
 
 ```julia
 model = create_model("resnet50")                                  # random weights, no download
+model = create_model("timm/resnet50.a1_in1k")                     # that repository's architecture, random weights
 model = create_model("timm/resnet50.a1_in1k"; pretrained = true)  # weights from the Hub
 model = create_model("resnet50"; drop_path_rate = 0.1)            # timm's model arguments
 
@@ -56,15 +56,15 @@ are downloaded once and cached in the cache of Python's `huggingface_hub`
 (`~/.cache/huggingface/hub`, or `HF_HUB_CACHE`). `HF_TOKEN` gives access to private or gated
 repositories, and `HF_HUB_OFFLINE=1` uses only cached files. The keyword `revision` picks a
 branch, tag or commit, and `eltype` builds the model in `Float16`, `Float32` (the default) or
-`Float64`. Other keywords are timm's model arguments, and override the repository's
-configuration.
+`Float64`. Other keywords are the model arguments of the original library (timm's `num_classes`,
+`drop_rate`, ...), and override the repository's configuration.
 
 ### Inputs and outputs
 
-Models take Flux's layout, width × height × channels × batch. PyTorch's `(N, C, H, W)` is the
-same memory layout with the dimensions reversed, and sizes in timm configurations, such as
-`input_size = (3, 224, 224)`, are in PyTorch order. Classifiers return logits, of size
-classes × batch.
+Image models, which are all the ported models so far, take Flux's layout, width × height ×
+channels × batch. PyTorch's `(N, C, H, W)` is the same memory layout with the dimensions
+reversed, and sizes in timm configurations, such as `input_size = (3, 224, 224)`, are in
+PyTorch order. Classifiers return logits, of size classes × batch.
 
 Models are returned in test mode: dropout is off and batch normalisation uses its running
 statistics. Call `Flux.trainmode!(model)` before training.
@@ -74,7 +74,7 @@ statistics. Call `Flux.trainmode!(model)` before training.
 The preprocessing a checkpoint was trained with is in its configuration:
 
 ```julia
-cfg = Metalhead.pretrained_cfg("timm/convnext_tiny.fb_in1k")
+cfg = Metalhead.Timm.pretrained_cfg("timm/convnext_tiny.fb_in1k")
 cfg.input_size     # (3, 224, 224)
 cfg.crop_pct       # 0.875
 cfg.mean, cfg.std  # ((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
@@ -87,7 +87,7 @@ with Images.jl to classify a photo.
 
 ### Features and the classifier
 
-Ported models follow timm's split into a feature extractor and a head:
+Image models follow timm's split into a feature extractor and a head:
 
 ```julia
 model = create_model("timm/convnext_tiny.fb_in1k"; pretrained = true)

@@ -8,9 +8,12 @@ against PyTorch. `create_model` is the entry point.
 ## Layout
 
 - `src/hub/`: Hub downloads, safetensors checkpoints, the strict weight loader
-  (`loadweights.jl`), the architecture registry (`ArchSpec`, `register!`) and the public API
-  (`api.jl`).
+  (`loadweights.jl`), the architecture registry (`ArchSpec`, `ConfigFormat`, `register!`) and
+  the public API (`api.jl`). Nothing there is specific to timm or to vision.
 - `src/Timm/`: one file per timm family. Ports of `timm.layers` classes go in `layers.jl`.
+  `config.jl` is timm's `ConfigFormat`, the template for any other library: it says how a
+  `config.json` names an architecture and its arguments. A library gets its own `src/<Name>/`
+  module, and its architecture names must not clash with those already registered.
 - `src/legacy/`: the hand-written models of Metalhead 0.9 (`ResNet(50)`, `Metalhead.Layers`,
   `pretrain = true`). Deprecated, untested, and removed in 0.11: don't extend them.
 - `test/`: run with ParallelTestRunner. Each file is a `@testset` in its own module. Shared

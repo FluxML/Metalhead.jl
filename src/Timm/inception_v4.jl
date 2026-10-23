@@ -240,6 +240,6 @@ function feature_info(m::InceptionV4)
             for (e, reduction) in zip(INCEPTION_V4_STAGE_ENDS, INCEPTION_V4_REDUCTIONS)]
 end
 
-register!(ArchSpec(:timm, "inception_v4", inception_v4;
+register!(ArchSpec(TIMM, "inception_v4", inception_v4;
     references = ["timm/inception_v4.tf_in1k" =>
         "ad5d294cda312745a9afa433e45d9ccd956a1548"]))

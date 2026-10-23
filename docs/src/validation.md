@@ -67,5 +67,5 @@ Not checked:
 - Training-mode behaviour. Dropout and stochastic depth are random, and batch normalisation
   updates its statistics like Flux does.
 - The initialisation of randomly initialised models, which only roughly follows timm.
-- Image preprocessing. [`Metalhead.pretrained_cfg`](@ref) returns the settings a checkpoint
+- Image preprocessing. [`Metalhead.Timm.pretrained_cfg`](@ref) returns the settings a checkpoint
   expects, but applying them is up to you.
