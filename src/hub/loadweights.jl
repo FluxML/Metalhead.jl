@@ -61,7 +61,8 @@ function torch_params(model; prefix::AbstractString = "")
             push!(params, TorchParam(key, array, kind))
         end
     end
-    function walk(x, key)
+    # Not specialized: a model has many layer types, and each would compile its own walk.
+    function walk(@nospecialize(x), key)
         ps = layer_params(x)
         if ps !== nothing
             for (name, array, kind) in ps
@@ -102,7 +103,10 @@ end
 
 transform(::Val{:plain}, x) = x
 transform(::Val{:dense}, x) = permutedims(x, (2, 1))
-transform(::Val{:conv}, x) = reverse(x; dims = Tuple(1:(ndims(x) - 2)))
+# Flips the spatial dimensions; indexing compiles much faster than `reverse(x; dims)`.
+function transform(::Val{:conv}, x::AbstractArray{<:Any, N}) where {N}
+    return x[ntuple(d -> d <= N - 2 ? reverse(axes(x, d)) : axes(x, d), N)...]
+end
 
 const DEFAULT_IGNORE = [r"num_batches_tracked$"]
 

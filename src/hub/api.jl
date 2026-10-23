@@ -1,6 +1,17 @@
 const ELTYPE_CONVERTERS = Dict{DataType, Function}(
     Float16 => f16, BFloat16 => bf16, Float32 => f32, Float64 => f64)
 
+# The converters walk the whole model, compiling for each of its layer types. `f32` and
+# `f64` change only the arrays of another float eltype, so skip them when there are none
+# (`f16` and `bf16` also move normalization layers to Float32).
+function convert_eltype(T, model)
+    params, _ = torch_params(model)
+    noop = T in (Float32, Float64) && all(params) do p
+        return eltype(p.array) == T || !(eltype(p.array) <: Union{AbstractFloat, Complex})
+    end
+    return noop ? model : ELTYPE_CONVERTERS[T](model)
+end
+
 nt(d::AbstractDict) = (; (Symbol(k) => jsonvalue(v) for (k, v) in d)...)
 jsonvalue(v::AbstractVector) = Tuple(jsonvalue.(v))
 jsonvalue(v::AbstractDict) = nt(v)
@@ -70,14 +81,21 @@ function create_model(name::AbstractString; pretrained::Bool = false,
     if !pretrained && !isdir(name) && !occursin('/', name)
         spec = bare_spec(name)
         model = spec.build(; merge(spec.defaults, values(kwargs))...)
-        return Flux.testmode!(ELTYPE_CONVERTERS[eltype](model))
+        return Flux.testmode!(convert_eltype(eltype, model))
     end
     source = model_source(name, revision)
+    # A dynamic call, so that compiling the random construction above doesn't infer the Hub,
+    # JSON and safetensors code below.
+    return Base.invokelatest(
+        create_from_source, source, pretrained, eltype, NamedTuple(kwargs))
+end
+
+function create_from_source(source::ModelSource, pretrained, eltype, kwargs)
     config = JSON.parsefile(source_file(source, "config.json"))
     format, architecture = identify(config)
     spec = lookup(architecture)
-    args = model_args(format, spec, config, NamedTuple(kwargs))
-    model = ELTYPE_CONVERTERS[eltype](spec.build(; args...))
+    args = model_args(format, spec, config, kwargs)
+    model = convert_eltype(eltype, spec.build(; args...))
     if pretrained
         skip = skip_prefix(format, config, args)
         load_state!(model, Checkpoint(source_weights(source)); skip, ignore = [DEFAULT_IGNORE;
