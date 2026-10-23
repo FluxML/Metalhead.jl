@@ -58,6 +58,8 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
   NNlib 0.9.52 are now the minimum versions (#305, #327).
 - Downloads share the cache of Python's `huggingface_hub` (`~/.cache/huggingface/hub`), and
   its `HF_TOKEN`, `HF_HUB_CACHE` and `HF_HUB_OFFLINE` environment variables.
+- The first `create_model` call of a session compiles less: building a random model takes
+  2.5–3 s less, loading pretrained weights 0.5–1 s less (#247).
 
 ### Deprecated
 

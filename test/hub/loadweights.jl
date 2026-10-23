@@ -112,6 +112,8 @@ end
     @test m.bn1.active === false
     @test size(forward_features(m, rand(Float32, 64, 64, 3, 1))) == (2, 2, 512, 1)
     @test eltype(create_model("resnet18"; eltype = Float64).fc.weight) == Float64
+    @test Metalhead.convert_eltype(Float32, m) === m
+    @test eltype(Metalhead.convert_eltype(Float32, Dense(rand(2, 3))).weight) == Float32
     mbf = create_model("resnet18"; eltype = Flux.BFloat16)
     @test eltype(mbf.fc.weight) == Flux.BFloat16
     @test eltype(mbf(rand(Flux.BFloat16, 64, 64, 3, 1))) == Flux.BFloat16

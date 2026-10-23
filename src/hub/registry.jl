@@ -65,11 +65,13 @@ end
 
 # Architecture names are unique across formats, so that `create_model("name")` is unambiguous.
 const REGISTRY = Dict{String, ArchSpec}()
+const FORMATS = ConfigFormat[]
 
 function register!(spec::ArchSpec)
     old = get(REGISTRY, spec.name, nothing)
     old === nothing || old.format == spec.format ||
         error("architecture `$(spec.name)` is already registered for $(old.format)")
+    spec.format in FORMATS || push!(FORMATS, spec.format)
     return REGISTRY[spec.name] = spec
 end
 
@@ -81,13 +83,12 @@ end
 
 # The format of a parsed config.json and the architecture it describes.
 function identify(config)
-    formats = unique(s.format for s in values(REGISTRY))
-    for format in formats
+    for format in FORMATS
         architecture = architecture_of(format, config)
         architecture === nothing || return format, architecture
     end
     return error("config.json is not in the format of a ported library " *
-                 "($(join(formats, ", ")))")
+                 "($(join(FORMATS, ", ")))")
 end
 
 """
