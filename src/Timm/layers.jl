@@ -45,7 +45,7 @@ end
 
 timm.layers.create_conv2d for one kernel size (no MixedConv2d/CondConv2d). Sizes are Ints or
 torch-order `(h, w)` pairs. `padding` is `""` (PyTorch-style symmetric), `"same"` (TF-style,
-a [`Conv2dSame`](@ref) unless it is static), `"valid"`, or an explicit torch padding.
+a `Conv2dSame` unless it is static), `"valid"`, or an explicit torch padding.
 """
 function create_conv2d(in_chs, out_chs, kernel_size; stride = 1, dilation = 1,
         padding = "", groups = 1, depthwise = false, bias = false)
