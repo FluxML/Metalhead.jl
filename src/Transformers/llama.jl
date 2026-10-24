@@ -103,16 +103,17 @@ Flux.@layer LlamaForCausalLM
 forward_head(m::LlamaForCausalLM, x; pre_logits::Bool = false) = pre_logits ? x : m.lm_head(x)
 
 """
-    forward_intermediates(model::Union{LlamaForCausalLM, Gemma3ForCausalLM, GraniteForCausalLM},
+    forward_intermediates(model::Union{LlamaForCausalLM, Gemma3ForCausalLM, GraniteForCausalLM, Qwen3_5ForCausalLM},
                           input_ids; indices = nothing, norm = false, stop_early = false,
                           intermediates_only = false, attention_mask = nothing)
 
-The outputs of the decoder layers of a language model (Llama, Qwen2, Qwen3, Gemma 3,
-Granite), each of size `(hidden_size, seq_len, batch_size)`: the `i`-th intermediate is
-transformers' `output_hidden_states[i]`, the output of the `i`-th layer, except that the last
-one is not normed unless `norm = true`. The features are the hidden states after the final norm,
-as [`forward_features`](@ref) returns them. `indices`, `norm`, `stop_early` and
-`intermediates_only` are those of the vision models, and `attention_mask` that of the model.
+The outputs of the decoder layers of a language model (Llama, Qwen2, Qwen3, Qwen3.5,
+Gemma 3, Granite), each of size `(hidden_size, seq_len, batch_size)`: the `i`-th intermediate
+is transformers' `output_hidden_states[i]`, the output of the `i`-th layer, except that the
+last one is not normed unless `norm = true`. The features are the hidden states after the final
+norm, as [`forward_features`](@ref) returns them. `indices`, `norm`, `stop_early` and
+`intermediates_only` are those of the vision models, and `attention_mask` that of the model,
+as is the `position_ids` keyword of Qwen3.5.
 """
 function forward_intermediates(m::CausalLM, input_ids::AbstractMatrix{<:Integer};
         indices = nothing, norm::Bool = false, stop_early::Bool = false,

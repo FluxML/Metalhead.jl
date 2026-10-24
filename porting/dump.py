@@ -8,6 +8,10 @@ e.g. "LlamaForCausalLM"), "model_type" and "config" (the fields of its config), 
 (batch, seq_len) of random token ids. Its fixture directory is written by `save_pretrained`, and
 the RMSNorms and rotary tables are computed in float64 (see `exact_float64` in common.py).
 With "lengths", the batch is padded on the right and the model takes an `attention_mask`.
+With "mrope_positions": true, it takes random `position_ids` of size (3, batch, seq_len), the
+temporal, height and width positions of a multimodal rotary embedding (Qwen3.5).
+A vision encoder (Qwen3_5VisionModel) has "grid_thw" instead of "input_shape": the
+(t, h, w) grids of patches of its images (see `dump_transformers_vision`).
 
 A spec with "library": "diffusers" describes a diffusers model, "architecture" (the class, e.g.
 "Flux2Transformer2DModel") with the arguments "config", saved with `save_pretrained`, and the
@@ -179,7 +183,17 @@ def dump_transformers(spec, out, args):
 
     With "lengths" (one per sequence of the batch), the sequences are padded on the right to
     the length of `input_shape`, as by a tokenizer, and the model takes their `attention_mask`,
-    stored as "kwargs/attention_mask"."""
+    stored as "kwargs/attention_mask". With "mrope_positions", the model takes random
+    `position_ids` (3, batch, seq_len), stored permuted as "kwargs/position_ids" so that Julia
+    reads them as (3, seq_len, batch).
+
+    A vision-language model (Qwen3_5ForConditionalGeneration) takes "images", a list of
+    [sequence, position, t, h, w] (0-based): the image tokens of a grid of t × h × w patches,
+    `t * h * w // merge**2` of them, start at that position of that sequence. Its random patches
+    and grids are stored as "kwargs/pixel_values" and "kwargs/image_grid_thw", and its
+    intermediates are those of the language model."""
+    if "grid_thw" in spec:
+        return dump_transformers_vision(spec, out, args)
     seed = spec.get("seed", 0)
     torch.manual_seed(seed)
     model = build(spec).eval()
@@ -207,28 +221,99 @@ def dump_transformers(spec, out, args):
                if n and any(True for _ in m.parameters())
                and (args.all_taps or n.count(".") <= spec.get("tap_depth", 1))]
     gen = torch.Generator().manual_seed(seed + 1)
-    x = torch.randint(model.config.vocab_size, spec["input_shape"], generator=gen)
+    vocab_size = model.config.get_text_config().vocab_size
+    x = torch.randint(vocab_size, spec["input_shape"], generator=gen)
     kwargs = {}
     if "lengths" in spec:
         positions = torch.arange(x.shape[1])
         kwargs["attention_mask"] = torch.stack([positions < n for n in spec["lengths"]]).long()
+    if "images" in spec:
+        kwargs.update(image_inputs(model, x, spec["images"], gen))
+    stored = {k: v for k, v in kwargs.items() if k != "mm_token_type_ids"}
+    if spec.get("mrope_positions"):
+        b, n = x.shape
+        kwargs["position_ids"] = torch.randint(2 * n, (3, b, n), generator=gen)
+        stored["position_ids"] = kwargs["position_ids"].permute(1, 2, 0).contiguous()
     with torch.no_grad():
         logits = model(input_ids=x, **kwargs).logits
         for h in handles:
             h.remove()
         features = model.model(input_ids=x, **kwargs).last_hidden_state
+        decoder = getattr(model.model, "language_model", model.model)
         layers = []
         handles = [layer.register_forward_hook(lambda m, i, o: layers.append(o.detach().clone()))
-                   for layer in model.model.layers]
+                   for layer in decoder.layers]
         model.model(input_ids=x, **kwargs)
         for h in handles:
             h.remove()
         intermediates = {f"intermediates/{i + 1}": y.contiguous() for i, y in enumerate(layers)}
-        intermediates.update({f"intermediates_norm/{i + 1}": model.model.norm(y).contiguous()
+        intermediates.update({f"intermediates_norm/{i + 1}": decoder.norm(y).contiguous()
                               for i, y in enumerate(layers)})
 
     acts = {"input": x, "output": logits.contiguous(), "features": features.contiguous(), **taps,
-            **intermediates, **{f"kwargs/{k}": v for k, v in kwargs.items()}}
+            **intermediates, **{f"kwargs/{k}": v for k, v in stored.items()}}
+    meta = {"spec": json.dumps(spec), "call_order": json.dumps(order),
+            "num_params": str(sum(p.numel() for p in model.parameters())), **versions()}
+    save_file(acts, out / "acts.safetensors", metadata=meta)
+
+    size = sum(f.stat().st_size for f in out.iterdir())
+    print(f"{out}: {len(model.state_dict())} tensors, {len(taps)} taps, {size / 1e6:.2f} MB")
+    return size <= args.max_bytes or bool(args.out)
+
+
+def image_inputs(model, x, images, gen):
+    """Write the image tokens of `images` ([sequence, position, t, h, w]) into the token ids `x`,
+    which hold no other, and return the model's image inputs: random patches, in float64, their
+    grids, and the `mm_token_type_ids` of the image tokens."""
+    config = model.config
+    vision = config.vision_config
+    x[x == config.image_token_id] = 0
+    grids = []
+    for b, start, t, h, w in sorted(images):
+        x[b, start:start + t * h * w // vision.spatial_merge_size ** 2] = config.image_token_id
+        grids.append([t, h, w])
+    grid_thw = torch.tensor(grids)
+    patch_dim = vision.in_channels * vision.temporal_patch_size * vision.patch_size ** 2
+    pixel_values = torch.randn(int(grid_thw.prod(-1).sum()), patch_dim, generator=gen,
+                               dtype=torch.float64)
+    return {"pixel_values": pixel_values, "image_grid_thw": grid_thw,
+            "mm_token_type_ids": (x == config.image_token_id).long()}
+
+
+def dump_transformers_vision(spec, out, args):
+    """Write the fixture of a transformers vision encoder (Qwen3_5VisionModel) of images and
+    videos, which `spec["grid_thw"]` sizes: a list of [t, h, w] grids of patches. Its inputs
+    are random patches, laid out as the image processor does ("inputs/1", (num_patches,
+    patch_dim)), and the grids ("inputs/2"); its outputs "output/last_hidden_state" and
+    "output/pooler_output" (the merged tokens)."""
+    seed = spec.get("seed", 0)
+    torch.manual_seed(seed)
+    model = build(spec).eval()
+    rerandomize(model, seed)
+    model.save_pretrained(out)
+    model = model.double()
+    exact_float64(model)
+
+    tap_dtype = getattr(torch, args.tap_dtype or ("float32" if args.all_taps else "float16"))
+    taps, order = {}, []
+    names = {n for n, m in model.named_modules()
+             if n and any(True for _ in m.parameters())
+             and (args.all_taps or n.count(".") <= spec.get("tap_depth", 1))}
+    cfg = model.config
+    gen = torch.Generator().manual_seed(seed + 1)
+    grid_thw = torch.tensor(spec["grid_thw"])
+    patch_dim = cfg.in_channels * cfg.temporal_patch_size * cfg.patch_size ** 2
+    pixel_values = torch.randn(int(grid_thw.prod(-1).sum()), patch_dim, generator=gen,
+                               dtype=torch.float64)
+    with torch.no_grad():
+        handles = tap_hooks(model, names, taps, order, tap_dtype)
+        outputs = model(pixel_values, grid_thw=grid_thw)
+        for h in handles:
+            h.remove()
+
+    acts = {"inputs/1": pixel_values, "inputs/2": grid_thw,
+            "output/last_hidden_state": outputs.last_hidden_state.contiguous(),
+            "output/pooler_output": outputs.pooler_output.contiguous(), **taps}
     meta = {"spec": json.dumps(spec), "call_order": json.dumps(order),
             "num_params": str(sum(p.numel() for p in model.parameters())), **versions()}
     save_file(acts, out / "acts.safetensors", metadata=meta)

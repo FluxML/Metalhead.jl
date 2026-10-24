@@ -6,7 +6,8 @@ using Metalhead, Flux, Functors, LinearAlgebra, SafeTensors
 using Metalhead: Checkpoint, join_key, layer_params
 
 export Tap, tapify, check_fixture, fixture_model, fixture_inputs, shrink_channels,
-       check_lm_reference, check_pipeline_fixture, check_diffusers_reference,
+       check_lm_reference, check_image_reference, check_pipeline_fixture,
+       check_diffusers_reference,
        reference_input, relerr
 
 relerr(a, b) = norm(a .- b) / max(norm(b), floatmin(Float64))
@@ -172,6 +173,32 @@ function check_lm_reference(file)
 end
 
 """
+    check_image_reference(file) -> NamedTuple
+
+Compare a vision-language model with the reference outputs of its real checkpoint on a
+prompt about an image ("image/..." keys, written by porting/dump_reference.py): the relative
+errors of the hidden states and of the logits of the last position, and whether greedy
+decoding reproduces transformers' continuation, from the same `pixel_values` and
+`image_grid_thw`.
+"""
+function check_image_reference(file)
+    meta = SafeTensors.deserialize(file).metadata
+    ref = Checkpoint(file)
+    model = create_model(meta["repo"]; pretrained = true, revision = meta["revision"])
+    ids = ref["image/input_ids"] .+ 1
+    images = (; pixel_values = Float32.(ref["image/pixel_values"]),
+        image_grid_thw = ref["image/image_grid_thw"])
+    hidden = forward_features(model, ids; images...)
+    logits = forward_head(model, hidden[:, end, :])
+    expected = vec(ref["image/generated_ids"]) .+ 1
+    generated = greedy_decode(model, ids[:, 1], length(expected) - size(ids, 1); images...)
+    return (; repo = meta["repo"],
+        hidden_states = relerr(hidden, ref["image/hidden_states"]),
+        last_logits = relerr(logits, ref["image/last_logits"]),
+        generated = generated == expected)
+end
+
+"""
     check_pipeline_fixture(dir; eltype = Float64) -> NamedTuple
 
 Compare a diffusers text-to-image pipeline written by porting/dump.py (a directory with a
@@ -237,9 +264,9 @@ function check_diffusers_reference(file; eltype = Float32)
         latents = relerr(latents, ref["output_latents"]), image = relerr(image, ref["output"]))
 end
 
-function greedy_decode(model, ids, n)
+function greedy_decode(model, ids, n; kwargs...)
     for _ in 1:n
-        ids = [ids; argmax(model(ids)[:, end])]
+        ids = [ids; argmax(model(ids; kwargs...)[:, end])]
     end
     return ids
 end
@@ -263,13 +290,26 @@ function fixture_inputs(acts)
 end
 
 """
+    output_error(y, acts) -> Float64
+
+The relative error of the output `y` of a fixture's model against its "output", or, for a
+model that returns a NamedTuple (a vision encoder), the largest error of its fields against
+"output/<name>".
+"""
+function output_error(y, acts)
+    y isa NamedTuple || return relerr(y, acts["output"])
+    return maximum(k -> relerr(y[k], acts["output/$k"]), keys(y))
+end
+
+"""
     check_fixture(dir; rtol = 1e-8, model = fixture_model(dir)) -> NamedTuple
 
 Load the tiny fixture in `dir` with [`fixture_model`](@ref) (in float64) and
 compare its logits and features (float64, relative error `rtol`) and every recorded module output
 with PyTorch's. Module outputs are stored in float16 or float32 and compared at a tolerance set
 by their precision, and so are the `forward_intermediates` (see [`check_intermediates`](@ref)).
-A fixture without features (a diffusion model) has `features = 0.0`.
+A fixture without features (a diffusion model) has `features = 0.0`. The output of a model
+that returns a NamedTuple is compared field by field (see [`output_error`](@ref)).
 Returns the relative errors, with the taps in PyTorch call order.
 """
 function check_fixture(dir; rtol = 1e-8, model = fixture_model(dir))
@@ -277,7 +317,7 @@ function check_fixture(dir; rtol = 1e-8, model = fixture_model(dir))
     meta = SafeTensors.deserialize(joinpath(dir, "acts.safetensors")).metadata
     order = Metalhead.JSON.parse(meta["call_order"])
     args, kwargs = fixture_inputs(acts)
-    output = relerr(model(args...; kwargs...), acts["output"])
+    output = output_error(model(args...; kwargs...), acts)
     features = haskey(acts, "features") ?
                relerr(forward_features(model, args...; kwargs...), acts["features"]) : 0.0
     tapkeys = filter(startswith("tap/"), collect(keys(acts)))

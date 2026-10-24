@@ -6,6 +6,7 @@ import importlib
 import inspect
 import json
 import math
+import sys
 import types
 
 import numpy as np
@@ -194,6 +195,8 @@ def rerandomize(model, seed=0):
                 normal(t, t[0].numel() ** -0.5)
             elif t.ndim == 3 and name.endswith("_proj"):  # stacked experts (num_experts, out, in)
                 normal(t, t.shape[-1] ** -0.5)
+            elif name == "A_log":  # decay rates of linear attention, slow enough to carry
+                uniform(t, -6, 0)  # the recurrent state across chunks of 64 tokens
             elif t.ndim <= 1:
                 uniform(t, 0.5, 1.5)
             else:
@@ -201,19 +204,31 @@ def rerandomize(model, seed=0):
 
 
 def exact_float64(model):
-    """Compute the RMSNorms, rotary tables and routers of a transformers model in its own dtype.
+    """Compute the RMSNorms, rotary tables, routers and gated delta rules of a transformers
+    model in its own dtype.
 
     transformers computes them in float32 even in a float64 model, which would limit the
     fixtures to float32 precision. In a float32 model the results are unchanged but for the
-    rounding of the rotary frequencies, which are computed in float64 here.
+    rounding of the rotary frequencies, which are computed in float64 here, and of the weights
+    that interpolate the position embeddings of a Qwen3.5 vision encoder (see
+    `_exact_float64_vision`).
     """
     for m in model.modules():
         name = type(m).__name__
         if name.endswith("RMSNorm"):
-            forward = _gemma_rmsnorm_forward if name.startswith("Gemma") else _rmsnorm_forward
+            zero_centred = name.startswith(("Gemma", "Qwen3_5"))  # scale by 1 + weight
+            forward = _zero_centred_rmsnorm_forward if zero_centred else _rmsnorm_forward
             m.forward = types.MethodType(forward, m)
+        elif name.endswith("RMSNormGated"):
+            m.forward = types.MethodType(_gated_rmsnorm_forward, m)
+        elif name.endswith("GatedDeltaNet"):
+            m.forward = types.MethodType(_gated_delta_net_forward, m)
         elif name.startswith("GraniteMoe") and name.endswith("TopKRouter"):
             m.forward = types.MethodType(_granitemoe_router_forward, m)
+        elif name.endswith("VisionRotaryEmbedding"):  # Qwen3.5's 2D axial rotary embedding
+            m.exact_inv_freq = _exact_axial_inv_freq(m)
+            m.forward = types.MethodType(_axial_rotary_forward, m)
+            _exact_float64_vision(sys.modules[type(m).__module__])
         elif name.endswith("RotaryEmbedding"):
             if isinstance(m.rope_type, dict):  # a table for each layer type (Gemma 3)
                 m.exact_inv_freq = {t: _exact_inv_freq(m.config.rope_parameters[t],
@@ -222,7 +237,9 @@ def exact_float64(model):
                 m.forward = types.MethodType(_layer_type_rotary_forward, m)
             else:
                 m.exact_inv_freq = _exact_inv_freq(m.config.rope_parameters, m.inv_freq)
-                m.forward = types.MethodType(_rotary_forward, m)
+                mrope = hasattr(m, "mrope_section") and hasattr(m, "recomposition_frequencies")
+                forward = _mrope_rotary_forward if mrope else _rotary_forward
+                m.forward = types.MethodType(forward, m)
 
 
 def _rmsnorm_forward(self, x):
@@ -236,9 +253,65 @@ def _granitemoe_router_forward(self, hidden_states):
     return top_k_index, torch.softmax(top_k_logits, dim=-1), router_logits
 
 
-def _gemma_rmsnorm_forward(self, x):
+def _zero_centred_rmsnorm_forward(self, x):
     variance = x.pow(2).mean(-1, keepdim=True)
     return (x * torch.rsqrt(variance + self.eps)) * (1.0 + self.weight)
+
+
+def _gated_rmsnorm_forward(self, hidden_states, gate):
+    variance = hidden_states.pow(2).mean(-1, keepdim=True)
+    hidden_states = self.weight * (hidden_states * torch.rsqrt(variance + self.variance_epsilon))
+    return hidden_states * torch.nn.functional.silu(gate)
+
+
+def _gated_delta_net_forward(self, hidden_states, cache_params=None, attention_mask=None,
+                             **kwargs):
+    """`Qwen3_5GatedDeltaNet.forward` on a whole sequence (a prefill, which leaves the cache as
+    it is), with the decays `g` and the chunked gated delta rule computed in the dtype of the
+    model rather than in float32."""
+    assert cache_params is None or not cache_params.has_previous_state(self.layer_idx, 0)
+    modeling = sys.modules[type(self).__module__]
+    hidden_states = modeling.apply_mask_to_padding_states(hidden_states, attention_mask)
+    batch_size, seq_len, _ = hidden_states.shape
+    mixed_qkv = modeling.causal_conv1d_fn(
+        self.in_proj_qkv(hidden_states).transpose(1, 2), self.conv1d.weight.squeeze(1),
+        self.conv1d.bias, activation=self.activation).transpose(1, 2)
+    query, key, value = torch.split(mixed_qkv, [self.key_dim, self.key_dim, self.value_dim],
+                                    dim=-1)
+    query = query.reshape(batch_size, seq_len, -1, self.head_k_dim)
+    key = key.reshape(batch_size, seq_len, -1, self.head_k_dim)
+    value = value.reshape(batch_size, seq_len, -1, self.head_v_dim)
+    z = self.in_proj_z(hidden_states).reshape(batch_size, seq_len, -1, self.head_v_dim)
+    beta = self.in_proj_b(hidden_states).sigmoid()
+    a = self.in_proj_a(hidden_states)
+    g = -self.A_log.exp() * torch.nn.functional.softplus(a + self.dt_bias)
+    if self.num_v_heads // self.num_k_heads > 1:
+        query = query.repeat_interleave(self.num_v_heads // self.num_k_heads, dim=2)
+        key = key.repeat_interleave(self.num_v_heads // self.num_k_heads, dim=2)
+    rule = modeling.torch_chunk_gated_delta_rule
+    if query.dtype == torch.float64:
+        rule = _float32_as_float64(rule)
+    core_attn_out, _ = rule(query, key, value, g=g, beta=beta, use_qk_l2norm_in_kernel=True)
+    core_attn_out = self.norm(core_attn_out.reshape(-1, self.head_v_dim),
+                              z.reshape(-1, self.head_v_dim))
+    return self.out_proj(core_attn_out.reshape(batch_size, seq_len, -1))
+
+
+class _Float32AsFloat64:
+    """The `torch` module, but for `torch.float32`, which is `torch.float64`."""
+
+    def __getattr__(self, name):
+        return torch.float64 if name == "float32" else getattr(torch, name)
+
+
+def _float32_as_float64(fn):
+    """The function `fn` of a transformers module, undecorated, with `torch.float32` read as
+    `torch.float64`: transformers' own code, computing in float64 where it casts to float32."""
+    fn = inspect.unwrap(fn)
+    new = types.FunctionType(fn.__code__, {**fn.__globals__, "torch": _Float32AsFloat64()},
+                             fn.__name__, fn.__defaults__, fn.__closure__)
+    new.__kwdefaults__ = fn.__kwdefaults__
+    return new
 
 
 def _exact_inv_freq(params, inv_freq):
@@ -269,6 +342,17 @@ def _rotary_forward(self, x, position_ids):
 
 
 @torch.no_grad()
+def _mrope_rotary_forward(self, x, position_ids):
+    """The multimodal rotary tables of Qwen3.5, for position ids of size (3, batch, seq_len):
+    the frequencies of the temporal, height and width positions, recomposed by the model's
+    own `recomposition_frequencies`."""
+    freqs = position_ids.expand(3, -1, -1)[..., None].double() * self.exact_inv_freq
+    cos = self.recomposition_frequencies(freqs.cos() * self.attention_scaling)
+    sin = self.recomposition_frequencies(freqs.sin() * self.attention_scaling)
+    return cos.to(x.dtype), sin.to(x.dtype)
+
+
+@torch.no_grad()
 def _layer_type_rotary_forward(self, x, position_ids, layer_type):
     return _rotary_tables(x, position_ids, self.exact_inv_freq[layer_type],
                           getattr(self, f"{layer_type}_attention_scaling"))
@@ -279,6 +363,63 @@ def _rotary_tables(x, position_ids, inv_freq, attention_scaling):
     emb = torch.cat((freqs, freqs), dim=-1)
     return ((emb.cos() * attention_scaling).to(x.dtype),
             (emb.sin() * attention_scaling).to(x.dtype))
+
+
+def _exact_axial_inv_freq(m):
+    """The `inv_freq` of a `Qwen3_5VisionRotaryEmbedding` in float64."""
+    config = m.config
+    dim = getattr(config, "head_dim", None) or config.hidden_size // config.num_attention_heads
+    spatial = dim // 2
+    freqs = 1.0 / (config.rope_parameters["rope_theta"]
+                   ** (torch.arange(0, spatial, 2, dtype=torch.float64) / spatial))
+    assert torch.allclose(freqs, m.inv_freq.double(), rtol=1e-6, atol=0), (freqs, m.inv_freq)
+    return freqs
+
+
+@torch.no_grad()
+def _axial_rotary_forward(self, x, position_ids):
+    freqs = position_ids[..., None].double() * self.exact_inv_freq
+    return (self.recomposition_frequencies(freqs.cos() * self.attention_scaling),
+            self.recomposition_frequencies(freqs.sin() * self.attention_scaling))
+
+
+def _exact_float64_vision(module):
+    """Patch the vision encoder of `module` (`modeling_qwen3_5`) to rotate float64 queries and
+    keys in float64, and `vision_utils` to compute the weights that interpolate the learned
+    position embeddings in float64. transformers computes both in float32."""
+    from transformers import vision_utils
+    if getattr(module, "_metalhead_exact_float64", False):
+        return
+    original = module.apply_rotary_pos_emb_vision
+
+    def apply_rotary_pos_emb_vision(q, k, cos, sin):
+        if q.dtype != torch.float64:
+            return original(q, k, cos, sin)
+        cos, sin = cos.unsqueeze(-2).to(q.dtype), sin.unsqueeze(-2).to(q.dtype)
+        return (q * cos + module.rotate_half(q) * sin, k * cos + module.rotate_half(k) * sin)
+
+    module.apply_rotary_pos_emb_vision = apply_rotary_pos_emb_vision
+    vision_utils._interpolation_axis_taps_weights = _interpolation_axis_taps_weights_float64
+    module._metalhead_exact_float64 = True
+
+
+def _interpolation_axis_taps_weights_float64(index, size, side, mode, align_corners,
+                                             padding="border"):
+    """`vision_utils._interpolation_axis_taps_weights` in float64."""
+    index = index.to(torch.float64)
+    if align_corners:
+        src = index * (side - 1) / torch.clamp(size - 1, min=1)
+    else:
+        src = (index + 0.5) * side / size - 0.5
+    floor = torch.floor(src)
+    assert mode == "bilinear", f"interpolation mode {mode} is not supported"
+    offsets = torch.arange(0, 2, device=index.device)
+    raw_taps = floor.long()[:, None] + offsets
+    taps = raw_taps.clamp(0, side - 1)
+    weights = (1 - (src[:, None] - floor[:, None] - offsets).abs()).clamp(min=0)
+    if padding == "zeros":
+        weights = weights * ((raw_taps >= 0) & (raw_taps <= side - 1))
+    return taps, weights
 
 
 @contextlib.contextmanager

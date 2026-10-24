@@ -1,0 +1,21 @@
+{
+  "library": "transformers",
+  "architecture": "Qwen3_5VisionModel",
+  "model_type": "qwen3_5_vision",
+  "config": {
+    "depth": 1,
+    "hidden_size": 32,
+    "hidden_act": "silu",
+    "intermediate_size": 40,
+    "num_heads": 4,
+    "in_channels": 2,
+    "patch_size": 2,
+    "spatial_merge_size": 3,
+    "temporal_patch_size": 3,
+    "out_hidden_size": 16,
+    "num_position_embeddings": 25,
+    "rope_parameters": {"rope_type": "axial", "rope_theta": 100.0}
+  },
+  "grid_thw": [[1, 3, 6], [3, 6, 3]],
+  "tap_depth": 3
+}

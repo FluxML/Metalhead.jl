@@ -1,0 +1,17 @@
+{
+  "library": "transformers",
+  "architecture": "Qwen3_5VisionModel",
+  "model_type": "qwen3_5_vision",
+  "config": {
+    "depth": 2,
+    "hidden_size": 32,
+    "intermediate_size": 48,
+    "num_heads": 2,
+    "patch_size": 4,
+    "out_hidden_size": 24,
+    "num_position_embeddings": 36,
+    "deepstack_visual_indexes": []
+  },
+  "grid_thw": [[1, 4, 6], [2, 6, 4], [1, 2, 2], [1, 8, 10]],
+  "tap_depth": 3
+}
