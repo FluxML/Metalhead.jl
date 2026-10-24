@@ -90,6 +90,5 @@ normalize in `Float32`, and, as in diffusers, the timestep embeddings and the Eu
 scheduler are computed in `Float32`. On an RTX 5090, FLUX.2 [klein] 4B in `BFloat16` takes 15 GB
 of GPU memory and about 2.5 seconds for an image of 1024 × 1024 pixels in 4 steps.
 
-On the CPU, `Float32` is the practical choice. `BFloat16` normalizations fail there with
-KernelAbstractions 0.10 until the NNlib release after 0.9.52
-([NNlib.jl#843](https://github.com/FluxML/NNlib.jl/pull/843)).
+On the CPU, `Float32` is the practical choice: there, matrix products and convolutions in
+`BFloat16` are slow and accumulate in 16 bits.

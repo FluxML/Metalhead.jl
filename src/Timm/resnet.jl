@@ -112,7 +112,8 @@ function downsample_conv(in_channels, out_channels, kernel_size; stride = 1)
 end
 
 function downsample_avg(in_channels, out_channels; stride = 1)
-    pool = stride == 1 ? identity : x -> avg_pool_ceil(x, 2, stride)
+    pool = stride == 1 ? identity :
+           x -> meanpool(x, (2, 2); stride, ceil_mode = true, count_include_pad = false)
     return Chain(pool, Conv((1, 1), in_channels => out_channels; bias = false), BatchNorm(out_channels))
 end
 

@@ -81,16 +81,18 @@ end
 
 Whether the Float32 `model` converted to `T` (by `f16` or `bf16`) runs in mixed precision on
 the inputs `x` (floating-point arrays are converted to `T`) and keyword arguments `kwargs`:
-the layers that opt out of half precision (`Flux._keep_f32_under_halfprec`, the norms)
-keep `Float32` arrays and every other floating-point array is `T`, the output has eltype
-`T`, no warning is logged (such as Flux's eltype mismatch), and the relative error of the
-output against `model(x)` is at most `rtol`. Logs what fails.
+the layers with a conversion method of their own (the norms, such as
+`Flux.f16(::LayerNorm2d, cx)`) keep `Float32` arrays and every other floating-point array is
+`T`, the output has eltype `T`, no warning is logged (such as Flux's eltype mismatch), and
+the relative error of the output against `model(x)` is at most `rtol`. Logs what fails.
 """
 function check_half_precision(model, x...; T = Float16, rtol = 1e-2, kwargs...)
-    half = Metalhead.ELTYPE_CONVERTERS[T](model)
+    cast = Metalhead.ELTYPE_CONVERTERS[T]
+    half = cast(model)
+    keeps_f32(l) = which(cast, Tuple{typeof(l), Any}) !== which(cast, Tuple{Any, Any})
     wrong = String[]
     function walk(l, path)
-        if Flux._keep_f32_under_halfprec(l)
+        if keeps_f32(l)
             all(a -> !(a isa AbstractArray{<:AbstractFloat}) || eltype(a) == Float32,
                 Functors.fleaves(l)) || push!(wrong, path)
         elseif l isa AbstractArray{<:AbstractFloat}
@@ -100,7 +102,7 @@ function check_half_precision(model, x...; T = Float16, rtol = 1e-2, kwargs...)
         end
     end
     walk(half, "model")
-    tohalf(a) = a isa AbstractArray{<:AbstractFloat} ? Metalhead.ELTYPE_CONVERTERS[T](a) : a
+    tohalf(a) = a isa AbstractArray{<:AbstractFloat} ? cast(a) : a
     logs, y = Test.collect_test_logs(; min_level = Base.CoreLogging.Warn) do
         return half(map(tohalf, x)...; kwargs...)
     end

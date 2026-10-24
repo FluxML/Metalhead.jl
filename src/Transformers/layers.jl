@@ -24,7 +24,8 @@ the features divided by their root mean square, computed in at least `Float32`. 
     variance_epsilon
 end
 Flux.@layer RMSNorm
-Flux._keep_f32_under_halfprec(::RMSNorm) = true
+Flux.f16(m::RMSNorm, cx) = f32(m, cx)
+Flux.bf16(m::RMSNorm, cx) = f32(m, cx)
 
 RMSNorm(dim::Integer; eps) = RMSNorm(ones(Float32, dim), Float64(eps))
 

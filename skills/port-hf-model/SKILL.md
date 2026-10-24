@@ -138,7 +138,7 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
     `PatchEmbed`, `ClassifierHead`, `NormMlpClassifierHead`, `select_adaptive_pool2d`,
     `create_classifier`, `create_conv2d` (with `Conv2dSame` for TF "SAME" padding),
     `conv_norm_act` (`ConvNormAct`), `SEModule`, `EcaModule`, `create_attn`, `make_divisible`,
-    `drop_path`, `token_drop_path`, `dropout_or_identity`, `to_2tuple`, `avg_pool_ceil`.
+    `drop_path`, `token_drop_path`, `dropout_or_identity`, `to_2tuple`.
   - A torch class that subclasses a torch layer (`Conv2dSame` is an `nn.Conv2d`) has that
     layer's keys. Wrap the Flux layer and forward its keys with
     `layer_params(m::Wrapper) = layer_params(m.conv)`, as `Conv2dSame` does.
@@ -206,7 +206,7 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
 ## Numerical pitfalls
 
 - **GELU.** `nn.GELU()` is the exact erf form: use `gelu_erf`. `NNlib.gelu` is the tanh
-  approximation, which is `nn.GELU(approximate='tanh')`.
+  approximation, which is `nn.GELU(approximate='tanh')`. CLIP's QuickGELU is `quick_gelu`.
 - **Norm epsilon.** Always pass `eps` explicitly. timm often uses `1e-6` (ViT, ConvNeXt
   LayerNorms) while Flux's default is `1f-5`. A wrong eps passes loose checks and fails the
   1e-8 fixture check. Check each norm separately: a block may set one eps and create a
@@ -219,7 +219,11 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
 - **Pooling.**
   - `MaxPool` pads with -Inf, like torch.
   - `NNlib.meanpool` has `count_include_pad`, like torch.
-  - There is no `ceil_mode`: use `avg_pool_ceil` in `layers.jl`, or pad explicitly.
+  - `NNlib.maxpool` and `NNlib.meanpool` take `ceil_mode`, like torch, but Flux's `MaxPool`
+    and `MeanPool` don't: call the NNlib function in a closure.
+- **Resizing.** torch's `F.interpolate(mode="bicubic")` is `NNlib.upsample_bicubic`, with
+  `align_corners` and `antialias`. It defaults to `align_corners = false`, as torch does, but
+  `upsample_bilinear` defaults to `true`.
 - **Permutes.** `x.permute(0, 2, 3, 1)` (NCHW to NHWC) is `permutedims(x, (3, 1, 2, 4))`
   (WHCN to CWHN), and `permute(0, 3, 1, 2)` is `permutedims(x, (2, 3, 1, 4))`. On CWHN,
   `Dense` and `LayerNorm` act on the channels, like `nn.Linear` and `nn.LayerNorm` on NHWC.
@@ -274,14 +278,12 @@ normalization layers keep their parameters and statistics in `Float32` and norma
 `Float32`, every other array becomes 16-bit, and so does the data flowing through.
 
 - **A norm layer you write** (`RMSNorm`, `LayerNorm2d`) opts out of the cast with
-  `Flux._keep_f32_under_halfprec(::MyNorm) = true` after its `Flux.@layer` (an internal
-  Flux hook, which `BatchNorm`, `InstanceNorm` and `GroupNorm` define), and passes its
-  parameters to NNlib: `NNlib.rmsnorm(m.weight, x; eps)`, or
+  `Flux.f16(m::MyNorm, cx) = f32(m, cx)` and `Flux.bf16(m::MyNorm, cx) = f32(m, cx)` after
+  its `Flux.@layer`, as Flux's `BatchNorm`, `InstanceNorm`, `GroupNorm` and `LayerNorm` do,
+  and passes its parameters to NNlib: `NNlib.rmsnorm(m.weight, x; eps)`, or
   `NNlib.layernorm(g, b, x; dims, eps)` with `g` and `b` reshaped to broadcast against `x`.
   These return the eltype of `x`, and throw on 16-bit parameters with 16-bit input. Don't
   multiply by the weight yourself: a `Float32` weight times `Float16` data is `Float32`.
-- Flux 0.16.13's `LayerNorm` still converts its scale and bias to 16 bits
-  (FluxML/Flux.jl#2773 changes that). Don't define the hook for it here: that is piracy.
 - Other parameters (layer scale `gamma`, ResMLP's `Affine`) convert like any weight.
 - **Constants built in the forward pass** (blur filters, pooling matrices, rotary tables,
   masks) take `eltype(x)`, and scalars `oftype(x, c)` or `eltype(x)(c)`: a `Float32` array
@@ -291,10 +293,9 @@ normalization layers keep their parameters and statistics in `Float32` and norma
 - **Test** with `check_half_precision(name)` (`test/parity_setup.jl`): it converts a
   fixture to `Float16` and checks the eltypes of the norm parameters, of the other arrays
   and of the output, that no warning is logged, and the error against `Float32` (1e-2).
-  Never run `BFloat16` on the CPU in the tests, only on a GPU: NNlib 0.9.52's fused norms
-  throw on `BFloat16` CPU arrays with KernelAbstractions 0.10 (FluxML/NNlib.jl#841, fixed by
-  #843 after 0.9.52), and CPU matrix products and convolutions accumulate in 16 bits. A test
-  may check the eltypes that `eltype = BFloat16` gives, without running the model.
+  Never run `BFloat16` on the CPU in the tests, only on a GPU: CPU matrix products and
+  convolutions are slow and accumulate in 16 bits. A test may check the eltypes that
+  `eltype = BFloat16` gives, without running the model.
 
 ## Fixtures and debugging
 
