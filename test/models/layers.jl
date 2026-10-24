@@ -27,6 +27,32 @@ using Metalhead, Test
           ["conv.weight", "bn.weight", "bn.bias", "bn.running_mean", "bn.running_var"]
 end
 
+@testset "attention dropout" begin
+    using Metalhead.Timm: attention_fdrop
+    using Flux
+    # NNlib takes its fused attention only with `fdrop = identity`, so an inactive dropout
+    # is not passed on
+    d, x = Dropout(0.1), rand(Float32, 4, 2, 3, 1)
+    @test attention_fdrop(d, x) === identity
+    @test attention_fdrop(identity, x) === identity
+    @test attention_fdrop(Dropout(0.0), x) === identity
+    active = Ref{Any}()
+    Flux.gradient(x -> (active[] = attention_fdrop(d, x); sum(x)), x)
+    @test active[] === d
+    @test attention_fdrop(Flux.trainmode!(Dropout(0.1)), x) isa Dropout
+    Flux.testmode!(d)
+    Flux.gradient(x -> (active[] = attention_fdrop(d, x); sum(x)), x)
+    @test active[] === identity
+    # the attention layers pass the dropout of their model only in training
+    model = create_model("LlamaForCausalLM"; vocab_size = 16, hidden_size = 8,
+        intermediate_size = 12, num_hidden_layers = 1, num_attention_heads = 2,
+        attention_dropout = 0.5)
+    ids = rand(1:16, 5, 2)
+    @test model(ids) == model(ids)
+    Flux.trainmode!(model)
+    @test model(ids) != model(ids)
+end
+
 @testset "mixed-precision norms" begin
     using Flux
     using Metalhead.Timm: LayerNorm2d

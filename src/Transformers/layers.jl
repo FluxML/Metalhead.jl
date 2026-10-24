@@ -77,6 +77,9 @@ function rotary_tables(m::RotaryEmbedding, x, n)
     end
 end
 
+# A model without positional embeddings (NoPE)
+rotary_tables(::Nothing, x, n) = nothing
+
 # The keys that each query attends to in sliding-window attention, on top of the causal
 # mask: the `mask` of `NNlib.scaled_dot_product_attention`, of size `(seq_len, seq_len)`,
 # true where the key `j` is in the window of the query `i`, `j > i - sliding_window` as in
@@ -102,6 +105,8 @@ end
 ChainRulesCore.@non_differentiable sliding_window_q_lengths(::Any...)
 
 to_device_of(x, a) = copyto!(similar(x, size(a)), a)
+device_indices(x, index) = copyto!(similar(x, Int, size(index)), index)
+ChainRulesCore.@non_differentiable device_indices(::Any...)
 
 # The number of tokens of each sequence of a batch padded on the right, from a tokenizer's
 # `attention_mask` of size `(seq_len, batch_size)`: the `kv_lengths` of
@@ -175,6 +180,65 @@ function check_full_attention(name; num_hidden_layers, use_sliding_window, slidi
     all(==("full_attention"), types) ||
         error("`layer_types = $(repr(Tuple(types)))` is not supported by the Metalhead port of $name: only full attention is")
     return nothing
+end
+
+# `act(gate) .* up`, for the halves `gate` and `up` of the first dimension of `h`, as
+# `act(gate) * up` with `gate, up = h.chunk(2, dim=-1)`.
+function gated(act, h)
+    m = size(h, 1) ÷ 2
+    halves = reshape(h, m, 2, :)
+    y = act.(view(halves, :, 1, :)) .* view(halves, :, 2, :)
+    return reshape(y, m, size(h)[2:end]...)
+end
+
+# The tokens of each expert, for the experts `index` (k, n) of the tokens, copied to the
+# CPU: a matrix (capacity, num_experts) whose column `e` holds the tokens routed to `e`, in
+# order, padded with token 1 to the largest number of tokens of an expert, and the matrix
+# (k, n) of the positions in it of the tokens' experts.
+function expert_slots(index, num_experts)
+    index = Array(index)
+    k = size(index, 1)
+    counts = zeros(Int, num_experts)
+    for e in index
+        1 <= e <= num_experts || error("expert $e is not in 1:$num_experts")
+        counts[e] += 1
+    end
+    capacity = maximum(counts; init = 0)
+    token = ones(Int, capacity, num_experts)
+    slot = similar(index, Int)
+    fill!(counts, 0)
+    for (i, e) in enumerate(index)
+        c = counts[e] += 1
+        token[c, e] = (i - 1) ÷ k + 1
+        slot[i] = (e - 1) * capacity + c
+    end
+    return token, slot
+end
+ChainRulesCore.@non_differentiable expert_slots(::Any...)
+
+"""
+    moe_experts(gate_up, down, act, x, top_k_index, top_k_weights)
+
+The experts of a sparse mixture of experts, as transformers' `MixtralExperts`: each token,
+a column of `x` (hidden, n), goes through its experts `top_k_index` (k, n), whose outputs
+`down * (act(gate) .* up)` are summed with the weights `top_k_weights` (k, n). The stacked
+weights of the experts are torch's `gate_up_proj` (num_experts, 2 * intermediate, hidden)
+and `down_proj` (num_experts, hidden, intermediate), so `gate_up` has size
+(hidden, 2 * intermediate, num_experts) and `down` (intermediate, hidden, num_experts).
+
+The tokens are grouped by expert and padded to the largest group, so that each projection is
+one `batched_mul`, and each token gathers back the outputs of its experts. Unlike a scatter,
+this needs no atomic additions, which are slow in 16 bits on a GPU.
+"""
+function moe_experts(gate_up, down, act, x, top_k_index, top_k_weights)
+    hidden, n = size(x)
+    k = size(top_k_index, 1)
+    token, slot = expert_slots(top_k_index, size(gate_up, 3))
+    xs = NNlib.gather(x, device_indices(x, token))
+    h = gated(act, batched_mul(batched_transpose(gate_up), xs))
+    y = reshape(batched_mul(batched_transpose(down), h), hidden, :)
+    ys = NNlib.gather(y, device_indices(x, slot)) .* reshape(top_k_weights, 1, k, n)
+    return dropdims(sum(ys; dims = 2); dims = 2)
 end
 
 """

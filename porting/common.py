@@ -50,10 +50,12 @@ def build(spec, **extra):
 
 def build_transformers(spec):
     """The transformers class `spec["architecture"]`, built from a config of `spec["model_type"]`
-    with the fields `spec["config"]`, with PyTorch's scaled_dot_product_attention."""
+    with the fields `spec["config"]`, with PyTorch's scaled_dot_product_attention and the eager
+    loop over the experts of a mixture of experts."""
     import transformers
     config = transformers.AutoConfig.for_model(spec["model_type"], **spec.get("config", {}))
-    return getattr(transformers, spec["architecture"])._from_config(config, attn_implementation="sdpa")
+    return getattr(transformers, spec["architecture"])._from_config(
+        config, attn_implementation="sdpa", experts_implementation="eager")
 
 
 def build_diffusers(spec):
@@ -190,6 +192,8 @@ def rerandomize(model, seed=0):
                 normal(t, 0.1)
             elif t.ndim >= 2 and name == "weight":
                 normal(t, t[0].numel() ** -0.5)
+            elif t.ndim == 3 and name.endswith("_proj"):  # stacked experts (num_experts, out, in)
+                normal(t, t.shape[-1] ** -0.5)
             elif t.ndim <= 1:
                 uniform(t, 0.5, 1.5)
             else:
@@ -197,7 +201,7 @@ def rerandomize(model, seed=0):
 
 
 def exact_float64(model):
-    """Compute the RMSNorms and rotary tables of a transformers model in its own dtype.
+    """Compute the RMSNorms, rotary tables and routers of a transformers model in its own dtype.
 
     transformers computes them in float32 even in a float64 model, which would limit the
     fixtures to float32 precision. In a float32 model the results are unchanged but for the
@@ -208,6 +212,8 @@ def exact_float64(model):
         if name.endswith("RMSNorm"):
             forward = _gemma_rmsnorm_forward if name.startswith("Gemma") else _rmsnorm_forward
             m.forward = types.MethodType(forward, m)
+        elif name.startswith("GraniteMoe") and name.endswith("TopKRouter"):
+            m.forward = types.MethodType(_granitemoe_router_forward, m)
         elif name.endswith("RotaryEmbedding"):
             if isinstance(m.rope_type, dict):  # a table for each layer type (Gemma 3)
                 m.exact_inv_freq = {t: _exact_inv_freq(m.config.rope_parameters[t],
@@ -222,6 +228,12 @@ def exact_float64(model):
 def _rmsnorm_forward(self, x):
     variance = x.pow(2).mean(-1, keepdim=True)
     return self.weight * (x * torch.rsqrt(variance + self.variance_epsilon))
+
+
+def _granitemoe_router_forward(self, hidden_states):
+    router_logits = torch.nn.functional.linear(hidden_states, self.weight)
+    top_k_logits, top_k_index = router_logits.topk(self.top_k, dim=-1)
+    return top_k_index, torch.softmax(top_k_logits, dim=-1), router_logits
 
 
 def _gemma_rmsnorm_forward(self, x):

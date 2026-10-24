@@ -162,8 +162,12 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
     ```julia
     qkv = reshape(m.qkv(x), :, nheads, 3, n, b)
     q, k, v = qkv[:, :, 1, :, :], qkv[:, :, 2, :, :], qkv[:, :, 3, :, :]   # (hd, H, N, B)
-    y = reshape(NNlib.scaled_dot_product_attention(q, k, v; fdrop = m.attn_drop), :, n, b)
+    fdrop = attention_fdrop(m.attn_drop, q)
+    y = reshape(NNlib.scaled_dot_product_attention(q, k, v; fdrop), :, n, b)
     ```
+    Pass the dropout through `attention_fdrop` (`layers.jl`), which gives `identity` unless
+    it is active: with any other `fdrop`, NNlib can't take its fused implementation, which is
+    3 times faster in `Float32` and 50 times in `BFloat16` on a GPU.
     A torch `(B, H, N, hd)` tensor reversed is `(hd, N, H, B)`. It needs
     `permutedims(x, (1, 3, 2, 4))` before the call. Multi-query attention (one key/value
     head shared by all query heads, MobileNetV4) is the call with keys and values of 1 head
@@ -370,7 +374,10 @@ first. The workflow is the one above, with these differences.
   the modules that differ. `qwen2.jl` changes only which projections have a bias;
   `qwen3.jl` adds a `Qwen3Attention` with per-head `q_norm` and `k_norm`. A model whose
   layers differ more but whose decoder runs like Llama's (`gemma3.jl`) builds a `LlamaModel`
-  of its own layers, and a `...ForCausalLM <: CausalLM` where its head differs. Weight keys come
+  of its own layers, and a `...ForCausalLM <: CausalLM` where its head differs. A model that
+  changes the embeddings outside the embedding module (Granite's `embedding_multiplier`) is a
+  `DecoderModel` of its own with an `embed` method (`GraniteModel`): folding the change into
+  the embedding would fail the tap of `embed_tokens`. Weight keys come
   from field names, so the struct names don't matter for loading. `attention_heads` derives
   `head_dim` and `num_key_value_heads`; an explicit `head_dim` need not divide
   `hidden_size` (Qwen3-0.6B: 16 heads of 128 features, hidden size 1024).
@@ -427,6 +434,20 @@ first. The workflow is the one above, with these differences.
   a padding query whose window holds only padding attends to nothing: PyTorch returns zeros
   there, and NNlib NaNs unless `sliding_window_q_lengths` gives it the matching `q_lengths`.
   Give a padded fixture such queries (Gemma 3's `lengths = [9, 7, 2]` with a window of 4).
+- **Mixtures of experts** (Granite MoE). transformers 5 stores the experts of a layer as
+  stacked 3D parameters (`experts.gate_up_proj`, `experts.down_proj`) and renames or merges
+  the checkpoint's keys when loading (`conversion_mapping.py`); `save_pretrained` writes the
+  checkpoint's keys back, so fixtures have them too. Mirror the checkpoint's keys: Granite's
+  `input_linear.weight` is a plain 3D array field, `(in, out, num_experts)` in Julia. Compute
+  the experts with `moe_experts` (`layers.jl`), and pick them with `MLUtils.topk`, which runs
+  on the GPU too. Routers often compute in float32 (`.float()`, `softmax(dtype=torch.float)`):
+  patch them in `exact_float64`, and in Julia compute the routing weights in
+  `promote_type(eltype(x), Float32)`. `build_transformers` uses the eager experts
+  (`experts_implementation="eager"`), and `rerandomize` gives stacked `..._proj` parameters
+  the scale of their fan-in. Avoid `NNlib.scatter` in forward passes: its atomic additions
+  are slow in `BFloat16` on a GPU (100 times slower than in `Float32` on an RTX 5090). Test the
+  fixtures' sensitivity by changing the router (softmax over all experts, lowest experts):
+  with tiny models, a wrong router can still match to a few percent.
   `bfloat16` checkpoints load into Float32 arrays without any special handling.
 - **Specs.** `{"library": "transformers", "architecture": "LlamaForCausalLM",
   "model_type": "llama", "config": {...}, "input_shape": [B, L], "tap_depth": 3}`. `dump.py`
@@ -436,7 +457,8 @@ first. The workflow is the one above, with these differences.
   error on the others (`rope_type`, `hidden_act`).
 - **References.** `uv run dump_reference.py <org>/<repo>` tokenizes `PROMPTS` with the repo's
   tokenizer and stores the ids, the hidden states, the last-position logits and the greedy
-  continuation (`check_lm_reference` in `test/parity.jl`). Prefer the smallest checkpoint of
+  continuation (`check_lm_reference` in `test/parity.jl`); the logits come from the model's
+  own head, which may scale (Granite) or softcap them. Prefer the smallest checkpoint of
   the architecture. Tokenizers are not part of Metalhead; HuggingFaceTokenizers.jl loads
   them for end-to-end checks outside the test suite.
 

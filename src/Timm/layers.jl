@@ -207,6 +207,16 @@ token_drop_path(p) = dropout_or_identity(p; dims = 3)
 # nn.Dropout(p) / DropPath(p), or nn.Identity() when p == 0.
 dropout_or_identity(p; dims = :) = p > 0 ? Dropout(p; dims) : identity
 
+# The dropout of the attention weights as the `fdrop` of `NNlib.scaled_dot_product_attention`,
+# where it drops anything: any `fdrop` but `identity` keeps NNlib from its fused
+# implementation, even that of an inactive `Dropout`. As Flux's `Dropout`, it is active under
+# automatic differentiation unless `testmode!` says otherwise, so it is checked in the
+# differentiated code.
+function attention_fdrop(d, x)
+    return d isa Dropout && d.p > 0 && something(d.active, NNlib.within_gradient(x)) ? d :
+           identity
+end
+
 function check_unsupported(name; kwargs...)
     for (k, (v, default)) in pairs(kwargs)
         v == default ||
@@ -587,7 +597,7 @@ function (m::MultiQueryAttention2d)(x)
     q = permutedims(reshape(q, w * h, key_dim, m.num_heads, b), (2, 3, 1, 4))
     k = permutedims(reshape(k, :, key_dim, 1, b), (2, 3, 1, 4))
     v = permutedims(reshape(v, :, value_dim, 1, b), (2, 3, 1, 4))
-    o = NNlib.scaled_dot_product_attention(q, k, v; fdrop = m.attn_drop)
+    o = NNlib.scaled_dot_product_attention(q, k, v; fdrop = attention_fdrop(m.attn_drop, q))
     o = reshape(permutedims(o, (3, 1, 2, 4)), w, h, value_dim * m.num_heads, b)
     return m.output(o)
 end

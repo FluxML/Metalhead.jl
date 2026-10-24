@@ -64,7 +64,8 @@ function (m::Gemma3Attention)(x, position_embeddings, kv_lengths = nothing)
     v = reshape(m.v_proj(x), m.head_dim, :, n, b)
     q = NNlib.apply_rotary_embedding(q, cos, sin)
     k = NNlib.apply_rotary_embedding(k, cos, sin)
-    y = NNlib.scaled_dot_product_attention(q, k, v; fdrop = m.attention_dropout,
+    y = NNlib.scaled_dot_product_attention(q, k, v;
+        fdrop = attention_fdrop(m.attention_dropout, q),
         scale = m.scaling, is_causal = true, kv_lengths,
         mask = sliding_window_mask(x, n, m.sliding_window),
         q_lengths = sliding_window_q_lengths(kv_lengths, n, m.sliding_window))

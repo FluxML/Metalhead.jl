@@ -24,7 +24,8 @@ function (m::Qwen3Attention)(x, position_embeddings, kv_lengths = nothing)
     v = reshape(m.v_proj(x), m.head_dim, :, n, b)
     q = NNlib.apply_rotary_embedding(q, cos, sin)
     k = NNlib.apply_rotary_embedding(k, cos, sin)
-    y = NNlib.scaled_dot_product_attention(q, k, v; fdrop = m.attention_dropout,
+    y = NNlib.scaled_dot_product_attention(q, k, v;
+        fdrop = attention_fdrop(m.attention_dropout, q),
         is_causal = true, kv_lengths)
     return m.o_proj(reshape(y, :, n, b))
 end

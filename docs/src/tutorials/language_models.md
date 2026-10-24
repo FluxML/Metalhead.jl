@@ -2,8 +2,9 @@
 
 Metalhead also ports language models from
 [Hugging Face Transformers](https://github.com/huggingface/transformers), starting with the
-Llama, Qwen and Gemma 3 architectures (`LlamaForCausalLM`, `Qwen2ForCausalLM`,
-`Qwen3ForCausalLM` and `Gemma3ForCausalLM`).
+Llama, Qwen, Gemma 3 and Granite architectures (`LlamaForCausalLM`, `Qwen2ForCausalLM`,
+`Qwen3ForCausalLM`, `Gemma3ForCausalLM`, `GraniteForCausalLM`, `GraniteMoeForCausalLM`,
+`GraniteMoeSharedForCausalLM` and `GraniteMoeHybridForCausalLM`).
 They load from the Hub like the timm models:
 
 ```julia
@@ -81,9 +82,21 @@ The rotary embeddings are the default ones, or those scaled as in Llama 3.1 and 
 an error. These are the other rotary embeddings, such as `"yarn"`, and the sliding-window
 attention of Qwen2 and Qwen3 (`use_sliding_window`), which their released checkpoints leave
 off. Gemma 3 does have sliding-window attention: its layers attend either to all the previous
-tokens or to the last `sliding_window` of them, as its `layer_types` say.
+tokens or to the last `sliding_window` of them, as its `layer_types` say. Granite 4.0
+(`GraniteMoeHybridForCausalLM`) loads only without its Mamba layers, as `granite-4.0-350m`
+and `granite-4.0-1b` are; the `-h-` models have them.
 
 transformers derives the Qwen2 and Qwen3 classes from Llama's, and their ports reuse the
 Llama structs: a Qwen model is a `LlamaForCausalLM`, whose Qwen3 attention layers are
 `Qwen3Attention`s. A Gemma 3 model is a `Gemma3ForCausalLM` whose decoder is a `LlamaModel` of
-`Gemma3DecoderLayer`s.
+`Gemma3DecoderLayer`s, and the four Granite classes are `GraniteForCausalLM`s.
+
+## Mixtures of experts
+
+In Granite MoE (`GraniteMoeForCausalLM`, and `GraniteMoeSharedForCausalLM` with a shared
+expert), the MLP of each layer is a sparse mixture of experts: a router picks the
+`num_experts_per_tok` experts of each token, whose outputs are summed with the router's
+weights. Each projection of the experts is one `batched_mul` over the tokens grouped by
+expert, so the experts compute only for their own tokens, as in transformers. Grouping the
+tokens by expert copies the experts of each token to the CPU, once per layer on a GPU. The
+load-balancing loss of training is not implemented.
