@@ -42,7 +42,7 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
   `Gemma3ForCausalLM`, the Gemma 3 text model, with its sliding-window attention (#336), and
   IBM's Granite (`GraniteForCausalLM`), its mixtures of experts (`GraniteMoeForCausalLM` and
   `GraniteMoeSharedForCausalLM`) and Granite 4.0 without its Mamba layers
-  (`GraniteMoeHybridForCausalLM`), validated against `HuggingFaceTB/SmolLM2-135M`,
+  (`GraniteMoeHybridForCausalLM`, #337), validated against `HuggingFaceTB/SmolLM2-135M`,
   `unsloth/Llama-3.2-1B`, `Qwen/Qwen2.5-0.5B`, `Qwen/Qwen3-0.6B`, `unsloth/gemma-3-270m`,
   `ibm-granite/granite-3.3-2b-base`, `ibm-granite/granite-3.1-1b-a400m-base`,
   `ibm-research/moe-7b-1b-active-shared-experts` and `ibm-granite/granite-4.0-350m-base`.
