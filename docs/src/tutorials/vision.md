@@ -9,13 +9,11 @@ Hub; later loads use the cache. The dataset sections use your own photographs.
 
 ## Set up
 
-The examples use Metalhead's `create_model` API. When following the development
-documentation, install Metalhead from GitHub in the Julia environment for this tutorial:
+Install the packages of this tutorial in its Julia environment:
 
 ```julia
 using Pkg
-Pkg.add(url = "https://github.com/FluxML/Metalhead.jl")
-Pkg.add(["Flux", "FileIO", "ImageIO", "ImageCore",
+Pkg.add(["Metalhead", "Flux", "FileIO", "ImageIO", "ImageCore",
     "ImageTransformations", "Interpolations"])
 ```
 

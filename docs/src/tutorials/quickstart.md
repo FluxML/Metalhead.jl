@@ -34,9 +34,10 @@ Other repositories load from their `main` branch, or from `revision`:
 model = create_model("timm/resnet50.a1_in1k"; pretrained = true, revision = "main")
 ```
 
-The other keyword arguments are the original library's model arguments (timm's, for now), such
-as `num_classes`, `drop_rate` or `drop_path_rate`. They override the repository's configuration. Use `eltype` to build the
-model in another precision (`Float16`, `Flux.BFloat16`, `Float32` or `Float64`).
+The other keyword arguments are the original library's model arguments, such as timm's
+`num_classes`, `drop_rate` or `drop_path_rate`. They override the repository's configuration.
+Use `eltype` to build the model in another precision (`Float16`, `Flux.BFloat16`, `Float32` or
+`Float64`).
 
 [`list_models`](@ref) lists the ported architectures, or with `pretrained = true` the
 validated checkpoints:

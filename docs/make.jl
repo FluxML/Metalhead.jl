@@ -1,8 +1,11 @@
 using Documenter, Metalhead
 
-# copy readme into index.md
+# index.md is the README, without its badges and with links into the version being built
+readme = replace(read(joinpath(@__DIR__, "..", "README.md"), String),
+    r"^\[!\[.*\n"m => "",
+    r"https://fluxml\.ai/Metalhead\.jl/dev/([\w/]+)/" => s"\1.md")
 open(joinpath(@__DIR__, "src", "index.md"), "w") do io
-    write(io, read(joinpath(@__DIR__, "..", "README.md"), String))
+    write(io, "```@meta\nEditURL = \"../../README.md\"\n```\n\n", readme)
 end
 
 function family_file(spec)
@@ -12,6 +15,12 @@ function family_file(spec)
         return "src/Timm/$file.jl"
     end
     return relpath(string(first(methods(spec.build)).file), pkgdir(Metalhead))
+end
+
+# repo is "org/name", or "org/name/subfolder" for a component of a diffusers pipeline
+function hub_url(repo, sha)
+    org, name, subfolder... = split(repo, '/')
+    return join(["https://huggingface.co/$org/$name/tree/$sha"; subfolder], '/')
 end
 
 function write_model_list(path)
@@ -40,20 +49,30 @@ function write_model_list(path)
         "vision_transformer" => "Vision Transformer (ViT)",
         "xception_aligned" => "Aligned Xception")
     title(family) = get(titles, family, family)
+    libraries = ["timm" => "Vision models (timm)",
+        "transformers" => "Language models (transformers)",
+        "diffusers" => "Image generation (diffusers)"]
+    library(spec) = replace(string(spec.format), " pipeline" => "")
     ArchSpec = Metalhead.ArchSpec
     groups = Dict{String, Dict{String, Vector{ArchSpec}}}()
     for (family, names) in list_models(; byfamily = true)
         for name in names
             spec = Metalhead.REGISTRY[name]
-            by_family = get!(groups, string(spec.format), Dict{String, Vector{ArchSpec}}())
+            by_family = get!(groups, library(spec), Dict{String, Vector{ArchSpec}}())
             push!(get!(by_family, family, ArchSpec[]), spec)
         end
     end
+    issetequal(keys(groups), first.(libraries)) ||
+        error("give each library a heading in the model list: $(collect(keys(groups)))")
     narchs = length(Metalhead.REGISTRY)
     nfamilies = sum(length, values(groups))
     nrefs = sum(length(s.references) for s in values(Metalhead.REGISTRY))
     open(path, "w") do io
         println(io, """
+            ```@meta
+            EditURL = nothing
+            ```
+
             # [Models](@id models)
 
             Metalhead has $narchs ported architectures in $nfamilies families. Build one
@@ -83,20 +102,21 @@ function write_model_list(path)
             Depth = 3
             ```
             """)
-        for format in sort!(collect(keys(groups)))
-            println(io, "## $format\n")
-            by_family = groups[format]
+        blob = "https://github.com/FluxML/Metalhead.jl/blob/master"
+        for (lib, heading) in libraries
+            println(io, "## $heading\n")
+            by_family = groups[lib]
             for family in sort!(collect(keys(by_family)); by = title)
                 specs = sort!(by_family[family]; by = s -> s.name)
                 println(io, "### $(title(family))\n")
                 count = length(specs)
                 noun = count == 1 ? "architecture" : "architectures"
-                file = family_file(first(specs))
-                println(io, "`$family`: $count $noun. ",
-                    "[Source](https://github.com/FluxML/Metalhead.jl/blob/master/$file).\n")
+                files = unique(family_file.(specs))
+                sources = join(("[`$(basename(f))`]($blob/$f)" for f in files), ", ")
+                println(io, "`$family`: $count $noun. Source: $sources.\n")
                 println(io, "| Architecture | Validated checkpoints |\n|:--|:--|")
                 for s in specs
-                    refs = join(("[`$repo`](https://huggingface.co/$repo/tree/$sha)"
+                    refs = join(("[`$repo`]($(hub_url(repo, sha)))"
                                  for (repo, sha) in s.references), ", ")
                     isempty(refs) && (refs = "—")
                     println(io, "| `$(s.name)` | $refs |")
@@ -120,17 +140,17 @@ end
 makedocs(; modules = [Metalhead],
     sitename = "Metalhead.jl",
     pages = ["Home" => "index.md",
-        "Getting started" => "tutorials/quickstart.md",
-        "Vision models" => "tutorials/vision.md",
-        "Language models" => "tutorials/language_models.md",
-        "Text-to-image generation" => "tutorials/text_to_image.md",
+        "Tutorials" => ["Getting started" => "tutorials/quickstart.md",
+            "Vision models" => "tutorials/vision.md",
+            "Language models" => "tutorials/language_models.md",
+            "Text-to-image generation" => "tutorials/text_to_image.md"],
         "Models" => "models.md",
-        "How models are validated" => "validation.md",
-        "Porting a model" => "contributing.md",
+        "Development" => ["How models are validated" => "validation.md",
+            "Porting a model" => "contributing.md"],
         "Migrating from 0.9" => "migration.md",
         "API reference" => "api/reference.md"
     ],
-    warnonly = [:example_block, :missing_docs, :cross_references],
+    warnonly = [:example_block, :missing_docs],
     format = Documenter.HTML(canonical = "https://fluxml.ai/Metalhead.jl/stable/",
         assets = ["assets/flux.css"],
         prettyurls = get(ENV, "CI", nothing) == "true"))
