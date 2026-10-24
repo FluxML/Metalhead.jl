@@ -15,6 +15,9 @@ to [Flux.jl](https://fluxml.ai). It ports models from three Hugging Face librari
 - **Text-to-image pipelines** from [diffusers](https://github.com/huggingface/diffusers):
   FLUX.2 [klein].
 
+The [list of models](https://fluxml.ai/Metalhead.jl/dev/models/) gives every ported
+architecture and the Hub checkpoints validated for it.
+
 `create_model` downloads a repository's configuration and weights and returns an ordinary Flux
 model, ready for inference or fine-tuning, on the CPU or a GPU. The models run in Julia,
 without PyTorch. Each port mirrors the module tree of the PyTorch original, loads its
@@ -24,6 +27,7 @@ safetensors weights by name, and is
 ## Contents
 
 - [Installation](#installation)
+- [Models](#models)
 - [Usage](#usage)
   - [Creating a model](#creating-a-model)
   - [Inputs and outputs](#inputs-and-outputs)
@@ -45,6 +49,24 @@ Metalhead.jl requires Julia 1.10 or later. Install it from the Julia package man
 
 ```julia
 julia> ]add Metalhead
+```
+
+## Models
+
+| Library | Ported families |
+|:--|:--|
+| [timm](https://github.com/huggingface/pytorch-image-models) | ResNet, ResNeXt, Wide ResNet, SE- and ECA-ResNet, Res2Net, ConvNeXt, DenseNet, VGG, Inception, Inception-ResNet, Xception, EfficientNet and EfficientNetV2, MobileNetV1 to V4, MNASNet, MixNet, FBNet, LCNet, ConvMixer, MLP-Mixer, ResMLP, gMLP, and ViT with the image encoders of DINOv2, CLIP and SigLIP |
+| [transformers](https://github.com/huggingface/transformers) | Llama, Qwen2 and Qwen3, Gemma 3, and Granite, with its mixtures of experts and the Granite 4.0 models without Mamba layers |
+| [diffusers](https://github.com/huggingface/diffusers) | FLUX.2 [klein]: the text-to-image pipeline, its transformer and its autoencoder |
+
+The [list of models](https://fluxml.ai/Metalhead.jl/dev/models/) gives each architecture of
+these families and the Hub checkpoints whose outputs were compared with PyTorch's. Other Hub
+repositories of the same architectures load too. From Julia:
+
+```julia
+list_models()                             # the ported architectures
+list_models(; pretrained = true)          # the validated checkpoints
+list_models(; byfamily = true)["resnet"]  # the architectures of a family
 ```
 
 ## Usage
@@ -75,11 +97,6 @@ model = create_model("resnet50")                                  # random weigh
 model = create_model("timm/resnet50.a1_in1k")                     # that repository's architecture, random weights
 model = create_model("timm/resnet50.a1_in1k"; pretrained = true)  # weights from the Hub
 model = create_model("resnet50"; drop_path_rate = 0.1)            # timm's model arguments
-
-list_models()                     # the ported architectures
-list_models(; pretrained = true)  # the checkpoints validated against PyTorch
-list_models(; byfamily = true)    # a dictionary of architectures by family
-list_models(; byfamily = true)["resnet"]
 ```
 
 Any Hub repository whose architecture has been ported can be loaded, not only the validated

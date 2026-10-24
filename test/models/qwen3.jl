@@ -34,7 +34,7 @@ end
     model = create_model("Qwen3ForCausalLM"; tiny...)
     @test size(model(rand(1:16, 5, 3))) == (16, 5, 3)
     @test size(model(rand(1:16, 5))) == (16, 5)
-    @test list_models(; byfamily = true)["qwen3"] == ["Qwen3ForCausalLM"]
+    @test "Qwen3ForCausalLM" in list_models(; byfamily = true)["qwen"]
     attn = model.model.layers[1].self_attn
     @test attn isa Metalhead.Transformers.Qwen3Attention
     @test size(attn.q_norm.weight) == size(attn.k_norm.weight) == (4,)

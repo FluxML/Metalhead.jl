@@ -222,6 +222,6 @@ function feature_info(m::InceptionResNetV2)
 end
 
 register!(ArchSpec(TIMM, "inception_resnet_v2", inception_resnet_v2;
-    family = "inception_resnet_v2",
+    family = "inception",
     references = ["timm/inception_resnet_v2.tf_in1k" =>
         "836b07d7d599da247de92f148c7a07fda18afced"]))

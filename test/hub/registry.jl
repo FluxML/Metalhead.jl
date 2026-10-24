@@ -31,6 +31,7 @@ end
     @test families["xception_aligned"] ==
           ["xception41", "xception41p", "xception65", "xception65p", "xception71"]
     @test "vit_tiny_patch16_224" in families["vision_transformer"]
+    @test families["inception"] == ["inception_resnet_v2", "inception_v3", "inception_v4"]
 
     checkpoints = list_models(; byfamily = true, pretrained = true)
     @test checkpoints isa Dict{String, Vector{String}}

@@ -54,14 +54,11 @@ end
         num_hidden_layers = 2, num_attention_heads = 2, num_key_value_heads = 1)
     moe = (; num_local_experts = 4, num_experts_per_tok = 2)
     hybrid = (; layer_types = ["attention", "attention"], moe...)
-    families = list_models(; byfamily = true)
-    options = [(;), moe, moe, hybrid]
-    for (arch, family, kwargs) in zip(GRANITE_ARCHS,
-        ["granite", "granitemoe", "granitemoeshared", "granitemoehybrid"], options)
+    @test list_models(; byfamily = true)["granite"] == sort(GRANITE_ARCHS)
+    for (arch, kwargs) in zip(GRANITE_ARCHS, [(;), moe, moe, hybrid])
         model = create_model(arch; tiny..., kwargs...)
         @test size(model(rand(1:16, 5, 3))) == (16, 5, 3)
         @test size(model(rand(1:16, 5))) == (16, 5)
-        @test families[family] == [arch]
     end
 
     # the multipliers, and the head size of transformers, `hidden_size ÷ num_attention_heads`
