@@ -21,6 +21,7 @@ function write_model_list(path)
         "densenet" => "DenseNet",
         "efficientnet" => "EfficientNet, MobileNetV1/V2, MNASNet and MixNet",
         "flux2" => "FLUX.2",
+        "gemma3" => "Gemma 3",
         "inception_resnet_v2" => "Inception-ResNet-v2",
         "inception_v3" => "Inception-v3",
         "inception_v4" => "Inception-v4",

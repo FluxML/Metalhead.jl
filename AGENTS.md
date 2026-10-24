@@ -2,10 +2,11 @@
 
 Metalhead.jl provides Flux ports of Hugging Face Hub models: the vision models of
 [timm](https://github.com/huggingface/pytorch-image-models), language models of
-[transformers](https://github.com/huggingface/transformers) (Llama and Qwen for now), and
-text-to-image pipelines of [diffusers](https://github.com/huggingface/diffusers) (FLUX.2
-[klein] for now). Each port mirrors the PyTorch module tree, loads the original safetensors
-weights by name, and is checked numerically against PyTorch. `create_model` is the entry point.
+[transformers](https://github.com/huggingface/transformers) (Llama, Qwen and Gemma 3 for
+now), and text-to-image pipelines of [diffusers](https://github.com/huggingface/diffusers)
+(FLUX.2 [klein] for now). Each port mirrors the PyTorch module tree, loads the original
+safetensors weights by name, and is checked numerically against PyTorch. `create_model` is
+the entry point.
 
 ## Layout
 

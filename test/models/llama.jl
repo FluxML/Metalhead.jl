@@ -3,7 +3,7 @@ using Flux: BFloat16
 include("../parity_setup.jl")
 using .ParitySetup
 
-const LLAMA_FIXTURES = ["llama_tiny", "llama_options"]
+const LLAMA_FIXTURES = ["llama_tiny", "llama_options", "llama_rope"]
 
 @testset "fixtures" begin
     for name in LLAMA_FIXTURES
@@ -59,12 +59,25 @@ end
     @test eltype(bf16.model.embed_tokens.weight) == BFloat16
 
     # config.json has `rope_theta` and `rope_scaling` (transformers 4) or `rope_parameters` (5)
-    theta(; kw...) = create_model("LlamaForCausalLM"; tiny..., kw...).model.rotary_emb.rope_theta
-    @test theta() == 10_000
-    @test theta(rope_theta = 500) == 500
-    @test theta(rope_parameters = (rope_type = "default", rope_theta = 300.0)) == 300
-    @test theta(rope_theta = 500, rope_parameters = Dict("rope_type" => "default")) == 500
-    @test_throws "rope_type" theta(rope_scaling = (rope_type = "llama3", factor = 8.0))
+    rotary(; kw...) = create_model("LlamaForCausalLM"; tiny..., kw...).model.rotary_emb
+    rope(; kw...) = rotary(; kw...).rope_parameters
+    @test rope() == (rope_type = "default", rope_theta = 10_000)
+    @test rope(rope_theta = 500).rope_theta == 500
+    @test rope(rope_parameters = (rope_type = "default", rope_theta = 300.0)).rope_theta == 300
+    @test rope(rope_theta = 500,
+        rope_parameters = Dict("rope_type" => "default")).rope_theta == 500
+    # Llama 3.1 and later, whose `original_max_position_embeddings` defaults to
+    # `max_position_embeddings`
+    llama3 = Dict("rope_type" => "llama3", "factor" => 32.0, "low_freq_factor" => 1.0,
+        "high_freq_factor" => 4.0)
+    @test rope(rope_scaling = llama3, rope_theta = 5e5, max_position_embeddings = 1000) ==
+          (rope_type = "llama3", rope_theta = 5e5, factor = 32.0, low_freq_factor = 1.0,
+        high_freq_factor = 4.0, original_max_position_embeddings = 1000)
+    @test rope(rope_scaling = (type = "linear", factor = 2.0)) ==
+          (rope_type = "linear", rope_theta = 10_000, factor = 2.0)
+    @test_throws "rope_type" rope(rope_scaling = (rope_type = "yarn", factor = 8.0))
+    @test_throws "partial_rotary_factor" rope(
+        rope_scaling = (rope_type = "linear", factor = 2.0, partial_rotary_factor = 0.5))
 
     @test_throws "unsupported keyword" create_model("LlamaForCausalLM"; tiny..., num_layers = 2)
     @test_throws "unsupported keyword" create_model(fixture("llama_tiny"); num_layers = 2)
@@ -75,7 +88,9 @@ end
 end
 
 TEST_NETWORK && @testset "references" begin
-    for file in reference_files("SmolLM2"; org = "HuggingFaceTB")
+    for file in reference_files_of("LlamaForCausalLM")
+        # Llama 3.2 1B downloads 2.5 GB
+        contains(file, "Llama-3.2") && !TEST_LARGE && continue
         r = check_lm_reference(file)
         @test r.hidden_states <= 1e-4
         @test r.last_logits <= 1e-4

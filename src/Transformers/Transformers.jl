@@ -24,5 +24,6 @@ include("layers.jl")
 include("llama.jl")
 include("qwen2.jl")
 include("qwen3.jl")
+include("gemma3.jl")
 
 end # module

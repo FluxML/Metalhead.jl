@@ -11,7 +11,7 @@ transformers derives Qwen2 from Llama's classes, adding a bias to the query, key
 projections, so the model is a `LlamaForCausalLM` (see
 [`llama_for_causal_lm`](@ref Metalhead.Transformers.llama_for_causal_lm) for its inputs and
 outputs). Sliding-window attention (`use_sliding_window`, `layer_types`) and rotary
-embeddings other than the default error.
+embeddings other than the default, `"linear"` and `"llama3"` ones error.
 """
 function qwen2_for_causal_lm(; vocab_size = 151936, hidden_size = 4096,
         intermediate_size = 22016, num_hidden_layers = 32, num_attention_heads = 32,
@@ -24,7 +24,9 @@ function qwen2_for_causal_lm(; vocab_size = 151936, hidden_size = 4096,
         sliding_window, max_window_layers, layer_types)
     head_dim, num_key_value_heads = attention_heads(; hidden_size, num_attention_heads,
         num_key_value_heads, head_dim)
-    theta = rope_theta_of("Qwen2ForCausalLM"; rope_theta, rope_scaling, rope_parameters)
+    rope = rope_parameters_of(
+        "Qwen2ForCausalLM"; rope_theta, rope_scaling, rope_parameters,
+        max_position_embeddings)
     attention(dense) = LlamaAttention(head_dim,
         dense(hidden_size => num_attention_heads * head_dim, true),
         dense(hidden_size => num_key_value_heads * head_dim, true),
@@ -33,7 +35,7 @@ function qwen2_for_causal_lm(; vocab_size = 151936, hidden_size = 4096,
         dropout_or_identity(attention_dropout))
     return llama_like(attention; vocab_size, hidden_size, intermediate_size,
         num_hidden_layers, hidden_act, initializer_range, rms_norm_eps, tie_word_embeddings,
-        rope_theta = theta, head_dim)
+        rope_parameters = rope, head_dim)
 end
 
 register!(ArchSpec(TRANSFORMERS, "Qwen2ForCausalLM", qwen2_for_causal_lm;

@@ -1,6 +1,6 @@
 # Ported from transformers.models.llama.modeling_llama (transformers 5.20, Apache-2.0,
 # The Hugging Face Team). Validated against test/fixtures/llama_* and
-# test/references/HuggingFaceTB--SmolLM2-135M.
+# test/references/HuggingFaceTB--SmolLM2-135M and unsloth--Llama-3.2-1B.
 
 @concrete struct LlamaMLP
     gate_proj
@@ -22,8 +22,9 @@ Flux.@layer LlamaMLP
 end
 Flux.@layer LlamaAttention
 
-function (m::LlamaAttention)(x, cos, sin, kv_lengths = nothing)
+function (m::LlamaAttention)(x, position_embeddings, kv_lengths = nothing)
     _, n, b = size(x)
+    cos, sin = position_embeddings
     q = reshape(m.q_proj(x), m.head_dim, :, n, b)
     k = reshape(m.k_proj(x), m.head_dim, :, n, b)
     v = reshape(m.v_proj(x), m.head_dim, :, n, b)
@@ -42,8 +43,8 @@ end
 end
 Flux.@layer LlamaDecoderLayer
 
-function (m::LlamaDecoderLayer)(x, cos, sin, kv_lengths = nothing)
-    x = x .+ m.self_attn(m.input_layernorm(x), cos, sin, kv_lengths)
+function (m::LlamaDecoderLayer)(x, position_embeddings, kv_lengths = nothing)
+    x = x .+ m.self_attn(m.input_layernorm(x), position_embeddings, kv_lengths)
     return x .+ m.mlp(m.post_attention_layernorm(x))
 end
 
@@ -55,17 +56,18 @@ end
 end
 Flux.@layer LlamaModel
 
-# The token embeddings, the rotary tables and the lengths of the sequences of a batch.
+# The token embeddings, the rotary tables of the layers (transformers'
+# `position_embeddings`) and the lengths of the sequences of a batch.
 function embed(m::LlamaModel, input_ids, attention_mask)
     x = m.embed_tokens(input_ids)
-    cos, sin = rotary_tables(m.rotary_emb, x, size(input_ids, 1))
-    return x, cos, sin, kv_lengths_of(attention_mask, input_ids)
+    position_embeddings = rotary_tables(m.rotary_emb, x, size(input_ids, 1))
+    return x, position_embeddings, kv_lengths_of(attention_mask, input_ids)
 end
 
 function (m::LlamaModel)(input_ids::AbstractMatrix{<:Integer}; attention_mask = nothing)
-    x, cos, sin, kv_lengths = embed(m, input_ids, attention_mask)
+    x, position_embeddings, kv_lengths = embed(m, input_ids, attention_mask)
     for layer in m.layers
-        x = layer(x, cos, sin, kv_lengths)
+        x = layer(x, position_embeddings, kv_lengths)
     end
     return m.norm(x)
 end
@@ -75,40 +77,45 @@ function (m::LlamaModel)(input_ids::AbstractVector{<:Integer}; attention_mask = 
     return dropdims(m(reshape(input_ids, :, 1); attention_mask = mask); dims = 3)
 end
 
-@concrete struct LlamaForCausalLM
+# A causal language model: a decoder `model` (a `LlamaModel`) and the output projection
+# `lm_head` of its `forward_head`.
+abstract type CausalLM end
+
+function forward_features(m::CausalLM, input_ids; attention_mask = nothing)
+    return m.model(input_ids; attention_mask)
+end
+
+function (m::CausalLM)(input_ids; attention_mask = nothing)
+    return forward_head(m, forward_features(m, input_ids; attention_mask))
+end
+
+@concrete struct LlamaForCausalLM <: CausalLM
     model
     lm_head
 end
 Flux.@layer LlamaForCausalLM
 
-function forward_features(m::LlamaForCausalLM, input_ids; attention_mask = nothing)
-    return m.model(input_ids; attention_mask)
-end
-
 forward_head(m::LlamaForCausalLM, x; pre_logits::Bool = false) = pre_logits ? x : m.lm_head(x)
 
-function (m::LlamaForCausalLM)(input_ids; attention_mask = nothing)
-    return forward_head(m, forward_features(m, input_ids; attention_mask))
-end
-
 """
-    forward_intermediates(model::LlamaForCausalLM, input_ids; indices = nothing, norm = false,
-                          stop_early = false, intermediates_only = false, attention_mask = nothing)
+    forward_intermediates(model::Union{LlamaForCausalLM, Gemma3ForCausalLM}, input_ids;
+                          indices = nothing, norm = false, stop_early = false,
+                          intermediates_only = false, attention_mask = nothing)
 
-The outputs of the decoder layers of a language model built on Llama's classes (Llama, Qwen2,
-Qwen3), each of size `(hidden_size, seq_len, batch_size)`: the `i`-th intermediate is
+The outputs of the decoder layers of a language model (Llama, Qwen2, Qwen3, Gemma 3), each
+of size `(hidden_size, seq_len, batch_size)`: the `i`-th intermediate is
 transformers' `output_hidden_states[i]`, the output of the `i`-th layer, except that the last
 one is not normed unless `norm = true`. The features are the hidden states after the final norm,
 as [`forward_features`](@ref) returns them. `indices`, `norm`, `stop_early` and
 `intermediates_only` are those of the vision models, and `attention_mask` that of the model.
 """
-function forward_intermediates(m::LlamaForCausalLM, input_ids::AbstractMatrix{<:Integer};
+function forward_intermediates(m::CausalLM, input_ids::AbstractMatrix{<:Integer};
         indices = nothing, norm::Bool = false, stop_early::Bool = false,
         intermediates_only::Bool = false, attention_mask = nothing)
     model = m.model
     take, max_index = feature_take_indices(length(model.layers), indices)
-    x, cos, sin, kv_lengths = embed(model, input_ids, attention_mask)
-    layers = [h -> layer(h, cos, sin, kv_lengths) for layer in model.layers]
+    x, position_embeddings, kv_lengths = embed(model, input_ids, attention_mask)
+    layers = [h -> layer(h, position_embeddings, kv_lengths) for layer in model.layers]
     outs = stage_outputs(layers, x, stop_early ? max_index : length(layers))
     intermediates = [norm ? model.norm(outs[i]) : outs[i] for i in take]
     intermediates_only && return intermediates
@@ -121,8 +128,8 @@ end
 Port of transformers' `LlamaForCausalLM`, built from the fields of its `LlamaConfig` (the
 `config.json` of a checkpoint), with the same names and defaults. `create_model` ignores the
 other keys of `config.json`, such as the token ids and generation settings, as transformers does.
-Rotary embeddings other than the default (`rope_scaling` or a `rope_parameters` with another
-`rope_type`, as in Llama 3) error.
+The rotary embedding is the default one or, with `rope_scaling` or `rope_parameters`, one
+with `rope_type = "linear"` or `"llama3"` (Llama 3.1 and later); other types error.
 
 The model maps token indices of size `(seq_len, batch_size)`, or a vector for a single
 sequence, to logits of size `(vocab_size, seq_len, batch_size)`, with causal attention. Token
@@ -144,7 +151,8 @@ function llama_for_causal_lm(; vocab_size = 32000, hidden_size = 4096,
         error("`hidden_size` ($hidden_size) must be divisible by `num_attention_heads` ($num_attention_heads)")
     head_dim, num_key_value_heads = attention_heads(; hidden_size, num_attention_heads,
         num_key_value_heads, head_dim)
-    theta = rope_theta_of("LlamaForCausalLM"; rope_theta, rope_scaling, rope_parameters)
+    rope = rope_parameters_of("LlamaForCausalLM"; rope_theta, rope_scaling, rope_parameters,
+        max_position_embeddings)
     attention(dense) = LlamaAttention(head_dim,
         dense(hidden_size => num_attention_heads * head_dim, attention_bias),
         dense(hidden_size => num_key_value_heads * head_dim, attention_bias),
@@ -153,7 +161,7 @@ function llama_for_causal_lm(; vocab_size = 32000, hidden_size = 4096,
         dropout_or_identity(attention_dropout))
     return llama_like(attention; vocab_size, hidden_size, intermediate_size,
         num_hidden_layers, hidden_act, initializer_range, rms_norm_eps, tie_word_embeddings,
-        rope_theta = theta, head_dim, mlp_bias)
+        rope_parameters = rope, head_dim, mlp_bias)
 end
 
 # A `LlamaForCausalLM` whose layers have the self-attention `attention(dense)`, where
@@ -161,7 +169,7 @@ end
 # transformers derives from Llama's classes (Qwen2, Qwen3) are built with it.
 function llama_like(attention; vocab_size, hidden_size, intermediate_size,
         num_hidden_layers, hidden_act, initializer_range, rms_norm_eps, tie_word_embeddings,
-        rope_theta, head_dim, mlp_bias = false)
+        rope_parameters, head_dim, mlp_bias = false)
     init = normal_init(initializer_range)
     dense(in_out, bias) = Dense(in_out; bias, init)
     norm() = RMSNorm(hidden_size; eps = rms_norm_eps)
@@ -174,7 +182,7 @@ function llama_like(attention; vocab_size, hidden_size, intermediate_size,
     embed_tokens = Embedding(vocab_size => hidden_size; init)
     model = LlamaModel(
         embed_tokens, [decoder_layer() for _ in 1:num_hidden_layers], norm(),
-        RotaryEmbedding(head_dim, rope_theta))
+        RotaryEmbedding(head_dim, rope_parameters))
     lm_head = tie_word_embeddings ? TiedLMHead(embed_tokens.weight) :
               dense(hidden_size => vocab_size, false)
     return LlamaForCausalLM(model, lm_head)
@@ -182,4 +190,6 @@ end
 
 register!(ArchSpec(TRANSFORMERS, "LlamaForCausalLM", llama_for_causal_lm;
     family = "llama",
-    references = ["HuggingFaceTB/SmolLM2-135M" => "93efa2f097d58c2a74874c7e644dbc9b0cee75a2"]))
+    references = [
+        "HuggingFaceTB/SmolLM2-135M" => "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+        "unsloth/Llama-3.2-1B" => "9535bd9b1d1dea6acafbdc4813b728796aeb28da"]))

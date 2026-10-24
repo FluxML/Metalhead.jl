@@ -16,8 +16,9 @@
 end
 Flux.@layer Qwen3Attention
 
-function (m::Qwen3Attention)(x, cos, sin, kv_lengths = nothing)
+function (m::Qwen3Attention)(x, position_embeddings, kv_lengths = nothing)
     _, n, b = size(x)
+    cos, sin = position_embeddings
     q = m.q_norm(reshape(m.q_proj(x), m.head_dim, :, n, b))
     k = m.k_norm(reshape(m.k_proj(x), m.head_dim, :, n, b))
     v = reshape(m.v_proj(x), m.head_dim, :, n, b)
@@ -37,7 +38,7 @@ same names and defaults. transformers derives Qwen3 from Llama's classes, with a
 `LlamaForCausalLM` (see
 [`llama_for_causal_lm`](@ref Metalhead.Transformers.llama_for_causal_lm) for its inputs and
 outputs). Sliding-window attention (`use_sliding_window`, `layer_types`) and rotary
-embeddings other than the default error.
+embeddings other than the default, `"linear"` and `"llama3"` ones error.
 """
 function qwen3_for_causal_lm(; vocab_size = 151936, hidden_size = 4096,
         intermediate_size = 22016, num_hidden_layers = 32, num_attention_heads = 32,
@@ -51,7 +52,9 @@ function qwen3_for_causal_lm(; vocab_size = 151936, hidden_size = 4096,
         sliding_window, max_window_layers, layer_types)
     head_dim, num_key_value_heads = attention_heads(; hidden_size, num_attention_heads,
         num_key_value_heads, head_dim)
-    theta = rope_theta_of("Qwen3ForCausalLM"; rope_theta, rope_scaling, rope_parameters)
+    rope = rope_parameters_of(
+        "Qwen3ForCausalLM"; rope_theta, rope_scaling, rope_parameters,
+        max_position_embeddings)
     attention(dense) = Qwen3Attention(head_dim,
         dense(hidden_size => num_attention_heads * head_dim, attention_bias),
         dense(hidden_size => num_key_value_heads * head_dim, attention_bias),
@@ -61,7 +64,7 @@ function qwen3_for_causal_lm(; vocab_size = 151936, hidden_size = 4096,
         dropout_or_identity(attention_dropout))
     return llama_like(attention; vocab_size, hidden_size, intermediate_size,
         num_hidden_layers, hidden_act, initializer_range, rms_norm_eps, tie_word_embeddings,
-        rope_theta = theta, head_dim)
+        rope_parameters = rope, head_dim)
 end
 
 register!(ArchSpec(TRANSFORMERS, "Qwen3ForCausalLM", qwen3_for_causal_lm;
