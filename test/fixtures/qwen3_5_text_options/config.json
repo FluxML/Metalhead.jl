@@ -1,0 +1,47 @@
+{
+  "architectures": [
+    "Qwen3_5ForCausalLM"
+  ],
+  "attention_bias": true,
+  "attention_dropout": 0.1,
+  "bos_token_id": null,
+  "dtype": "float32",
+  "eos_token_id": null,
+  "head_dim": 32,
+  "hidden_act": "gelu_pytorch_tanh",
+  "hidden_size": 24,
+  "initializer_range": 0.02,
+  "intermediate_size": 20,
+  "layer_types": [
+    "full_attention",
+    "linear_attention",
+    "linear_attention"
+  ],
+  "linear_conv_kernel_dim": 3,
+  "linear_key_head_dim": 6,
+  "linear_num_key_heads": 2,
+  "linear_num_value_heads": 2,
+  "linear_value_head_dim": 4,
+  "max_position_embeddings": 32768,
+  "model_type": "qwen3_5_text",
+  "num_attention_heads": 3,
+  "num_hidden_layers": 3,
+  "num_key_value_heads": 3,
+  "pad_token_id": null,
+  "rms_norm_eps": 1e-05,
+  "rope_parameters": {
+    "mrope_interleaved": true,
+    "mrope_section": [
+      2,
+      2,
+      1
+    ],
+    "partial_rotary_factor": 0.5,
+    "rope_theta": 1000000.0,
+    "rope_type": "default"
+  },
+  "tie_word_embeddings": false,
+  "transformers_version": "5.20.2",
+  "use_cache": true,
+  "vocab_size": 40
+}

@@ -8,6 +8,8 @@ e.g. "LlamaForCausalLM"), "model_type" and "config" (the fields of its config), 
 (batch, seq_len) of random token ids. Its fixture directory is written by `save_pretrained`, and
 the RMSNorms and rotary tables are computed in float64 (see `exact_float64` in common.py).
 With "lengths", the batch is padded on the right and the model takes an `attention_mask`.
+With "mrope_positions": true, it takes random `position_ids` of size (3, batch, seq_len), the
+temporal, height and width positions of a multimodal rotary embedding (Qwen3.5).
 
 A spec with "library": "diffusers" describes a diffusers model, "architecture" (the class, e.g.
 "Flux2Transformer2DModel") with the arguments "config", saved with `save_pretrained`, and the
@@ -179,7 +181,9 @@ def dump_transformers(spec, out, args):
 
     With "lengths" (one per sequence of the batch), the sequences are padded on the right to
     the length of `input_shape`, as by a tokenizer, and the model takes their `attention_mask`,
-    stored as "kwargs/attention_mask"."""
+    stored as "kwargs/attention_mask". With "mrope_positions", the model takes random
+    `position_ids` (3, batch, seq_len), stored permuted as "kwargs/position_ids" so that Julia
+    reads them as (3, seq_len, batch)."""
     seed = spec.get("seed", 0)
     torch.manual_seed(seed)
     model = build(spec).eval()
@@ -212,6 +216,11 @@ def dump_transformers(spec, out, args):
     if "lengths" in spec:
         positions = torch.arange(x.shape[1])
         kwargs["attention_mask"] = torch.stack([positions < n for n in spec["lengths"]]).long()
+    stored = dict(kwargs)
+    if spec.get("mrope_positions"):
+        b, n = x.shape
+        kwargs["position_ids"] = torch.randint(2 * n, (3, b, n), generator=gen)
+        stored["position_ids"] = kwargs["position_ids"].permute(1, 2, 0).contiguous()
     with torch.no_grad():
         logits = model(input_ids=x, **kwargs).logits
         for h in handles:
@@ -228,7 +237,7 @@ def dump_transformers(spec, out, args):
                               for i, y in enumerate(layers)})
 
     acts = {"input": x, "output": logits.contiguous(), "features": features.contiguous(), **taps,
-            **intermediates, **{f"kwargs/{k}": v for k, v in kwargs.items()}}
+            **intermediates, **{f"kwargs/{k}": v for k, v in stored.items()}}
     meta = {"spec": json.dumps(spec), "call_order": json.dumps(order),
             "num_params": str(sum(p.numel() for p in model.parameters())), **versions()}
     save_file(acts, out / "acts.safetensors", metadata=meta)

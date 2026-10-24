@@ -28,5 +28,6 @@ include("qwen3.jl")
 include("gemma3.jl")
 include("granite.jl")
 include("granitemoe.jl")
+include("qwen3_5.jl")
 
 end # module
