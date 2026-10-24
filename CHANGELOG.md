@@ -39,10 +39,11 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
     and FBNetV3; LCNet.
 - Flux ports of [transformers](https://github.com/huggingface/transformers) language models,
   `LlamaForCausalLM` (#327), `Qwen2ForCausalLM` and `Qwen3ForCausalLM` (#329), and
-  `Gemma3ForCausalLM`, the Gemma 3 text model, with its sliding-window attention, validated
-  against `HuggingFaceTB/SmolLM2-135M`, `unsloth/Llama-3.2-1B`, `Qwen/Qwen2.5-0.5B`,
-  `Qwen/Qwen3-0.6B` and `unsloth/gemma-3-270m`. The rotary embeddings may be scaled as in Llama
-  3.1 and later (`rope_type = "llama3"`) or linearly (`"linear"`).
+  `Gemma3ForCausalLM`, the Gemma 3 text model, with its sliding-window attention (#336),
+  validated against `HuggingFaceTB/SmolLM2-135M`, `unsloth/Llama-3.2-1B`,
+  `Qwen/Qwen2.5-0.5B`, `Qwen/Qwen3-0.6B` and `unsloth/gemma-3-270m`. The rotary embeddings
+  may be scaled as in Llama 3.1 and later (`rope_type = "llama3"`) or linearly (`"linear"`)
+  (#336).
   `create_model` loads them from their Hub repository, and takes the fields of `config.json`
   as keyword arguments. They take token indices starting at 1 and return logits; there is no
   key-value cache yet. Batches padded on the right take the tokenizer's `attention_mask`, and
