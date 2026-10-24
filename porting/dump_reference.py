@@ -82,14 +82,16 @@ def dump_reference(repo, revision, batch):
 def dump_lm_reference(repo, sha, max_new_tokens=8):
     from transformers import AutoModelForCausalLM, AutoTokenizer
     model = AutoModelForCausalLM.from_pretrained(repo, revision=sha, dtype=torch.float32,
-                                                 attn_implementation="sdpa").eval()
+                                                 attn_implementation="sdpa",
+                                                 experts_implementation="eager").eval()
     tokenizer = AutoTokenizer.from_pretrained(repo, revision=sha)
     ids = [tokenizer(p)["input_ids"] for p in PROMPTS]
     n = min(map(len, ids))
     input_ids = torch.tensor([i[:n] for i in ids])
     with torch.no_grad():
         hidden = model.model(input_ids=input_ids).last_hidden_state
-        logits = model.lm_head(hidden[:, -1, :])
+        # the head of the model, which may scale (Granite) or softcap (Gemma) the logits
+        logits = model(input_ids=input_ids, logits_to_keep=1).logits[:, -1, :]
         generated = model.generate(input_ids[:1], max_new_tokens=max_new_tokens, do_sample=False,
                                    pad_token_id=tokenizer.eos_token_id)
 

@@ -48,7 +48,11 @@ function (m::LlamaDecoderLayer)(x, position_embeddings, kv_lengths = nothing)
     return x .+ m.mlp(m.post_attention_layernorm(x))
 end
 
-@concrete struct LlamaModel
+# A decoder of token indices, with the fields `layers` and `norm`, whose `embed` gives the
+# inputs of its first layer.
+abstract type DecoderModel end
+
+@concrete struct LlamaModel <: DecoderModel
     embed_tokens
     layers
     norm
@@ -64,7 +68,7 @@ function embed(m::LlamaModel, input_ids, attention_mask)
     return x, position_embeddings, kv_lengths_of(attention_mask, input_ids)
 end
 
-function (m::LlamaModel)(input_ids::AbstractMatrix{<:Integer}; attention_mask = nothing)
+function (m::DecoderModel)(input_ids::AbstractMatrix{<:Integer}; attention_mask = nothing)
     x, position_embeddings, kv_lengths = embed(m, input_ids, attention_mask)
     for layer in m.layers
         x = layer(x, position_embeddings, kv_lengths)
@@ -72,12 +76,12 @@ function (m::LlamaModel)(input_ids::AbstractMatrix{<:Integer}; attention_mask = 
     return m.norm(x)
 end
 
-function (m::LlamaModel)(input_ids::AbstractVector{<:Integer}; attention_mask = nothing)
+function (m::DecoderModel)(input_ids::AbstractVector{<:Integer}; attention_mask = nothing)
     mask = attention_mask === nothing ? nothing : reshape(attention_mask, :, 1)
     return dropdims(m(reshape(input_ids, :, 1); attention_mask = mask); dims = 3)
 end
 
-# A causal language model: a decoder `model` (a `LlamaModel`) and the output projection
+# A causal language model: a decoder `model` (a `DecoderModel`) and the output projection
 # `lm_head` of its `forward_head`.
 abstract type CausalLM end
 
@@ -98,12 +102,12 @@ Flux.@layer LlamaForCausalLM
 forward_head(m::LlamaForCausalLM, x; pre_logits::Bool = false) = pre_logits ? x : m.lm_head(x)
 
 """
-    forward_intermediates(model::Union{LlamaForCausalLM, Gemma3ForCausalLM}, input_ids;
-                          indices = nothing, norm = false, stop_early = false,
+    forward_intermediates(model::Union{LlamaForCausalLM, Gemma3ForCausalLM, GraniteForCausalLM},
+                          input_ids; indices = nothing, norm = false, stop_early = false,
                           intermediates_only = false, attention_mask = nothing)
 
-The outputs of the decoder layers of a language model (Llama, Qwen2, Qwen3, Gemma 3), each
-of size `(hidden_size, seq_len, batch_size)`: the `i`-th intermediate is
+The outputs of the decoder layers of a language model (Llama, Qwen2, Qwen3, Gemma 3,
+Granite), each of size `(hidden_size, seq_len, batch_size)`: the `i`-th intermediate is
 transformers' `output_hidden_states[i]`, the output of the `i`-th layer, except that the last
 one is not normed unless `norm = true`. The features are the hidden states after the final norm,
 as [`forward_features`](@ref) returns them. `indices`, `norm`, `stop_early` and

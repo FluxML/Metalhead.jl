@@ -39,15 +39,19 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
     and FBNetV3; LCNet.
 - Flux ports of [transformers](https://github.com/huggingface/transformers) language models,
   `LlamaForCausalLM` (#327), `Qwen2ForCausalLM` and `Qwen3ForCausalLM` (#329), and
-  `Gemma3ForCausalLM`, the Gemma 3 text model, with its sliding-window attention (#336),
-  validated against `HuggingFaceTB/SmolLM2-135M`, `unsloth/Llama-3.2-1B`,
-  `Qwen/Qwen2.5-0.5B`, `Qwen/Qwen3-0.6B` and `unsloth/gemma-3-270m`. The rotary embeddings
-  may be scaled as in Llama 3.1 and later (`rope_type = "llama3"`) or linearly (`"linear"`)
-  (#336).
-  `create_model` loads them from their Hub repository, and takes the fields of `config.json`
-  as keyword arguments. They take token indices starting at 1 and return logits; there is no
-  key-value cache yet. Batches padded on the right take the tokenizer's `attention_mask`, and
-  `forward_intermediates` returns the hidden states of the decoder layers.
+  `Gemma3ForCausalLM`, the Gemma 3 text model, with its sliding-window attention (#336), and
+  IBM's Granite (`GraniteForCausalLM`), its mixtures of experts (`GraniteMoeForCausalLM` and
+  `GraniteMoeSharedForCausalLM`) and Granite 4.0 without its Mamba layers
+  (`GraniteMoeHybridForCausalLM`), validated against `HuggingFaceTB/SmolLM2-135M`,
+  `unsloth/Llama-3.2-1B`, `Qwen/Qwen2.5-0.5B`, `Qwen/Qwen3-0.6B`, `unsloth/gemma-3-270m`,
+  `ibm-granite/granite-3.3-2b-base`, `ibm-granite/granite-3.1-1b-a400m-base`,
+  `ibm-research/moe-7b-1b-active-shared-experts` and `ibm-granite/granite-4.0-350m-base`.
+  The rotary embeddings may be scaled as in Llama 3.1 and later (`rope_type = "llama3"`) or
+  linearly (`"linear"`) (#336). `create_model` loads them from their Hub repository, and
+  takes the fields of `config.json` as keyword arguments. They take token indices starting
+  at 1 and return logits; there is no key-value cache yet. Batches padded on the right take
+  the tokenizer's `attention_mask`, and `forward_intermediates` returns the hidden states of
+  the decoder layers.
 - Flux ports of [diffusers](https://github.com/huggingface/diffusers) models and pipelines, in
   `Metalhead.Diffusers`: text-to-image generation with FLUX.2 [klein] (`Flux2KleinPipeline`,
   with `Flux2Transformer2DModel`, `AutoencoderKLFlux2` and `FlowMatchEulerDiscreteScheduler`),
