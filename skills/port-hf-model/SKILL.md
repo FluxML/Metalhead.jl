@@ -439,8 +439,8 @@ first. The workflow is the one above, with these differences.
   the checkpoint's keys when loading (`conversion_mapping.py`); `save_pretrained` writes the
   checkpoint's keys back, so fixtures have them too. Mirror the checkpoint's keys: Granite's
   `input_linear.weight` is a plain 3D array field, `(in, out, num_experts)` in Julia. Compute
-  the experts with `moe_experts` (`layers.jl`), and route with `top_k_experts` and
-  `expert_scores`. Routers often compute in float32 (`.float()`, `softmax(dtype=torch.float)`):
+  the experts with `moe_experts` (`layers.jl`), and pick them with `MLUtils.topk`, which runs
+  on the GPU too. Routers often compute in float32 (`.float()`, `softmax(dtype=torch.float)`):
   patch them in `exact_float64`, and in Julia compute the routing weights in
   `promote_type(eltype(x), Float32)`. `build_transformers` uses the eager experts
   (`experts_implementation="eager"`), and `rerandomize` gives stacked `..._proj` parameters

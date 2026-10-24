@@ -97,6 +97,6 @@ In Granite MoE (`GraniteMoeForCausalLM`, and `GraniteMoeSharedForCausalLM` with 
 expert), the MLP of each layer is a sparse mixture of experts: a router picks the
 `num_experts_per_tok` experts of each token, whose outputs are summed with the router's
 weights. Each projection of the experts is one `batched_mul` over the tokens grouped by
-expert, so the experts compute only for their own tokens, as in transformers. The router
-picks its experts on the CPU, so a model on the GPU copies the router's logits to the CPU
-once per layer. The load-balancing loss of training is not implemented.
+expert, so the experts compute only for their own tokens, as in transformers. Grouping the
+tokens by expert copies the experts of each token to the CPU, once per layer on a GPU. The
+load-balancing loss of training is not implemented.

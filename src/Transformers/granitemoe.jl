@@ -25,11 +25,9 @@ end
 Flux.@layer GraniteMoeTopKGating
 
 function (m::GraniteMoeTopKGating)(x)
-    logits = m.layer(x)
-    index = top_k_experts(logits, m.top_k)
     T = eltype(x)
-    weights = softmax(promote_type(T, Float32).(expert_scores(logits, index)); dims = 1)
-    return index, T.(weights)
+    logits, index = topk(m.layer(x), m.top_k)
+    return index, T.(softmax(promote_type(T, Float32).(logits); dims = 1))
 end
 
 @concrete struct GraniteMoeMoE

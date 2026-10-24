@@ -76,8 +76,8 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
 
 ### Changed
 
-- New dependencies: HuggingFaceApi, SafeTensors, JSON and ConcreteStructs. Flux 0.16.14 and
-  NNlib 0.9.53 are now the minimum versions (#305, #327).
+- New dependencies: HuggingFaceApi, SafeTensors, JSON and ConcreteStructs. Flux 0.16.14,
+  NNlib 0.9.53 and MLUtils 0.4.9 are now the minimum versions (#305, #327, #337).
 - Downloads share the cache of Python's `huggingface_hub` (`~/.cache/huggingface/hub`), and
   its `HF_TOKEN`, `HF_HUB_CACHE` and `HF_HUB_OFFLINE` environment variables.
 

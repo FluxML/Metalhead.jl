@@ -191,33 +191,12 @@ function gated(act, h)
     return reshape(y, m, size(h)[2:end]...)
 end
 
-# The `k` experts of each token, a column of the router's `scores` (num_experts, n), by
-# decreasing score as `torch.topk`: a matrix (k, n) on the CPU.
-function top_k_experts(scores, k)
-    s = Array(scores)
-    index = Matrix{Int}(undef, k, size(s, 2))
-    for (j, c) in enumerate(eachcol(s))
-        index[:, j] = partialsortperm(c, 1:k; rev = true)
-    end
-    return index
-end
-ChainRulesCore.@non_differentiable top_k_experts(::Any...)
-
-# The scores `scores[index[i, j], j]` of the experts `index` (k, n) of each token.
-function expert_scores(scores, index)
-    return NNlib.gather(vec(scores), linear_indices(scores, index))
-end
-
-function linear_indices(scores, index)
-    return device_indices(scores, index .+ size(scores, 1) .* (0:(size(index, 2) - 1))')
-end
-ChainRulesCore.@non_differentiable linear_indices(::Any...)
-
-# The tokens of each expert, for the experts `index` (k, n) of the tokens: a matrix
-# (capacity, num_experts) whose column `e` holds the tokens routed to `e`, in order, padded
-# with token 1 to the largest number of tokens of an expert, and the matrix (k, n) of the
-# positions in it of the tokens' experts.
+# The tokens of each expert, for the experts `index` (k, n) of the tokens, copied to the
+# CPU: a matrix (capacity, num_experts) whose column `e` holds the tokens routed to `e`, in
+# order, padded with token 1 to the largest number of tokens of an expert, and the matrix
+# (k, n) of the positions in it of the tokens' experts.
 function expert_slots(index, num_experts)
+    index = Array(index)
     k = size(index, 1)
     counts = zeros(Int, num_experts)
     for e in index
