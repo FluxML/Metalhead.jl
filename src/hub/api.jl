@@ -1,6 +1,26 @@
 const ELTYPE_CONVERTERS = Dict{DataType, Function}(
     Float16 => f16, BFloat16 => bf16, Float32 => f32, Float64 => f64)
 
+"""
+    float32_functor(constructor, layer)
+
+The `Functors.functor` of a normalization `layer` whose floating-point arrays stay `Float32`
+when a walk makes them 16-bit, as `f16` and `bf16` do: NNlib's norms take `Float32`
+parameters for 16-bit data. A norm layer defines it after its `Flux.@layer`, with
+`Functors.functor(::Type{<:MyNorm}, m) = float32_functor(MyNorm, m)`.
+"""
+function float32_functor(constructor, layer)
+    names = fieldnames(typeof(layer))
+    children = NamedTuple{names}(map(name -> getfield(layer, name), names))
+    return children, c -> constructor(map(keep_float32, children, c)...)
+end
+
+# The values of `old` rather than their 16-bit rounding, on the device of `new`
+keep_float32(old, new) = new
+function keep_float32(old::AbstractArray, new::AbstractArray{<:Union{Float16, BFloat16}})
+    return Flux.get_device(new)(convert(AbstractArray{Float32}, old))
+end
+
 nt(d::AbstractDict) = (; (Symbol(k) => jsonvalue(v) for (k, v) in d)...)
 jsonvalue(v::AbstractVector) = Tuple(jsonvalue.(v))
 jsonvalue(v::AbstractDict) = nt(v)

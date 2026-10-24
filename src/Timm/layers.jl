@@ -230,7 +230,7 @@ end
     eps
 end
 Flux.@layer LayerNorm2d
-Flux._keep_f32_under_halfprec(::LayerNorm2d) = true
+Functors.functor(::Type{<:LayerNorm2d}, m) = float32_functor(LayerNorm2d, m)
 
 function LayerNorm2d(channels::Integer; eps = 1e-6)
     return LayerNorm2d(ones(Float32, channels), zeros(Float32, channels), eps)

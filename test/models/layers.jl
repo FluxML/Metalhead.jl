@@ -35,9 +35,14 @@ end
         (LayerNorm2d(4), randn(Float32, 5, 3, 4, 2))]
         foreach(p -> p .= randn(Float32, size(p)), Flux.trainables(norm))
         half, xh = f16(norm), f16(x)
-        @test all(p -> eltype(p) == Float32, Flux.trainables(half))
+        @test Flux.trainables(half) == Flux.trainables(norm)
+        @test all(p -> p isa Vector{Float32}, Flux.trainables(half))
+        @test all(p -> p isa Vector{Float32}, Flux.trainables(bf16(norm)))
+        @test all(p -> p isa Vector{Float32}, Flux.trainables(cpu(half)))
         @test half(xh) isa Array{Float16}
         @test half(xh) ≈ f16(norm(Float32.(xh))) rtol=1e-3
         @test f64(norm)(Float64.(x)) isa Array{Float64}
+        g = Flux.gradient(m -> sum(f16(m)(xh)), norm)[1]
+        @test g.weight isa Vector{Float32}
     end
 end

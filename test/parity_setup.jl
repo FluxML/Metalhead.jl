@@ -76,22 +76,29 @@ function check_gradient(model, x...)
     return isempty(bad)
 end
 
+# The layers whose arrays stay Float32 under `f16`/`bf16`: Flux's, and Metalhead's
+# (`Metalhead.float32_functor`). Flux 0.16.13 converts those of `LayerNorm` to 16 bits, and
+# FluxML/Flux.jl#2773 keeps them Float32.
+const FLOAT32_LAYERS = Union{BatchNorm, InstanceNorm, GroupNorm,
+    Metalhead.Transformers.RMSNorm, Metalhead.Timm.LayerNorm2d}
+
 """
     check_half_precision(model, x...; T = Float16, rtol = 1e-2, kwargs...) -> Bool
 
 Whether the Float32 `model` converted to `T` (by `f16` or `bf16`) runs in mixed precision on
 the inputs `x` (floating-point arrays are converted to `T`) and keyword arguments `kwargs`:
-the layers that opt out of half precision (`Flux._keep_f32_under_halfprec`, the norms)
-keep `Float32` arrays and every other floating-point array is `T`, the output has eltype
-`T`, no warning is logged (such as Flux's eltype mismatch), and the relative error of the
-output against `model(x)` is at most `rtol`. Logs what fails.
+the norm layers (`FLOAT32_LAYERS`) keep `Float32` arrays and every other floating-point
+array is `T`, the output has eltype `T`, no warning is logged (such as Flux's eltype
+mismatch), and the relative error of the output against `model(x)` is at most `rtol`. Logs
+what fails.
 """
 function check_half_precision(model, x...; T = Float16, rtol = 1e-2, kwargs...)
     half = Metalhead.ELTYPE_CONVERTERS[T](model)
     wrong = String[]
     function walk(l, path)
-        if Flux._keep_f32_under_halfprec(l)
-            all(a -> !(a isa AbstractArray{<:AbstractFloat}) || eltype(a) == Float32,
+        if l isa Union{FLOAT32_LAYERS, LayerNorm}
+            eltypes = l isa LayerNorm ? (T, Float32) : (Float32,)
+            all(a -> !(a isa AbstractArray{<:AbstractFloat}) || eltype(a) in eltypes,
                 Functors.fleaves(l)) || push!(wrong, path)
         elseif l isa AbstractArray{<:AbstractFloat}
             eltype(l) == T || push!(wrong, path)

@@ -274,14 +274,17 @@ normalization layers keep their parameters and statistics in `Float32` and norma
 `Float32`, every other array becomes 16-bit, and so does the data flowing through.
 
 - **A norm layer you write** (`RMSNorm`, `LayerNorm2d`) opts out of the cast with
-  `Flux._keep_f32_under_halfprec(::MyNorm) = true` after its `Flux.@layer` (an internal
-  Flux hook, which `BatchNorm`, `InstanceNorm` and `GroupNorm` define), and passes its
-  parameters to NNlib: `NNlib.rmsnorm(m.weight, x; eps)`, or
-  `NNlib.layernorm(g, b, x; dims, eps)` with `g` and `b` reshaped to broadcast against `x`.
-  These return the eltype of `x`, and throw on 16-bit parameters with 16-bit input. Don't
-  multiply by the weight yourself: a `Float32` weight times `Float16` data is `Float32`.
+  `Functors.functor(::Type{<:MyNorm}, m) = float32_functor(MyNorm, m)` after its
+  `Flux.@layer`, and goes in `FLOAT32_LAYERS` in `test/parity_setup.jl`. Its rebuild keeps
+  the arrays that a walk (`f16`, `bf16`, `adapt`) makes 16-bit in `Float32`, with their
+  original values. Don't use Flux's internal hook `Flux._keep_f32_under_halfprec`, with which
+  `BatchNorm`, `InstanceNorm` and `GroupNorm` do the same. The layer passes its parameters
+  to NNlib: `NNlib.rmsnorm(m.weight, x; eps)`, or `NNlib.layernorm(g, b, x; dims, eps)` with
+  `g` and `b` reshaped to broadcast against `x`. These return the eltype of `x`, and throw on
+  16-bit parameters with 16-bit input. Don't multiply by the weight yourself: a `Float32`
+  weight times `Float16` data is `Float32`.
 - Flux 0.16.13's `LayerNorm` still converts its scale and bias to 16 bits
-  (FluxML/Flux.jl#2773 changes that). Don't define the hook for it here: that is piracy.
+  (FluxML/Flux.jl#2773 changes that). Don't define a functor for it here: that is piracy.
 - Other parameters (layer scale `gamma`, ResMLP's `Affine`) convert like any weight.
 - **Constants built in the forward pass** (blur filters, pooling matrices, rotary tables,
   masks) take `eltype(x)`, and scalars `oftype(x, c)` or `eltype(x)(c)`: a `Float32` array
