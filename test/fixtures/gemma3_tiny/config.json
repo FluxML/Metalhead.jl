@@ -1,0 +1,47 @@
+{
+  "_sliding_window_pattern": 6,
+  "architectures": [
+    "Gemma3ForCausalLM"
+  ],
+  "attention_bias": false,
+  "attention_dropout": 0.0,
+  "attn_logit_softcapping": null,
+  "bos_token_id": 2,
+  "dtype": "float32",
+  "eos_token_id": 1,
+  "final_logit_softcapping": null,
+  "head_dim": 8,
+  "hidden_activation": "gelu_pytorch_tanh",
+  "hidden_size": 32,
+  "initializer_range": 0.02,
+  "intermediate_size": 48,
+  "layer_types": [
+    "sliding_attention",
+    "full_attention",
+    "sliding_attention"
+  ],
+  "max_position_embeddings": 131072,
+  "model_type": "gemma3_text",
+  "num_attention_heads": 4,
+  "num_hidden_layers": 3,
+  "num_key_value_heads": 2,
+  "pad_token_id": 0,
+  "query_pre_attn_scalar": 12,
+  "rms_norm_eps": 1e-06,
+  "rope_parameters": {
+    "full_attention": {
+      "rope_theta": 1000.0,
+      "rope_type": "default"
+    },
+    "sliding_attention": {
+      "rope_theta": 50.0,
+      "rope_type": "default"
+    }
+  },
+  "sliding_window": 3,
+  "tie_word_embeddings": true,
+  "transformers_version": "5.20.2",
+  "use_bidirectional_attention": false,
+  "use_cache": true,
+  "vocab_size": 64
+}

@@ -5,6 +5,7 @@ import functools
 import importlib
 import inspect
 import json
+import math
 import types
 
 import numpy as np
@@ -205,10 +206,17 @@ def exact_float64(model):
     for m in model.modules():
         name = type(m).__name__
         if name.endswith("RMSNorm"):
-            m.forward = types.MethodType(_rmsnorm_forward, m)
+            forward = _gemma_rmsnorm_forward if name.startswith("Gemma") else _rmsnorm_forward
+            m.forward = types.MethodType(forward, m)
         elif name.endswith("RotaryEmbedding"):
-            assert m.rope_type == "default", f"{name}: rope_type {m.rope_type} is not supported"
-            m.forward = types.MethodType(_rotary_forward, m)
+            if isinstance(m.rope_type, dict):  # a table for each layer type (Gemma 3)
+                m.exact_inv_freq = {t: _exact_inv_freq(m.config.rope_parameters[t],
+                                                       getattr(m, f"{t}_inv_freq"))
+                                    for t in m.rope_type}
+                m.forward = types.MethodType(_layer_type_rotary_forward, m)
+            else:
+                m.exact_inv_freq = _exact_inv_freq(m.config.rope_parameters, m.inv_freq)
+                m.forward = types.MethodType(_rotary_forward, m)
 
 
 def _rmsnorm_forward(self, x):
@@ -216,15 +224,49 @@ def _rmsnorm_forward(self, x):
     return self.weight * (x * torch.rsqrt(variance + self.variance_epsilon))
 
 
+def _gemma_rmsnorm_forward(self, x):
+    variance = x.pow(2).mean(-1, keepdim=True)
+    return (x * torch.rsqrt(variance + self.eps)) * (1.0 + self.weight)
+
+
+def _exact_inv_freq(params, inv_freq):
+    """The `inv_freq` of the rotary embedding with `rope_parameters` `params` in float64, which
+    must match transformers' own float32 `inv_freq` to float32 precision."""
+    dim = 2 * inv_freq.numel()
+    freqs = 1.0 / (params["rope_theta"] ** (torch.arange(0, dim, 2, dtype=torch.float64) / dim))
+    rope_type = params.get("rope_type", "default")
+    if rope_type == "linear":
+        freqs = freqs / params["factor"]
+    elif rope_type == "llama3":  # `_compute_llama3_parameters`
+        factor, low, high = params["factor"], params["low_freq_factor"], params["high_freq_factor"]
+        old_context_len = params["original_max_position_embeddings"]
+        wavelen = 2 * math.pi / freqs
+        smooth = (old_context_len / wavelen - low) / (high - low)
+        medium = (1 - smooth) * freqs / factor + smooth * freqs
+        freqs = torch.where(wavelen < old_context_len / high, freqs,
+                            torch.where(wavelen > old_context_len / low, freqs / factor, medium))
+    else:
+        assert rope_type == "default", f"rope_type {rope_type} is not supported"
+    assert torch.allclose(freqs, inv_freq.double(), rtol=1e-6, atol=0), (freqs, inv_freq)
+    return freqs
+
+
 @torch.no_grad()
 def _rotary_forward(self, x, position_ids):
-    dim = 2 * self.inv_freq.numel()
-    base = self.config.rope_parameters["rope_theta"]
-    inv_freq = 1.0 / (base ** (torch.arange(0, dim, 2, dtype=torch.float64) / dim))
+    return _rotary_tables(x, position_ids, self.exact_inv_freq, self.attention_scaling)
+
+
+@torch.no_grad()
+def _layer_type_rotary_forward(self, x, position_ids, layer_type):
+    return _rotary_tables(x, position_ids, self.exact_inv_freq[layer_type],
+                          getattr(self, f"{layer_type}_attention_scaling"))
+
+
+def _rotary_tables(x, position_ids, inv_freq, attention_scaling):
     freqs = position_ids[..., None].double() * inv_freq
     emb = torch.cat((freqs, freqs), dim=-1)
-    return ((emb.cos() * self.attention_scaling).to(x.dtype),
-            (emb.sin() * self.attention_scaling).to(x.dtype))
+    return ((emb.cos() * attention_scaling).to(x.dtype),
+            (emb.sin() * attention_scaling).to(x.dtype))
 
 
 @contextlib.contextmanager

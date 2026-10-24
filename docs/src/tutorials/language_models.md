@@ -2,7 +2,8 @@
 
 Metalhead also ports language models from
 [Hugging Face Transformers](https://github.com/huggingface/transformers), starting with the
-Llama and Qwen architectures (`LlamaForCausalLM`, `Qwen2ForCausalLM` and `Qwen3ForCausalLM`).
+Llama, Qwen and Gemma 3 architectures (`LlamaForCausalLM`, `Qwen2ForCausalLM`,
+`Qwen3ForCausalLM` and `Gemma3ForCausalLM`).
 They load from the Hub like the timm models:
 
 ```julia
@@ -75,11 +76,14 @@ create_model("LlamaForCausalLM"; vocab_size = 1000, hidden_size = 64, intermedia
     num_hidden_layers = 2, num_attention_heads = 4, num_key_value_heads = 2)
 ```
 
-Options that the port doesn't implement raise an error. These are the rotary embeddings other
-than the default one, such as the `rope_type = "llama3"` of Llama 3.1 and later, and the
-sliding-window attention of Qwen2 and Qwen3 (`use_sliding_window`), which their released
-checkpoints leave off.
+The rotary embeddings are the default ones, or those scaled as in Llama 3.1 and later
+(`rope_type = "llama3"`) or linearly (`"linear"`). Options that the ports don't implement raise
+an error. These are the other rotary embeddings, such as `"yarn"`, and the sliding-window
+attention of Qwen2 and Qwen3 (`use_sliding_window`), which their released checkpoints leave
+off. Gemma 3 does have sliding-window attention: its layers attend either to all the previous
+tokens or to the last `sliding_window` of them, as its `layer_types` say.
 
 transformers derives the Qwen2 and Qwen3 classes from Llama's, and their ports reuse the
 Llama structs: a Qwen model is a `LlamaForCausalLM`, whose Qwen3 attention layers are
-`Qwen3Attention`s.
+`Qwen3Attention`s. A Gemma 3 model is a `Gemma3ForCausalLM` whose decoder is a `LlamaModel` of
+`Gemma3DecoderLayer`s.

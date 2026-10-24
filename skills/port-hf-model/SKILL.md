@@ -363,12 +363,14 @@ first. The workflow is the one above, with these differences.
   `modeling_<model>.py` and `configuration_<model>.py`. Many models are Llama with a few
   changes (`# Copied from` or `modular_<model>.py` say which): reuse `RMSNorm`,
   `RotaryEmbedding` and `rotary_tables` (for `NNlib.apply_rotary_embedding`), `TiedLMHead`
-  and `rope_theta_of` from `layers.jl`, and add shared blocks there.
+  and `rope_parameters_of` from `layers.jl`, and add shared blocks there.
 - **Llama subclasses.** Where `modular_<model>.py` subclasses the Llama classes, the port
   reuses the Llama structs, as Res2Net reuses timm's `ResNet`: its builder passes
   `llama_like` (`llama.jl`) a function that builds the attention of a layer, and defines only
   the modules that differ. `qwen2.jl` changes only which projections have a bias;
-  `qwen3.jl` adds a `Qwen3Attention` with per-head `q_norm` and `k_norm`. Weight keys come
+  `qwen3.jl` adds a `Qwen3Attention` with per-head `q_norm` and `k_norm`. A model whose
+  layers differ more but whose decoder runs like Llama's (`gemma3.jl`) builds a `LlamaModel`
+  of its own layers, and a `...ForCausalLM <: CausalLM` where its head differs. Weight keys come
   from field names, so the struct names don't matter for loading. `attention_heads` derives
   `head_dim` and `num_key_value_heads`; an explicit `head_dim` need not divide
   `hidden_size` (Qwen3-0.6B: 16 heads of 128 features, hidden size 1024).
@@ -377,7 +379,8 @@ first. The workflow is the one above, with these differences.
   `sliding_window = None` unless `use_sliding_window`, then derive `layer_types` from
   `max_window_layers`. Declare the derived field (`layer_types`) as well as its sources,
   compute it the same way when it is `nothing`, and check the result: `check_full_attention`
-  in `layers.jl` does this for sliding-window attention, which the ports don't implement.
+  in `layers.jl` does this for the sliding-window attention of Qwen2 and Qwen3, which their
+  ports don't implement, and `gemma3_layer_types` for Gemma 3's, which its port does.
   Probe edge cases in Python before choosing what to reject (`uv run python -I -c ...`):
   transformers itself fails on a `"sliding_attention"` layer when `use_sliding_window` is false.
 - **Undeclared and validated fields.** Grep the modeling file for `getattr(config, ...)`: it
@@ -393,7 +396,11 @@ first. The workflow is the one above, with these differences.
   it only the keys of `config.json` it declares, as transformers ignores the generic ones
   (token ids, `transformers_version`, ...), so declare every field the model reads. Older
   checkpoints have `rope_theta` and `rope_scaling` where transformers 5 writes
-  `rope_parameters`: accept all three (`rope_theta_of`).
+  `rope_parameters`: accept all three (`rope_parameters_of`). It supports the `rope_type`s
+  `"default"`, `"linear"` and `"llama3"`; `inv_freq` (`layers.jl`) computes their frequencies,
+  and `_exact_inv_freq` (`porting/common.py`) the same in float64 for the fixtures, checked
+  against transformers' own. A model with a rotary embedding for each layer type (Gemma 3)
+  holds a NamedTuple of `RotaryEmbedding`s, and its attention picks the tables of its type.
 - **No parameter counts.** A transformers configuration is a checkpoint, not a named
   architecture, so the registry has no defaults to check. Strict loading of the reference
   checks the real configuration.
@@ -412,7 +419,14 @@ first. The workflow is the one above, with these differences.
 - **Float32 inside float64.** transformers computes RMSNorm and the rotary tables in float32
   even in a float64 model, and its eager attention takes the softmax in float32. The fixtures
   use `attn_implementation="sdpa"` and `exact_float64` (`porting/common.py`) to compute in
-  float64; patch any new float32 cast the same way, or the fixture misses 1e-8.
+  float64; patch any new float32 cast the same way, or the fixture misses 1e-8. A float32
+  buffer that holds a constant (Gemma 3's `embed_scale`, `√hidden_size`) stays rounded to
+  float32 in a float64 model: round it to `Float32` in Julia too.
+- **Sliding-window attention** (Gemma 3): `sliding_window_mask` is the window's `mask` for
+  `NNlib.scaled_dot_product_attention`, on top of `is_causal`. In a batch padded on the right,
+  a padding query whose window holds only padding attends to nothing: PyTorch returns zeros
+  there, and NNlib NaNs unless `sliding_window_q_lengths` gives it the matching `q_lengths`.
+  Give a padded fixture such queries (Gemma 3's `lengths = [9, 7, 2]` with a window of 4).
   `bfloat16` checkpoints load into Float32 arrays without any special handling.
 - **Specs.** `{"library": "transformers", "architecture": "LlamaForCausalLM",
   "model_type": "llama", "config": {...}, "input_shape": [B, L], "tap_depth": 3}`. `dump.py`
