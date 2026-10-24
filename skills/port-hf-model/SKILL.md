@@ -36,7 +36,8 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
    defining the same method fail precompilation ("Method overwriting is not permitted").
 3. **Register** every architecture you support with
    `register!(ArchSpec(TIMM, "<arch>", builder; family = "<module>", defaults = (...), references = [...]))`.
-   `family` is the timm model module name, used by `list_models(; byfamily = true)` and the docs.
+   `family` is the model line, used by `list_models(; byfamily = true)` and the docs: usually
+   the timm model module name, but the three Inception modules share `inception`.
    `defaults` must reproduce what `timm.create_model("<arch>")` builds: the `model_args` of
    the entry point, plus `num_classes = 0` when the default pretrained cfg has no classifier.
    `param_counts.py` prints `num_classes` to check this. Register only architectures whose
@@ -78,6 +79,8 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
    `julia --project -e 'using Pkg; Pkg.test(test_args = ["models/<family>"])'` (several are
    allowed, e.g. `["models/mlp_mixer", "models/convmixer"]`). Run all of `["hub", "models"]`
    (several minutes) once, at the end. Don't edit `src/` while a test run is going.
+9. **Document.** Name a new family in the table of the README's "Models" section, and record
+   the port under `[Unreleased]` in `CHANGELOG.md`.
 
 ## Iterating quickly
 
@@ -396,8 +399,10 @@ first. The workflow is the one above, with these differences.
   (`validate_architecture`) say what to reject: `LlamaConfig` requires `hidden_size`
   divisible by `num_attention_heads` even with an explicit `head_dim`; Qwen3's doesn't.
 - **Registry.** Register the class name with the transformers `ConfigFormat`
-  (`src/Transformers/config.jl`) and its model module as the family, e.g.
-  `register!(ArchSpec(TRANSFORMERS, "Qwen2ForCausalLM", builder; family = "qwen2", references = [...]))`.
+  (`src/Transformers/config.jl`) and its model line as the family, which can span several
+  transformers modules (`granite` holds Granite, GraniteMoe, GraniteMoeShared and
+  GraniteMoeHybrid), e.g.
+  `register!(ArchSpec(TRANSFORMERS, "Qwen2ForCausalLM", builder; family = "qwen", references = [...]))`.
   `create_model` looks it up from `config.json`'s `architectures`. The builder takes the
   fields of the config class as keywords, with their names and defaults. `model_args` passes
   it only the keys of `config.json` it declares, as transformers ignores the generic ones

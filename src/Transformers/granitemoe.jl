@@ -222,18 +222,18 @@ function granitemoe_like(name; vocab_size, hidden_size, intermediate_size,
 end
 
 register!(ArchSpec(TRANSFORMERS, "GraniteMoeForCausalLM", granitemoe_for_causal_lm;
-    family = "granitemoe",
+    family = "granite",
     references = [
         "ibm-granite/granite-3.1-1b-a400m-base" => "408b6e90baab8cf24f4aa9f8e19703ffa0a53b29"]))
 
 register!(ArchSpec(TRANSFORMERS, "GraniteMoeSharedForCausalLM",
     granitemoeshared_for_causal_lm;
-    family = "granitemoeshared",
+    family = "granite",
     references = [
         "ibm-research/moe-7b-1b-active-shared-experts" => "6194d7218c3e792b939b535f5640f9c32be9b442"]))
 
 register!(ArchSpec(TRANSFORMERS, "GraniteMoeHybridForCausalLM",
     granitemoehybrid_for_causal_lm;
-    family = "granitemoehybrid",
+    family = "granite",
     references = [
         "ibm-granite/granite-4.0-350m-base" => "a50b46cef21c8a86b15f0496cb794487a78a910b"]))

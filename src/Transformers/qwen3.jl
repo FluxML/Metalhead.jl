@@ -69,5 +69,5 @@ function qwen3_for_causal_lm(; vocab_size = 151936, hidden_size = 4096,
 end
 
 register!(ArchSpec(TRANSFORMERS, "Qwen3ForCausalLM", qwen3_for_causal_lm;
-    family = "qwen3",
+    family = "qwen",
     references = ["Qwen/Qwen3-0.6B" => "c1899de289a04d12100db370d81485cdf75e47ca"]))

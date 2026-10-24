@@ -13,8 +13,8 @@ end
 function family_file(spec)
     if spec.format == Metalhead.Timm.TIMM
         aliases = Dict("vision_transformer" => "vit", "xception_aligned" => "xception")
-        file = get(aliases, spec.family, spec.family)
-        return "src/Timm/$file.jl"
+        file = "src/Timm/$(get(aliases, spec.family, spec.family)).jl"
+        isfile(joinpath(pkgdir(Metalhead), file)) && return file
     end
     return relpath(string(first(methods(spec.build)).file), pkgdir(Metalhead))
 end
@@ -34,23 +34,19 @@ function write_model_list(path)
         "flux2" => "FLUX.2",
         "gemma3" => "Gemma 3",
         "granite" => "Granite",
-        "granitemoe" => "Granite MoE",
-        "granitemoehybrid" => "Granite 4.0 (GraniteMoeHybrid, without Mamba layers)",
-        "granitemoeshared" => "Granite MoE with a shared expert",
-        "inception_resnet_v2" => "Inception-ResNet-v2",
-        "inception_v3" => "Inception-v3",
-        "inception_v4" => "Inception-v4",
+        "inception" => "Inception-v3, Inception-v4 and Inception-ResNet-v2",
         "llama" => "Llama",
         "mlp_mixer" => "MLP-Mixer, ResMLP and gMLP",
         "mobilenetv3" => "MobileNetV3/V4, FBNetV3 and LCNet",
-        "qwen2" => "Qwen2",
-        "qwen3" => "Qwen3",
+        "qwen" => "Qwen",
         "res2net" => "Res2Net",
         "resnet" => "ResNet",
         "vgg" => "VGG",
         "vision_transformer" => "Vision Transformer (ViT)",
         "xception_aligned" => "Aligned Xception")
     title(family) = get(titles, family, family)
+    notes = Dict("granite" => "Granite 4.0 models load without Mamba layers, so the hybrid " *
+                              "\"H\" models (`granite-4.0-h-*`) don't load.")
     libraries = ["timm" => "Vision models (timm)",
         "transformers" => "Language models (transformers)",
         "diffusers" => "Image generation (diffusers)"]
@@ -81,9 +77,11 @@ function write_model_list(path)
             with `create_model("<architecture>")`, or load a Hub checkpoint of it with
             `create_model("<organisation>/<repository>"; pretrained = true)`.
 
-            Models are grouped by library and family, following the original library's model
-            modules. Wide ResNet, ResNeXt and SE-ResNet belong to the ResNet family;
-            Res2Net and aligned Xception have their own families.
+            Models are grouped by library and family, a model line. A timm family is usually
+            one of timm's model modules: Wide ResNet, ResNeXt and SE-ResNet belong to the
+            ResNet family; Res2Net and aligned Xception have their own families; the three
+            Inception modules share one. A transformers or diffusers family, such as Granite
+            or FLUX.2, can span several modules.
 
             Browse the same families from Julia with [`list_models`](@ref):
 
@@ -116,6 +114,7 @@ function write_model_list(path)
                 files = unique(family_file.(specs))
                 sources = join(("[`$(basename(f))`]($blob/$f)" for f in files), ", ")
                 println(io, "`$family`: $count $noun. Source: $sources.\n")
+                haskey(notes, family) && println(io, notes[family], "\n")
                 println(io, "| Architecture | Validated checkpoints |\n|:--|:--|")
                 for s in specs
                     refs = join(("[`$repo`]($(hub_url(repo, sha)))"

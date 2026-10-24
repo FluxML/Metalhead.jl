@@ -33,7 +33,7 @@ end
     model = create_model("Qwen2ForCausalLM"; tiny...)
     @test size(model(rand(1:16, 5, 3))) == (16, 5, 3)
     @test size(model(rand(1:16, 5))) == (16, 5)
-    @test list_models(; byfamily = true)["qwen2"] == ["Qwen2ForCausalLM"]
+    @test "Qwen2ForCausalLM" in list_models(; byfamily = true)["qwen"]
     attn = model.model.layers[1].self_attn
     @test size(attn.k_proj.weight) == (4, 8)
     @test attn.q_proj.bias isa AbstractVector && attn.k_proj.bias isa AbstractVector &&

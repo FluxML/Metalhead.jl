@@ -268,7 +268,7 @@ function feature_info(m::InceptionV3)
 end
 
 # The torchvision checkpoint also holds the auxiliary classifier, which timm drops on load.
-register!(ArchSpec(TIMM, "inception_v3", inception_v3; family = "inception_v3",
+register!(ArchSpec(TIMM, "inception_v3", inception_v3; family = "inception",
     references = ["timm/inception_v3.tv_in1k" =>
         "393d84cc85c467d8fbc0dc81a65c04e87a32572c"],
     ignore = [r"^AuxLogits\."]))
