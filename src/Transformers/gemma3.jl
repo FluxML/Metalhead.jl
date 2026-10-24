@@ -32,7 +32,8 @@ least `Float32` and keeps its `weight` in `Float32` under `f16`/`bf16`.
     eps
 end
 Flux.@layer Gemma3RMSNorm
-Flux._keep_f32_under_halfprec(::Gemma3RMSNorm) = true
+Flux.f16(m::Gemma3RMSNorm, cx) = f32(m, cx)
+Flux.bf16(m::Gemma3RMSNorm, cx) = f32(m, cx)
 
 Gemma3RMSNorm(dim::Integer; eps) = Gemma3RMSNorm(zeros(Float32, dim), Float64(eps))
 
