@@ -183,14 +183,6 @@ function conv_norm_act(in_chs, out_chs, kernel_size = 1; stride = 1, padding = "
     return Chain(; conv, bn, aa = create_aa(aa_layer, out_chs; stride))
 end
 
-# nn.AvgPool2d(k, stride, ceil_mode=True, count_include_pad=False)
-function avg_pool_ceil(x, k::Int, stride::Int)
-    pad(n) = max(0, cld(n - k, stride) * stride + k - n)
-    return NNlib.meanpool(
-        x, (k, k); stride, pad = (0, pad(size(x, 1)), 0, pad(size(x, 2))),
-        count_include_pad = false)
-end
-
 # timm's SelectAdaptivePool2d(pool_type="avg")
 function select_adaptive_pool2d(; flatten::Bool)
     return Chain(; pool = GlobalMeanPool(), flatten = flatten ? Flux.flatten : identity)
@@ -230,7 +222,8 @@ end
     eps
 end
 Flux.@layer LayerNorm2d
-Flux._keep_f32_under_halfprec(::LayerNorm2d) = true
+Flux.f16(m::LayerNorm2d, cx) = f32(m, cx)
+Flux.bf16(m::LayerNorm2d, cx) = f32(m, cx)
 
 function LayerNorm2d(channels::Integer; eps = 1e-6)
     return LayerNorm2d(ones(Float32, channels), zeros(Float32, channels), eps)
@@ -290,10 +283,6 @@ Flux.@layer LayerScale
 layer_scale(dim, init_values) = LayerScale(fill(Float32(init_values), dim))
 
 (m::LayerScale)(x) = x .* m.gamma
-
-# timm.layers.quick_gelu, the activation of OpenAI's CLIP.
-quick_gelu(x::Number) = x * sigmoid(oftype(x, 1.702) * x)
-quick_gelu(x::AbstractArray) = quick_gelu.(x)
 
 # timm.layers.AttentionPoolLatent on (C, N, B) tokens: attention from learned latent queries,
 # then an MLP, keeping the first latent (pool_type = "token"). Without qk_norm, whose

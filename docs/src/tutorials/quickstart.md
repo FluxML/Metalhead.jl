@@ -164,7 +164,7 @@ model = create_model("timm/convnext_tiny.fb_in1k"; pretrained = true, num_classe
 Flux.trainmode!(model)
 
 loss(m, x, y) = Flux.logitcrossentropy(m(x), y)
-data = [(rand(Float32, 224, 224, 3, 4), Flux.onehotbatch(rand(1:10, 4), 1:10))]
+data = [(rand(Float32, 224, 224, 3, 4), rand(1:10, 4))]  # labels in 1:num_classes
 opt_state = Flux.setup(AdamW(1e-4), model)
 Flux.train!(loss, model, data, opt_state)
 ```

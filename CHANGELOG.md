@@ -53,12 +53,9 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
   prompts as strings.
 - Mixed precision under `eltype = Float16` or `Flux.BFloat16` (or `f16`/`bf16`, #332): the
   RMSNorms of the language models and timm's `LayerNorm2d` keep their parameters in
-  `Float32`, as Flux's `BatchNorm` and `GroupNorm` do, and normalise in `Float32`, while the
-  activations stay in half precision. ViTs resample their position embeddings in `Float32`,
-  as timm does. Flux's `LayerNorm` does the same from the release after Flux 0.16.13
-  (FluxML/Flux.jl#2773). On the CPU, the RMSNorms and Flux's `LayerNorm` and `GroupNorm`
-  fail on `BFloat16` input with KernelAbstractions 0.10 until the NNlib release after 0.9.52
-  (FluxML/NNlib.jl#843).
+  `Float32`, as Flux's `BatchNorm`, `GroupNorm` and `LayerNorm` do, and normalise in
+  `Float32`, while the activations stay in half precision. ViTs resample their position
+  embeddings in `Float32`, as timm does.
 - Validation against PyTorch: float64 parity fixtures for every code path, run in CI without
   Python or network access, and float32 references for 59 pretrained checkpoints. Weights load
   strictly by name.
@@ -71,8 +68,8 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
 
 ### Changed
 
-- New dependencies: HuggingFaceApi, SafeTensors, JSON and ConcreteStructs. Flux 0.16.13 and
-  NNlib 0.9.52 are now the minimum versions (#305, #327).
+- New dependencies: HuggingFaceApi, SafeTensors, JSON and ConcreteStructs. Flux 0.16.14 and
+  NNlib 0.9.53 are now the minimum versions (#305, #327).
 - Downloads share the cache of Python's `huggingface_hub` (`~/.cache/huggingface/hub`), and
   its `HF_TOKEN`, `HF_HUB_CACHE` and `HF_HUB_OFFLINE` environment variables.
 
