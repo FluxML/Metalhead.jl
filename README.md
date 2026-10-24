@@ -4,14 +4,40 @@
 [![CI](https://github.com/FluxML/Metalhead.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/FluxML/Metalhead.jl/actions/workflows/CI.yml)
 [![Coverage](https://codecov.io/gh/FluxML/Metalhead.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/FluxML/Metalhead.jl)
 
-Metalhead.jl provides [Flux.jl](https://fluxml.ai) ports of models from the
-[Hugging Face Hub](https://huggingface.co/models): the vision models of
-[timm](https://github.com/huggingface/pytorch-image-models), language models of
-[transformers](https://github.com/huggingface/transformers), starting with Llama, Qwen, Gemma 3 and Granite, and
-text-to-image pipelines of [diffusers](https://github.com/huggingface/diffusers), starting with
-FLUX.2 [klein]. Each port mirrors the module
-structure of the PyTorch original, loads the original weights directly from the Hub, and is
-checked numerically against PyTorch.
+Metalhead.jl brings pretrained models from the [Hugging Face Hub](https://huggingface.co/models)
+to [Flux.jl](https://fluxml.ai). It ports models from three Hugging Face libraries:
+
+- **Vision models** from [timm](https://github.com/huggingface/pytorch-image-models): about
+  300 architectures, including ResNet, ConvNeXt, EfficientNet, MobileNet and ViT, for
+  classification or as backbones.
+- **Language models** from [transformers](https://github.com/huggingface/transformers): Llama,
+  Qwen, Gemma 3 and Granite.
+- **Text-to-image pipelines** from [diffusers](https://github.com/huggingface/diffusers):
+  FLUX.2 [klein].
+
+`create_model` downloads a repository's configuration and weights and returns an ordinary Flux
+model, ready for inference or fine-tuning, on the CPU or a GPU. The models run in Julia,
+without PyTorch. Each port mirrors the module tree of the PyTorch original, loads its
+safetensors weights by name, and is
+[checked numerically against PyTorch](https://fluxml.ai/Metalhead.jl/dev/validation/).
+
+## Contents
+
+- [Installation](#installation)
+- [Usage](#usage)
+  - [Creating a model](#creating-a-model)
+  - [Inputs and outputs](#inputs-and-outputs)
+  - [Preprocessing](#preprocessing)
+  - [Features and the classifier](#features-and-the-classifier)
+  - [Multi-scale features](#multi-scale-features)
+  - [Fine-tuning](#fine-tuning)
+  - [Model structure](#model-structure)
+  - [Language models](#language-models)
+  - [Text-to-image generation](#text-to-image-generation)
+- [Validated against PyTorch](#validated-against-pytorch)
+- [Contributing](#contributing)
+- [Upgrading from Metalhead 0.9](#upgrading-from-metalhead-09)
+- [Acknowledgements](#acknowledgements)
 
 ## Installation
 
@@ -212,13 +238,27 @@ equivalent of each model.
 
 ## Acknowledgements
 
-The architectures, pretrained weights and their configurations come from
-[timm](https://github.com/huggingface/pytorch-image-models) (PyTorch Image Models), by Ross
-Wightman and the Hugging Face team, and from
-[transformers](https://github.com/huggingface/transformers), by the Hugging Face team.
-Metalhead's ports translate their code, and its tests compare against their outputs.
-Pretrained weights keep the license of their Hub repository.
+Metalhead's ports translate the code of three Hugging Face libraries, and its tests compare
+against their outputs: [timm](https://github.com/huggingface/pytorch-image-models) (PyTorch
+Image Models), by Ross Wightman and the Hugging Face team, and
+[transformers](https://github.com/huggingface/transformers) and
+[diffusers](https://github.com/huggingface/diffusers), by the Hugging Face team and their
+contributors. The pretrained weights and their configurations are those of the Hub
+repositories, published by timm or by each model's authors, and keep the license of their
+repository.
 
-Porting timm with AI agents, loading the Hub weights by name and checking the result against
-PyTorch, follows [Luximm.jl](https://github.com/csvance/Luximm.jl) by Carroll Vance, which
-does the same for [Lux.jl](https://lux.csail.mit.edu).
+Porting models with AI agents, loading the Hub weights by name and checking the result
+against PyTorch, follows [Luximm.jl](https://github.com/csvance/Luximm.jl) by Carroll Vance,
+which does the same for timm in [Lux.jl](https://lux.csail.mit.edu).
+
+Before the ports, Metalhead was a collection of hand-written Flux models.
+[Mike Innes](https://github.com/MikeInnes) started it in 2018, with
+[Avik Pal](https://github.com/avik-pal), and [Dhairya Gandhi](https://github.com/DhairyaLGandhi)
+and [Kyle Daruwalla](https://github.com/darsnack) maintained it through the following years.
+[Abhirath Anand](https://github.com/theabhirath) wrote most of the
+models and layers of Metalhead 0.9, and [Brian Chen](https://github.com/ToucheSir) kept its
+tests running on CPUs and GPUs. [Carlo Lucibello](https://github.com/CarloLucibello) ported
+the pretrained weights of torchvision to the Hugging Face Hub in 2023, has maintained
+Metalhead since, and rebuilt it around ports of Hub models in Metalhead 0.10. Many
+[other contributors](https://github.com/FluxML/Metalhead.jl/graphs/contributors) added models,
+fixes and documentation.

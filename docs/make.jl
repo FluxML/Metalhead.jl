@@ -1,8 +1,10 @@
 using Documenter, Metalhead
 
-# index.md is the README, without its badges and with links into the version being built
+# index.md is the README, without its badges and table of contents (the sidebar has one),
+# and with links into the version being built
 readme = replace(read(joinpath(@__DIR__, "..", "README.md"), String),
     r"^\[!\[.*\n"m => "",
+    r"^## Contents\n.*?(?=^## )"ms => "",
     r"https://fluxml\.ai/Metalhead\.jl/dev/([\w/]+)/" => s"\1.md")
 open(joinpath(@__DIR__, "src", "index.md"), "w") do io
     write(io, "```@meta\nEditURL = \"../../README.md\"\n```\n\n", readme)
