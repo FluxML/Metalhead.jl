@@ -469,6 +469,15 @@ first. The workflow is the one above, with these differences.
   and keys and weights the interpolated position embeddings in float32: `exact_float64`
   patches both, and the port computes them in at least `Float32`. The image processor
   (`image_processing_qwen2_vl.jl`) is checked against `uv run dump_image_processor.py`.
+- **Vision-language models** (`Qwen3_5ForConditionalGeneration`). config.json nests
+  `text_config` and `vision_config`, which arrive as NamedTuples: build each part with the
+  keys its builder declares (`config_args`). The image features replace the image tokens by
+  one `NNlib.gather` (torch's `masked_scatter`), and the multimodal rotary positions of the
+  tokens come from the image grids (`rope_index`, transformers' `get_rope_index`). A spec's
+  `"images"`, `[sequence, position, t, h, w]` each, places the image tokens in the random ids;
+  `dump.py` stores the patches and grids as `kwargs/`. For a checkpoint with a
+  `vision_config`, `dump_reference.py` adds a prompt about an image (`image/...` keys,
+  `check_image_reference`).
 - **References.** `uv run dump_reference.py <org>/<repo>` tokenizes `PROMPTS` with the repo's
   tokenizer and stores the ids, the hidden states, the last-position logits and the greedy
   continuation (`check_lm_reference` in `test/parity.jl`); the logits come from the model's

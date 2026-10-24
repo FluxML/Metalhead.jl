@@ -80,10 +80,13 @@ def dump_reference(repo, revision, batch):
 
 
 def dump_lm_reference(repo, sha, max_new_tokens=8):
-    from transformers import AutoModelForCausalLM, AutoTokenizer
-    model = AutoModelForCausalLM.from_pretrained(repo, revision=sha, dtype=torch.float32,
-                                                 attn_implementation="sdpa",
-                                                 experts_implementation="eager").eval()
+    from transformers import AutoModelForCausalLM, AutoModelForImageTextToText, AutoTokenizer
+    config = json.loads(pathlib.Path(hf_hub_download(repo, "config.json", revision=sha)).read_text())
+    # a vision-language model: AutoModelForCausalLM would build its text model only
+    auto = AutoModelForImageTextToText if "vision_config" in config else AutoModelForCausalLM
+    model = auto.from_pretrained(repo, revision=sha, dtype=torch.float32,
+                                 attn_implementation="sdpa",
+                                 experts_implementation="eager").eval()
     tokenizer = AutoTokenizer.from_pretrained(repo, revision=sha)
     ids = [tokenizer(p)["input_ids"] for p in PROMPTS]
     n = min(map(len, ids))
@@ -100,9 +103,48 @@ def dump_lm_reference(repo, sha, max_new_tokens=8):
     meta = {"repo": repo, "revision": sha, "prompts": json.dumps(PROMPTS), **versions()}
     tensors = {"input_ids": input_ids, "hidden_states": hidden.contiguous(),
                "last_logits": logits.contiguous(), "generated_ids": generated.contiguous()}
+    if "vision_config" in config:
+        tensors.update(image_reference(model, repo, sha, max_new_tokens))
+        meta["image_prompt"] = IMAGE_PROMPT
     save_file(tensors, out, metadata=meta)
     print(f"{out}: {repo}@{sha}, {out.stat().st_size / 1e3:.1f} kB, greedy continuation "
           f"{tokenizer.decode(generated[0, n:])!r}")
+
+
+IMAGE_PROMPT = "Describe this image in one sentence."
+IMAGE_URL = ("https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/"
+             "pipeline-cat-chonk.jpeg")
+
+
+def image_reference(model, repo, sha, max_new_tokens, size=(224, 160)):
+    """The outputs of a vision-language model on `IMAGE_PROMPT` about the image of `IMAGE_URL`,
+    resized to `size` (w, h) and preprocessed by the repo's processor with `min_pixels` low
+    enough to keep its size, under keys "image/...". The pixel values are rounded to float16."""
+    import io
+    import urllib.request
+    from PIL import Image
+    from transformers import AutoProcessor
+    processor = AutoProcessor.from_pretrained(repo, revision=sha)
+    with urllib.request.urlopen(IMAGE_URL) as f:
+        image = Image.open(io.BytesIO(f.read())).convert("RGB").resize(size, Image.BICUBIC)
+    messages = [{"role": "user", "content": [{"type": "image"},
+                                             {"type": "text", "text": IMAGE_PROMPT}]}]
+    text = processor.apply_chat_template(messages, add_generation_prompt=True,
+                                         enable_thinking=False, tokenize=False)
+    inputs = processor(text=[text], images=[image], return_tensors="pt",
+                       images_kwargs={"min_pixels": size[0] * size[1]})
+    inputs["pixel_values"] = inputs["pixel_values"].half().float()
+    with torch.no_grad():
+        hidden = model.model(**inputs).last_hidden_state
+        logits = model(**inputs, logits_to_keep=1).logits[:, -1, :]
+        generated = model.generate(**inputs, max_new_tokens=max_new_tokens, do_sample=False)
+    n = inputs["input_ids"].shape[1]
+    print(f"{repo} on the image: {processor.decode(generated[0, n:])!r}")
+    return {"image/input_ids": inputs["input_ids"],
+            "image/pixel_values": inputs["pixel_values"].half(),
+            "image/image_grid_thw": inputs["image_grid_thw"],
+            "image/hidden_states": hidden.contiguous(), "image/last_logits": logits.contiguous(),
+            "image/generated_ids": generated.contiguous()}
 
 
 def reference_path(name):

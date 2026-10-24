@@ -52,6 +52,13 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
   at 1 and return logits; there is no key-value cache yet. Batches padded on the right take
   the tokenizer's `attention_mask`, and `forward_intermediates` returns the hidden states of
   the decoder layers.
+- Qwen3.5, the vision-language model of the Qwen3.5 checkpoints
+  (`Qwen3_5ForConditionalGeneration`), validated against `Qwen/Qwen3.5-0.8B` on text and on
+  an image. Its decoder alternates gated attention with gated delta rule (linear attention)
+  layers and has a multimodal rotary embedding; it is also ported alone
+  (`Qwen3_5ForCausalLM`), as is its vision encoder (`Qwen3_5VisionModel`).
+  `Metalhead.Transformers.qwen3_5_image_inputs` preprocesses images as the checkpoints'
+  processor does. Videos are not supported.
 - Flux ports of [diffusers](https://github.com/huggingface/diffusers) models and pipelines, in
   `Metalhead.Diffusers`: text-to-image generation with FLUX.2 [klein] (`Flux2KleinPipeline`,
   with `Flux2Transformer2DModel`, `AutoencoderKLFlux2` and `FlowMatchEulerDiscreteScheduler`),

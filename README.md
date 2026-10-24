@@ -11,7 +11,7 @@ to [Flux.jl](https://fluxml.ai). It ports models from three Hugging Face librari
   300 architectures, including ResNet, ConvNeXt, EfficientNet, MobileNet and ViT, for
   classification or as backbones.
 - **Language models** from [transformers](https://github.com/huggingface/transformers): Llama,
-  Qwen, Gemma 3 and Granite.
+  Qwen, Gemma 3 and Granite, and the Qwen3.5 vision-language models, which also read images.
 - **Text-to-image pipelines** from [diffusers](https://github.com/huggingface/diffusers):
   FLUX.2 [klein].
 
@@ -37,6 +37,7 @@ safetensors weights by name, and is
   - [Fine-tuning](#fine-tuning)
   - [Model structure](#model-structure)
   - [Language models](#language-models)
+  - [Vision-language models](#vision-language-models)
   - [Text-to-image generation](#text-to-image-generation)
 - [Validated against PyTorch](#validated-against-pytorch)
 - [Contributing](#contributing)
@@ -56,7 +57,7 @@ julia> ]add Metalhead
 | Library | Ported families |
 |:--|:--|
 | [timm](https://github.com/huggingface/pytorch-image-models) | ResNet, ResNeXt, Wide ResNet, SE- and ECA-ResNet, Res2Net, ConvNeXt, DenseNet, VGG, Inception, Inception-ResNet, Xception, EfficientNet and EfficientNetV2, MobileNetV1 to V4, MNASNet, MixNet, FBNet, LCNet, ConvMixer, MLP-Mixer, ResMLP, gMLP, and ViT with the image encoders of DINOv2, CLIP and SigLIP |
-| [transformers](https://github.com/huggingface/transformers) | Llama, Qwen2 and Qwen3, Gemma 3, and Granite, with its mixtures of experts and the Granite 4.0 models without Mamba layers |
+| [transformers](https://github.com/huggingface/transformers) | Llama, Qwen2 and Qwen3, Gemma 3, and Granite, with its mixtures of experts and the Granite 4.0 models without Mamba layers; Qwen3.5, a vision-language model |
 | [diffusers](https://github.com/huggingface/diffusers) | FLUX.2 [klein]: the text-to-image pipeline, its transformer and its autoencoder |
 
 The [list of models](https://fluxml.ai/Metalhead.jl/dev/models/) gives each architecture of
@@ -204,6 +205,31 @@ tokenizer = from_pretrained(Tokenizer, "HuggingFaceTB/SmolLM2-135M")
 ids = encode(tokenizer, "The capital of France is the city of").ids .+ 1   # ids start at 0
 logits = model(ids)                                      # vocabulary × sequence length
 decode(tokenizer, [argmax(logits[:, end]) - 1])          # " Paris"
+```
+
+### Vision-language models
+
+Qwen3.5 answers prompts about images. `qwen3_5_image_inputs` resizes and cuts an image into
+the patches the model takes, and the prompt holds one image token for each 2 × 2 patches:
+
+```julia
+using HuggingFaceTokenizers
+using Metalhead.Transformers: qwen3_5_image_inputs
+
+model = create_model("Qwen/Qwen3.5-0.8B"; pretrained = true)
+tokenizer = from_pretrained(Tokenizer, "Qwen/Qwen3.5-0.8B")
+
+image = rand(Float32, 640, 480, 3)    # width × height × channels, in [0, 1]
+pixel_values, image_grid_thw = qwen3_5_image_inputs(image)
+n = prod(image_grid_thw) ÷ 4                              # the number of image tokens
+prompt = "<|im_start|>user\n<|vision_start|>" * "<|image_pad|>"^n *
+         "<|vision_end|>Describe this image.<|im_end|>\n<|im_start|>assistant\n" *
+         "<think>\n\n</think>\n\n"
+ids = encode(tokenizer, prompt).ids .+ 1
+for _ in 1:20                                             # greedy decoding
+    push!(ids, argmax(model(ids; pixel_values, image_grid_thw)[:, end]))
+end
+decode(tokenizer, ids[(end - 19):end] .- 1)
 ```
 
 ### Text-to-image generation

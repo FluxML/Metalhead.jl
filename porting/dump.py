@@ -185,7 +185,13 @@ def dump_transformers(spec, out, args):
     the length of `input_shape`, as by a tokenizer, and the model takes their `attention_mask`,
     stored as "kwargs/attention_mask". With "mrope_positions", the model takes random
     `position_ids` (3, batch, seq_len), stored permuted as "kwargs/position_ids" so that Julia
-    reads them as (3, seq_len, batch)."""
+    reads them as (3, seq_len, batch).
+
+    A vision-language model (Qwen3_5ForConditionalGeneration) takes "images", a list of
+    [sequence, position, t, h, w] (0-based): the image tokens of a grid of t × h × w patches,
+    `t * h * w // merge**2` of them, start at that position of that sequence. Its random patches
+    and grids are stored as "kwargs/pixel_values" and "kwargs/image_grid_thw", and its
+    intermediates are those of the language model."""
     if "grid_thw" in spec:
         return dump_transformers_vision(spec, out, args)
     seed = spec.get("seed", 0)
@@ -215,12 +221,15 @@ def dump_transformers(spec, out, args):
                if n and any(True for _ in m.parameters())
                and (args.all_taps or n.count(".") <= spec.get("tap_depth", 1))]
     gen = torch.Generator().manual_seed(seed + 1)
-    x = torch.randint(model.config.vocab_size, spec["input_shape"], generator=gen)
+    vocab_size = model.config.get_text_config().vocab_size
+    x = torch.randint(vocab_size, spec["input_shape"], generator=gen)
     kwargs = {}
     if "lengths" in spec:
         positions = torch.arange(x.shape[1])
         kwargs["attention_mask"] = torch.stack([positions < n for n in spec["lengths"]]).long()
-    stored = dict(kwargs)
+    if "images" in spec:
+        kwargs.update(image_inputs(model, x, spec["images"], gen))
+    stored = {k: v for k, v in kwargs.items() if k != "mm_token_type_ids"}
     if spec.get("mrope_positions"):
         b, n = x.shape
         kwargs["position_ids"] = torch.randint(2 * n, (3, b, n), generator=gen)
@@ -230,14 +239,15 @@ def dump_transformers(spec, out, args):
         for h in handles:
             h.remove()
         features = model.model(input_ids=x, **kwargs).last_hidden_state
+        decoder = getattr(model.model, "language_model", model.model)
         layers = []
         handles = [layer.register_forward_hook(lambda m, i, o: layers.append(o.detach().clone()))
-                   for layer in model.model.layers]
+                   for layer in decoder.layers]
         model.model(input_ids=x, **kwargs)
         for h in handles:
             h.remove()
         intermediates = {f"intermediates/{i + 1}": y.contiguous() for i, y in enumerate(layers)}
-        intermediates.update({f"intermediates_norm/{i + 1}": model.model.norm(y).contiguous()
+        intermediates.update({f"intermediates_norm/{i + 1}": decoder.norm(y).contiguous()
                               for i, y in enumerate(layers)})
 
     acts = {"input": x, "output": logits.contiguous(), "features": features.contiguous(), **taps,
@@ -249,6 +259,25 @@ def dump_transformers(spec, out, args):
     size = sum(f.stat().st_size for f in out.iterdir())
     print(f"{out}: {len(model.state_dict())} tensors, {len(taps)} taps, {size / 1e6:.2f} MB")
     return size <= args.max_bytes or bool(args.out)
+
+
+def image_inputs(model, x, images, gen):
+    """Write the image tokens of `images` ([sequence, position, t, h, w]) into the token ids `x`,
+    which hold no other, and return the model's image inputs: random patches, in float64, their
+    grids, and the `mm_token_type_ids` of the image tokens."""
+    config = model.config
+    vision = config.vision_config
+    x[x == config.image_token_id] = 0
+    grids = []
+    for b, start, t, h, w in sorted(images):
+        x[b, start:start + t * h * w // vision.spatial_merge_size ** 2] = config.image_token_id
+        grids.append([t, h, w])
+    grid_thw = torch.tensor(grids)
+    patch_dim = vision.in_channels * vision.temporal_patch_size * vision.patch_size ** 2
+    pixel_values = torch.randn(int(grid_thw.prod(-1).sum()), patch_dim, generator=gen,
+                               dtype=torch.float64)
+    return {"pixel_values": pixel_values, "image_grid_thw": grid_thw,
+            "mm_token_type_ids": (x == config.image_token_id).long()}
 
 
 def dump_transformers_vision(spec, out, args):

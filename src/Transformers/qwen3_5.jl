@@ -418,10 +418,16 @@ end
 function forward_intermediates(m::Qwen3_5ForCausalLM, input_ids::AbstractMatrix{<:Integer};
         indices = nothing, norm::Bool = false, stop_early::Bool = false,
         intermediates_only::Bool = false, attention_mask = nothing, position_ids = nothing)
-    model = m.model
+    return decoder_intermediates(m.model, m.model.embed_tokens(input_ids), position_ids,
+        attention_mask; indices, norm, stop_early, intermediates_only)
+end
+
+# `forward_intermediates` of the decoder `model` for the input embeddings `inputs_embeds`.
+function decoder_intermediates(model::Qwen3_5TextModel, inputs_embeds, position_ids,
+        attention_mask; indices, norm, stop_early, intermediates_only)
     take, max_index = feature_take_indices(length(model.layers), indices)
-    x, position_embeddings, kv_lengths = decoder_inputs(model,
-        model.embed_tokens(input_ids), position_ids, attention_mask)
+    x, position_embeddings, kv_lengths = decoder_inputs(model, inputs_embeds, position_ids,
+        attention_mask)
     layers = [h -> layer(h, position_embeddings, kv_lengths) for layer in model.layers]
     outs = stage_outputs(layers, x, stop_early ? max_index : length(layers))
     intermediates = [norm ? model.norm(outs[i]) : outs[i] for i in take]
@@ -575,3 +581,184 @@ end
 
 register!(ArchSpec(TRANSFORMERS, "Qwen3_5ForCausalLM", qwen3_5_for_causal_lm;
     family = "qwen", ignore = [r"^mtp\."]))
+
+# The vision-language model: the vision encoder of qwen3_5_vision.jl, whose merged tokens
+# replace the image tokens of the text, and the text model.
+
+@concrete struct Qwen3_5Model
+    visual
+    language_model
+    image_token_id
+end
+Flux.@layer Qwen3_5Model
+
+# The input embeddings of the decoder and their (3, seq_len, batch) positions: the
+# embeddings of the tokens, with the images' merged tokens in place of their image tokens.
+function multimodal_inputs(m::Qwen3_5Model, input_ids, pixel_values, image_grid_thw,
+        attention_mask)
+    x = m.language_model.embed_tokens(input_ids)
+    pixel_values === nothing && return x, nothing
+    image_grid_thw === nothing && error("`pixel_values` need their `image_grid_thw`")
+    features = m.visual(pixel_values, image_grid_thw).pooler_output
+    image_index = m.image_token_id + 1
+    x = merge_image_features(x, input_ids, features, image_index)
+    positions = rope_index(input_ids, image_grid_thw, image_index,
+        m.visual.spatial_merge_size, attention_mask)
+    return x, positions
+end
+
+"""
+    (model::Qwen3_5Model)(input_ids; pixel_values = nothing, image_grid_thw = nothing,
+                          attention_mask = nothing)
+
+The hidden states after the final norm of the vision-language model of Qwen3.5. The token
+indices `input_ids` (seq_len, batch_size), or a vector, hold one run of image tokens for
+each image of `pixel_values` and `image_grid_thw` (see
+[`qwen3_5_for_conditional_generation`](@ref
+Metalhead.Transformers.qwen3_5_for_conditional_generation)).
+"""
+function (m::Qwen3_5Model)(input_ids::AbstractMatrix{<:Integer}; pixel_values = nothing,
+        image_grid_thw = nothing, attention_mask = nothing)
+    x, positions = multimodal_inputs(m, input_ids, pixel_values, image_grid_thw,
+        attention_mask)
+    return qwen3_5_decode(m.language_model, x, positions; attention_mask)
+end
+
+function (m::Qwen3_5Model)(input_ids::AbstractVector{<:Integer}; attention_mask = nothing,
+        kwargs...)
+    mask = attention_mask === nothing ? nothing : reshape(attention_mask, :, 1)
+    y = m(reshape(input_ids, :, 1); attention_mask = mask, kwargs...)
+    return dropdims(y; dims = 3)
+end
+
+# The 0-based (3, seq_len, batch) positions of the multimodal rotary embedding, transformers'
+# `get_rope_index` for images. Text tokens count up on the three rows. The tokens of an
+# image, its `(t, h ÷ merge, w ÷ merge)` grid of merged patches, take the positions of their
+# grid from the current position, which then advances by the larger of the two sides.
+# Padding (`attention_mask`, on the right) keeps the position 0.
+function rope_index(input_ids, image_grid_thw, image_index, merge, attention_mask)
+    ids = Array(input_ids)
+    grids = Array(image_grid_thw)
+    lengths = something(kv_lengths_of(attention_mask, input_ids), fill(size(ids, 1),
+        size(ids, 2)))
+    positions = zeros(Int, 3, size(ids)...)
+    image = 0
+    for b in axes(ids, 2)
+        pos, l = 0, 1
+        while l <= lengths[b]
+            if ids[l, b] != image_index
+                positions[:, l, b] .= pos
+                pos, l = pos + 1, l + 1
+                continue
+            end
+            image += 1
+            image <= size(grids, 2) ||
+                error("the token indices hold more images than `image_grid_thw` ($(size(grids, 2)))")
+            t, h, w = grids[1, image], grids[2, image] ÷ merge, grids[3, image] ÷ merge
+            stop = l + t * h * w - 1
+            stop <= lengths[b] && all(==(image_index), view(ids, l:stop, b)) ||
+                error("image $image needs $(t * h * w) image tokens from position $l of sequence $b")
+            grid = Iterators.product(0:(w - 1), 0:(h - 1), 0:(t - 1))  # width fastest
+            for (k, (wi, hi, ti)) in zip(l:stop, grid)
+                positions[:, k, b] .= (pos + ti, pos + hi, pos + wi)
+            end
+            pos, l = pos + max(h, w), stop + 1
+        end
+    end
+    image == size(grids, 2) ||
+        error("`image_grid_thw` has $(size(grids, 2)) images, the token indices $image")
+    return positions
+end
+ChainRulesCore.@non_differentiable rope_index(::Any...)
+
+# The embeddings `x` (hidden, seq_len, batch) with the image features (hidden, n) in place
+# of the image tokens, in order, as torch's `masked_scatter`: one gather.
+function merge_image_features(x, input_ids, features, image_index)
+    d, n, b = size(x)
+    index = ChainRulesCore.ignore_derivatives() do
+        is_image = vec(Array(input_ids) .== image_index)
+        count(is_image) == size(features, 2) ||
+            error("the token indices hold $(count(is_image)) image tokens, the images give $(size(features, 2))")
+        index = collect(1:(n * b))
+        index[is_image] .= n * b .+ (1:size(features, 2))
+        device_indices(x, index)
+    end
+    vectors = hcat(reshape(x, d, :), convert_like(x, features))
+    return reshape(NNlib.gather(vectors, index), d, n, b)
+end
+
+@concrete struct Qwen3_5ForConditionalGeneration <: CausalLM
+    model
+    lm_head
+end
+Flux.@layer Qwen3_5ForConditionalGeneration
+
+function forward_features(m::Qwen3_5ForConditionalGeneration, input_ids; kwargs...)
+    return m.model(input_ids; kwargs...)
+end
+
+function (m::Qwen3_5ForConditionalGeneration)(input_ids; kwargs...)
+    return forward_head(m, forward_features(m, input_ids; kwargs...))
+end
+
+function forward_head(m::Qwen3_5ForConditionalGeneration, x; pre_logits::Bool = false)
+    return pre_logits ? x : m.lm_head(x)
+end
+
+function forward_intermediates(m::Qwen3_5ForConditionalGeneration,
+        input_ids::AbstractMatrix{<:Integer}; indices = nothing, norm::Bool = false,
+        stop_early::Bool = false, intermediates_only::Bool = false, pixel_values = nothing,
+        image_grid_thw = nothing, attention_mask = nothing)
+    x, positions = multimodal_inputs(m.model, input_ids, pixel_values, image_grid_thw,
+        attention_mask)
+    return decoder_intermediates(m.model.language_model, x, positions, attention_mask;
+        indices, norm, stop_early, intermediates_only)
+end
+
+# The entries of the NamedTuple `config` (a sub-config of config.json) that `build`
+# declares as keyword arguments.
+function config_args(build, config)
+    declared = Set(k for m in methods(build) for k in Base.kwarg_decl(m))
+    return (; (k => v for (k, v) in pairs(something(config, (;))) if k in declared)...)
+end
+
+"""
+    qwen3_5_for_conditional_generation(; text_config, vision_config, image_token_id = 248056,
+                                       tie_word_embeddings = false)
+
+Port of transformers' `Qwen3_5ForConditionalGeneration`, the vision-language model of the
+Qwen3.5 checkpoints, built from its `Qwen3_5Config`: the vision encoder
+[`qwen3_5_vision_model`](@ref Metalhead.Transformers.qwen3_5_vision_model) of
+`vision_config`, the decoder [`qwen3_5_text_model`](@ref
+Metalhead.Transformers.qwen3_5_text_model) of `text_config` (both NamedTuples of their
+config's fields; other keys are ignored) and the output projection `lm_head`, tied to the
+token embeddings with `tie_word_embeddings`. Videos and the multi-token prediction weights
+(`mtp.*`) of the checkpoints are not supported.
+
+The model maps token indices of size `(seq_len, batch_size)`, or a vector, to logits of
+size `(vocab_size, seq_len, batch_size)`, as [`llama_for_causal_lm`](@ref
+Metalhead.Transformers.llama_for_causal_lm) does, and takes the keyword arguments
+`attention_mask` and, for images, `pixel_values` and `image_grid_thw`, as made by
+[`qwen3_5_image_inputs`](@ref Metalhead.Transformers.qwen3_5_image_inputs). The token
+indices then hold, for each image in order, a run of `prod(image_grid_thw[:, i]) ÷ 4`
+image tokens (`image_token_id + 1`, `<|image_pad|>`), between the tokens of
+`<|vision_start|>` and `<|vision_end|>`, as the chat template of the checkpoints writes
+them. The merged tokens of the image replace the image tokens, and the multimodal rotary
+embedding gives them the positions of their grid.
+"""
+function qwen3_5_for_conditional_generation(; text_config = (;), vision_config = (;),
+        image_token_id = 248_056, tie_word_embeddings = false)
+    language_model = qwen3_5_text_model(; config_args(qwen3_5_text_model, text_config)...)
+    visual = qwen3_5_vision_model(; config_args(qwen3_5_vision_model, vision_config)...)
+    weight = language_model.embed_tokens.weight
+    lm_head = tie_word_embeddings ? TiedLMHead(weight) :
+              Dense(size(weight, 1) => size(weight, 2); bias = false,
+        init = normal_init(get(something(text_config, (;)), :initializer_range, 0.02)))
+    return Qwen3_5ForConditionalGeneration(
+        Qwen3_5Model(visual, language_model, image_token_id), lm_head)
+end
+
+register!(ArchSpec(TRANSFORMERS, "Qwen3_5ForConditionalGeneration",
+    qwen3_5_for_conditional_generation;
+    family = "qwen", ignore = [r"^mtp\."],
+    references = ["Qwen/Qwen3.5-0.8B" => "2fc06364715b967f1860aea9cf38778875588b17"]))

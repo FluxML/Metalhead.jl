@@ -156,3 +156,55 @@ end
           only(forward_intermediates(model, ids[1:66, 2:2]; indices = [1],
         intermediates_only = true))[:, :, 1]
 end
+
+@testset "vision-language model" begin
+    r = check_fixture(fixture("qwen3_5_tiny"))
+    @test r.output <= 1e-8
+    @test r.features <= 1e-8
+    @test r.pass
+    @test check_half_precision("qwen3_5_tiny"; rtol = 6e-2)
+
+    model = fixture_model(fixture("qwen3_5_tiny"); eltype = Float32)
+    (ids,), inputs = fixture_inputs(Metalhead.Checkpoint(joinpath(fixture("qwen3_5_tiny"),
+        "acts.safetensors")))
+    pixel_values, image_grid_thw = Float32.(inputs.pixel_values), inputs.image_grid_thw
+    @test check_gradient(model, ids; pixel_values, image_grid_thw, inputs.attention_mask)
+    @test "Qwen3_5ForConditionalGeneration" in list_models(; byfamily = true)["qwen"]
+
+    # each sequence of the batch, with its own image, alone
+    batch = model(ids; pixel_values, image_grid_thw, inputs.attention_mask)
+    first_patches = sum(prod, eachcol(image_grid_thw[:, 1:2]))
+    alone = model(ids[1:24, 2]; pixel_values = pixel_values[:, (first_patches + 1):end],
+        image_grid_thw = image_grid_thw[:, 3:3])
+    @test alone ≈ batch[:, 1:24, 2]
+    # text alone is the text model's
+    text = rand(1:59, 9, 2)
+    @test model(text) ≈ model.lm_head(model.model.language_model(text))
+    @test forward_features(model, text[:, 1]) ≈ model.model.language_model(text[:, 1])
+    hidden = forward_intermediates(model, ids; pixel_values, image_grid_thw,
+        inputs.attention_mask)
+    @test first(hidden) ≈ forward_features(model, ids; pixel_values, image_grid_thw,
+        inputs.attention_mask)
+
+    # transformers' `get_rope_index`: the merged 4 × 6 grid of patches at positions 3:8 takes
+    # the positions of its 2 × 3 grid from 3, and the text after it goes on from 3 + 3
+    image = 61  # `image_token_id + 1`
+    tokens = [1, 2, 3, fill(image, 6)..., 4, 5]
+    positions = Metalhead.Transformers.rope_index(tokens[:, :], [1; 4; 6;;], image, 2,
+        nothing)
+    @test positions[:, :, 1] == [0 1 2 3 3 3 3 3 3 6 7
+                                 0 1 2 3 3 3 4 4 4 6 7
+                                 0 1 2 3 4 5 3 4 5 6 7]
+    @test_throws "image tokens" model(ids[1:10, :]; pixel_values, image_grid_thw)
+    @test_throws "image_grid_thw" model(ids; pixel_values)
+end
+
+TEST_NETWORK && @testset "references" begin
+    for file in reference_files_of("Qwen3_5ForConditionalGeneration")
+        for r in (check_lm_reference(file), check_image_reference(file))
+            @test r.hidden_states <= 1e-4
+            @test r.last_logits <= 1e-4
+            @test r.generated
+        end
+    end
+end

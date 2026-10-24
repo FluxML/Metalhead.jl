@@ -8,8 +8,9 @@ using Flux, Functors
 using Test
 using ChainRulesCore: unthunk
 
-export Parity, check_fixture, check_lm_reference, check_pipeline_fixture,
-       check_diffusers_reference, fixture_model, fixture_inputs, shrink_channels,
+export Parity, check_fixture, check_lm_reference, check_image_reference,
+       check_pipeline_fixture, check_diffusers_reference, fixture_model, fixture_inputs,
+       shrink_channels,
        reference_input, relerr, tapify, fixture, reference_files, reference_files_of,
        check_param_counts,
        check_gradient, check_half_precision, JSON, SafeTensors, TEST_NETWORK, TEST_LARGE,
@@ -61,15 +62,15 @@ sum_abs2(y) = sum(abs2, y)
 sum_abs2(y::NamedTuple) = sum(sum_abs2, values(y))
 
 """
-    check_gradient(model, x...) -> Bool
+    check_gradient(model, x...; kwargs...) -> Bool
 
-Whether a gradient of `sum(abs2, model(x...))` (summed over the fields of a NamedTuple
-output) in train mode reaches every trainable array of `model` and is finite. Logs the arrays
-that get none (e.g. of a submodule the forward pass never calls) or a non-finite one.
+Whether a gradient of `sum(abs2, model(x...; kwargs...))` (summed over the fields of a
+NamedTuple output) in train mode reaches every trainable array of `model` and is finite. Logs
+the arrays that get none (e.g. of a submodule the forward pass never calls) or a non-finite one.
 """
-function check_gradient(model, x...)
+function check_gradient(model, x...; kwargs...)
     model = Flux.trainmode!(model)
-    g = Flux.gradient(m -> sum_abs2(m(x...)), model)[1]
+    g = Flux.gradient(m -> sum_abs2(m(x...; kwargs...)), model)[1]
     bad = String[]
     for (kp, _) in Flux.trainables(model; path = true)
         dp = g !== nothing && Functors.haskeypath(g, kp) ? Functors.getkeypath(g, kp) :
