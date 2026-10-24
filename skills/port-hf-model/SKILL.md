@@ -434,11 +434,13 @@ first. The workflow is the one above, with these differences.
   float64; patch any new float32 cast the same way, or the fixture misses 1e-8. A float32
   buffer that holds a constant (Gemma 3's `embed_scale`, `√hidden_size`) stays rounded to
   float32 in a float64 model: round it to `Float32` in Julia too.
-- **Sliding-window attention** (Gemma 3): `sliding_window_mask` is the window's `mask` for
-  `NNlib.scaled_dot_product_attention`, on top of `is_causal`. In a batch padded on the right,
-  a padding query whose window holds only padding attends to nothing: PyTorch returns zeros
-  there, and NNlib NaNs unless `sliding_window_q_lengths` gives it the matching `q_lengths`.
-  Give a padded fixture such queries (Gemma 3's `lengths = [9, 7, 2]` with a window of 4).
+- **Sliding-window attention** (Gemma 3): pass `is_causal = true` and
+  `window = attention_window(n, sliding_window)` to `NNlib.scaled_dot_product_attention`; no
+  mask is needed, and NNlib only goes through the keys of the windows. In a batch padded on
+  the right, a padding query whose window holds only padding attends to nothing: PyTorch
+  returns zeros there, and NNlib NaNs unless `sliding_window_q_lengths` gives it the
+  matching `q_lengths`. Give a padded fixture such queries (Gemma 3's `lengths = [9, 7, 2]`
+  with a window of 4).
 - **Mixtures of experts** (Granite MoE). transformers 5 stores the experts of a layer as
   stacked 3D parameters (`experts.gate_up_proj`, `experts.down_proj`) and renames or merges
   the checkpoint's keys when loading (`conversion_mapping.py`); `save_pretrained` writes the
@@ -449,8 +451,9 @@ first. The workflow is the one above, with these differences.
   patch them in `exact_float64`, and in Julia compute the routing weights in
   `promote_type(eltype(x), Float32)`. `build_transformers` uses the eager experts
   (`experts_implementation="eager"`), and `rerandomize` gives stacked `..._proj` parameters
-  the scale of their fan-in. Avoid `NNlib.scatter` in forward passes: its atomic additions
-  are slow in `BFloat16` on a GPU (100 times slower than in `Float32` on an RTX 5090). Test the
+  the scale of their fan-in. Prefer gathers to `NNlib.scatter` in forward passes: its atomic
+  additions are nondeterministic, and slow in `BFloat16` on GPUs before sm_90 (A100, RTX 30
+  and 40 series), though as fast as in `Float32` on newer ones since NNlib 0.9.54. Test the
   fixtures' sensitivity by changing the router (softmax over all experts, lowest experts):
   with tiny models, a wrong router can still match to a few percent.
   `bfloat16` checkpoints load into Float32 arrays without any special handling.

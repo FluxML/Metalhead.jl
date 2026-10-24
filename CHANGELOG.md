@@ -39,7 +39,8 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
     and FBNetV3; LCNet.
 - Flux ports of [transformers](https://github.com/huggingface/transformers) language models,
   `LlamaForCausalLM` (#327), `Qwen2ForCausalLM` and `Qwen3ForCausalLM` (#329), and
-  `Gemma3ForCausalLM`, the Gemma 3 text model, with its sliding-window attention (#336), and
+  `Gemma3ForCausalLM`, the Gemma 3 text model, with its sliding-window attention, which
+  NNlib computes over the keys of the windows only (#336), and
   IBM's Granite (`GraniteForCausalLM`), its mixtures of experts (`GraniteMoeForCausalLM` and
   `GraniteMoeSharedForCausalLM`) and Granite 4.0 without its Mamba layers
   (`GraniteMoeHybridForCausalLM`, #337), validated against `HuggingFaceTB/SmolLM2-135M`,
@@ -84,7 +85,7 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
 ### Changed
 
 - New dependencies: HuggingFaceApi, SafeTensors, JSON and ConcreteStructs. Flux 0.16.14,
-  NNlib 0.9.53 and MLUtils 0.4.9 are now the minimum versions (#305, #327, #337).
+  NNlib 0.9.54 and MLUtils 0.4.9 are now the minimum versions (#305, #327, #337).
 - Downloads share the cache of Python's `huggingface_hub` (`~/.cache/huggingface/hub`), and
   its `HF_TOKEN`, `HF_HUB_CACHE` and `HF_HUB_OFFLINE` environment variables.
 

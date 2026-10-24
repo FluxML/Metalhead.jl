@@ -80,18 +80,12 @@ end
 # A model without positional embeddings (NoPE)
 rotary_tables(::Nothing, x, n) = nothing
 
-# The keys that each query attends to in sliding-window attention, on top of the causal
-# mask: the `mask` of `NNlib.scaled_dot_product_attention`, of size `(seq_len, seq_len)`,
-# true where the key `j` is in the window of the query `i`, `j > i - sliding_window` as in
-# transformers' `sliding_window_overlay`. `nothing` where the window holds the whole
-# sequence.
-function sliding_window_mask(x, n, sliding_window)
-    (sliding_window === nothing || sliding_window >= n) && return nothing
-    return ChainRulesCore.ignore_derivatives() do
-        mask = [j > i - sliding_window for j in 1:n, i in 1:n]
-        return copyto!(similar(x, Bool, n, n), mask)
-    end
-end
+# The `window` of `NNlib.scaled_dot_product_attention` with `is_causal`: the query `i`
+# attends to the keys `i - sliding_window < j ≤ i`, as in transformers'
+# `sliding_window_overlay`. `nothing` where the window holds the whole sequence, which
+# leaves cuDNN's fused kernel available.
+attention_window(n, sliding_window) =
+    sliding_window === nothing || sliding_window >= n ? nothing : sliding_window
 
 # In a batch padded on the right, the queries past `kv_lengths + sliding_window - 1` have
 # only padding in their window. PyTorch's attention gives them zeros, as
@@ -228,7 +222,8 @@ and `down_proj` (num_experts, hidden, intermediate), so `gate_up` has size
 
 The tokens are grouped by expert and padded to the largest group, so that each projection is
 one `batched_mul`, and each token gathers back the outputs of its experts. Unlike a scatter,
-this needs no atomic additions, which are slow in 16 bits on a GPU.
+this needs no atomic additions, which are nondeterministic, and slow in `BFloat16` on GPUs
+before sm_90.
 """
 function moe_experts(gate_up, down, act, x, top_k_index, top_k_weights)
     hidden, n = size(x)
