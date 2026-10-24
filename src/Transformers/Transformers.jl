@@ -15,7 +15,7 @@ using NNlib
 using ConcreteStructs: @concrete
 using ChainRulesCore: ChainRulesCore
 using ..Metalhead: ArchSpec, ConfigFormat, register!, declared_args
-using ..Timm: dropout_or_identity, feature_take_indices, stage_outputs
+using ..Timm: dropout_or_identity, attention_fdrop, feature_take_indices, stage_outputs
 import ..Metalhead: layer_params, architecture_of, model_args
 import ..Metalhead: forward_features, forward_head, forward_intermediates
 

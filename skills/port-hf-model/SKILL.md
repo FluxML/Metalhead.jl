@@ -162,8 +162,12 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
     ```julia
     qkv = reshape(m.qkv(x), :, nheads, 3, n, b)
     q, k, v = qkv[:, :, 1, :, :], qkv[:, :, 2, :, :], qkv[:, :, 3, :, :]   # (hd, H, N, B)
-    y = reshape(NNlib.scaled_dot_product_attention(q, k, v; fdrop = m.attn_drop), :, n, b)
+    fdrop = attention_fdrop(m.attn_drop, q)
+    y = reshape(NNlib.scaled_dot_product_attention(q, k, v; fdrop), :, n, b)
     ```
+    Pass the dropout through `attention_fdrop` (`layers.jl`), which gives `identity` unless
+    it is active: with any other `fdrop`, NNlib can't take its fused implementation, which is
+    3 times faster in `Float32` and 50 times in `BFloat16` on a GPU.
     A torch `(B, H, N, hd)` tensor reversed is `(hd, N, H, B)`. It needs
     `permutedims(x, (1, 3, 2, 4))` before the call. Multi-query attention (one key/value
     head shared by all query heads, MobileNetV4) is the call with keys and values of 1 head

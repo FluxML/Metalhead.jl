@@ -14,7 +14,7 @@ function (m::ViTAttention)(x)
     _, n, b = size(x)
     qkv = reshape(m.qkv(x), :, m.num_heads, 3, n, b)
     q, k, v = qkv[:, :, 1, :, :], qkv[:, :, 2, :, :], qkv[:, :, 3, :, :]
-    y = NNlib.scaled_dot_product_attention(q, k, v; fdrop = m.attn_drop)
+    y = NNlib.scaled_dot_product_attention(q, k, v; fdrop = attention_fdrop(m.attn_drop, q))
     return m.proj_drop(m.proj(reshape(y, :, n, b)))
 end
 

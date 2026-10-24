@@ -25,7 +25,8 @@ function (m::GraniteAttention)(x, position_embeddings, kv_lengths = nothing)
         q = NNlib.apply_rotary_embedding(q, cos, sin)
         k = NNlib.apply_rotary_embedding(k, cos, sin)
     end
-    y = NNlib.scaled_dot_product_attention(q, k, v; fdrop = m.attention_dropout,
+    y = NNlib.scaled_dot_product_attention(q, k, v;
+        fdrop = attention_fdrop(m.attention_dropout, q),
         scale = m.scaling, is_causal = true, kv_lengths)
     return m.o_proj(reshape(y, :, n, b))
 end
