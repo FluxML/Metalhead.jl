@@ -6,6 +6,7 @@ import importlib
 import inspect
 import json
 import math
+import sys
 import types
 
 import numpy as np
@@ -205,7 +206,9 @@ def exact_float64(model):
 
     transformers computes them in float32 even in a float64 model, which would limit the
     fixtures to float32 precision. In a float32 model the results are unchanged but for the
-    rounding of the rotary frequencies, which are computed in float64 here.
+    rounding of the rotary frequencies, which are computed in float64 here, and of the weights
+    that interpolate the position embeddings of a Qwen3.5 vision encoder (see
+    `_exact_float64_vision`).
     """
     for m in model.modules():
         name = type(m).__name__
@@ -214,6 +217,10 @@ def exact_float64(model):
             m.forward = types.MethodType(forward, m)
         elif name.startswith("GraniteMoe") and name.endswith("TopKRouter"):
             m.forward = types.MethodType(_granitemoe_router_forward, m)
+        elif name.endswith("VisionRotaryEmbedding"):  # Qwen3.5's 2D axial rotary embedding
+            m.exact_inv_freq = _exact_axial_inv_freq(m)
+            m.forward = types.MethodType(_axial_rotary_forward, m)
+            _exact_float64_vision(sys.modules[type(m).__module__])
         elif name.endswith("RotaryEmbedding"):
             if isinstance(m.rope_type, dict):  # a table for each layer type (Gemma 3)
                 m.exact_inv_freq = {t: _exact_inv_freq(m.config.rope_parameters[t],
@@ -279,6 +286,63 @@ def _rotary_tables(x, position_ids, inv_freq, attention_scaling):
     emb = torch.cat((freqs, freqs), dim=-1)
     return ((emb.cos() * attention_scaling).to(x.dtype),
             (emb.sin() * attention_scaling).to(x.dtype))
+
+
+def _exact_axial_inv_freq(m):
+    """The `inv_freq` of a `Qwen3_5VisionRotaryEmbedding` in float64."""
+    config = m.config
+    dim = getattr(config, "head_dim", None) or config.hidden_size // config.num_attention_heads
+    spatial = dim // 2
+    freqs = 1.0 / (config.rope_parameters["rope_theta"]
+                   ** (torch.arange(0, spatial, 2, dtype=torch.float64) / spatial))
+    assert torch.allclose(freqs, m.inv_freq.double(), rtol=1e-6, atol=0), (freqs, m.inv_freq)
+    return freqs
+
+
+@torch.no_grad()
+def _axial_rotary_forward(self, x, position_ids):
+    freqs = position_ids[..., None].double() * self.exact_inv_freq
+    return (self.recomposition_frequencies(freqs.cos() * self.attention_scaling),
+            self.recomposition_frequencies(freqs.sin() * self.attention_scaling))
+
+
+def _exact_float64_vision(module):
+    """Patch the vision encoder of `module` (`modeling_qwen3_5`) to rotate float64 queries and
+    keys in float64, and `vision_utils` to compute the weights that interpolate the learned
+    position embeddings in float64. transformers computes both in float32."""
+    from transformers import vision_utils
+    if getattr(module, "_metalhead_exact_float64", False):
+        return
+    original = module.apply_rotary_pos_emb_vision
+
+    def apply_rotary_pos_emb_vision(q, k, cos, sin):
+        if q.dtype != torch.float64:
+            return original(q, k, cos, sin)
+        cos, sin = cos.unsqueeze(-2).to(q.dtype), sin.unsqueeze(-2).to(q.dtype)
+        return (q * cos + module.rotate_half(q) * sin, k * cos + module.rotate_half(k) * sin)
+
+    module.apply_rotary_pos_emb_vision = apply_rotary_pos_emb_vision
+    vision_utils._interpolation_axis_taps_weights = _interpolation_axis_taps_weights_float64
+    module._metalhead_exact_float64 = True
+
+
+def _interpolation_axis_taps_weights_float64(index, size, side, mode, align_corners,
+                                             padding="border"):
+    """`vision_utils._interpolation_axis_taps_weights` in float64."""
+    index = index.to(torch.float64)
+    if align_corners:
+        src = index * (side - 1) / torch.clamp(size - 1, min=1)
+    else:
+        src = (index + 0.5) * side / size - 0.5
+    floor = torch.floor(src)
+    assert mode == "bilinear", f"interpolation mode {mode} is not supported"
+    offsets = torch.arange(0, 2, device=index.device)
+    raw_taps = floor.long()[:, None] + offsets
+    taps = raw_taps.clamp(0, side - 1)
+    weights = (1 - (src[:, None] - floor[:, None] - offsets).abs()).clamp(min=0)
+    if padding == "zeros":
+        weights = weights * ((raw_taps >= 0) & (raw_taps <= side - 1))
+    return taps, weights
 
 
 @contextlib.contextmanager

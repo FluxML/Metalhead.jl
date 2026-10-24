@@ -56,16 +56,20 @@ function check_param_counts(arch)
     return ok
 end
 
+# The sum of squares of an output, or of all the fields of a NamedTuple of outputs.
+sum_abs2(y) = sum(abs2, y)
+sum_abs2(y::NamedTuple) = sum(sum_abs2, values(y))
+
 """
     check_gradient(model, x...) -> Bool
 
-Whether a gradient of `sum(abs2, model(x...))` in train mode reaches every trainable array of
-`model` and is finite. Logs the arrays that get none (e.g. of a submodule the forward pass never
-calls) or a non-finite one.
+Whether a gradient of `sum(abs2, model(x...))` (summed over the fields of a NamedTuple
+output) in train mode reaches every trainable array of `model` and is finite. Logs the arrays
+that get none (e.g. of a submodule the forward pass never calls) or a non-finite one.
 """
 function check_gradient(model, x...)
     model = Flux.trainmode!(model)
-    g = Flux.gradient(m -> sum(abs2, m(x...)), model)[1]
+    g = Flux.gradient(m -> sum_abs2(m(x...)), model)[1]
     bad = String[]
     for (kp, _) in Flux.trainables(model; path = true)
         dp = g !== nothing && Functors.haskeypath(g, kp) ? Functors.getkeypath(g, kp) :
@@ -84,7 +88,8 @@ the inputs `x` (floating-point arrays are converted to `T`) and keyword argument
 the layers with a conversion method of their own (the norms, such as
 `Flux.f16(::LayerNorm2d, cx)`) keep `Float32` arrays and every other floating-point array is
 `T`, the output has eltype `T`, no warning is logged (such as Flux's eltype mismatch), and
-the relative error of the output against `model(x)` is at most `rtol`. Logs what fails.
+the relative error of the output against `model(x)` is at most `rtol`. A NamedTuple output
+is checked field by field. Logs what fails.
 """
 function check_half_precision(model, x...; T = Float16, rtol = 1e-2, kwargs...)
     cast = Metalhead.ELTYPE_CONVERTERS[T]
@@ -106,10 +111,13 @@ function check_half_precision(model, x...; T = Float16, rtol = 1e-2, kwargs...)
     logs, y = Test.collect_test_logs(; min_level = Base.CoreLogging.Warn) do
         return half(map(tohalf, x)...; kwargs...)
     end
-    err = relerr(Float32.(y), model(x...; kwargs...))
+    outputs(y) = y isa NamedTuple ? values(y) : (y,)
+    err = maximum(((a, b),) -> relerr(Float32.(a), b),
+        zip(outputs(y), outputs(model(x...; kwargs...))))
+    output = eltype.(outputs(y))
     warnings = [l.message for l in logs]
-    ok = isempty(wrong) && eltype(y) == T && isempty(warnings) && err <= rtol
-    ok || @info "not in mixed precision" T wrong output=eltype(y) warnings err
+    ok = isempty(wrong) && all(==(T), output) && isempty(warnings) && err <= rtol
+    ok || @info "not in mixed precision" T wrong output warnings err
     return ok
 end
 

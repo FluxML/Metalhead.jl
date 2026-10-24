@@ -460,6 +460,15 @@ first. The workflow is the one above, with these differences.
   (`model.layers.0.self_attn`, `...mlp`, the norms). Cover each option of the config (bias,
   `head_dim`, grouped and plain attention, tied and untied head) in at least one spec, and
   error on the others (`rope_type`, `hidden_act`).
+- **Vision encoders** (Qwen3.5's `Qwen3_5VisionModel`, `qwen3_5_vision.jl`). A spec has
+  `"grid_thw"`, the `[t, h, w]` patch grids of its images, instead of `"input_shape"`;
+  `dump.py` stores random patches and the grids as `inputs/1` and `inputs/2`, and each field
+  of the output as `output/<name>`, which `check_fixture` compares one by one. Attention
+  within each frame of packed images (transformers' `cu_seqlens`) is
+  `NNlib.scaled_dot_product_attention` with `q_segments`. transformers rotates the queries
+  and keys and weights the interpolated position embeddings in float32: `exact_float64`
+  patches both, and the port computes them in at least `Float32`. The image processor
+  (`image_processing_qwen2_vl.jl`) is checked against `uv run dump_image_processor.py`.
 - **References.** `uv run dump_reference.py <org>/<repo>` tokenizes `PROMPTS` with the repo's
   tokenizer and stores the ids, the hidden states, the last-position logits and the greedy
   continuation (`check_lm_reference` in `test/parity.jl`); the logits come from the model's

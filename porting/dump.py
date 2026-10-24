@@ -8,6 +8,8 @@ e.g. "LlamaForCausalLM"), "model_type" and "config" (the fields of its config), 
 (batch, seq_len) of random token ids. Its fixture directory is written by `save_pretrained`, and
 the RMSNorms and rotary tables are computed in float64 (see `exact_float64` in common.py).
 With "lengths", the batch is padded on the right and the model takes an `attention_mask`.
+A vision encoder (Qwen3_5VisionModel) has "grid_thw" instead of "input_shape": the
+(t, h, w) grids of patches of its images (see `dump_transformers_vision`).
 
 A spec with "library": "diffusers" describes a diffusers model, "architecture" (the class, e.g.
 "Flux2Transformer2DModel") with the arguments "config", saved with `save_pretrained`, and the
@@ -180,6 +182,8 @@ def dump_transformers(spec, out, args):
     With "lengths" (one per sequence of the batch), the sequences are padded on the right to
     the length of `input_shape`, as by a tokenizer, and the model takes their `attention_mask`,
     stored as "kwargs/attention_mask"."""
+    if "grid_thw" in spec:
+        return dump_transformers_vision(spec, out, args)
     seed = spec.get("seed", 0)
     torch.manual_seed(seed)
     model = build(spec).eval()
@@ -229,6 +233,49 @@ def dump_transformers(spec, out, args):
 
     acts = {"input": x, "output": logits.contiguous(), "features": features.contiguous(), **taps,
             **intermediates, **{f"kwargs/{k}": v for k, v in kwargs.items()}}
+    meta = {"spec": json.dumps(spec), "call_order": json.dumps(order),
+            "num_params": str(sum(p.numel() for p in model.parameters())), **versions()}
+    save_file(acts, out / "acts.safetensors", metadata=meta)
+
+    size = sum(f.stat().st_size for f in out.iterdir())
+    print(f"{out}: {len(model.state_dict())} tensors, {len(taps)} taps, {size / 1e6:.2f} MB")
+    return size <= args.max_bytes or bool(args.out)
+
+
+def dump_transformers_vision(spec, out, args):
+    """Write the fixture of a transformers vision encoder (Qwen3_5VisionModel) of images and
+    videos, which `spec["grid_thw"]` sizes: a list of [t, h, w] grids of patches. Its inputs
+    are random patches, laid out as the image processor does ("inputs/1", (num_patches,
+    patch_dim)), and the grids ("inputs/2"); its outputs "output/last_hidden_state" and
+    "output/pooler_output" (the merged tokens)."""
+    seed = spec.get("seed", 0)
+    torch.manual_seed(seed)
+    model = build(spec).eval()
+    rerandomize(model, seed)
+    model.save_pretrained(out)
+    model = model.double()
+    exact_float64(model)
+
+    tap_dtype = getattr(torch, args.tap_dtype or ("float32" if args.all_taps else "float16"))
+    taps, order = {}, []
+    names = {n for n, m in model.named_modules()
+             if n and any(True for _ in m.parameters())
+             and (args.all_taps or n.count(".") <= spec.get("tap_depth", 1))}
+    cfg = model.config
+    gen = torch.Generator().manual_seed(seed + 1)
+    grid_thw = torch.tensor(spec["grid_thw"])
+    patch_dim = cfg.in_channels * cfg.temporal_patch_size * cfg.patch_size ** 2
+    pixel_values = torch.randn(int(grid_thw.prod(-1).sum()), patch_dim, generator=gen,
+                               dtype=torch.float64)
+    with torch.no_grad():
+        handles = tap_hooks(model, names, taps, order, tap_dtype)
+        outputs = model(pixel_values, grid_thw=grid_thw)
+        for h in handles:
+            h.remove()
+
+    acts = {"inputs/1": pixel_values, "inputs/2": grid_thw,
+            "output/last_hidden_state": outputs.last_hidden_state.contiguous(),
+            "output/pooler_output": outputs.pooler_output.contiguous(), **taps}
     meta = {"spec": json.dumps(spec), "call_order": json.dumps(order),
             "num_params": str(sum(p.numel() for p in model.parameters())), **versions()}
     save_file(acts, out / "acts.safetensors", metadata=meta)

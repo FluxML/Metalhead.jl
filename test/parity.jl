@@ -263,13 +263,26 @@ function fixture_inputs(acts)
 end
 
 """
+    output_error(y, acts) -> Float64
+
+The relative error of the output `y` of a fixture's model against its "output", or, for a
+model that returns a NamedTuple (a vision encoder), the largest error of its fields against
+"output/<name>".
+"""
+function output_error(y, acts)
+    y isa NamedTuple || return relerr(y, acts["output"])
+    return maximum(k -> relerr(y[k], acts["output/$k"]), keys(y))
+end
+
+"""
     check_fixture(dir; rtol = 1e-8, model = fixture_model(dir)) -> NamedTuple
 
 Load the tiny fixture in `dir` with [`fixture_model`](@ref) (in float64) and
 compare its logits and features (float64, relative error `rtol`) and every recorded module output
 with PyTorch's. Module outputs are stored in float16 or float32 and compared at a tolerance set
 by their precision, and so are the `forward_intermediates` (see [`check_intermediates`](@ref)).
-A fixture without features (a diffusion model) has `features = 0.0`.
+A fixture without features (a diffusion model) has `features = 0.0`. The output of a model
+that returns a NamedTuple is compared field by field (see [`output_error`](@ref)).
 Returns the relative errors, with the taps in PyTorch call order.
 """
 function check_fixture(dir; rtol = 1e-8, model = fixture_model(dir))
@@ -277,7 +290,7 @@ function check_fixture(dir; rtol = 1e-8, model = fixture_model(dir))
     meta = SafeTensors.deserialize(joinpath(dir, "acts.safetensors")).metadata
     order = Metalhead.JSON.parse(meta["call_order"])
     args, kwargs = fixture_inputs(acts)
-    output = relerr(model(args...; kwargs...), acts["output"])
+    output = output_error(model(args...; kwargs...), acts)
     features = haskey(acts, "features") ?
                relerr(forward_features(model, args...; kwargs...), acts["features"]) : 0.0
     tapkeys = filter(startswith("tap/"), collect(keys(acts)))

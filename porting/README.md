@@ -15,6 +15,8 @@ uv run param_counts.py resnet resnet18 resnet50   # -> test/references/param_cou
 uv run dump_reference.py timm/resnet18.a1_in1k   # real weights -> test/references/
 uv run dump.py specs/llama_tiny.json             # a transformers spec ("library": "transformers")
 uv run dump_reference.py HuggingFaceTB/SmolLM2-135M   # a language model: tokenized prompts
+uv run dump.py specs/qwen3_5_vision_tiny.json    # a vision encoder: random patches of "grid_thw"
+uv run dump_image_processor.py                   # Qwen3.5's image processor on tiny images
 uv run dump.py specs/transformer_flux2_tiny.json specs/flux2_klein_tiny.json   # diffusers model, pipeline
 uv run dump_reference.py black-forest-labs/FLUX.2-klein-4B/vae   # a component in a subfolder
 uv run dump_reference.py black-forest-labs/FLUX.2-klein-4B       # a pipeline, end to end
