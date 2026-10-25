@@ -1,112 +1,88 @@
-# Ported from transformers.models.sam3.image_processing_sam3 and processing_sam3
-# (transformers 5.20, Apache-2.0, The Hugging Face Team): the inputs that `Sam3Processor`
-# makes of images, box prompts and token ids, and its post-processing of the outputs of
-# SAM 3. Validated against test/references/sam3_image_processor.safetensors.
+# Ported from transformers.models.sam3.image_processing_sam3 (transformers 5.20, Apache-2.0,
+# The Hugging Face Team): `Sam3ImageProcessor`, of images (not segmentation maps), and its
+# post-processing of the outputs of SAM 3. Validated against
+# test/references/processors/sam3.safetensors.
 
 """
-    sam3_image_inputs(images; image_size = (1008, 1008), image_mean = (0.5, 0.5, 0.5),
-                      image_std = (0.5, 0.5, 0.5)) -> (pixel_values, original_sizes)
+    Sam3ImageProcessor(; do_resize = true, size = (; height = 1008, width = 1008),
+                       resample = 2, do_rescale = true, rescale_factor = 1 / 255,
+                       do_normalize = true, image_mean = (0.5, 0.5, 0.5),
+                       image_std = (0.5, 0.5, 0.5), do_convert_rgb = true)
 
-The images of SAM 3 ([`sam3_model`](@ref Metalhead.Transformers.sam3_model)), as
-transformers' image processor of SAM 3 makes them: each image is resized to `image_size`
-`(height, width)` with antialiased bilinear interpolation (an 8-bit image along its width
-and then its height, rounded back to integers after each, as torchvision does on the CPU),
-scaled to `[0, 1]` (8-bit images only) and normalized with `image_mean` and `image_std`.
+transformers' image processor of SAM 3, with the defaults of its Python class; the image
+processor of a [`Sam3Processor`](@ref Metalhead.Transformers.Sam3Processor), with the
+settings of a repository. Called on one image or a vector of images, it returns
+`(; pixel_values, original_sizes)`: `pixel_values`, a `Float32` array of size
+`(width, height, channels, num_images)`, and `original_sizes`, the `(height, width)` of each
+image, which the boxes and the post-processing (`target_sizes`) take.
 
-`images` is one image or a vector of images, each an array of size
-`(width, height, channels)` (torch's `(channels, height, width)` reversed) of integers from
-0 to 255 (an 8-bit image, as `UInt8`) or of real numbers from 0 to 1. For an Images.jl
-image `img`, that is `permutedims(channelview(img), (3, 2, 1))`.
+An image is an array of size `(width, height, channels)` (torch's
+`(channels, height, width)` reversed) of integers from 0 to 255 (an 8-bit image, as `UInt8`)
+or of reals from 0 to 1. Each image is
 
-Returns `pixel_values`, a `Float32` array of size `(width, height, channels, num_images)`,
-and `original_sizes`, the `(height, width)` of each image, which
-[`sam3_box_inputs`](@ref Metalhead.Transformers.sam3_box_inputs) and the post-processing
-(the `target_sizes` of [`post_process_instance_segmentation`](@ref
-Metalhead.Transformers.post_process_instance_segmentation)) take.
+ 1. converted to RGB with `do_convert_rgb`: a grey image (a matrix, or one channel, or two
+    with alpha) has its grey repeated, and the alpha of RGBA is dropped, as PIL does;
+ 2. resized to `size` with `do_resize`, with PIL's filter `resample`, 2 (bilinear) or 3
+    (bicubic), antialiased as torchvision resizes it;
+ 3. multiplied by `rescale_factor` with `do_rescale`, and normalized with `image_mean` and
+    `image_std` with `do_normalize`. An image of reals from 0 to 1 is taken as an 8-bit
+    image already rescaled: `do_rescale` leaves it as it is, and without it the values are
+    multiplied by 255.
 
-An 8-bit image whose size needs no resizing gives the same `pixel_values` as transformers,
-and an image of real numbers the same to Float32 precision. A resized 8-bit image may differ
-by one level of 255 in a few of its values, as torchvision computes its weights in
-fixed-point arithmetic.
+An 8-bit image gives the same `pixel_values` as transformers, and an image of reals the
+same to Float32 precision.
 """
-function sam3_image_inputs(images; image_size = (1008, 1008),
-        image_mean = (0.5, 0.5, 0.5), image_std = (0.5, 0.5, 0.5))
-    images isa AbstractArray{<:Real, 3} &&
-        return sam3_image_inputs([images]; image_size, image_mean, image_std)
-    h, w = image_size isa Integer ? (image_size, image_size) : image_size
-    pixel_values = map(images) do image
-        ndims(image) == 3 ||
-            error("an image must be an array of size (width, height, channels), got $(size(image))")
-        size(image, 3) == length(image_mean) == length(image_std) ||
-            error("an image has $(size(image, 3)) channels, `image_mean` and `image_std` $(length(image_mean)) and $(length(image_std))")
-        # transformers folds the rescaling of 8-bit images into the mean and the std
-        scale = eltype(image) <: Integer ? 255.0f0 : 1.0f0
-        mean = reshape(Float32.(collect(image_mean)) .* scale, 1, 1, :)
-        std = reshape(Float32.(collect(image_std)) .* scale, 1, 1, :)
-        resized = resize_image(image, w, h; upsample = NNlib.upsample_bilinear)
-        return (resized .- mean) ./ std
-    end
-    return stack(pixel_values), [(size(image, 2), size(image, 1)) for image in images]
+Base.@kwdef struct Sam3ImageProcessor <: ImageProcessor
+    do_resize::Bool = true
+    size::Any = (; height = 1008, width = 1008)
+    resample::Int = 2
+    do_rescale::Bool = true
+    rescale_factor::Float64 = 1 / 255
+    do_normalize::Bool = true
+    image_mean::Any = (0.5, 0.5, 0.5)
+    image_std::Any = (0.5, 0.5, 0.5)
+    do_convert_rgb::Bool = true
+    provenance::NamedTuple = (;)
 end
 
-"""
-    sam3_box_inputs(boxes, original_sizes; labels = nothing)
-        -> (input_boxes, input_boxes_labels)
+register_processor!("Sam3ImageProcessor", Sam3ImageProcessor)
 
-The box prompts of SAM 3, as transformers' processor of SAM 3 makes them: `boxes` holds,
-for each image, a vector of boxes `(x1, y1, x2, y2)` in the pixels of the image, whose
-size `(height, width)` is in `original_sizes`, and `labels` their labels, 1 (positive, the
-default) or 0 (negative).
-
-Returns `input_boxes`, of size `(4, num_boxes, num_images)`, the boxes `(cx, cy, w, h)`
-normalized to their image, and `input_boxes_labels`, of size `(num_boxes, num_images)`; an
-image with fewer boxes than the others is padded with boxes labelled -10.
-"""
-function sam3_box_inputs(boxes, original_sizes; labels = nothing)
-    length(boxes) == length(original_sizes) ||
-        error("got the boxes of $(length(boxes)) images and the sizes of $(length(original_sizes))")
-    n = maximum(length, boxes; init = 0)
-    xyxy = fill(-10.0f0, 4, n, length(boxes))
-    box_labels = fill(-10, n, length(boxes))
-    for (j, (image_boxes, (h, w))) in enumerate(zip(boxes, original_sizes))
-        for (i, (x1, y1, x2, y2)) in enumerate(image_boxes)
-            xyxy[:, i, j] .= Float32.((x1, y1, x2, y2)) ./ Float32.((w, h, w, h))
-            box_labels[i, j] = labels === nothing ? 1 : labels[j][i]
-        end
-    end
-    x1, y1, x2, y2 = (xyxy[i:i, :, :] for i in 1:4)
-    return cat((x1 .+ x2) ./ 2, (y1 .+ y2) ./ 2, x2 .- x1, y2 .- y1; dims = 1), box_labels
+function ignored_keys(::Type{Sam3ImageProcessor})
+    return (; IMAGES_KWARGS_IGNORED...,
+        mask_size = "only resizes the segmentation maps of training labels",
+        crop_size = "only used with `do_center_crop`",
+        pad_size = "only used with `do_pad`",
+        image_seq_length = "not read by Sam3ImageProcessor")
+end
+function restricted_keys(::Type{Sam3ImageProcessor})
+    return (; do_center_crop = (false,), do_pad = (false,))
 end
 
-"""
-    sam3_text_inputs(token_ids; max_length = 32, pad_token_id = 49407)
-        -> (input_ids, attention_mask)
-
-The text prompts of SAM 3, as transformers' processor of SAM 3 makes them: the token ids of
-each prompt, 0-based as a tokenizer gives them (with its start and end tokens), padded on
-the right to `max_length` with `pad_token_id`, the end-of-text token of the CLIP
-tokenizer. Returns the token indices `(max_length, num_prompts)`, 1-based as the model takes
-them, and their `attention_mask`.
-
-```julia
-using HuggingFaceTokenizers
-tokenizer = from_pretrained(Tokenizer, "unsloth/sam3.1")
-input_ids, attention_mask = sam3_text_inputs([encode(tokenizer, "a cat").ids])
-```
-"""
-function sam3_text_inputs(token_ids; max_length = 32, pad_token_id = 49407)
-    input_ids = fill(pad_token_id + 1, max_length, length(token_ids))
-    attention_mask = zeros(Int, max_length, length(token_ids))
-    for (j, ids) in enumerate(token_ids)
-        length(ids) <= max_length ||
-            error("prompt $j has $(length(ids)) tokens, more than `max_length = $max_length`")
-        input_ids[1:length(ids), j] .= ids .+ 1
-        attention_mask[1:length(ids), j] .= 1
-    end
-    return input_ids, attention_mask
+function check_processor(ip::Sam3ImageProcessor)
+    check_resample(ip.resample)
+    size_hw(ip.size)
+    return nothing
 end
 
-const Sam3Detector = Union{Sam3Model, Sam3VideoModel}
+function sam3_pixel_values(ip::Sam3ImageProcessor, image)
+    x = ip.do_convert_rgb ? convert_to_rgb(image) : image
+    eightbit = is_8bit(x)
+    if ip.do_resize
+        h, w = size_hw(ip.size)
+        x = resize_image(x, (w, h), ip.resample)
+    else
+        x = Float32.(x)
+    end
+    return rescale_and_normalize(x, eightbit, ip.do_rescale, ip.rescale_factor,
+        ip.do_normalize, ip.image_mean, ip.image_std)
+end
+
+function (ip::Sam3ImageProcessor)(images)
+    images = image_batch(images)
+    isempty(images) && error("no images to process")
+    pixel_values = stack_images([sam3_pixel_values(ip, image) for image in images])
+    return (; pixel_values, original_sizes = [(size(x, 2), size(x, 1)) for x in images])
+end
 
 # The scores (num_queries, batch) of the queries: the probability of each times that of the
 # presence of the prompt.
@@ -135,17 +111,21 @@ function resize_probabilities(p, (h, w))
 end
 
 """
-    post_process_object_detection(model, outputs; threshold = 0.3, target_sizes = nothing)
+    post_process_object_detection(processor, outputs; threshold = 0.3,
+                                  target_sizes = nothing)
 
-The objects that SAM 3 detects in each image, from the `outputs` of `model` (a
-[`Sam3Model`](@ref Metalhead.Transformers.Sam3Model)), as transformers' processor of SAM 3
-gives them: for each image, a NamedTuple of the `scores` of the queries above `threshold`
+The objects that SAM 3 detects in each image, from the `outputs` of a [`Sam3Model`](@ref
+Metalhead.Transformers.Sam3Model), as transformers' processor of SAM 3 gives them:
+`processor` is a [`Sam3Processor`](@ref Metalhead.Transformers.Sam3Processor) or its image
+processor. For each image, a NamedTuple of the `scores` of the queries above `threshold`
 (the probability of each query times that of the presence of the prompt) and of their
 `boxes` `(4, num_objects)`, `(x1, y1, x2, y2)` normalized to the image, or in its pixels
-with the `target_sizes` `(height, width)` of the images.
+with the `target_sizes` `(height, width)` of the images (such as the `original_sizes` of the
+processor's output).
 """
-function post_process_object_detection(::Sam3Detector, outputs; threshold = 0.3,
+function post_process_object_detection(::Sam3ImageProcessor, outputs; threshold = 0.3,
         target_sizes = nothing)
+    target_sizes = size_list(target_sizes)
     scores, boxes = sam3_scores(outputs), Array(outputs.pred_boxes)
     check_target_sizes(target_sizes, size(scores, 2))
     return map(axes(scores, 2)) do i
@@ -156,21 +136,23 @@ function post_process_object_detection(::Sam3Detector, outputs; threshold = 0.3,
 end
 
 """
-    post_process_instance_segmentation(model, outputs; threshold = 0.3,
+    post_process_instance_segmentation(processor, outputs; threshold = 0.3,
                                        mask_threshold = 0.5, target_sizes = nothing)
 
-The objects that SAM 3 segments in each image, from the `outputs` of `model` (a
-[`Sam3Model`](@ref Metalhead.Transformers.Sam3Model)), as transformers' processor of SAM 3
-gives them: for each image, the `scores` and `boxes` of
+The objects that SAM 3 segments in each image, from the `outputs` of a [`Sam3Model`](@ref
+Metalhead.Transformers.Sam3Model), as transformers' processor of SAM 3 gives them:
+`processor` is a [`Sam3Processor`](@ref Metalhead.Transformers.Sam3Processor) or its image
+processor. For each image, the `scores` and `boxes` of
 [`post_process_object_detection`](@ref
 Metalhead.Transformers.post_process_object_detection), and the `masks` of the objects, a
 `BitArray` of size `(width, height, num_objects)` where the probability of the mask is above
-`mask_threshold`. With the `target_sizes` `(height, width)` of the images, the probabilities
-are resized bilinearly to them first.
+`mask_threshold`. With the `target_sizes`
+`(height, width)` of the images, the probabilities are resized bilinearly to them first.
 """
-function post_process_instance_segmentation(model::Sam3Detector, outputs; threshold = 0.3,
-        mask_threshold = 0.5, target_sizes = nothing)
-    detections = post_process_object_detection(model, outputs; threshold, target_sizes)
+function post_process_instance_segmentation(ip::Sam3ImageProcessor, outputs;
+        threshold = 0.3, mask_threshold = 0.5, target_sizes = nothing)
+    target_sizes = size_list(target_sizes)
+    detections = post_process_object_detection(ip, outputs; threshold, target_sizes)
     scores = sam3_scores(outputs)
     masks = sigmoid.(Array(outputs.pred_masks))
     return map(enumerate(detections)) do (i, d)
@@ -182,18 +164,20 @@ function post_process_instance_segmentation(model::Sam3Detector, outputs; thresh
 end
 
 """
-    post_process_semantic_segmentation(model, outputs; threshold = 0.5,
+    post_process_semantic_segmentation(processor, outputs; threshold = 0.5,
                                        target_sizes = nothing)
 
-The semantic segmentation of each image by SAM 3, from the `outputs` of `model` (a
-[`Sam3Model`](@ref Metalhead.Transformers.Sam3Model)), as transformers' processor of SAM 3
-gives it: for each image, a NamedTuple of the `segmentation`, a `BitMatrix` of size
-`(width, height)` where the probability of `semantic_seg` is above `threshold`, and of the
-probabilities `scores`. With the `target_sizes` `(height, width)` of the images, the
+The semantic segmentation of each image by SAM 3, from the `outputs` of a
+[`Sam3Model`](@ref Metalhead.Transformers.Sam3Model), as transformers' processor of SAM 3
+gives it: `processor` is a [`Sam3Processor`](@ref Metalhead.Transformers.Sam3Processor) or
+its image processor. For each image, a NamedTuple of the `segmentation`, a `BitMatrix` of
+size `(width, height)` where the probability of `semantic_seg` is above `threshold`, and of
+the probabilities `scores`. With the `target_sizes` `(height, width)` of the images, the
 probabilities are resized bilinearly to them first.
 """
-function post_process_semantic_segmentation(::Sam3Detector, outputs; threshold = 0.5,
+function post_process_semantic_segmentation(::Sam3ImageProcessor, outputs; threshold = 0.5,
         target_sizes = nothing)
+    target_sizes = size_list(target_sizes)
     probabilities = sigmoid.(Array(outputs.semantic_seg))
     check_target_sizes(target_sizes, size(probabilities, 4))
     return map(axes(probabilities, 4)) do i

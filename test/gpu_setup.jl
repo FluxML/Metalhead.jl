@@ -31,12 +31,15 @@ is_pipeline(name) = isfile(joinpath(fixture(name), "model_index.json"))
     fixtures_of(library) -> Vector{String}
 
 The fixtures of `library` (`:Timm`, `:Transformers` or `:Diffusers`, the module of the
-config format that `create_model` identifies), pipelines included.
+config format that `create_model` identifies), pipelines included; not those of processors
+(test/fixtures/processors), which have no config.json.
 """
 function fixtures_of(library::Symbol)
     return filter(readdir(FIXTURES)) do name
-        config = is_pipeline(name) ? "model_index.json" : "config.json"
-        format, _ = Metalhead.identify(JSON.parsefile(joinpath(fixture(name), config)))
+        file = is_pipeline(name) ? "model_index.json" : "config.json"
+        config = joinpath(fixture(name), file)
+        isfile(config) || return false
+        format, _ = Metalhead.identify(JSON.parsefile(config))
         return nameof(parentmodule(typeof(format))) == library
     end
 end

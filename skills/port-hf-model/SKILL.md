@@ -481,7 +481,7 @@ first. The workflow is the one above, with these differences.
   `NNlib.scaled_dot_product_attention` with `q_segments`. transformers rotates the queries
   and keys and weights the interpolated position embeddings in float32: `exact_float64`
   patches both, and the port computes them in at least `Float32`. The image processor
-  (`image_processing_qwen2_vl.jl`) is checked against `uv run dump_image_processor.py`.
+  (`image_processing_qwen2_vl.jl`) is checked against `uv run dump_processor.py`.
 - **Vision-language models** (`Qwen3_5ForConditionalGeneration`). config.json nests
   `text_config` and `vision_config`, which arrive as NamedTuples: build each part with the
   keys its builder declares (`config_args`). The image features replace the image tokens by
@@ -510,6 +510,43 @@ first. The workflow is the one above, with these differences.
   own head, which may scale (Granite) or softcap them. Prefer the smallest checkpoint of
   the architecture. Tokenizers are not part of Metalhead; HuggingFaceTokenizers.jl loads
   them for end-to-end checks outside the test suite.
+
+## Processors
+
+A model that takes images, text or boxes gets the processor of its checkpoint, which
+`create_processor(repo)` (`src/hub/processors.jl`) loads as transformers' `AutoProcessor`
+does. `src/Transformers/processing_sam3.jl`, `image_processing_sam3.jl` and
+`tokenization_utils_tokenizers.jl` are the reference ports.
+
+- **Classes.** One immutable struct per upstream class, defined with `Base.@kwdef`: its fields
+  are the attributes of the Python class with that class's defaults (not a checkpoint's),
+  and a last field `provenance::NamedTuple = (;)` for `show`. Image processors subtype
+  `Metalhead.ImageProcessor`, others `Metalhead.Processor`. Register the class name that
+  configurations give with `register_processor!("Sam3Processor", Sam3Processor; aliases,
+  model_types)`; the suffixes `Fast` and `Pil` are dropped. A processor that combines others
+  declares `processor_components(::Type{T}) = (; image_processor = ..., tokenizer =
+  TokenizersBackend)`, components defaulting to `nothing`; the generic `load_processor`
+  loads them and routes each override to the component with a setting of its name.
+- **Strict settings.** Declare `ignored_keys(T)` (`key = "reason"`; splat
+  `IMAGES_KWARGS_IGNORED` into an image processor's), `restricted_keys(T)` (`key = allowed
+  values`) for options that aren't ported, `legacy_keys(T)` (`old = path`), and a
+  `check_processor(p)` that errors on unsupported values. Other keys warn once, so test that
+  each validated repository's files load with `@test_logs` and no warning.
+- **Other libraries.** A config.json that carries the preprocessing (timm's
+  `pretrained_cfg`) gets a method `instantiate_processor(::Format, files, config; kwargs...)`
+  that builds the processor with `processor_from_entries(T, json_entries(dict, file);
+  kwargs...)`, which reads strictly and applies the overrides.
+- **Calling.** Images go through `image_batch` (and so `image_array`), then
+  `convert_to_rgb`, `resize_image` (torchvision's uint8 resize, bit for bit, through
+  `Timm.pil_resize`) and `rescale_and_normalize`. The output is a NamedTuple with
+  transformers' keys in Julia layout, 1-based token indices, which the model takes through a
+  method `model(inputs::NamedTuple)`. Text is strings (for a tokenizer backend) or 0-based
+  token ids. Post-processing and `decode` dispatch on the processor.
+- **Fixtures.** `porting/dump_processor.py` calls `AutoProcessor.from_pretrained(repo)(...)`,
+  never the components, copies the repository's small JSON files (not tokenizer.json) to
+  `test/fixtures/processors/<org>--<repo>/`, and writes the outputs and each prompt's token
+  ids to `test/references/processors/`, so that `test/processors/` runs offline; strings
+  are checked with HuggingFaceTokenizers.jl under `METALHEAD_TEST_NETWORK`.
 
 ## diffusers models and pipelines
 

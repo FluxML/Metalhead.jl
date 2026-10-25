@@ -52,17 +52,7 @@ end
 # torchvision's `ToPILImage` converts them, times 255 rounded down (which keeps `k / 255`
 # at `k`). A grayscale image (a matrix, or 1 channel), gray with alpha (2) or RGBA (4) is
 # converted as Pillow's `convert("RGB")` does, repeating the gray and dropping the alpha.
-function pil_rgb(img::AbstractArray{<:Real})
-    ndims(img) in (2, 3) ||
-        throw(ArgumentError("an image is a (width, height[, channels]) array, got size \
-                             $(size(img))"))
-    x = to_uint8(ndims(img) == 2 ? reshape(img, size(img)..., 1) : img)
-    c = size(x, 3)
-    c == 3 && return x
-    c in (1, 2) && return repeat(x[:, :, 1:1], 1, 1, 3)
-    c == 4 && return x[:, :, 1:3]
-    return throw(ArgumentError("an image has 1 to 4 channels (L, LA, RGB or RGBA), got $c"))
-end
+pil_rgb(img) = convert_to_rgb(to_uint8(image_array(img)))
 
 to_uint8(img::AbstractArray{UInt8}) = Array(img)
 function to_uint8(img::AbstractArray{<:Integer})
@@ -152,7 +142,7 @@ function eval_transform(images; input_size = (3, 224, 224), interpolation = "bic
     filter = Symbol(interpolation)
     crop_pct = truthy(crop_pct) ? crop_pct : DEFAULT_CROP_PCT
     scale_h, scale_w = floor(Int, h / crop_pct), floor(Int, w / crop_pct)
-    images = images isa AbstractArray{<:Real} ? [images] : images
+    images = image_batch(images)
     out = Array{Float32}(undef, w, h, 3, length(images))
     for (i, image) in enumerate(images)
         x = pil_rgb(image)

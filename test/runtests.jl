@@ -1,12 +1,17 @@
 using Pkg
 
 # METALHEAD_TEST_GPU=true also runs the tests of test/gpu/ on a CUDA GPU, and adds CUDA and
-# cuDNN to the test environment for them. Precompile once at the end: on Julia 1.13.2,
-# `Pkg.add` fails to auto-precompile an indirect dependency whose version it changes
-# (JuliaLang/Pkg.jl#4866).
+# cuDNN to the test environment for them. METALHEAD_TEST_NETWORK=true also adds
+# HuggingFaceTokenizers.jl, which tokenizes strings with Python's tokenizers (through
+# PythonCall and CondaPkg), for the tests of tokenizers. Precompile once at the end: on
+# Julia 1.13.2, `Pkg.add` fails to auto-precompile an indirect dependency whose version it
+# changes (JuliaLang/Pkg.jl#4866).
 const TEST_GPU = parse(Bool, get(ENV, "METALHEAD_TEST_GPU", "false"))
-if TEST_GPU
-    withenv(() -> Pkg.add(["CUDA", "cuDNN"]), "JULIA_PKG_PRECOMPILE_AUTO" => "0")
+const TEST_NETWORK = parse(Bool, get(ENV, "METALHEAD_TEST_NETWORK", "false"))
+const EXTRAS = [TEST_GPU ? ["CUDA", "cuDNN"] : String[];
+                TEST_NETWORK ? ["HuggingFaceTokenizers"] : String[]]
+if !isempty(EXTRAS)
+    withenv(() -> Pkg.add(EXTRAS), "JULIA_PKG_PRECOMPILE_AUTO" => "0")
     Pkg.precompile()
 end
 

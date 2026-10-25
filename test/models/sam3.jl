@@ -1,8 +1,7 @@
 using Metalhead, Test
 include("../parity_setup.jl")
 using .ParitySetup
-using Metalhead.Transformers: sam3_image_inputs, sam3_box_inputs, sam3_text_inputs,
-                              get_text_features, get_vision_features,
+using Metalhead.Transformers: get_text_features, get_vision_features, Sam3ImageProcessor,
                               post_process_object_detection,
                               post_process_instance_segmentation,
                               post_process_semantic_segmentation
@@ -128,84 +127,56 @@ const TINY = (;
         input_boxes_labels = [1 1])
 end
 
-@testset "inputs and post-processing" begin
-    boxes, labels = sam3_box_inputs([[(10, 20, 30, 60)], [(0, 0, 50, 50), (5, 5, 15, 25)]],
-        [(100, 50), (50, 100)]; labels = [[1], [0, 1]])
-    @test boxes[:, :, 1] ≈ [0.4 -10; 0.4 -10; 0.4 0; 0.4 0]
-    @test boxes[:, :, 2] ≈ [0.25 0.1; 0.5 0.3; 0.5 0.1; 1.0 0.4]
-    @test labels == [1 0; -10 1]
-    @test sam3_box_inputs([[(10, 20, 30, 60)]], [(100, 50)])[2] == [1;;]
-
-    ids, mask = sam3_text_inputs([[49406, 2368, 49407], [49406, 49407]]; max_length = 5)
-    @test ids == [49407 49407; 2369 49408; 49408 49408; 49408 49408; 49408 49408]
-    @test mask == [1 1; 1 1; 1 0; 0 0; 0 0]
-    @test_throws "max_length" sam3_text_inputs([collect(1:6)]; max_length = 5)
-
+@testset "processor inputs and post-processing" begin
     model = create_model("Sam3Model"; TINY...)
+    pixel_values = randn(Float32, 32, 32, 3, 2)
+    input_ids = rand(1:39, 6, 2)
+    attention_mask = [ones(Int, 6) [ones(Int, 4); 0; 0]]
+    boxes = Float32[0.5 0.4; 0.5 0.6; 0.3 0.2; 0.4 0.5;;;]
+    labels = [1; -10;;]
+    # the output of a processor, whose `original_sizes` the model ignores
+    inputs = (; pixel_values = pixel_values[:, :, :, 1:1],
+        original_sizes = [(32, 32)], input_ids = input_ids[:, 1:1],
+        attention_mask = attention_mask[:, 1:1], input_boxes = boxes,
+        input_boxes_labels = labels)
+    y = model(inputs)
+    @test y.pred_masks ≈ model(inputs.pixel_values, inputs.input_ids;
+        inputs.attention_mask, input_boxes = boxes, input_boxes_labels = labels).pred_masks
+    @test model((; pixel_values, input_ids, attention_mask)).pred_logits ≈
+          model(pixel_values, input_ids; attention_mask).pred_logits
+    video = create_model("Sam3VideoModel"; detector_config = TINY)
+    @test video(inputs).pred_logits ≈ video.detector_model(inputs).pred_logits
+    @test_throws "input_ids" model((; pixel_values))
+    @test_throws "pixel_values" model((; input_ids))
+
+    ip = Sam3ImageProcessor()
     logits = [3.0f0 -1; 0 2; -3 0; 1 -2]
     outputs = (; pred_logits = logits, presence_logits = [0.0f0 4],
         pred_boxes = repeat(Float32[0.1, 0.2, 0.5, 0.6], 1, 4, 2),
         pred_masks = repeat([10.0f0 -10; -10 10], 4, 4, 4, 2),
         semantic_seg = fill(1.0f0, 8, 8, 1, 2))
     scores = Metalhead.NNlib.sigmoid.(logits) .* Metalhead.NNlib.sigmoid.([0.0f0 4])
-    detections = post_process_object_detection(model, outputs; threshold = 0.4)
+    detections = post_process_object_detection(ip, outputs; threshold = 0.4)
     @test detections[1].scores ≈ scores[scores[:, 1] .> 0.4, 1]
     @test length(detections[2].scores) == 2
     @test size(detections[1].boxes) == (4, length(detections[1].scores))
-    scaled = post_process_object_detection(model, outputs; threshold = 0.4,
+    scaled = post_process_object_detection(ip, outputs; threshold = 0.4,
         target_sizes = [(10, 20), (30, 40)])
     @test scaled[1].boxes[:, 1] ≈ [2, 2, 10, 6]
-    @test_throws "target sizes" post_process_object_detection(model, outputs;
+    @test_throws "target sizes" post_process_object_detection(ip, outputs;
         target_sizes = [(10, 20)])
-    instances = post_process_instance_segmentation(model, outputs; threshold = 0.4,
+    instances = post_process_instance_segmentation(ip, outputs; threshold = 0.4,
         target_sizes = [(16, 12), (8, 8)])
     @test size(instances[1].masks) == (12, 16, length(instances[1].scores))
     @test eltype(instances[1].masks) == Bool
     @test instances[2].masks[:, :, 1] == repeat([true false; false true], 4, 4)
-    none = post_process_instance_segmentation(model, outputs; threshold = 0.99)
+    none = post_process_instance_segmentation(ip, outputs; threshold = 0.99)
     @test size(none[1].masks) == (8, 8, 0)
-    semantic = post_process_semantic_segmentation(model, outputs;
+    semantic = post_process_semantic_segmentation(ip, outputs;
         target_sizes = [(4, 6), (8, 8)])
     @test size(semantic[1].segmentation) == (6, 4)
     @test all(semantic[2].segmentation)
     @test semantic[2].scores ≈ fill(Metalhead.NNlib.sigmoid(1.0f0), 8, 8)
-end
-
-@testset "image processing" begin
-    file = joinpath(pkgdir(Metalhead), "test", "references",
-        "sam3_image_processor.safetensors")
-    meta = SafeTensors.deserialize(file).metadata
-    ref = Metalhead.Checkpoint(file)
-    # transformers' processor on tiny images: exact without resizing (8-bit) or for images
-    # of real numbers, else within one level of 255 in a few values, as torchvision resizes
-    # 8-bit images in fixed-point arithmetic
-    for name in ("exact", "float", "upscale", "downscale", "batch")
-        kwargs = JSON.parse(meta[name])
-        images = [ref["$name/image/$i"]
-                  for i in 1:count(startswith("$name/image/"), keys(ref))]
-        std = get(kwargs, "image_std", [0.5, 0.5, 0.5])
-        pixel_values, sizes = sam3_image_inputs(images;
-            image_size = (kwargs["size"]["height"], kwargs["size"]["width"]),
-            image_mean = Tuple(get(kwargs, "image_mean", [0.5, 0.5, 0.5])),
-            image_std = Tuple(std))
-        expected = ref["$name/pixel_values"]
-        @test sizes == [(size(image, 2), size(image, 1)) for image in images]
-        @test eltype(pixel_values) == Float32
-        @test size(pixel_values) == size(expected)
-        err = abs.(pixel_values .- expected)
-        if name == "exact"
-            @test pixel_values == expected
-        elseif name == "float"
-            @test maximum(err) <= 1e-6
-        else
-            @test maximum(err) <= 1.0001 / (255 * minimum(std))
-            @test count(!iszero, err) <= 0.05 * length(err)
-        end
-    end
-    pixel_values, sizes = sam3_image_inputs(rand(UInt8, 20, 10, 3); image_size = 16)
-    @test size(pixel_values) == (16, 16, 3, 1)
-    @test sizes == [(10, 20)]
-    @test_throws "channels" sam3_image_inputs(rand(UInt8, 20, 10, 4))
 end
 
 if TEST_NETWORK

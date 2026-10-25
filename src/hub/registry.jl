@@ -113,13 +113,19 @@ function lookup(name::AbstractString)
     end
 end
 
-# The format of a parsed config.json and the architecture it describes.
-function identify(config)
-    formats = unique(s.format for s in values(REGISTRY))
-    for format in formats
+# The format of a parsed config.json and the architecture it describes, or `nothing`.
+function find_format(config)
+    for format in unique(s.format for s in values(REGISTRY))
         architecture = architecture_of(format, config)
         architecture === nothing || return format, architecture
     end
+    return nothing
+end
+
+function identify(config)
+    found = find_format(config)
+    found === nothing || return found
+    formats = unique(s.format for s in values(REGISTRY))
     return error("config.json is not in the format of a ported library " *
                  "($(join(formats, ", ")))")
 end
