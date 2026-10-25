@@ -508,8 +508,10 @@ setting of that name, and a name that no component has is an error.
 
 Returns the most complete processor the repository describes, as transformers'
 `AutoProcessor` does: a processor that combines an image processor and a tokenizer, such as
-`Transformers.Sam3Processor`; else an image processor; else a tokenizer,
-`Transformers.TokenizersBackend`. Calling it returns a NamedTuple that the model takes:
+`Transformers.Sam3Processor`; else an image processor, such as the
+[`Timm.EvalTransform`](@ref Metalhead.Timm.EvalTransform) of every timm checkpoint; else a
+tokenizer, `Transformers.TokenizersBackend`. Calling it returns what the model takes, a
+NamedTuple (an array for `Timm.EvalTransform`):
 
 ```julia
 proc = create_processor("unsloth/sam3.1")
@@ -520,8 +522,10 @@ Transformers.post_process_instance_segmentation(proc, outputs;
 ```
 
 Images are arrays of size `(width, height, channels)`, of integers from 0 to 255 or of reals
-from 0 to 1. Strings need a tokenizer backend (`using HuggingFaceTokenizers`); token ids, as
-a tokenizer gives them (from 0), don't. `show` prints each setting and where it comes from.
+from 0 to 1, or, with ImageCore loaded, matrices of colorants (see
+[`image_array`](@ref Metalhead.image_array)). Strings need a tokenizer backend
+(`using HuggingFaceTokenizers`); token ids, as a tokenizer gives them (from 0), don't.
+`show` prints each setting and where it comes from.
 """
 function create_processor(name::AbstractString;
         revision::Union{Nothing, AbstractString} = nothing, subfolder::AbstractString = "",

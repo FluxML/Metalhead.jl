@@ -535,7 +535,9 @@ does. `src/Transformers/processing_sam3.jl`, `image_processing_sam3.jl` and
 - **Other libraries.** A config.json that carries the preprocessing (timm's
   `pretrained_cfg`) gets a method `instantiate_processor(::Format, files, config; kwargs...)`
   that builds the processor with `processor_from_entries(T, json_entries(dict, file);
-  kwargs...)`, which reads strictly and applies the overrides.
+  kwargs...)`, which reads strictly and applies the overrides (timm's gives
+  `Timm.EvalTransform`, in `src/Timm/transforms.jl`, checked by
+  `porting/dump_timm_transform.py`).
 - **Calling.** Images go through `image_batch` (and so `image_array`), then
   `convert_to_rgb`, `resize_image` (torchvision's uint8 resize, bit for bit, through
   `Timm.pil_resize`) and `rescale_and_normalize`. The output is a NamedTuple with

@@ -2,8 +2,8 @@
 
     uv run dump_timm_transform.py
 
-Writes test/references/timm_transforms.safetensors, for `eval_transform` and `pil_resize` in
-src/Timm/: the outputs of timm's full path,
+Writes test/references/timm_transforms.safetensors, for `eval_transform`, `pil_resize` and
+`EvalTransform` in src/Timm/: the outputs of timm's full path,
 `create_transform(**resolve_data_config({}, pretrained_cfg = cfg))`, applied to PIL images, for
 `pretrained_cfg`s that cover the interpolations, crop modes and statistics of timm's tags, and
 of `PIL.Image.resize` on tiny random 8-bit images. Images are stored (channels, height, width).
@@ -11,9 +11,14 @@ of `PIL.Image.resize` on tiny random 8-bit images. Images are stored (channels, 
 - "image/<i>": the small images, RGB but for a grayscale (1 channel) and an RGBA (4) one,
   which go through `convert("RGB")` first, as timm's datasets do.
 - "transform/<case>": the `pixel_values` (batch, channels, height, width) of all the small
-  images, or of the image of `large_image` for the case "realistic" (a timm model's own
-  configuration); the metadata "transform/<case>" has the `pretrained_cfg`, `use_test_size` and
-  the resolved data configuration.
+  images, or of the image of `large_image` for the case "realistic" (the configuration of a
+  validated checkpoint, from its config.json on the Hub); the metadata "transform/<case>" has the
+  `pretrained_cfg`, `use_test_size` and the resolved data configuration.
+- "logits/realistic": the logits of that checkpoint's pretrained model for the image of
+  "transform/realistic", whose config.json is copied to test/fixtures/processors/.
+- metadata "resolved/<repo>": for each timm checkpoint of test/references/, its revision and
+  `resolve_data_config({}, model=model)` with `use_test_size` false (`config`) and true
+  (`test_config`), for `model = timm.create_model("hf-hub:<repo>@<revision>")`.
 - "resize/<i>/input" and "resize/<i>/<filter>": an image and `PIL.Image.resize` of it to the
   size in the metadata "resize/<i>", by each filter; "resize/<i>/torchvision_<filter>" its
   resize as a uint8 tensor by torchvision (`antialias=True`, on the CPU), for `pil_resize(...;
@@ -26,7 +31,9 @@ import numpy as np
 import PIL
 import timm
 import torch
+from huggingface_hub import hf_hub_download
 from PIL import Image
+from safetensors import safe_open
 from safetensors.torch import save_file
 from timm.data import create_transform, resolve_data_config
 from torchvision.transforms import InterpolationMode
@@ -35,7 +42,9 @@ from torchvision.transforms.v2 import functional as tvF
 from common import versions
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-OUT = ROOT / "test" / "references" / "timm_transforms.safetensors"
+REFERENCES = ROOT / "test" / "references"
+OUT = REFERENCES / "timm_transforms.safetensors"
+FIXTURES = ROOT / "test" / "fixtures" / "processors"
 
 INCEPTION = dict(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
 CLIP = dict(mean=(0.48145466, 0.4578275, 0.40821073),
@@ -66,7 +75,7 @@ CASES = {
     "test_size_used": dict(input_size=(3, 16, 16), test_input_size=(3, 20, 20),
                            crop_pct=0.875, test_crop_pct=1.0, use_test_size=True),
 }
-REALISTIC_MODEL = "convnext_tiny.fb_in1k"
+REALISTIC_REPO = "timm/convnext_tiny.fb_in1k"
 LARGE = (3, 375, 500)
 # (width, height) of the input and of the output; the first size is that of the input
 RESIZES = [
@@ -103,9 +112,20 @@ def to_pil(array):
     return Image.fromarray(hwc[:, :, 0] if mode == "L" else hwc, mode=mode)
 
 
+def validated_checkpoints():
+    """The timm repositories of test/references/ and the revisions they were validated at."""
+    checkpoints = {}
+    for path in sorted(REFERENCES.glob("timm--*.safetensors")):
+        with safe_open(path, "pt") as f:
+            meta = f.metadata()
+        checkpoints[meta["repo"]] = meta["revision"]
+    return checkpoints
+
+
 def main():
     rng = np.random.default_rng(0)
-    tensors, meta = {}, {"model": REALISTIC_MODEL, "pillow": PIL.__version__,
+    checkpoints = validated_checkpoints()
+    tensors, meta = {}, {"model": REALISTIC_REPO, "pillow": PIL.__version__,
                          "cpu_capability": torch.backends.cpu.get_cpu_capability(), **versions()}
 
     small = [rng.integers(0, 256, shape, dtype=np.uint8) for shape in SMALL]
@@ -122,13 +142,28 @@ def main():
                                                     use_test_size=use_test_size,
                                                     config=config))
 
-    model = timm.create_model(REALISTIC_MODEL, pretrained=False)
+    revision = checkpoints[REALISTIC_REPO]
+    model = timm.create_model(f"hf-hub:{REALISTIC_REPO}@{revision}", pretrained=True).eval()
     config = resolve_data_config({}, model=model)
     image = to_pil(large_image(*LARGE))
-    tensors["transform/realistic"] = create_transform(**config)(image)[None].contiguous()
+    x = create_transform(**config)(image)[None].contiguous()
+    tensors["transform/realistic"] = x
+    with torch.no_grad():
+        tensors["logits/realistic"] = model(x).contiguous()
     meta["transform/realistic"] = json.dumps(dict(pretrained_cfg=model.pretrained_cfg,
                                                   use_test_size=False, config=config,
-                                                  large_image=LARGE))
+                                                  large_image=LARGE, repo=REALISTIC_REPO,
+                                                  revision=revision))
+    fixture = FIXTURES / REALISTIC_REPO.replace("/", "--")
+    fixture.mkdir(parents=True, exist_ok=True)
+    config_json = hf_hub_download(REALISTIC_REPO, "config.json", revision=revision)
+    (fixture / "config.json").write_bytes(pathlib.Path(config_json).read_bytes())
+
+    for repo, revision in checkpoints.items():
+        model = timm.create_model(f"hf-hub:{repo}@{revision}", pretrained=False)
+        meta[f"resolved/{repo}"] = json.dumps(dict(
+            revision=revision, config=resolve_data_config({}, model=model),
+            test_config=resolve_data_config({}, model=model, use_test_size=True)))
 
     for i, ((w, h), size) in enumerate(RESIZES):
         image = rng.integers(0, 256, (3, h, w), dtype=np.uint8)

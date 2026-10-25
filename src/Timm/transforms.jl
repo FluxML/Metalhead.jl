@@ -2,6 +2,8 @@
 # and `transforms_imagenet_eval` in timm/data/transforms_factory.py), and the torchvision
 # 0.29 transforms it composes: `Resize`, timm's `ResizeKeepRatio`, `CenterCrop`, `ToTensor`
 # and `Normalize`. timm transforms PIL images, so the port of Pillow (pil.jl) resizes them.
+# `EvalTransform` is the processor of a timm checkpoint, from the `pretrained_cfg` of its
+# config.json (timm/models/_hub.py and the `PretrainedCfg` of timm/models/_pretrained.py).
 
 const IMAGENET_DEFAULT_MEAN = (0.485, 0.456, 0.406)
 const IMAGENET_DEFAULT_STD = (0.229, 0.224, 0.225)
@@ -102,6 +104,18 @@ function center_crop(img, (h, w))
     return img[left .+ (1:w), top .+ (1:h), :]
 end
 
+function check_transform(interpolation, crop_mode, mean, std)
+    interpolation in TIMM_INTERPOLATIONS ||
+        throw(ArgumentError("interpolation = $(repr(interpolation)) is not supported \
+                             (supported: $(join(repr.(TIMM_INTERPOLATIONS), ", ")))"))
+    crop_mode in TIMM_CROP_MODES ||
+        throw(ArgumentError("crop_mode = $(repr(crop_mode)) is not supported (supported: \
+                             $(join(repr.(TIMM_CROP_MODES), ", ")))"))
+    length(mean) == length(std) == 3 ||
+        throw(ArgumentError("`mean` and `std` have one value per RGB channel"))
+    return nothing
+end
+
 """
     eval_transform(images; input_size = (3, 224, 224), interpolation = "bicubic",
                    crop_pct = 0.875, crop_mode = "center", mean = IMAGENET_DEFAULT_MEAN,
@@ -129,14 +143,7 @@ function eval_transform(images; input_size = (3, 224, 224), interpolation = "bic
         crop_pct = DEFAULT_CROP_PCT, crop_mode = "center", mean = IMAGENET_DEFAULT_MEAN,
         std = IMAGENET_DEFAULT_STD)
     interpolation = string(interpolation)
-    interpolation in TIMM_INTERPOLATIONS ||
-        throw(ArgumentError("interpolation = $(repr(interpolation)) is not supported \
-                             (supported: $(join(repr.(TIMM_INTERPOLATIONS), ", ")))"))
-    crop_mode in TIMM_CROP_MODES ||
-        throw(ArgumentError("crop_mode = $(repr(crop_mode)) is not supported (supported: \
-                             $(join(repr.(TIMM_CROP_MODES), ", ")))"))
-    length(mean) == length(std) == 3 ||
-        throw(ArgumentError("`mean` and `std` have one value per RGB channel"))
+    check_transform(interpolation, crop_mode, mean, std)
     h, w = input_size isa Integer ? (input_size, input_size) :
            Tuple(input_size)[(end - 1):end]
     filter = Symbol(interpolation)
@@ -160,4 +167,116 @@ function eval_transform(images; input_size = (3, 224, 224), interpolation = "bic
         end
     end
     return out
+end
+
+"""
+    Timm.EvalTransform(; input_size = (3, 224, 224), interpolation = "bicubic",
+                       mean = (0.485, 0.456, 0.406), std = (0.229, 0.224, 0.225),
+                       crop_pct = 0.875, crop_mode = "center")
+
+timm's evaluation transform, `create_transform(**resolve_data_config(...))`: the image
+processor of every timm checkpoint, which [`create_processor`](@ref
+Metalhead.create_processor) builds from the `pretrained_cfg` of its config.json. Its
+settings are those that timm's `resolve_data_config` resolves, with the same defaults, which
+apply where the configuration doesn't set them.
+
+Called on one image or a vector of images, it returns the input of the model, not a
+NamedTuple: a `Float32` array of size `(W, H, 3, batch)`, where `(3, H, W)` is
+`input_size`, of the images resized, cropped and normalized, bit for bit as timm transforms
+them as PIL images. One image gives a batch of one.
+
+```julia
+model = create_model("timm/convnext_tiny.fb_in1k"; pretrained = true)
+transform = create_processor("timm/convnext_tiny.fb_in1k")
+logits = model(transform(image))    # transform(image): 224 × 224 × 3 × 1
+```
+
+An image is an array of size `(width, height, channels)` (torch's
+`(channels, height, width)` reversed) of integers from 0 to 255 (an 8-bit image, as `UInt8`)
+or of reals from 0 to 1, which are converted to 8 bits as torchvision's `ToPILImage`
+converts them, or, with ImageCore loaded, a matrix of colorants (see
+[`image_array`](@ref Metalhead.image_array)). Grey images, and the alpha of RGBA, are
+converted to RGB as Pillow's `convert("RGB")` does. Each image is
+
+ 1. resized with Pillow's filter `interpolation` (`"nearest"`, `"bilinear"`, `"bicubic"`,
+    `"box"`, `"hamming"` or `"lanczos"`): its short side to `floor(input_size / crop_pct)`
+    with `crop_mode = "center"`, both sides with `crop_mode = "squash"`. (A non-square
+    `input_size` with `"center"` resizes with `"bilinear"`, as in timm.) timm's third crop
+    mode, `"border"`, is not supported;
+ 2. center-cropped to the height and width of `input_size` `(channels, height, width)`,
+    padded with zeros where it is smaller;
+ 3. scaled to [0, 1] and normalized with `mean` and `std`.
+
+`create_processor(repo; use_test_size = true)` resolves `test_input_size` and
+`test_crop_pct` in place of `input_size` and `crop_pct`, where the configuration has them,
+as `resolve_data_config(use_test_size = True)` does: many checkpoints are evaluated at a
+larger size than the one they were trained at. The other keywords of `create_processor`
+override the settings, e.g. `crop_pct = 1.0`. [`Timm.pretrained_cfg`](@ref
+Metalhead.Timm.pretrained_cfg) returns the `pretrained_cfg` as it is.
+"""
+Base.@kwdef struct EvalTransform <: ImageProcessor
+    input_size::NTuple{3, Int} = (3, 224, 224)
+    interpolation::String = "bicubic"
+    mean::Tuple{Vararg{Float64}} = IMAGENET_DEFAULT_MEAN
+    std::Tuple{Vararg{Float64}} = IMAGENET_DEFAULT_STD
+    crop_pct::Float64 = DEFAULT_CROP_PCT
+    crop_mode::String = "center"
+    provenance::NamedTuple = (;)
+end
+
+function (t::EvalTransform)(images)
+    return eval_transform(images; t.input_size, t.interpolation, t.mean, t.std, t.crop_pct,
+        t.crop_mode)
+end
+
+function check_processor(t::EvalTransform)
+    return check_transform(t.interpolation, t.crop_mode, t.mean, t.std)
+end
+
+# The keys of timm's `PretrainedCfg` that the eval transform doesn't read.
+function ignored_keys(::Type{EvalTransform})
+    weights = "says where timm finds the weights"
+    classifier = "describes the classifier"
+    model = "describes the model"
+    metadata = "metadata"
+    return (; url = weights, file = weights, state_dict = weights, hf_hub_id = weights,
+        hf_hub_filename = weights, source = weights,
+        custom_load = "says how timm loads the weights",
+        architecture = "names the architecture", tag = "names the pretrained weights",
+        test_input_size = "replaces `input_size` with `use_test_size = true`",
+        test_crop_pct = "replaces `crop_pct` with `use_test_size = true`",
+        min_input_size = "the smallest input size of the model, not one of the transform",
+        fixed_input_size = "a setting of the model, which `create_model` reads",
+        num_classes = classifier, label_offset = classifier, label_names = classifier,
+        label_descriptions = classifier, pool_size = model, test_pool_size = model,
+        first_conv = model, classifier = model, license = metadata, description = metadata,
+        origin_url = metadata, paper_name = metadata, paper_ids = metadata,
+        notes = metadata)
+end
+
+# The settings that `resolve_data_config` takes from the `pretrained_cfg` only where they are
+# true in Python, so that an empty string or list, or zero, is the default.
+const TRUTHY_SETTINGS = ("interpolation", "mean", "std", "crop_pct", "crop_mode",
+    "test_crop_pct")
+
+# The `pretrained_cfg` of a config.json; a former config.json is the `pretrained_cfg` with the
+# architecture (timm's `_parse_model_cfg`).
+function timm_pretrained_cfg(config)
+    haskey(config, "pretrained_cfg") && return config["pretrained_cfg"]
+    outside = ("architecture", "num_features", "labels")
+    return Dict(k => v for (k, v) in config if !(k in outside))
+end
+
+function instantiate_processor(::TimmFormat, files, config; use_test_size::Bool = false,
+        kwargs...)
+    entries, test = Tuple{String, Any, String}[], Tuple{String, Any, String}[]
+    for (k, v) in timm_pretrained_cfg(config)
+        k in TRUTHY_SETTINGS && !truthy(v) && continue
+        if use_test_size && k in ("test_input_size", "test_crop_pct")
+            push!(test, (replace(k, "test_" => ""), jsonvalue(v), "config.json (`$k`)"))
+        else
+            push!(entries, (k, jsonvalue(v), "config.json"))
+        end
+    end
+    return processor_from_entries(EvalTransform, [entries; test]; kwargs...)
 end

@@ -27,6 +27,7 @@ create_processor
 ## timm
 
 ```@docs
+Metalhead.Timm.EvalTransform
 Metalhead.Timm.pretrained_cfg
 ```
 
@@ -75,7 +76,8 @@ diffusers builders the arguments of the model's constructor.
 ```@autodocs
 Modules = [Metalhead.Timm, Metalhead.Transformers]
 Order = [:function]
-Filter = f -> !(f in (Metalhead.Timm.pretrained_cfg,
+Filter = f -> !(f in (Metalhead.Timm.pretrained_cfg, Metalhead.Timm.resolve_data_config,
+    Metalhead.Timm.eval_transform, Metalhead.Timm.pil_resize,
     Metalhead.Transformers.post_process_object_detection,
     Metalhead.Transformers.post_process_instance_segmentation,
     Metalhead.Transformers.post_process_semantic_segmentation,
@@ -125,6 +127,9 @@ Metalhead.SourceFile
 Metalhead.local_path
 Metalhead.image_array
 Metalhead.image_batch
+Metalhead.Timm.resolve_data_config
+Metalhead.Timm.eval_transform
+Metalhead.Timm.pil_resize
 Metalhead.Checkpoint
 Metalhead.load_state!
 Metalhead.torch_params

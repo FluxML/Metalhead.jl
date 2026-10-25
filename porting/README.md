@@ -13,6 +13,7 @@ uv run dump.py specs/resnet_basic.json --all-taps --out out/resnet_basic   # deb
 julia --project=.. check.jl out/resnet_basic
 uv run param_counts.py resnet resnet18 resnet50   # -> test/references/param_counts/resnet.json
 uv run dump_reference.py timm/resnet18.a1_in1k   # real weights -> test/references/
+uv run dump_timm_transform.py                    # timm's eval transform (EvalTransform), Pillow's resize
 uv run dump.py specs/llama_tiny.json             # a transformers spec ("library": "transformers")
 uv run dump_reference.py HuggingFaceTB/SmolLM2-135M   # a language model: tokenized prompts
 uv run dump.py specs/qwen3_5_vision_tiny.json    # a vision encoder: random patches of "grid_thw"
