@@ -72,18 +72,19 @@ Flux.@layer SqueezeNet
 
 function SqueezeNet(; pretrain::Bool = false, inchannels::Integer = 3,
                     nclasses::Integer = 1000)
+    legacy_depwarn(:SqueezeNet)
     layers = squeezenet(; inchannels, nclasses)
     model = SqueezeNet(layers)
     if pretrain
-        loadpretrain!(model, "squeezenet")
+        _loadpretrain!(model, "squeezenet")
     end
     return model
 end
 
 (m::SqueezeNet)(x) = m.layers(x)
 
-backbone(m::SqueezeNet) = m.layers[1]
-classifier(m::SqueezeNet) = m.layers[2:end]
+_backbone(m::SqueezeNet) = m.layers[1]
+_classifier(m::SqueezeNet) = m.layers[2:end]
 
 function Flux.loadmodel!(model::SqueezeNet, w)
     Flux.loadmodel!(model.layers[1], w.layers[1])

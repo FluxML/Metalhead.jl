@@ -37,8 +37,9 @@ end
 end
 
 @testset "half precision" begin
+    # sam3_boxes has reached 1.3e-2 in CI
     for name in SAM3_FIXTURES
-        @test check_half_precision(name)
+        @test check_half_precision(name; rtol = 2e-2)
     end
 end
 

@@ -58,17 +58,18 @@ Flux.@layer ResMLP
 function ResMLP(config::Symbol; imsize::Dims{2} = (224, 224),
                 patch_size::Dims{2} = (16, 16), pretrain::Bool = false,
                 inchannels::Integer = 3, nclasses::Integer = 1000)
+    legacy_depwarn(:ResMLP)
     _checkconfig(config, keys(MIXER_CONFIGS))
     layers = mlpmixer(resmixerblock, imsize; mlp_ratio = 4.0, patch_size,
                       MIXER_CONFIGS[config]..., inchannels, nclasses)
     model = ResMLP(layers)
     if pretrain
-        loadpretrain!(model, string(resmlp, config))
+        _loadpretrain!(model, string(resmlp, config))
     end
     return model
 end
 
 (m::ResMLP)(x) = m.layers(x)
 
-backbone(m::ResMLP) = m.layers[1]
-classifier(m::ResMLP) = m.layers[2]
+_backbone(m::ResMLP) = m.layers[1]
+_classifier(m::ResMLP) = m.layers[2]

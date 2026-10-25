@@ -16,6 +16,7 @@ include("legacy/legacy.jl")
 
 # Hugging Face Hub ports
 using ConcreteStructs: @concrete
+using Downloads: RequestError
 import HuggingFaceApi as HF
 using JSON: JSON
 using SafeTensors: SafeTensors

@@ -103,17 +103,18 @@ Flux.@layer ViT
 
 function ViT(config::Symbol; imsize::Dims{2} = (224, 224), patch_size::Dims{2} = (16, 16),
              pretrain::Bool = false, inchannels::Integer = 3, nclasses::Integer = 1000)
+    legacy_depwarn(:ViT)
     _checkconfig(config, keys(VIT_CONFIGS))
     layers = vit(imsize; inchannels, patch_size, nclasses, VIT_CONFIGS[config]...)
     model = ViT(layers)
     if pretrain
         artifact_name = "vit_$(string(config)[1])_$(patch_size[1])-IMAGENET1K_V1"
-        loadpretrain!(model, artifact_name)
+        _loadpretrain!(model, artifact_name)
     end
     return model
 end
 
 (m::ViT)(x) = m.layers(x)
 
-backbone(m::ViT) = m.layers[1]
-classifier(m::ViT) = m.layers[2]
+_backbone(m::ViT) = m.layers[1]
+_classifier(m::ViT) = m.layers[2]

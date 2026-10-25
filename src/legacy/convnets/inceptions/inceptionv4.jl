@@ -136,15 +136,16 @@ Flux.@layer Inceptionv4
 
 function Inceptionv4(; pretrain::Bool = false, inchannels::Integer = 3,
                      nclasses::Integer = 1000)
+    legacy_depwarn(:Inceptionv4)
     layers = inceptionv4(; inchannels, nclasses)
     model = Inceptionv4(layers)
     if pretrain
-        loadpretrain!(model, "Inceptionv4")
+        _loadpretrain!(model, "Inceptionv4")
     end
     return model
 end
 
 (m::Inceptionv4)(x) = m.layers(x)
 
-backbone(m::Inceptionv4) = m.layers[1]
-classifier(m::Inceptionv4) = m.layers[2]
+_backbone(m::Inceptionv4) = m.layers[1]
+_classifier(m::Inceptionv4) = m.layers[2]

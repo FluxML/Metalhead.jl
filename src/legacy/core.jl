@@ -6,7 +6,10 @@ A `Flux.Chain` is returned, which can be indexed/sliced into to get the desired 
 Note that the model used here as input must be the "camel-cased" version of the model,
 e.g. `ResNet` instead of `resnet`.
 """
-backbone
+function backbone(model)
+    legacy_depwarn(:backbone)
+    return _backbone(model)
+end
 
 """
     classifier(model)
@@ -16,4 +19,7 @@ a model on a different dataset. A `Flux.Chain` is returned, which can be indexed
 get the desired layer(s). Note that the model used here as input must be the "camel-cased"
 version of the model, e.g. `ResNet` instead of `resnet`.
 """
-classifier
+function classifier(model)
+    legacy_depwarn(:classifier)
+    return _classifier(model)
+end

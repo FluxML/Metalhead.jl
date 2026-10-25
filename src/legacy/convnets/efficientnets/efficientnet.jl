@@ -85,15 +85,16 @@ Flux.@layer EfficientNet
 
 function EfficientNet(config::Symbol; pretrain::Bool = false, inchannels::Integer = 3,
                       nclasses::Integer = 1000)
+    legacy_depwarn(:EfficientNet)
     layers = efficientnet(config; inchannels, nclasses)
     model = EfficientNet(layers)
     if pretrain
-        loadpretrain!(model, string("efficientnet_", config))
+        _loadpretrain!(model, string("efficientnet_", config))
     end
     return model
 end
 
 (m::EfficientNet)(x) = m.layers(x)
 
-backbone(m::EfficientNet) = m.layers[1]
-classifier(m::EfficientNet) = m.layers[2]
+_backbone(m::EfficientNet) = m.layers[1]
+_classifier(m::EfficientNet) = m.layers[2]

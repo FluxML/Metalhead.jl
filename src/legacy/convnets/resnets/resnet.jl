@@ -20,6 +20,7 @@ Flux.@layer ResNet
 
 function ResNet(depth::Integer; pretrain::Bool = false, inchannels::Integer = 3,
                 nclasses::Integer = 1000)
+    legacy_depwarn(:ResNet)
     _checkconfig(depth, keys(RESNET_CONFIGS))
     layers = resnet(RESNET_CONFIGS[depth]...; inchannels, nclasses)
     model = ResNet(layers)
@@ -30,15 +31,15 @@ function ResNet(depth::Integer; pretrain::Bool = false, inchannels::Integer = 3,
         elseif depth in [50, 101, 152]
             artifact_name *= "-IMAGENET1K_V2"
         end
-        loadpretrain!(model, artifact_name)
+        _loadpretrain!(model, artifact_name)
     end
     return model
 end
 
 (m::ResNet)(x) = m.layers(x)
 
-backbone(m::ResNet) = m.layers[1]
-classifier(m::ResNet) = m.layers[2]
+_backbone(m::ResNet) = m.layers[1]
+_classifier(m::ResNet) = m.layers[2]
 
 """
     WideResNet(depth::Integer; pretrain::Bool = false, inchannels::Integer = 3, nclasses::Integer = 1000)
@@ -64,6 +65,7 @@ Flux.@layer WideResNet
 
 function WideResNet(depth::Integer; pretrain::Bool = false, inchannels::Integer = 3,
                     nclasses::Integer = 1000)
+    legacy_depwarn(:WideResNet)
     _checkconfig(depth, keys(LRESNET_CONFIGS))
     layers = resnet(LRESNET_CONFIGS[depth]...; base_width = 128, inchannels, nclasses)
     model = WideResNet(layers)
@@ -72,12 +74,12 @@ function WideResNet(depth::Integer; pretrain::Bool = false, inchannels::Integer 
         if depth in [50, 101]
             artifact_name *= "-IMAGENET1K_V2"
         end        
-        loadpretrain!(model, artifact_name)
+        _loadpretrain!(model, artifact_name)
     end
     return model
 end
 
 (m::WideResNet)(x) = m.layers(x)
 
-backbone(m::WideResNet) = m.layers[1]
-classifier(m::WideResNet) = m.layers[2]
+_backbone(m::WideResNet) = m.layers[1]
+_classifier(m::WideResNet) = m.layers[2]

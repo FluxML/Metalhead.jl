@@ -90,15 +90,16 @@ Flux.@layer MobileNetv3
 
 function MobileNetv3(config::Symbol; width_mult::Real = 1, pretrain::Bool = false,
                      inchannels::Integer = 3, nclasses::Integer = 1000)
+    legacy_depwarn(:MobileNetv3)
     layers = mobilenetv3(config; width_mult, inchannels, nclasses)
     model = MobileNetv3(layers)
     if pretrain
-        loadpretrain!(model, "mobilenet_v3")
+        _loadpretrain!(model, "mobilenet_v3")
     end
     return model
 end
 
 (m::MobileNetv3)(x) = m.layers(x)
 
-backbone(m::MobileNetv3) = m.layers[1]
-classifier(m::MobileNetv3) = m.layers[2]
+_backbone(m::MobileNetv3) = m.layers[1]
+_classifier(m::MobileNetv3) = m.layers[2]

@@ -4,7 +4,11 @@ All notable changes to Metalhead.jl are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Releases before 0.9.6 are described
 in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
 
-## [Unreleased] (0.10.0)
+## [0.10.0]
+
+Breaking: Flux 0.16.14, NNlib 0.9.54 and MLUtils 0.4.9 are now the minimum versions, and the
+hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and the
+[migration guide](https://fluxml.ai/Metalhead.jl/dev/migration/)).
 
 ### Added
 
@@ -26,11 +30,11 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
   - `forward_intermediates` and `feature_info`, for the multi-scale features of segmentation
     and depth heads (ResNet and its variants, ConvNeXt, ViT, the MLP mixers, DenseNet, VGG,
     Inception v3/v4, Inception-ResNet-v2, aligned Xception, and the EfficientNet and MobileNet
-    families, including MixNet, MNASNet, FBNet and LCNet) (#309).
+    families, including MixNet, MNASNet, FBNet and LCNet) (#321).
   - ViT options of DINOv2, CLIP and SigLIP: layer scale, register tokens, pre-norm,
     QuickGELU, attention pooling (`global_pool = "map"`), average/max pooling, and
     `dynamic_img_size`, which resamples the position embedding like PyTorch's antialiased
-    bicubic interpolation.
+    bicubic interpolation (#321).
   - 298 architectures: ResNet, ResNeXt, Wide ResNet, SE-ResNet, SE-ResNeXt, SENet, ECA-ResNet,
     Res2Net and Res2NeXt; ViT, including DINOv2 (with registers), CLIP and SigLIP; ConvNeXt;
     VGG; DenseNet; Inception v3 and v4, Inception-ResNet-v2; aligned Xception; MLP-Mixer, ResMLP and gMLP; ConvMixer;
@@ -55,8 +59,8 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
   the decoder layers.
 - Qwen3.5, the vision-language model of the Qwen3.5 checkpoints
   (`Qwen3_5ForConditionalGeneration`), validated against `Qwen/Qwen3.5-0.8B` on text and on
-  an image. Its decoder alternates gated attention with gated delta rule (linear attention)
-  layers and has a multimodal rotary embedding; it is also ported alone
+  an image (#340). Its decoder alternates gated attention with gated delta rule (linear
+  attention) layers and has a multimodal rotary embedding; it is also ported alone
   (`Qwen3_5ForCausalLM`), as is its vision encoder (`Qwen3_5VisionModel`).
   `Metalhead.Transformers.qwen3_5_image_inputs` preprocesses images as the checkpoints'
   processor does. Videos are not supported.
@@ -75,15 +79,17 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
   with `Flux2Transformer2DModel`, `AutoencoderKLFlux2` and `FlowMatchEulerDiscreteScheduler`),
   validated against `black-forest-labs/FLUX.2-klein-4B` (#332). `create_model` builds a pipeline from
   the `model_index.json` of a repository, or one of its components with `subfolder`
-  (`"org/name/vae"` also names one). With HuggingFaceTokenizers.jl loaded, pipelines take
-  prompts as strings.
+  (`"org/name/vae"` also names one).
+- An extension for HuggingFaceTokenizers.jl (`ext/`): with it loaded,
+  `Metalhead.Diffusers.tokenize` tokenizes prompts with the tokenizer and chat template of a
+  pipeline, so that pipelines take prompts as strings (#332).
 - Mixed precision under `eltype = Float16` or `Flux.BFloat16` (or `f16`/`bf16`, #332): the
   RMSNorms of the language models and timm's `LayerNorm2d` keep their parameters in
   `Float32`, as Flux's `BatchNorm`, `GroupNorm` and `LayerNorm` do, and normalise in
   `Float32`, while the activations stay in half precision. ViTs resample their position
   embeddings in `Float32`, as timm does.
 - Validation against PyTorch: float64 parity fixtures for every code path, run in CI without
-  Python or network access, and float32 references for 59 pretrained checkpoints. Weights load
+  Python or network access, and float32 references for 71 pretrained checkpoints. Weights load
   strictly by name.
 - `porting/` tools and an agent skill (`skills/port-hf-model`) for porting new
   models (#305, #307).
@@ -94,16 +100,19 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
 
 ### Changed
 
-- New dependencies: HuggingFaceApi, SafeTensors, JSON and ConcreteStructs. Flux 0.16.14,
-  NNlib 0.9.54 and MLUtils 0.4.9 are now the minimum versions (#305, #327, #337).
+- New dependencies: HuggingFaceApi, SafeTensors, JSON and ConcreteStructs, and the weak
+  dependency HuggingFaceTokenizers. Flux 0.16.14, NNlib 0.9.54 and MLUtils 0.4.9 are now the
+  minimum versions (#335, #337, #341).
 - Downloads share the cache of Python's `huggingface_hub` (`~/.cache/huggingface/hub`), and
   its `HF_TOKEN`, `HF_HUB_CACHE` and `HF_HUB_OFFLINE` environment variables.
 
 ### Deprecated
 
-- The hand-written models (`ResNet(50)`, `ViT(:base)`, ...) and their lowercase builders, the
-  `Metalhead.Layers` module, and `pretrain = true` with the weights it loads from the FluxML
-  organisation. They will be removed in 0.11 (#305).
+- The hand-written models (`ResNet(50)`, `ViT(:base)`, ...) and their lowercase builders,
+  `backbone`, `classifier` and `Metalhead.loadpretrain!`, the `Metalhead.Layers` module, and
+  `pretrain = true` with the weights it loads from the FluxML organisation. They will be
+  removed in 0.11 (#305). The model constructors, `backbone`, `classifier` and
+  `loadpretrain!` warn once per session, naming their replacement (#345).
 
 ### Removed
 
@@ -135,6 +144,6 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
 
 - Compat with JLD2 0.6 (#291).
 
-[Unreleased]: https://github.com/FluxML/Metalhead.jl/compare/v0.9.7...HEAD
+[0.10.0]: https://github.com/FluxML/Metalhead.jl/compare/v0.9.7...HEAD
 [0.9.7]: https://github.com/FluxML/Metalhead.jl/compare/v0.9.6...v0.9.7
 [0.9.6]: https://github.com/FluxML/Metalhead.jl/compare/v0.9.5...v0.9.6

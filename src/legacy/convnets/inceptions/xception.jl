@@ -92,15 +92,16 @@ Flux.@layer Xception
 
 function Xception(; pretrain::Bool = false, inchannels::Integer = 3,
                   nclasses::Integer = 1000)
+    legacy_depwarn(:Xception)
     layers = xception(; inchannels, nclasses)
     model = Xception(layers)
     if pretrain
-        loadpretrain!(model, "xception")
+        _loadpretrain!(model, "xception")
     end
     return model
 end
 
 (m::Xception)(x) = m.layers(x)
 
-backbone(m::Xception) = m.layers[1]
-classifier(m::Xception) = m.layers[2]
+_backbone(m::Xception) = m.layers[1]
+_classifier(m::Xception) = m.layers[2]
