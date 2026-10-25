@@ -24,21 +24,22 @@ Flux.@layer SEResNet
 
 function SEResNet(depth::Integer; pretrain::Bool = false, inchannels::Integer = 3,
                   nclasses::Integer = 1000)
+    legacy_depwarn(:SEResNet)
     _checkconfig(depth, keys(RESNET_CONFIGS))
     layers = resnet(RESNET_CONFIGS[depth]...; inchannels, nclasses,
                     attn_fn = squeeze_excite)
     model = SEResNet(layers)
     if pretrain
         artifact_name = "seresnet$(depth)"
-        loadpretrain!(model, artifact_name)
+        _loadpretrain!(model, artifact_name)
     end
     return model
 end
 
 (m::SEResNet)(x) = m.layers(x)
 
-backbone(m::SEResNet) = m.layers[1]
-classifier(m::SEResNet) = m.layers[2]
+_backbone(m::SEResNet) = m.layers[1]
+_classifier(m::SEResNet) = m.layers[2]
 
 """
     SEResNeXt(depth::Integer; pretrain::Bool = false, cardinality::Integer = 32,
@@ -70,18 +71,19 @@ Flux.@layer SEResNeXt
 function SEResNeXt(depth::Integer; pretrain::Bool = false, cardinality::Integer = 32,
                    base_width::Integer = 4, inchannels::Integer = 3,
                    nclasses::Integer = 1000)
+    legacy_depwarn(:SEResNeXt)
     _checkconfig(depth, keys(LRESNET_CONFIGS))
     layers = resnet(LRESNET_CONFIGS[depth]...; inchannels, nclasses, cardinality,
                     base_width,
                     attn_fn = squeeze_excite)
     model = SEResNeXt(layers)
     if pretrain
-        loadpretrain!(model, string("seresnext", depth, "_", cardinality, "x", base_width))
+        _loadpretrain!(model, string("seresnext", depth, "_", cardinality, "x", base_width))
     end
     return model
 end
 
 (m::SEResNeXt)(x) = m.layers(x)
 
-backbone(m::SEResNeXt) = m.layers[1]
-classifier(m::SEResNeXt) = m.layers[2]
+_backbone(m::SEResNeXt) = m.layers[1]
+_classifier(m::SEResNeXt) = m.layers[2]

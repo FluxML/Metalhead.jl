@@ -182,15 +182,16 @@ Flux.@layer Inceptionv3
 
 function Inceptionv3(; pretrain::Bool = false, inchannels::Integer = 3,
                      nclasses::Integer = 1000)
+    legacy_depwarn(:Inceptionv3)
     layers = inceptionv3(; inchannels, nclasses)
     model = Inceptionv3(layers)
     if pretrain
-        loadpretrain!(model, "Inceptionv3")
+        _loadpretrain!(model, "Inceptionv3")
     end
     return model
 end
 
 (m::Inceptionv3)(x) = m.layers(x)
 
-backbone(m::Inceptionv3) = m.layers[1]
-classifier(m::Inceptionv3) = m.layers[2]
+_backbone(m::Inceptionv3) = m.layers[1]
+_classifier(m::Inceptionv3) = m.layers[2]

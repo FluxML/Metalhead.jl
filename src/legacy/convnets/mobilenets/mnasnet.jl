@@ -98,16 +98,17 @@ Flux.@layer MNASNet
 
 function MNASNet(config::Symbol; width_mult::Real = 1, pretrain::Bool = false,
                  inchannels::Integer = 3, nclasses::Integer = 1000)
+    legacy_depwarn(:MNASNet)
     _checkconfig(config, keys(MNASNET_CONFIGS))
     layers = mnasnet(config; width_mult, inchannels, nclasses)
     model = MNASNet(layers)
     if pretrain
-        loadpretrain!(model, "mnasnet$(width_mult)")
+        _loadpretrain!(model, "mnasnet$(width_mult)")
     end
     return model
 end
 
 (m::MNASNet)(x) = m.layers(x)
 
-backbone(m::MNASNet) = m.layers[1]
-classifier(m::MNASNet) = m.layers[2]
+_backbone(m::MNASNet) = m.layers[1]
+_classifier(m::MNASNet) = m.layers[2]

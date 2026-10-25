@@ -1,13 +1,18 @@
 # [Migrating from Metalhead 0.9](@id migration)
 
 Metalhead 0.10 replaces the hand-written models with ports of timm models, built with
-[`create_model`](@ref). The old API still works in 0.10, with deprecation warnings, and will be
-removed in 0.11. The deprecated API covers:
+[`create_model`](@ref). The old API still works in 0.10 and will be removed in 0.11. The
+deprecated API covers:
 
 - the model constructors (`ResNet(50)`, `ViT(:base)`, ...) and their lowercase builders
   (`Metalhead.resnet`, ...);
+- `backbone`, `classifier` and `Metalhead.loadpretrain!`;
 - the `Metalhead.Layers` module;
 - `pretrain = true`, and the weights it loads from the FluxML organisation on the Hub.
+
+The model constructors, `backbone`, `classifier` and `loadpretrain!` warn once per session,
+naming their replacement. The lowercase builders and `Metalhead.Layers`, which the
+constructors use, don't warn.
 
 ## What changes
 

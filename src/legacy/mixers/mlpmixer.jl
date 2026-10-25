@@ -59,17 +59,18 @@ Flux.@layer MLPMixer
 function MLPMixer(config::Symbol; imsize::Dims{2} = (224, 224),
                   patch_size::Dims{2} = (16, 16), pretrain::Bool = false,
                   inchannels::Integer = 3, nclasses::Integer = 1000)
+    legacy_depwarn(:MLPMixer)
     _checkconfig(config, keys(MIXER_CONFIGS))
     layers = mlpmixer(mixerblock, imsize; patch_size, MIXER_CONFIGS[config]..., inchannels,
                       nclasses)
     model = MLPMixer(layers)
     if pretrain
-        loadpretrain!(model, string("mlpmixer", config))
+        _loadpretrain!(model, string("mlpmixer", config))
     end
     return model
 end
 
 (m::MLPMixer)(x) = m.layers(x)
 
-backbone(m::MLPMixer) = m.layers[1]
-classifier(m::MLPMixer) = m.layers[2]
+_backbone(m::MLPMixer) = m.layers[1]
+_classifier(m::MLPMixer) = m.layers[2]

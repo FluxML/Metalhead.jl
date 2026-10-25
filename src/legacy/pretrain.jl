@@ -53,6 +53,11 @@ end
 Load the pre-trained weight artifacts matching `<name>.bson` into `model`.
 """
 function loadpretrain!(model, artifact_name)
+    legacy_depwarn(:loadpretrain!)
+    return _loadpretrain!(model, artifact_name)
+end
+
+function _loadpretrain!(model, artifact_name)
     m = loadweights(artifact_name)
     Flux.loadmodel!(model, m)
 end

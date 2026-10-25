@@ -144,17 +144,18 @@ Flux.@layer DenseNet
 
 function DenseNet(config::Int; pretrain::Bool = false, growth_rate::Int = 32,
                   reduction = 0.5, inchannels::Int = 3, nclasses::Int = 1000)
+    legacy_depwarn(:DenseNet)
     _checkconfig(config, keys(DENSENET_CONFIGS))
     layers = densenet(DENSENET_CONFIGS[config]; growth_rate, reduction, inchannels,
                       nclasses)
     model = DenseNet(layers)
     if pretrain
-        loadpretrain!(model, string("densenet", config))
+        _loadpretrain!(model, string("densenet", config))
     end
     return model
 end
 
 (m::DenseNet)(x) = m.layers(x)
 
-backbone(m::DenseNet) = m.layers[1]
-classifier(m::DenseNet) = m.layers[2]
+_backbone(m::DenseNet) = m.layers[1]
+_classifier(m::DenseNet) = m.layers[2]

@@ -129,6 +129,7 @@ Flux.@layer VGG
 
 function VGG(depth::Integer; pretrain::Bool = false, batchnorm::Bool = false,
              inchannels::Integer = 3, nclasses::Integer = 1000)
+    legacy_depwarn(:VGG)
     _checkconfig(depth, keys(VGG_CONFIGS))
     layers = vgg((224, 224); config = VGG_CONFIGS[depth], batchnorm, inchannels, nclasses,
                  dropout_prob = 0.5)
@@ -140,12 +141,12 @@ function VGG(depth::Integer; pretrain::Bool = false, batchnorm::Bool = false,
         else
             artifact_name *= "-IMAGENET1K_V1"
         end
-        loadpretrain!(model, artifact_name)
+        _loadpretrain!(model, artifact_name)
     end
     return model
 end
 
 (m::VGG)(x) = m.layers(x)
 
-backbone(m::VGG) = m.layers[1]
-classifier(m::VGG) = m.layers[2]
+_backbone(m::VGG) = m.layers[1]
+_classifier(m::VGG) = m.layers[2]

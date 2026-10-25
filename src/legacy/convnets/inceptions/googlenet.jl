@@ -98,15 +98,16 @@ Flux.@layer GoogLeNet
 
 function GoogLeNet(; pretrain::Bool = false, inchannels::Integer = 3,
                    nclasses::Integer = 1000, batchnorm::Bool = false, bias::Bool = true)
+    legacy_depwarn(:GoogLeNet)
     layers = googlenet(; inchannels, nclasses, batchnorm, bias)
     model = GoogLeNet(layers)
     if pretrain
-        loadpretrain!(model, "GoogLeNet")
+        _loadpretrain!(model, "GoogLeNet")
     end
     return model
 end
 
 (m::GoogLeNet)(x) = m.layers(x)
 
-backbone(m::GoogLeNet) = m.layers[1]
-classifier(m::GoogLeNet) = m.layers[2]
+_backbone(m::GoogLeNet) = m.layers[1]
+_classifier(m::GoogLeNet) = m.layers[2]

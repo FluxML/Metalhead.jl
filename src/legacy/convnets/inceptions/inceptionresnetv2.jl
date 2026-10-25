@@ -121,15 +121,16 @@ Flux.@layer InceptionResNetv2
 
 function InceptionResNetv2(; pretrain::Bool = false, inchannels::Integer = 3,
                            nclasses::Integer = 1000)
+    legacy_depwarn(:InceptionResNetv2)
     layers = inceptionresnetv2(; inchannels, nclasses)
     model = InceptionResNetv2(layers)
     if pretrain
-        loadpretrain!(model, "InceptionResNetv2")
+        _loadpretrain!(model, "InceptionResNetv2")
     end
     return model
 end
 
 (m::InceptionResNetv2)(x) = m.layers(x)
 
-backbone(m::InceptionResNetv2) = m.layers[1]
-classifier(m::InceptionResNetv2) = m.layers[2]
+_backbone(m::InceptionResNetv2) = m.layers[1]
+_classifier(m::InceptionResNetv2) = m.layers[2]

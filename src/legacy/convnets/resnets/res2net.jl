@@ -30,6 +30,7 @@ Flux.@layer Res2Net
 function Res2Net(depth::Integer; pretrain::Bool = false, scale::Integer = 4,
                  base_width::Integer = 26, inchannels::Integer = 3,
                  nclasses::Integer = 1000)
+    legacy_depwarn(:Res2Net)
     _checkconfig(depth, keys(LRESNET_CONFIGS))
     layers = resnet(bottle2neck, LRESNET_CONFIGS[depth][2]; base_width, scale,
                     inchannels, nclasses)
@@ -37,15 +38,15 @@ function Res2Net(depth::Integer; pretrain::Bool = false, scale::Integer = 4,
     model = Res2Net(layers)
     if pretrain
         artifact_name = string("res2net", depth, "_", base_width, "x", scale)
-        loadpretrain!(model, artifact_name)
+        _loadpretrain!(model, artifact_name)
     end
     return model
 end
 
 (m::Res2Net)(x) = m.layers(x)
 
-backbone(m::Res2Net) = m.layers[1]
-classifier(m::Res2Net) = m.layers[2]
+_backbone(m::Res2Net) = m.layers[1]
+_classifier(m::Res2Net) = m.layers[2]
 
 """
     Res2NeXt(depth::Integer; pretrain::Bool = false, scale::Integer = 4,
@@ -80,18 +81,19 @@ Flux.@layer Res2NeXt
 function Res2NeXt(depth::Integer; pretrain::Bool = false, scale::Integer = 4,
                   base_width::Integer = 4, cardinality::Integer = 8,
                   inchannels::Integer = 3, nclasses::Integer = 1000)
+    legacy_depwarn(:Res2NeXt)
     _checkconfig(depth, keys(LRESNET_CONFIGS))
     layers = resnet(bottle2neck, LRESNET_CONFIGS[depth][2]; base_width, scale,
                     cardinality, inchannels, nclasses)
     model = Res2NeXt(layers)
     if pretrain
         artifact_name = string("res2next", depth, "_", base_width, "x", scale, "x", cardinality)
-        loadpretrain!(model, artifact_name)
+        _loadpretrain!(model, artifact_name)
     end
     return model
 end
 
 (m::Res2NeXt)(x) = m.layers(x)
 
-backbone(m::Res2NeXt) = m.layers[1]
-classifier(m::Res2NeXt) = m.layers[2]
+_backbone(m::Res2NeXt) = m.layers[1]
+_classifier(m::Res2NeXt) = m.layers[2]

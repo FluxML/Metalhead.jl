@@ -71,17 +71,18 @@ Flux.@layer ConvMixer
 
 function ConvMixer(config::Symbol; pretrain::Bool = false, inchannels::Integer = 3,
                    nclasses::Integer = 1000)
+    legacy_depwarn(:ConvMixer)
     _checkconfig(config, keys(CONVMIXER_CONFIGS))
     layers = convmixer(CONVMIXER_CONFIGS[config][1]...; CONVMIXER_CONFIGS[config][2]...,
                        inchannels, nclasses)
     model = ConvMixer(layers)
     if pretrain
-        loadpretrain!(model, "convmixer_$config")
+        _loadpretrain!(model, "convmixer_$config")
     end
     return model
 end
 
 (m::ConvMixer)(x) = m.layers(x)
 
-backbone(m::ConvMixer) = m.layers[1]
-classifier(m::ConvMixer) = m.layers[2]
+_backbone(m::ConvMixer) = m.layers[1]
+_classifier(m::ConvMixer) = m.layers[2]

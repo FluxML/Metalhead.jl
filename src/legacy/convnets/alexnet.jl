@@ -54,15 +54,16 @@ Flux.@layer AlexNet
 
 function AlexNet(; pretrain::Bool = false, inchannels::Integer = 3,
                  nclasses::Integer = 1000)
+    legacy_depwarn(:AlexNet)
     layers = alexnet(; inchannels, nclasses)
     model = AlexNet(layers)
     if pretrain
-        loadpretrain!(model, "alexnet")
+        _loadpretrain!(model, "alexnet")
     end
     return model
 end
 
 (m::AlexNet)(x) = m.layers(x)
 
-backbone(m::AlexNet) = m.layers[1]
-classifier(m::AlexNet) = m.layers[2]
+_backbone(m::AlexNet) = m.layers[1]
+_classifier(m::AlexNet) = m.layers[2]

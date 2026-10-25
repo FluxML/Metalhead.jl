@@ -125,16 +125,17 @@ Flux.@layer ConvNeXt
 
 function ConvNeXt(config::Symbol; pretrain::Bool = false, inchannels::Integer = 3,
                   nclasses::Integer = 1000)
+    legacy_depwarn(:ConvNeXt)
     _checkconfig(config, keys(CONVNEXT_CONFIGS))
     layers = convnext(config; inchannels, nclasses)
     model = ConvNeXt(layers)
     if pretrain
-        loadpretrain!(model, "convnext_$config")
+        _loadpretrain!(model, "convnext_$config")
     end
     return model
 end
 
 (m::ConvNeXt)(x) = m.layers(x)
 
-backbone(m::ConvNeXt) = m.layers[1]
-classifier(m::ConvNeXt) = m.layers[2]
+_backbone(m::ConvNeXt) = m.layers[1]
+_classifier(m::ConvNeXt) = m.layers[2]

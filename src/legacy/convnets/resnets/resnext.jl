@@ -29,6 +29,7 @@ Flux.@layer ResNeXt
 
 function ResNeXt(depth::Integer; pretrain::Bool = false, cardinality::Integer = 32,
                  base_width::Integer = 4, inchannels::Integer = 3, nclasses::Integer = 1000)
+    legacy_depwarn(:ResNeXt)
     _checkconfig(depth, keys(LRESNET_CONFIGS))
     layers = resnet(LRESNET_CONFIGS[depth]...; inchannels, nclasses, cardinality,
                     base_width)
@@ -42,12 +43,12 @@ function ResNeXt(depth::Integer; pretrain::Bool = false, cardinality::Integer = 
         elseif depth == 101 && cardinality == 64 && base_width == 4
           artifact_name *= "-IMAGENET1K_V1"
         end
-        loadpretrain!(model, artifact_name)
+        _loadpretrain!(model, artifact_name)
     end
     return model
 end
 
 (m::ResNeXt)(x) = m.layers(x)
 
-backbone(m::ResNeXt) = m.layers[1]
-classifier(m::ResNeXt) = m.layers[2]
+_backbone(m::ResNeXt) = m.layers[1]
+_classifier(m::ResNeXt) = m.layers[2]
