@@ -6,6 +6,8 @@ using Metalhead.Transformers: Sam3Processor, Sam3ImageProcessor, TokenizersBacke
                               post_process_instance_segmentation,
                               post_process_semantic_segmentation
 
+include(joinpath(@__DIR__, "..", "processors_setup.jl"))
+
 # Written by porting/dump_processor.py, through transformers' AutoProcessor
 const PROCESSORS = joinpath(pkgdir(Metalhead), "test", "fixtures", "processors")
 const SAM3 = joinpath(PROCESSORS, "unsloth--sam3.1")
@@ -45,7 +47,7 @@ function check_outputs(name, out)
     for k in keys(out)
         r = REF["$name/$k"]
         if k === :original_sizes
-            @test out[k] == [(h, w) for (h, w) in eachcol(r)]
+            @test out[k] == Tuple((h, w) for (h, w) in eachcol(r))
         elseif k === :input_ids
             @test out[k] == r .+ 1
         elseif k === :pixel_values
@@ -130,6 +132,13 @@ end
     @test_throws "truncat" proc(; text = [long, inputs.text[1]])
     @test_throws "channels" create_processor(SAM3; do_convert_rgb = false)(;
         images = numbered("grey/image"))
+end
+
+@testset "documented outputs" begin
+    outputs = map(name -> (((proc, inputs) = case(name)); proc(; inputs...)), CASES)
+    check_documented_keys(Sam3Processor, outputs)
+    proc, inputs = case("batch")
+    check_documented_keys(Sam3ImageProcessor, [proc.image_processor(inputs.images)])
 end
 
 @testset "post-processing" begin

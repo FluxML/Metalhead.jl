@@ -136,7 +136,7 @@ end
     labels = [1; -10;;]
     # the output of a processor, whose `original_sizes` the model ignores
     inputs = (; pixel_values = pixel_values[:, :, :, 1:1],
-        original_sizes = [(32, 32)], input_ids = input_ids[:, 1:1],
+        original_sizes = ((32, 32),), input_ids = input_ids[:, 1:1],
         attention_mask = attention_mask[:, 1:1], input_boxes = boxes,
         input_boxes_labels = labels)
     y = model(inputs)
@@ -147,6 +147,7 @@ end
     video = create_model("Sam3VideoModel"; detector_config = TINY)
     @test video(inputs).pred_logits ≈ video.detector_model(inputs).pred_logits
     @test_throws "input_ids" model((; pixel_values))
+    @test_throws "has no `input_ids` (it has `pixel_values`)" model((; pixel_values))
     @test_throws "pixel_values" model((; input_ids))
 
     ip = Sam3ImageProcessor()

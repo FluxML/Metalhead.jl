@@ -465,6 +465,20 @@ function route_overrides(::Type{T}, kwargs::NamedTuple) where {T}
 end
 
 """
+    check_inputs(model, inputs::NamedTuple, required; hint = "")
+
+Throw if the NamedTuple `inputs` of `model(inputs)` lacks keys of `required`, naming them
+and the keys it has, so that the inputs of another model fail at the call rather than deep
+inside. Every `model(inputs::NamedTuple)` method calls it on the keys it can't do without.
+"""
+function check_inputs(model, inputs::NamedTuple, required; hint::AbstractString = "")
+    absent = filter(k -> !haskey(inputs, k), collect(Symbol, required))
+    isempty(absent) && return nothing
+    names(ks) = join(("`$k`" for k in ks), ", ", " and ")
+    return throw(ArgumentError("$(nameof(typeof(model))) needs the inputs $(names(required)), but `inputs` has no $(names(absent)) (it has $(isempty(inputs) ? "no keys" : names(keys(inputs))))$(isempty(hint) ? "" : "; $hint")"))
+end
+
+"""
     instantiate_processor(format::ConfigFormat, files::ProcessorFiles, config; kwargs...)
         -> Union{Nothing, Processor}
 

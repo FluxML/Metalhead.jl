@@ -15,23 +15,31 @@ Metalhead.create_processor) loads from a repository such as `"unsloth/sam3.1"` (
     (processor::Sam3Processor)(; images = nothing, text = nothing, input_boxes = nothing,
                                input_boxes_labels = nothing, original_sizes = nothing)
 
-The inputs of a [`Sam3Model`](@ref Metalhead.Transformers.Sam3Model), as a NamedTuple with
-transformers' keys, which the model takes as it is (`model(inputs)`):
+The inputs of a [`Sam3Model`](@ref Metalhead.Transformers.Sam3Model) from `images` (one
+image or a vector of them, see [`Sam3ImageProcessor`](@ref
+Metalhead.Transformers.Sam3ImageProcessor)), `text` and box prompts, as a NamedTuple with
+the keys of transformers' `Sam3Processor`, in Julia's layout (PyTorch's dimensions
+reversed), which the model takes as it is (`model(inputs)`):
 
-  - `pixel_values` and `original_sizes`, from the image processor, of one image or a vector
-    of images;
-  - `input_ids` and `attention_mask`, of size `(32, num_prompts)` (or longer prompts), the
-    token indices of `text` padded to 32 tokens, as `processing_sam3.py` writes: a string or
-    a vector of strings, which need a tokenizer backend (`using HuggingFaceTokenizers`), or
-    the token ids of a tokenizer (from 0, with its special tokens), a vector or a vector of
-    them. Without `text`, box prompts have the text "visual", as in transformers, and an
-    entry `nothing` of a vector is "visual" where its image has boxes;
-  - `input_boxes` `(4, num_boxes, num_images)` and `input_boxes_labels`
-    `(num_boxes, num_images)`, from the boxes `(x1, y1, x2, y2)` of each image in its
-    pixels, a vector of boxes per image (or `nothing` for none), normalized to
-    `(cx, cy, w, h)`, and
-    their labels, 1 (positive, the default) or 0 (negative). Images with fewer boxes are
-    padded with `point_pad_value`. The boxes need the images, or their `original_sizes`
+| Key                  | Size                    | Contents                                                                         |
+|:-------------------- |:----------------------- |:-------------------------------------------------------------------------------- |
+| `pixel_values`       | `(W, H, 3, batch)`      | the images, resized and normalised, `Float32`; with `images`                     |
+| `original_sizes`     | `batch`                 | a tuple of the `(height, width)` of each image, for the boxes and post-processing; `gpu` leaves it on the CPU |
+| `input_ids`          | `(32, batch)`           | token indices of the prompts, 1-based, padded on the right; with a prompt        |
+| `attention_mask`     | `(32, batch)`           | 1 for the tokens, 0 for the padding; with a prompt                               |
+| `input_boxes`        | `(4, num_boxes, batch)` | box prompts `(cx, cy, w, h)`, normalised to the image; only with box prompts     |
+| `input_boxes_labels` | `(num_boxes, batch)`    | 1 positive, 0 negative, `point_pad_value` (-10) padding; only with box prompts   |
+
+  - `text` is a string or a vector of strings, which need a tokenizer backend
+    (`using HuggingFaceTokenizers`), or the token ids of a tokenizer (from 0, with its
+    special tokens), a vector or a vector of them. Prompts are padded to 32 tokens, as
+    `processing_sam3.py` writes, and longer ones are kept whole. Without `text`, box
+    prompts have the text "visual", as in transformers, and an entry `nothing` of a vector
+    is "visual" where its image has boxes.
+  - `input_boxes` holds the boxes `(x1, y1, x2, y2)` of each image in its pixels, a vector
+    of boxes per image (or `nothing` for none), and `input_boxes_labels` their labels,
+    1 (positive, the default) or 0 (negative). Images with fewer boxes are padded with
+    `point_pad_value`. The boxes need the images, or their `original_sizes`
     `(height, width)`.
 
 Post-process the outputs of the model with [`post_process_instance_segmentation`](@ref
@@ -141,7 +149,7 @@ function (p::Sam3Processor)(; images = nothing, text = nothing, input_boxes = no
     inputs = if images !== nothing
         p.image_processor(images)
     elseif original_sizes !== nothing
-        (; original_sizes = size_list(original_sizes))
+        (; original_sizes = Tuple(size_list(original_sizes)))
     else
         input_boxes === nothing ||
             error("box prompts need the images, or their `original_sizes`")

@@ -914,10 +914,8 @@ its `pixel_values`, `input_ids`, `attention_mask`, and `input_boxes` and
 `input_boxes_labels` if it has them; other keys (`original_sizes`) are ignored.
 """
 function (m::Sam3Model)(inputs::NamedTuple)
-    haskey(inputs, :pixel_values) ||
-        error("SAM 3 needs images: `inputs` has no `pixel_values`")
-    haskey(inputs, :input_ids) ||
-        error("SAM 3 needs a prompt: `inputs` has no `input_ids` (pass `text` or `input_boxes` to the processor)")
+    check_inputs(m, inputs, (:pixel_values, :input_ids);
+        hint = "pass `images`, and `text` or `input_boxes`, to the processor")
     return m(inputs.pixel_values, inputs.input_ids;
         attention_mask = get(inputs, :attention_mask, nothing),
         input_boxes = get(inputs, :input_boxes, nothing),

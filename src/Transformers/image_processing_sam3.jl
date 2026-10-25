@@ -11,10 +11,13 @@
 
 transformers' image processor of SAM 3, with the defaults of its Python class; the image
 processor of a [`Sam3Processor`](@ref Metalhead.Transformers.Sam3Processor), with the
-settings of a repository. Called on one image or a vector of images, it returns
-`(; pixel_values, original_sizes)`: `pixel_values`, a `Float32` array of size
-`(width, height, channels, num_images)`, and `original_sizes`, the `(height, width)` of each
-image, which the boxes and the post-processing (`target_sizes`) take.
+settings of a repository. Called on one image or a vector of images, it returns a
+NamedTuple:
+
+| Key              | Size               | Contents                                                                   |
+|:---------------- |:------------------ |:-------------------------------------------------------------------------- |
+| `pixel_values`   | `(W, H, 3, batch)` | the images, resized and normalised, `Float32`                              |
+| `original_sizes` | `batch`            | a tuple of the `(height, width)` of each image, for the boxes and post-processing; `gpu` leaves it on the CPU |
 
 An image is an array of size `(width, height, channels)` (torch's
 `(channels, height, width)` reversed) of integers from 0 to 255 (an 8-bit image, as `UInt8`)
@@ -81,7 +84,7 @@ function (ip::Sam3ImageProcessor)(images)
     images = image_batch(images)
     isempty(images) && error("no images to process")
     pixel_values = stack_images([sam3_pixel_values(ip, image) for image in images])
-    return (; pixel_values, original_sizes = [(size(x, 2), size(x, 1)) for x in images])
+    return (; pixel_values, original_sizes = Tuple((size(x, 2), size(x, 1)) for x in images))
 end
 
 # The scores (num_queries, batch) of the queries: the probability of each times that of the
