@@ -112,7 +112,7 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
   `backbone`, `classifier` and `Metalhead.loadpretrain!`, the `Metalhead.Layers` module, and
   `pretrain = true` with the weights it loads from the FluxML organisation. They will be
   removed in 0.11 (#305). The model constructors, `backbone`, `classifier` and
-  `loadpretrain!` warn once per session, naming their replacement.
+  `loadpretrain!` warn once per session, naming their replacement (#345).
 
 ### Removed
 
