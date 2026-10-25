@@ -15,22 +15,25 @@ function kaiming_normal_fan_out(dims...)
 end
 
 # torch's adaptive_avg_pool2d to `outsize` = (W, H): output i averages the input range
-# [floor(i*n_in/n_out), ceil((i+1)*n_in/n_out)), as a matrix per dimension.
-function adaptive_pool_matrix(T, n_in, n_out)
+# [floor(i*n_in/n_out), ceil((i+1)*n_in/n_out)), as a matrix per dimension, with the eltype
+# and on the device of `x`.
+function adaptive_pool_matrix(x, n_in, n_out)
+    T = eltype(x)
     window(i) = (((i - 1) * n_in) ÷ n_out + 1):cld(i * n_in, n_out)
-    return [j in window(i) ? inv(T(length(window(i)))) : zero(T)
-            for i in 1:n_out, j in 1:n_in]
+    P = [j in window(i) ? inv(T(length(window(i)))) : zero(T)
+         for i in 1:n_out, j in 1:n_in]
+    return copyto!(similar(x, T, size(P)), P)
 end
 ChainRulesCore.@non_differentiable adaptive_pool_matrix(::Any, ::Any, ::Any)
 
 function adaptive_avg_pool2d(x, outsize)
     w, h, c, b = size(x)
     if outsize[1] != w
-        x = reshape(adaptive_pool_matrix(eltype(x), w, outsize[1]) * reshape(x, w, :),
+        x = reshape(adaptive_pool_matrix(x, w, outsize[1]) * reshape(x, w, :),
             outsize[1], h, c, b)
     end
     if outsize[2] != h
-        P = adaptive_pool_matrix(eltype(x), h, outsize[2])
+        P = adaptive_pool_matrix(x, h, outsize[2])
         x = permutedims(x, (2, 1, 3, 4))
         x = reshape(P * reshape(x, h, :), outsize[2], outsize[1], c, b)
         x = permutedims(x, (2, 1, 3, 4))

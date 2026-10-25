@@ -78,7 +78,9 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
 8. **Run the tests** of your family only, by file path prefix:
    `julia --project -e 'using Pkg; Pkg.test(test_args = ["models/<family>"])'` (several are
    allowed, e.g. `["models/mlp_mixer", "models/convmixer"]`). Run all of `["hub", "models"]`
-   (several minutes) once, at the end. Don't edit `src/` while a test run is going.
+   (several minutes) once, at the end. Don't edit `src/` while a test run is going. On a
+   machine with an NVIDIA GPU, also run `["gpu"]` with `METALHEAD_TEST_GPU=true`: it runs
+   every fixture on the GPU, where scalar indexing is an error.
 9. **Document.** Name a new family in the table of the README's "Models" section, and record
    the port under `[Unreleased]` in `CHANGELOG.md`.
 
@@ -267,7 +269,11 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
 - Constant arrays built in the forward pass (blur filters, pooling matrices) must not be
   mutated, or Zygote fails: build them with comprehensions and mark the builder
   `ChainRulesCore.@non_differentiable`. Broadcasting functions like `binomial.` also breaks
-  under Zygote.
+  under Zygote. Build them on the device of the input, `copyto!(similar(x, T, size(a)), a)`
+  (`blur_filter` in `layers.jl`): a CPU array fails on a GPU.
+- On a GPU, convolutions and norms fail on the views of `chunk` (scalar indexing): copy the
+  slices first (`x[:, :, r, :]`, as `MixedConv2d` does). Broadcasts take views. `gpu` turns
+  a `Vector` of `nothing` into a GPU array: hold optional submodules in a Tuple.
 - Zygote can't differentiate `cumsum` of a Tuple of Ints (it fails with
   `length(::ZeroTangent)`): compute such channel ranges in a helper marked
   `ChainRulesCore.@non_differentiable` (`split_ranges` in `layers.jl`).

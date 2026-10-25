@@ -29,6 +29,8 @@ checked numerically against PyTorch. `create_model` is the entry point.
 - `test/`: run with ParallelTestRunner. Each file is a `@testset` in its own module. Shared
   helpers are in `test/parity.jl` and `test/parity_setup.jl`; tiny PyTorch fixtures in
   `test/fixtures/`, real-weight references and parameter counts in `test/references/`.
+  `test/gpu/` runs the fixtures on a CUDA GPU, only with `METALHEAD_TEST_GPU=true`
+  (helpers in `test/gpu_setup.jl`).
 - `porting/`: the Python (uv) project that writes the fixtures and references. The package
   and its tests never run Python.
 - `skills/port-hf-model/SKILL.md`: the porting workflow, conventions and numerical pitfalls.
@@ -43,6 +45,7 @@ julia --project -e 'using Pkg; Pkg.test(test_args = ["models/resnet"])'     # by
 julia --project -e 'using Pkg; Pkg.test(test_args = ["--list"])'            # list test files
 METALHEAD_TEST_NETWORK=true julia --project -e 'using Pkg; Pkg.test()'     # also download weights
 METALHEAD_TEST_NETWORK=true METALHEAD_TEST_LARGE=true julia --project -e 'using Pkg; Pkg.test(test_args = ["models/flux2"])'  # 16 GB of FLUX.2
+METALHEAD_TEST_GPU=true julia --project -e 'using Pkg; Pkg.test(test_args = ["gpu"])'  # the fixtures on a CUDA GPU
 ```
 
 `Pkg.test` builds a fresh environment each time. For quick iteration, load Metalhead once in a

@@ -40,7 +40,9 @@ function Bottle2neck(inplanes, planes; stride = 1, downsample = nothing, cardina
 end
 
 function (b::Bottle2neck)(x)
-    spx = chunk(b.relu(b.bn1(b.conv1(x))); size = b.width, dims = 3)
+    out = b.relu(b.bn1(b.conv1(x)))
+    # copies, not the views of `chunk`, which GPU convolutions don't take
+    spx = map(r -> out[:, :, r, :], split_ranges(ntuple(_ -> b.width, b.scale)))
     sp = spx[1]
     spo = ()
     for (i, (conv, bn)) in enumerate(zip(b.convs, b.bns))
