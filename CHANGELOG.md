@@ -63,7 +63,7 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
 - SAM 3, the detector of the Segment Anything Model 3 (`Sam3Model`), which finds and segments
   the objects of an image that a text prompt or box prompts describe, validated against
   `jetjodh/sam3`, an ungated copy of the weights of `facebook/sam3`, and SAM 3.1
-  (`unsloth/sam3.1`). Its ViT attends within windows with a 2D rotary embedding, and its
+  (`unsloth/sam3.1`, #343). Its ViT attends within windows with a 2D rotary embedding, and its
   CLIP text encoder, geometry encoder of boxes, DETR encoder and decoder and mask decoder
   are ported. The checkpoints of SAM 3 load as `Sam3VideoModel`, whose detector only is
   ported, not its tracker. `Metalhead.Transformers.sam3_image_inputs`,
