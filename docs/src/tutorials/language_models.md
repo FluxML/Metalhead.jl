@@ -22,7 +22,9 @@ were validated against.
 The processor of a language model is the tokenizer of its repository, which
 [`create_processor`](@ref) loads as a
 [`TokenizersBackend`](@ref Metalhead.Transformers.TokenizersBackend), with the special
-tokens, padding and maximum length of its `tokenizer_config.json`. It turns texts into the
+tokens, padding and maximum length of its `tokenizer_config.json`, over the defaults of its
+tokenizer class, the one that transformers' `AutoTokenizer` builds (a class that Metalhead
+hasn't validated warns). It turns texts into the
 inputs of the model, and [`decode`](@ref Metalhead.Transformers.decode) turns token indices
 back into text. Strings need
 [HuggingFaceTokenizers.jl](https://github.com/MurrellGroup/HuggingFaceTokenizers.jl), which

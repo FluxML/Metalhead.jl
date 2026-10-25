@@ -119,7 +119,8 @@ transform
 Many timm checkpoints are evaluated at a larger size than they were trained at, given by
 `test_input_size` and `test_crop_pct` in their configuration. `use_test_size = true` takes
 these, as timm's `resolve_data_config(use_test_size = True)` does. Other keyword arguments
-override a setting by name:
+override a setting by name, also in natural forms (`input_size = 256` for
+`(3, 256, 256)`, `mean = 0.5` for every channel, `interpolation = :bilinear`):
 
 ```julia
 transform = create_processor(repo; use_test_size = true)

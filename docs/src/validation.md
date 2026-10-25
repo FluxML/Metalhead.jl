@@ -123,16 +123,19 @@ post-processing is checked on random outputs of the model: the same scores and b
 floating-point precision, and the same masks.
 
 For tokenizers, `porting/dump_processor.py tokenizers` calls the tokenizer that
-`AutoTokenizer.from_pretrained(repo)` loads, for the 12 tokenizers of the ported
-checkpoints: those of the nine validated language models, of Qwen3.5, of SAM 3 and of the
-FLUX.2 [klein] pipeline. Each tokenizes 15 strings where tokenizer classes can differ: case,
-accents and unicode normal forms, scripts and emoji, runs of whitespace, digits,
-contractions, code, special tokens written in the text, and the empty string. The token ids
-must be transformers', with and without special tokens, as must batches padded on either
-side, `max_length`, truncation on either side, the settings `pad_token`, `add_bos_token` and
-`add_eos_token` set at creation, the error of padding without a padding token, the text
-decoded with and without `skip_special_tokens`, the class, and the settings read from the
-files. The tests run offline with a backend that returns transformers' ids, and with
+`AutoTokenizer.from_pretrained(repo)` loads, for 13 tokenizers: those of the nine validated
+language models, of Qwen3.5, of SAM 3 and of the FLUX.2 [klein] pipeline, and GPT-2's, whose
+files leave the defaults of its class. Each tokenizes 16 strings where tokenizer classes can
+differ: case, accents and unicode normal forms, scripts and emoji, runs of whitespace,
+digits, contractions, code, special tokens written in the text, and the empty string. The
+token ids must be transformers', with and without special tokens, as must batches padded on
+either side, `max_length`, truncation on either side, the settings `pad_token`,
+`add_bos_token` and `add_eos_token` set at creation, the error of padding without a padding
+token, the text decoded with and without `skip_special_tokens`, the class, and the settings
+read from the files over the defaults of the class. Qwen3.5's processor, with keywords of
+calls (`max_length`, `padding`, `truncation`) in its `tokenizer_config.json`, must give
+transformers' outputs too, as the defaults of its calls, which those of a call override.
+The tests run offline with a backend that returns transformers' ids, and with
 `METALHEAD_TEST_NETWORK=true` through HuggingFaceTokenizers.jl and each repository's files.
 
 Configuration files are read strictly, an unknown key with a warning, and the tests load

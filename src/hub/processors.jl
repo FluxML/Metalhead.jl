@@ -611,11 +611,13 @@ match.
 
 `name` is a Hub repository, a local directory or a bare architecture, as for
 [`create_model`](@ref), and validated repositories default to the commit they were validated
-at. The settings are read from the repository's files over the defaults of the Python class,
-strictly: a setting that the port doesn't implement is an error, and an unknown key a
-warning. The keyword arguments override them by name, e.g. `size = (; height = 512)`, where
-a NamedTuple merges into a nested setting; each goes to the one component that has a
-setting of that name, and a name that no component has is an error.
+at. A branch is read at the commit of the first file found, so that the files come from one
+commit; offline or without network, from the cache. The settings are read from the
+repository's files over the defaults of the Python class, strictly: a setting that the port
+doesn't implement is an error, and an unknown key a warning. The keyword arguments override
+them by name, e.g. `size = (; height = 512)`, where a NamedTuple merges into a nested
+setting; each goes to the one component that has a setting of that name, and a name that no
+component has is an error.
 
 Returns the most complete processor the repository describes, as transformers'
 `AutoProcessor` does: a processor that combines an image processor and a tokenizer, such as

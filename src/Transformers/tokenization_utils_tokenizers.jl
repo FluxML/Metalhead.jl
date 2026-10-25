@@ -578,7 +578,10 @@ The text of the token indices `indices` (1-based, as the models take and give th
 tokenizer of `processor`, a [`TokenizersBackend`](@ref
 Metalhead.Transformers.TokenizersBackend) or a processor with one, as transformers'
 `decode`: a string for an index or a vector of them, a vector of strings for a matrix
-`(seq_len, batch)`. Needs a tokenizer backend (`using HuggingFaceTokenizers`).
+`(seq_len, batch)`. `skip_special_tokens` drops the special tokens of tokenizer.json, and
+the named and extra special tokens of the tokenizer (`bos_token`, `extra_special_tokens`,
+...), which transformers adds as special. Needs a tokenizer backend
+(`using HuggingFaceTokenizers`).
 """
 function decode(tok::TokenizersBackend, indices::AbstractVector;
         skip_special_tokens::Bool = false)

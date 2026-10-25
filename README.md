@@ -131,7 +131,9 @@ statistics. Call `Flux.trainmode!(model)` before training.
 A checkpoint expects its inputs prepared in a particular way, with settings stored in its
 repository: the image size, crop and normalisation, the special tokens of its tokenizer.
 `create_processor` reads them, from the same repository and revision as `create_model`, and
-returns the processor of the checkpoint, which applies them as its Python library does.
+returns the processor of the checkpoint, which applies them as its Python library does. It
+reads the files of a branch at one commit, that of the first file it finds, and offline or
+without network those of the cache.
 `create_model` makes the forward pass match PyTorch; `create_processor` makes the whole path
 from raw input to result match. The output of a processor is what the model takes,
 `model(proc(...))`:
@@ -158,7 +160,8 @@ processor: it prepares its inputs itself, with its tokenizer `pipe.tokenizer`.
 
 The settings are read strictly: one that the port doesn't implement is an error, and an
 unknown key in a file a warning. `show` prints each setting and where it comes from, and
-keyword arguments override them:
+keyword arguments override them, in the forms of the Python library or in natural ones
+(`input_size = 256`, `mean = 0.5`, `interpolation = :bilinear`):
 
 ```julia
 create_processor("timm/convnext_tiny.fb_in1k"; crop_pct = 1.0)
@@ -237,7 +240,8 @@ as usual, and models move to a GPU with Flux's `gpu_device()`.
 Language models take token indices, which start at 1, and return logits, of size
 vocabulary × sequence length (× batch). Their processor is the tokenizer of the repository,
 which returns the token indices and the attention mask of texts, with the special tokens and
-padding of the repository's `tokenizer_config.json`.
+padding of the repository's `tokenizer_config.json`, over the defaults of the tokenizer class
+that transformers' `AutoTokenizer` builds.
 [HuggingFaceTokenizers.jl](https://github.com/MurrellGroup/HuggingFaceTokenizers.jl)
 tokenizes the strings.
 
@@ -285,6 +289,10 @@ decode(proc, input_ids[(end - 19):end])
 # "This image features a medium-to-large dog standing in profile on a grassy field. The
 #  dog has"
 ```
+
+A vector of prompts makes a batch, which the model takes padded on either side. The
+processor takes the keywords of the tokenizer, `padding`, `truncation`, `max_length`,
+`padding_side` and `add_special_tokens`, with the defaults of `tokenizer_config.json`.
 
 ### Segmenting objects
 

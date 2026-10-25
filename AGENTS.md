@@ -45,7 +45,8 @@ reasons.
   Blocks that models share (RMSNorm, the rotary tables, the tied output head) go in
   `layers.jl`. Processors go next to their models, one file per upstream class under
   transformers' file names (`image_processing_sam3.jl`, `processing_sam3.jl`,
-  `tokenization_utils_tokenizers.jl` for `TokenizersBackend`);
+  `tokenization_utils_tokenizers.jl` for `TokenizersBackend`, `tokenization_auto.jl` for the
+  tokenizer class that `AutoTokenizer` builds and its defaults);
   `image_processing_backends.jl` has the operations of the torchvision backend that image
   processors share.
 - `src/Diffusers/`: diffusers models (`transformer_flux2.jl`, `autoencoder_kl_flux2.jl`, the
