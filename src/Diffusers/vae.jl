@@ -82,8 +82,9 @@ end
 end
 Flux.@layer UNetMidBlock2D
 
+# A Tuple, not a Vector: `gpu` would turn `[nothing]` into a GPU array.
 function unet_mid_block_2d(channels; groups, eps, act_fn, add_attention)
-    attentions = [add_attention ? vae_attention(channels; groups, eps) : nothing]
+    attentions = (add_attention ? vae_attention(channels; groups, eps) : nothing,)
     resnets = [resnet_block_2d(channels, channels; groups, eps, act_fn) for _ in 1:2]
     return UNetMidBlock2D(attentions, resnets)
 end
