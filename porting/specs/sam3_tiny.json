@@ -1,0 +1,58 @@
+{
+  "library": "transformers",
+  "architecture": "Sam3Model",
+  "model_type": "sam3",
+  "config": {
+    "vision_config": {
+      "backbone_config": {
+        "model_type": "sam3_vit_model",
+        "hidden_size": 32,
+        "intermediate_size": 40,
+        "num_hidden_layers": 2,
+        "num_attention_heads": 2,
+        "image_size": 40,
+        "patch_size": 4,
+        "window_size": 4,
+        "global_attn_indexes": [1],
+        "pretrain_image_size": 16
+      },
+      "fpn_hidden_size": 16
+    },
+    "text_config": {
+      "vocab_size": 64,
+      "hidden_size": 24,
+      "intermediate_size": 40,
+      "projection_dim": 12,
+      "num_hidden_layers": 2,
+      "num_attention_heads": 2,
+      "max_position_embeddings": 8,
+      "eos_token_id": 63
+    },
+    "geometry_encoder_config": {
+      "hidden_size": 16,
+      "num_layers": 2,
+      "num_attention_heads": 2,
+      "intermediate_size": 24
+    },
+    "detr_encoder_config": {
+      "hidden_size": 16,
+      "num_layers": 2,
+      "num_attention_heads": 2,
+      "intermediate_size": 24
+    },
+    "detr_decoder_config": {
+      "hidden_size": 16,
+      "num_layers": 2,
+      "num_queries": 5,
+      "num_attention_heads": 2,
+      "intermediate_size": 24
+    },
+    "mask_decoder_config": {
+      "hidden_size": 16,
+      "num_upsampling_stages": 2,
+      "num_attention_heads": 2
+    }
+  },
+  "inputs": {"batch": 2, "lengths": [8, 5]},
+  "tap_depth": 2
+}

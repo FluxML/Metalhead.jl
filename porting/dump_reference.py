@@ -19,6 +19,8 @@ float16, so that both sides use the same values.
 """
 import argparse
 import json
+
+import numpy as np
 import pathlib
 
 import timm
@@ -54,6 +56,8 @@ def dump_reference(repo, revision, batch):
     if any(f.rfilename == "model_index.json" for f in HfApi().model_info(repo, revision=sha).siblings):
         return dump_pipeline_reference(repo, sha)
     config = json.loads(pathlib.Path(hf_hub_download(repo, "config.json", revision=sha)).read_text())
+    if config.get("model_type") in ("sam3", "sam3_video"):
+        return dump_sam3_reference(repo, sha)
     if "model_type" in config:
         return dump_lm_reference(repo, sha)
     weights = hf_hub_download(repo, "model.safetensors", revision=sha)
@@ -145,6 +149,66 @@ def image_reference(model, repo, sha, max_new_tokens, size=(224, 160)):
             "image/image_grid_thw": inputs["image_grid_thw"],
             "image/hidden_states": hidden.contiguous(), "image/last_logits": logits.contiguous(),
             "image/generated_ids": generated.contiguous()}
+
+
+def dump_sam3_reference(repo, sha, size=336, top=2, stride=2):
+    """The detections of SAM 3 (the detector, `Sam3Model`) in the image of `IMAGE_URL`,
+    resized to `size` × `size` and stored as float16 values in [0, 1] ("image"), which the
+    processor upsamples to the model's size, from the same vision features: "text/..." for the
+    text prompt "cat", "box/..." for the text "visual" (the processor's text of box prompts)
+    with a positive box, the first box found for "cat", in the pixels of the image
+    ("box/boxes_xyxy"). Each stores the processor's inputs, the outputs of the model but its
+    masks, of which only those of the `top` best queries ("mask_queries", 1-based), every
+    `stride` pixels; and the scores, boxes and mask areas of transformers'
+    `post_process_instance_segmentation` at the size of the image ("post/...")."""
+    import io
+    import urllib.request
+    from PIL import Image
+    from transformers import Sam3Model, Sam3Processor
+    model = Sam3Model.from_pretrained(repo, revision=sha, dtype=torch.float32,
+                                      attn_implementation="sdpa").eval()
+    processor = Sam3Processor.from_pretrained(repo, revision=sha)
+    with urllib.request.urlopen(IMAGE_URL) as f:
+        image = Image.open(io.BytesIO(f.read())).convert("RGB").resize((size, size), Image.BICUBIC)
+    pixels = torch.from_numpy(np.asarray(image).copy()).permute(2, 0, 1).float().div(255).half()
+    image = pixels.float()
+    pixel_values = processor(images=[image], do_rescale=False, return_tensors="pt")["pixel_values"]
+    with torch.no_grad():
+        vision = model.get_vision_features(pixel_values=pixel_values)
+
+    tensors, summary = {"image": pixels}, {}
+
+    def run(name, **kwargs):
+        inputs = processor(images=[image], do_rescale=False, return_tensors="pt", **kwargs)
+        inputs.pop("pixel_values")
+        inputs.pop("original_sizes")
+        with torch.no_grad():
+            outputs = model(vision_embeds=vision, **inputs)
+        scores = outputs.pred_logits.sigmoid() * outputs.presence_logits.sigmoid()
+        queries = scores.topk(top, dim=1).indices[0]
+        results = processor.post_process_instance_segmentation(
+            outputs, threshold=0.5, mask_threshold=0.5, target_sizes=[(size, size)])[0]
+        tensors.update({f"{name}/{k}": v for k, v in inputs.items()})
+        tensors.update({
+            f"{name}/pred_logits": outputs.pred_logits, f"{name}/pred_boxes": outputs.pred_boxes,
+            f"{name}/presence_logits": outputs.presence_logits,
+            f"{name}/mask_queries": queries + 1,
+            f"{name}/pred_masks": outputs.pred_masks[:, queries, ::stride, ::stride],
+            f"{name}/semantic_seg": outputs.semantic_seg[:, :, ::stride, ::stride],
+            f"{name}/post/scores": results["scores"], f"{name}/post/boxes": results["boxes"],
+            f"{name}/post/mask_areas": results["masks"].sum(dim=(1, 2))})
+        summary[name] = (round(outputs.presence_logits.sigmoid().item(), 4), len(results["scores"]))
+        return outputs
+
+    first = run("text", text="cat")
+    box = (first.pred_boxes[0, first.pred_logits[0].argmax()] * size).tolist()
+    run("box", text="visual", input_boxes=[[box]])
+    tensors["box/boxes_xyxy"] = torch.tensor([box])
+    out = reference_path(repo)
+    meta = {"repo": repo, "revision": sha, "stride": str(stride), **versions()}
+    save_file({k: v.contiguous() for k, v in tensors.items()}, out, metadata=meta)
+    print(f"{out}: {repo}@{sha}, {out.stat().st_size / 1e3:.1f} kB, "
+          f"(presence, objects) {summary}")
 
 
 def reference_path(name):

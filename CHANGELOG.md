@@ -60,6 +60,16 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
   (`Qwen3_5ForCausalLM`), as is its vision encoder (`Qwen3_5VisionModel`).
   `Metalhead.Transformers.qwen3_5_image_inputs` preprocesses images as the checkpoints'
   processor does. Videos are not supported.
+- SAM 3, the detector of the Segment Anything Model 3 (`Sam3Model`), which finds and segments
+  the objects of an image that a text prompt or box prompts describe, validated against
+  `jetjodh/sam3`, an ungated copy of the weights of `facebook/sam3`, and SAM 3.1
+  (`unsloth/sam3.1`). Its ViT attends within windows with a 2D rotary embedding, and its
+  CLIP text encoder, geometry encoder of boxes, DETR encoder and decoder and mask decoder
+  are ported. The checkpoints of SAM 3 load as `Sam3VideoModel`, whose detector only is
+  ported, not its tracker. `Metalhead.Transformers.sam3_image_inputs`,
+  `sam3_box_inputs` and `sam3_text_inputs` make its inputs as transformers' processor does,
+  and `post_process_instance_segmentation`, `post_process_object_detection` and
+  `post_process_semantic_segmentation` read its outputs.
 - Flux ports of [diffusers](https://github.com/huggingface/diffusers) models and pipelines, in
   `Metalhead.Diffusers`: text-to-image generation with FLUX.2 [klein] (`Flux2KleinPipeline`,
   with `Flux2Transformer2DModel`, `AutoencoderKLFlux2` and `FlowMatchEulerDiscreteScheduler`),

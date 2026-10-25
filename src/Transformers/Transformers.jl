@@ -31,5 +31,8 @@ include("granitemoe.jl")
 include("qwen3_5.jl")
 include("qwen3_5_vision.jl")
 include("image_processing_qwen2_vl.jl")
+include("clip.jl")
+include("sam3.jl")
+include("image_processing_sam3.jl")
 
 end # module

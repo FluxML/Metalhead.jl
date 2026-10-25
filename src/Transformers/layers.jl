@@ -6,10 +6,10 @@ normal_init(std) = (dims...) -> Float32(std) .* randn(Float32, dims...)
 
 const ACT2FN = Dict("silu" => swish, "gelu_pytorch_tanh" => gelu_tanh)
 
-function act_fn(name; key = "hidden_act")
-    haskey(ACT2FN, name) ||
-        error("`$key = $(repr(name))` is not supported; supported: $(sort!(collect(keys(ACT2FN))))")
-    return ACT2FN[name]
+function act_fn(name; key = "hidden_act", table = ACT2FN)
+    haskey(table, name) ||
+        error("`$key = $(repr(name))` is not supported; supported: $(sort!(collect(keys(table))))")
+    return table[name]
 end
 
 """

@@ -21,6 +21,14 @@ feature_info
 Metalhead.Timm.pretrained_cfg
 ```
 
+## transformers
+
+```@docs
+Metalhead.Transformers.Sam3Model
+Metalhead.Transformers.Sam3VideoModel
+Metalhead.Transformers.Sam3VisionModel
+```
+
 ## diffusers
 
 ```@docs

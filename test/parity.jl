@@ -6,7 +6,7 @@ using Metalhead, Flux, Functors, LinearAlgebra, SafeTensors
 using Metalhead: Checkpoint, join_key, layer_params
 
 export Tap, tapify, check_fixture, fixture_model, fixture_inputs, shrink_channels,
-       check_lm_reference, check_image_reference, check_pipeline_fixture,
+       check_lm_reference, check_image_reference, check_sam3_reference, check_pipeline_fixture,
        check_diffusers_reference,
        reference_input, relerr
 
@@ -196,6 +196,57 @@ function check_image_reference(file)
         hidden_states = relerr(hidden, ref["image/hidden_states"]),
         last_logits = relerr(logits, ref["image/last_logits"]),
         generated = generated == expected)
+end
+
+"""
+    check_sam3_reference(file) -> NamedTuple
+
+Compare SAM 3 with the reference outputs of its real checkpoint, written by
+porting/dump_reference.py, on an image made with `sam3_image_inputs` from the stored one,
+for a text prompt ("text/...") and a box prompt ("box/...") that share its vision features:
+the largest relative errors of the logits, boxes and presence logits, of the masks of the
+best queries and of the semantic segmentation (every `stride` pixels), and of the scores and
+boxes of `post_process_instance_segmentation`, and whether its numbers of objects and the
+areas of their masks are those of transformers. The box prompt is also made with
+`sam3_box_inputs`, which must give the processor's.
+"""
+function check_sam3_reference(file)
+    meta = SafeTensors.deserialize(file).metadata
+    ref = Checkpoint(file)
+    T = Metalhead.Transformers
+    model = create_model(meta["repo"]; pretrained = true, revision = meta["revision"])
+    pixel_values, sizes = T.sam3_image_inputs(Float32.(ref["image"]))
+    vision = T.get_vision_features(model, pixel_values)
+    s = parse(Int, meta["stride"])
+    errs = Dict(k => 0.0 for k in (:logits, :boxes, :presence, :masks, :semantic, :post))
+    record!(k, x, key) = errs[k] = max(errs[k], relerr(x, ref[key]))
+    post_same = true
+    for name in ("text", "box")
+        boxes = (;)
+        if haskey(ref, "$name/input_boxes")
+            boxes = (; input_boxes = ref["$name/input_boxes"],
+                input_boxes_labels = ref["$name/input_boxes_labels"])
+            input_boxes, labels = T.sam3_box_inputs([eachcol(ref["$name/boxes_xyxy"])], sizes)
+            post_same &= input_boxes ≈ boxes.input_boxes && labels == boxes.input_boxes_labels
+        end
+        y = model(vision, ref["$name/input_ids"] .+ 1;
+            attention_mask = ref["$name/attention_mask"], boxes...)
+        record!(:logits, y.pred_logits, "$name/pred_logits")
+        record!(:boxes, y.pred_boxes, "$name/pred_boxes")
+        record!(:presence, y.presence_logits, "$name/presence_logits")
+        queries = vec(ref["$name/mask_queries"])
+        record!(:masks, y.pred_masks[1:s:end, 1:s:end, queries, :], "$name/pred_masks")
+        record!(:semantic, y.semantic_seg[1:s:end, 1:s:end, :, :], "$name/semantic_seg")
+        post = only(T.post_process_instance_segmentation(model, y; threshold = 0.5,
+            mask_threshold = 0.5, target_sizes = sizes))
+        post_same &= length(post.scores) == length(ref["$name/post/scores"]) &&
+                     vec(sum(post.masks; dims = (1, 2))) == ref["$name/post/mask_areas"]
+        if post_same
+            record!(:post, post.scores, "$name/post/scores")
+            record!(:post, post.boxes, "$name/post/boxes")
+        end
+    end
+    return (; repo = meta["repo"], NamedTuple(errs)..., post_same)
 end
 
 """

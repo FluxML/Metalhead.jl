@@ -29,17 +29,19 @@ function smart_resize(height::Integer, width::Integer; factor::Integer = 28,
 end
 
 # The image `(width, height, channels)` resized to `(w, h)` as torchvision does on the CPU:
-# antialiased bicubic interpolation in Float32. An 8-bit image is resized as PIL does, along
-# its width and then along its height, rounded and clamped to 0:255 after each pass.
-function resize_image(image, w, h)
+# antialiased bicubic (or `upsample = NNlib.upsample_bilinear`) interpolation in Float32. An
+# 8-bit image is resized as PIL does, along its width and then along its height, rounded and
+# clamped to 0:255 after each pass.
+function resize_image(image, w, h; upsample = NNlib.upsample_bicubic)
     x = Float32.(image)
-    bicubic(x, wh) = dropdims(
-        NNlib.upsample_bicubic(reshape(x, size(x)..., 1); size = wh, antialias = true);
+    resize(x, wh) = dropdims(
+        upsample(reshape(x, size(x)..., 1); size = wh, antialias = true,
+            align_corners = false);
         dims = 4)
-    eltype(image) <: Integer || return size(x)[1:2] == (w, h) ? x : bicubic(x, (w, h))
+    eltype(image) <: Integer || return size(x)[1:2] == (w, h) ? x : resize(x, (w, h))
     quantize(y) = round.(clamp.(y, 0, 255))
-    size(x, 1) == w || (x = quantize(bicubic(x, (w, size(x, 2)))))
-    size(x, 2) == h || (x = quantize(bicubic(x, (w, h))))
+    size(x, 1) == w || (x = quantize(resize(x, (w, size(x, 2)))))
+    size(x, 2) == h || (x = quantize(resize(x, (w, h))))
     return x
 end
 
