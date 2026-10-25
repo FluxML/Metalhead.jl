@@ -4,7 +4,7 @@
 # (special tokens, padding, truncation) read as `from_pretrained` reads them. Tokenizing a
 # string, a tokenization algorithm, is left to a backend: the HuggingFaceTokenizers.jl
 # extension, or any type with methods of `encode_ids` and `decode_ids`. Validated against
-# test/references/processors/sam3.safetensors.
+# test/references/processors/sam3.safetensors and tokenizers.safetensors.
 
 """
     encode_ids(backend, text::AbstractString; add_special_tokens = true) -> Vector{Int}
@@ -34,31 +34,65 @@ function decode_ids end
 transformers' `TokenizersBackend`, the tokenizer of a tokenizer.json, which
 [`create_processor`](@ref Metalhead.create_processor) loads from a repository with its
 settings in tokenizer_config.json (with special_tokens_map.json for files without
-`added_tokens_decoder`, as transformers reads them). Its fields are transformers'
+`added_tokens_decoder`, as transformers reads them): the processor of a language model,
+such as `"Qwen/Qwen3-0.6B"`, the `tokenizer` of a processor or of a diffusers pipeline. It
+stands for transformers' tokenizer classes, which derive from it (`GPT2Tokenizer`,
+`Qwen2Tokenizer`, `GemmaTokenizer`, `CLIPTokenizer`, ...): the tokenizer.json of the
+validated repositories tokenizes strings as these classes do, and `tokenizer_class` keeps
+the name for what a class changes (CLIP's decoding). Its fields are transformers'
 attributes:
 
   - `tokenizer`: the backend that encodes and decodes strings (`encode_ids` and
     `decode_ids`), or `nothing` until a string needs it, when the HuggingFaceTokenizers.jl
     extension loads `tokenizer_file`, the repository's tokenizer.json;
-  - `tokenizer_class`: the class that tokenizer_config.json names;
+  - `tokenizer_class`: the class that transformers' `AutoTokenizer` instantiates, the one
+    that tokenizer_config.json names or that of the model type of config.json (Qwen3.5's
+    `Qwen3_5Tokenizer`, where the file says `Qwen2Tokenizer`);
   - the special tokens `bos_token`, `eos_token`, `unk_token`, `sep_token`, `pad_token`,
     `cls_token` and `mask_token`, `extra_special_tokens`, and the named tokens of a model
     (`model_specific_special_tokens`, such as `image_token`);
   - `added_tokens_decoder`: the content of the added tokens by id (from 0), from which the
     ids of special tokens are known without a backend;
   - `model_max_length` (`nothing` for no limit), `padding_side`, `truncation_side`,
-    `clean_up_tokenization_spaces` and `model_input_names`.
+    `clean_up_tokenization_spaces` and `model_input_names`;
+  - `add_bos_token` and `add_eos_token`: `nothing` for the special tokens that the
+    post-processor of tokenizer.json adds (transformers ignores these keys of
+    tokenizer_config.json), or set when creating the processor, e.g.
+    `create_processor(repo; add_bos_token = false)`, for the BOS and EOS tokens they ask for
+    and none other, as in transformers (an unset one counts as `false`, and
+    `CLIPTokenizer` ignores both).
 
-Call it as `tok(text; padding, truncation, max_length, padding_side, add_special_tokens)`
-on a string or on token ids from 0, as a tokenizer gives them (which need no backend), or on
-a vector of them. It returns `(; input_ids, attention_mask)`: vectors for one text, else
-matrices `(seq_len, batch)`, with 1-based token indices, as the models take them. The
-keywords are transformers', with its defaults: `padding` is `true` (or `:longest`),
-`:max_length` or `false`; `truncation` (`true`, or implied by `max_length` without padding)
-cuts the tokens of a string, keeping the special tokens; `max_length` defaults to
-`model_max_length`. Without `padding`, a batch of different lengths is padded to the
-longest, as a Julia array needs, where transformers would fail to make a tensor of it.
-[`decode`](@ref Metalhead.Transformers.decode) turns indices back into text.
+    (tok::TokenizersBackend)(text; padding = nothing, truncation = nothing,
+                             max_length = nothing, padding_side = nothing,
+                             add_special_tokens = true)
+
+The inputs of a language model for `text`: a string or the token ids of a tokenizer (from
+0, with its special tokens, which need no backend), or a vector of them, as a NamedTuple
+that the model takes as it is (`model(tok(text))`):
+
+| Key              | Size                                       | Contents                                                                  |
+|:---------------- |:------------------------------------------ |:------------------------------------------------------------------------- |
+| `input_ids`      | `(seq_len, batch)`, `(seq_len,)` for one text | token indices, 1-based, padded on the side `padding_side`               |
+| `attention_mask` | as `input_ids`                             | 1 for the tokens, 0 for the padding; unless `model_input_names` omits it  |
+
+The keywords are transformers', with its defaults: `padding` is `true` (or `:longest`),
+`:max_length` or `false`, and is an error without a `pad_token`, as in transformers (set one
+with `create_processor(repo; pad_token = ...)`); `truncation` (`true`, or implied by
+`max_length` without padding) cuts the tokens of a string, keeping the special tokens;
+`max_length` defaults to `model_max_length`; `padding_side` overrides the tokenizer's.
+Without `padding`, a batch of different lengths is padded to the longest, as a Julia array
+needs, where transformers would fail to make a tensor of it. [`decode`](@ref
+Metalhead.Transformers.decode) turns indices back into text.
+
+```julia
+using Metalhead, HuggingFaceTokenizers
+using Metalhead.Transformers: decode
+tok = create_processor("unsloth/Llama-3.2-1B")
+inputs = tok(["The capital of France is", "Hello"])   # padded on the left, as Llama 3's
+model = create_model("unsloth/Llama-3.2-1B"; pretrained = true)
+logits = model(inputs)                                # (vocab_size, 6, 2)
+[decode(tok, [argmax(l)]) for l in eachcol(logits[:, end, :])]   # the next tokens
+```
 """
 Base.@kwdef struct TokenizersBackend <: Processor
     tokenizer::Any = nothing
@@ -78,11 +112,17 @@ Base.@kwdef struct TokenizersBackend <: Processor
     padding_side::String = "right"
     truncation_side::String = "right"
     clean_up_tokenization_spaces::Bool = false
+    add_bos_token::Union{Nothing, Bool} = nothing
+    add_eos_token::Union{Nothing, Bool} = nothing
     model_input_names::Vector{String} = ["input_ids", "attention_mask"]
     provenance::NamedTuple = (;)
 end
 
 register_processor!("TokenizersBackend", TokenizersBackend)
+
+# `gpu`, `f16` and the other Functors traversals of a model leave its tokenizer (that of a
+# pipeline) as it is, with a backend that may be a Python object.
+Functors.@leaf TokenizersBackend
 
 const SPECIAL_TOKENS = (:bos_token, :eos_token, :unk_token, :sep_token, :pad_token,
     :cls_token, :mask_token)
@@ -94,10 +134,8 @@ const CHAT_KEY = "chat templates are out of scope"
 function ignored_keys(::Type{TokenizersBackend})
     return (; chat_template = CHAT_KEY, use_default_system_prompt = CHAT_KEY,
         response_template = CHAT_KEY, response_schema = CHAT_KEY,
-        chat_control_tokens = CHAT_KEY,
-        add_bos_token = "dropped by transformers when tokenizer.json exists",
-        add_eos_token = "dropped by transformers when tokenizer.json exists",
-        add_prefix_space = TOKENIZER_JSON_KEY, do_lower_case = TOKENIZER_JSON_KEY,
+        chat_control_tokens = CHAT_KEY, add_prefix_space = TOKENIZER_JSON_KEY,
+        do_lower_case = TOKENIZER_JSON_KEY,
         errors = TOKENIZER_JSON_KEY, pretokenize_regex = TOKENIZER_JSON_KEY,
         legacy = TOKENIZER_JSON_KEY, sp_model_kwargs = TOKENIZER_JSON_KEY,
         strip_accents = TOKENIZER_JSON_KEY, tokenize_chinese_chars = TOKENIZER_JSON_KEY,
@@ -172,23 +210,29 @@ function tokenizer_entries(files::ProcessorFiles)
             added[id] = token
         end
     end
-    # `__init__` takes `additional_special_tokens` only without `extra_special_tokens`
+    # `extra_special_tokens` as a dictionary names the special tokens of a model, which
+    # `_from_pretrained` moves to `model_specific_special_tokens`; `__init__` then takes
+    # `additional_special_tokens` as the extra special tokens (Qwen3.5)
+    named = Pair{Symbol, String}[]
+    extra = value("extra_special_tokens")
+    if extra isa AbstractDict
+        append!(named, Symbol(n) => token_content(t) for (n, t) in extra)
+        delete!(kw, "extra_special_tokens")
+    end
     if haskey(kw, "additional_special_tokens") && !haskey(kw, "extra_special_tokens")
         set!("extra_special_tokens", kw["additional_special_tokens"]...)
     end
     entries = Tuple{String, Any, String}[]
-    named = Pair{Symbol, String}[]
-    for k in order
+    for k in unique(order)
         haskey(kw, k) || continue
         v, file = kw[k]
-        if k in ("additional_special_tokens", "added_tokens_decoder")
+        # transformers drops `add_bos_token` and `add_eos_token` of the files when there
+        # is a tokenizer.json, whose post-processor adds the special tokens
+        if k in ("additional_special_tokens", "added_tokens_decoder", "add_bos_token",
+            "add_eos_token")
             continue
         elseif k == "extra_special_tokens"
-            if v isa AbstractDict
-                append!(named, Symbol(n) => token_content(t) for (n, t) in v)
-            elseif !falsy(v)
-                push!(entries, (k, token_content.(v), file))
-            end
+            falsy(v) || push!(entries, (k, token_content.(v), file))
         elseif Symbol(k) in SPECIAL_TOKENS
             push!(entries, (k, token_content(v), file))
         elseif is_named_token(k, v)
@@ -212,15 +256,47 @@ end
 function load_processor(::Type{TokenizersBackend}, files::ProcessorFiles; kwargs...)
     has_file(files, "tokenizer_config.json") || has_file(files, "tokenizer.json") ||
         error("$(Metalhead.source_name(files.source)) has no tokenizer (tokenizer_config.json or tokenizer.json)")
-    entries = tokenizer_entries(files)
-    entries = [entries;
-               ("tokenizer_file", SourceFile(files.source, "tokenizer.json"), "repository")]
-    for i in eachindex(entries)
-        k, v, file = entries[i]
-        k == "tokenizer_class" && v isa AbstractString &&
-            (entries[i] = (k, Metalhead.class_name(v), file))
-    end
+    entries = filter(e -> e[1] != "tokenizer_class", tokenizer_entries(files))
+    config = read_json(files, "config.json")
+    model_type = config === nothing ? nothing : get(config, "model_type", nothing)
+    hub = read_json(files, "tokenizer_config.json")
+    hub = hub === nothing ? nothing : get(hub, "tokenizer_class", nothing)
+    class = tokenizer_class(hub, model_type)
+    class === nothing || push!(entries, ("tokenizer_class", class,
+        hub !== nothing && class == normalized_class(hub) ? "tokenizer_config.json" :
+        "config.json (`model_type`)"))
+    push!(entries,
+        ("tokenizer_file", SourceFile(files.source, "tokenizer.json"), "repository"))
     return processor_from_entries(TokenizersBackend, entries; kwargs...)
+end
+
+# AutoTokenizer's tokenizer classes of the model types of the ported architectures
+# (`TOKENIZER_MAPPING_NAMES`), and whether one replaces the class that tokenizer_config.json
+# names (`MODELS_WITH_INCORRECT_HUB_TOKENIZER_CLASS`).
+const MODEL_TYPE_TOKENIZERS = Dict(
+    "qwen2" => ("Qwen2Tokenizer", true), "qwen3" => ("Qwen2Tokenizer", false),
+    "qwen3_5" => ("Qwen3_5Tokenizer", true), "qwen3_5_text" => ("Qwen3_5Tokenizer", false),
+    "gemma3" => ("GemmaTokenizer", false), "gemma3_text" => ("GemmaTokenizer", false),
+    "granite" => ("TokenizersBackend", false), "granitemoe" => ("TokenizersBackend", false),
+    "granitemoeshared" => ("TokenizersBackend", false),
+    "granitemoehybrid" => ("TokenizersBackend", false),
+    "sam3" => ("CLIPTokenizer", false), "sam3_video" => ("CLIPTokenizer", false))
+
+# transformers 5 names `PreTrainedTokenizerFast` TokenizersBackend
+function normalized_class(name)
+    name = Metalhead.class_name(name)
+    return name == "PreTrainedTokenizer" ? "TokenizersBackend" : name
+end
+
+# The class that AutoTokenizer instantiates for the class `hub` that tokenizer_config.json
+# names and the model type of config.json (`nothing` if unknown): where they differ, the
+# model type's class if it is generic or the Hub's is known to be wrong, else the Hub's.
+function tokenizer_class(hub, model_type)
+    registered, wrong_hub = get(MODEL_TYPE_TOKENIZERS, model_type, (nothing, false))
+    hub isa AbstractString || return registered
+    hub = normalized_class(hub)
+    (registered === nothing || registered == hub) && return hub
+    return registered == "TokenizersBackend" || wrong_hub ? registered : hub
 end
 
 function Metalhead.setting_origin(tok::TokenizersBackend, key, value)
@@ -251,10 +327,33 @@ function token_id(tok::TokenizersBackend, token)
     return only(ids)
 end
 
-function pad_token_id(tok::TokenizersBackend)
-    tok.pad_token === nothing &&
-        error("$(tok.tokenizer_class) has no padding token (`pad_token`) to pad sequences of different lengths")
-    return token_id(tok, tok.pad_token)
+function check_pad_token(tok::TokenizersBackend)
+    tok.pad_token === nothing || return nothing
+    eos = tok.eos_token === nothing ? "" : ", e.g. `pad_token = $(repr(tok.eos_token))`"
+    return error("$(tok.tokenizer_class) has no padding token (`pad_token`) to pad sequences: set one when creating the processor$eos, as transformers asks")
+end
+
+pad_token_id(tok::TokenizersBackend) = (check_pad_token(tok); token_id(tok, tok.pad_token))
+
+# Tokenizer classes whose `__init__` sets the post-processor after transformers'
+# `update_post_processor`, so that `add_bos_token` and `add_eos_token` change nothing.
+const FIXED_POST_PROCESSOR = ("CLIPTokenizer",)
+
+# The ids of a string with its special tokens: those that the post-processor of
+# tokenizer.json adds or, if `add_bos_token` or `add_eos_token` is set, the BOS and EOS
+# tokens that they ask for around the tokens of the text, as transformers'
+# `update_post_processor` replaces the post-processor (an unset one counts as `false`).
+function encode_text(tok::TokenizersBackend, b, text, add_special_tokens)
+    template = add_special_tokens &&
+               (tok.add_bos_token !== nothing || tok.add_eos_token !== nothing) &&
+               !(tok.tokenizer_class in FIXED_POST_PROCESSOR)
+    template || return collect(Int, encode_ids(b, text; add_special_tokens))
+    ids = collect(Int, encode_ids(b, text; add_special_tokens = false))
+    something(tok.add_bos_token, false) && tok.bos_token !== nothing &&
+        pushfirst!(ids, token_id(tok, tok.bos_token))
+    something(tok.add_eos_token, false) && tok.eos_token !== nothing &&
+        push!(ids, token_id(tok, tok.eos_token))
+    return ids
 end
 
 # The ids of `text`, truncated to `max_length` (unless `nothing`) as the tokenizers library
@@ -262,7 +361,7 @@ end
 function token_ids(tok::TokenizersBackend, text::AbstractString, add_special_tokens,
         max_length)
     b = backend(tok)
-    ids = collect(Int, encode_ids(b, text; add_special_tokens))
+    ids = encode_text(tok, b, text, add_special_tokens)
     (max_length === nothing || length(ids) <= max_length) && return ids
     content = add_special_tokens ?
               collect(Int, encode_ids(b, text; add_special_tokens = false)) : ids
@@ -317,6 +416,8 @@ function (tok::TokenizersBackend)(text; padding = nothing, truncation = nothing,
     all(is_one_text, texts) ||
         error("a text is a string or token ids (from 0), or a vector of them; got $(typeof(text))")
     pad, truncate_to, max_length = call_strategies(tok, padding, truncation, max_length)
+    # transformers fails to pad without a padding token, even sequences of one length
+    padding === nothing || pad === :do_not_pad || check_pad_token(tok)
     seqs = [token_ids(tok, t, add_special_tokens, truncate_to) for t in texts]
     lengths = length.(seqs)
     targets = pad === :max_length ? max.(lengths, max_length) : lengths

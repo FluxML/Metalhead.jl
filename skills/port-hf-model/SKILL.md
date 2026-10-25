@@ -547,6 +547,14 @@ settings.
   transformers' keys in Julia layout, 1-based token indices, which the model takes through a
   method `model(inputs::NamedTuple)`. Text is strings (for a tokenizer backend) or 0-based
   token ids. Post-processing and `decode` dispatch on the processor.
+- **Tokenizers.** `TokenizersBackend` stands for every tokenizer class of transformers: what
+  a class changes beyond tokenizer.json is a setting or a small hook keyed by
+  `tokenizer_class` (CLIP's decoding, `FIXED_POST_PROCESSOR`). `porting/dump_processor.py
+  tokenizers` compares each class on strings where they can differ (case, accents, unicode
+  normal forms, whitespace runs, special tokens in the text); add a new language model's
+  repository to its `TOKENIZER_REPOS`. Language models take the tokenizer's output through
+  the generic `(m::CausalLM)(inputs::NamedTuple)`, which also takes a batch padded on the
+  left.
 - **Fixtures.** `porting/dump_processor.py` calls `AutoProcessor.from_pretrained(repo)(...)`,
   never the components, copies the repository's small JSON files (not tokenizer.json) to
   `test/fixtures/processors/<org>--<repo>/`, and writes the outputs and each prompt's token
@@ -574,10 +582,13 @@ above, with these differences.
 - **Pipelines** register their class with `DIFFUSERS_PIPELINE` (identified by the `...Pipeline`
   suffix of `_class_name`). `instantiate` (`src/Diffusers/config.jl`) builds each component of
   `model_index.json` from its subfolder: a model from its `config.json`, a scheduler from
-  `scheduler_config.json` through `SCHEDULERS` (class name => builder), a tokenizer as the
-  directory of its files (the HuggingFaceTokenizers.jl extension in `ext/` tokenizes). The
-  builder takes the components and the other declared keys (`is_distilled`). Schedulers keep
-  no state: port `set_timesteps` and `step` as functions of the noise levels.
+  `scheduler_config.json` through `SCHEDULERS` (class name => builder), a tokenizer as a
+  `TokenizersBackend` (`pipeline_tokenizer`; strings go through the HuggingFaceTokenizers.jl
+  extension in `ext/`). The builder takes the components and the other declared keys
+  (`is_distilled`). Schedulers keep no state: port `set_timesteps` and `step` as functions
+  of the noise levels. The pipeline's preprocessing is its own code (FLUX.2's
+  `encode_prompt` formats, tokenizes and pads the prompts): diffusers components have no
+  processor, and `create_processor` on them is an error (`instantiate_processor`).
 - **Layout.** Images are WHCN; tokens `(C, L, B)`; position ids `(n_axes, L)` integers (torch
   `(B, L, n_axes)`, of which diffusers takes the first); timesteps vectors. The Julia forward
   takes the positional arguments of the torch `forward`, in its order, so that fixtures call it

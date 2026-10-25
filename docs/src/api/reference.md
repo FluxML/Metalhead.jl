@@ -57,6 +57,7 @@ Metalhead.Timm.pretrained_cfg
 ## transformers
 
 ```@docs
+Metalhead.Transformers.CausalLM
 Metalhead.Transformers.Qwen3_5ForConditionalGeneration
 Metalhead.Transformers.Qwen3_5VisionModel
 Metalhead.Transformers.Sam3Model
@@ -68,7 +69,6 @@ Metalhead.Transformers.Sam3VisionModel
 
 ```@docs
 Metalhead.Diffusers.Flux2KleinPipeline
-Metalhead.Diffusers.tokenize
 Metalhead.Diffusers.encode_prompt
 Metalhead.Diffusers.Flux2Transformer2DModel
 Metalhead.Diffusers.encode

@@ -1,8 +1,10 @@
 using Metalhead, Test
+using Flux: Flux
 include("../parity_setup.jl")
 using .ParitySetup
 
 const D = Metalhead.Diffusers
+const T = Metalhead.Transformers
 const FLUX2_FIXTURES = ["vae_flux2_tiny", "vae_flux2_options", "transformer_flux2_tiny",
     "transformer_flux2_options"]
 const FLUX2_PIPELINES = ["flux2_klein_tiny", "flux2_klein_cfg"]
@@ -131,7 +133,8 @@ end
     @test pipe.is_distilled && pipe.tokenizer === nothing
     @test pipe.text_encoder isa Metalhead.Transformers.LlamaForCausalLM
     @test create_model(dir; subfolder = "vae") isa D.AutoencoderKLFlux2
-    @test_throws "HuggingFaceTokenizers" pipe("a prompt")
+    @test_throws "no tokenizer" pipe("a prompt")
+    @test_throws "no tokenizer" D.encode_prompt(pipe, "a prompt")
     embeds = randn(Float32, 48, 7, 1)
     image = pipe(embeds; height = 16, width = 20, num_inference_steps = 2)
     @test size(image) == (20, 16, 3, 1) && eltype(image) == Float32
@@ -146,6 +149,84 @@ end
     @test size(base(embeds; height = 16, width = 20, num_inference_steps = 1,
         negative_prompt_embeds = randn(Float32, 48, 3, 1))) == (20, 16, 3, 1)
     @test D.patchify_latents(D.unpatchify_latents(latents)) == latents
+end
+
+# Tokenizes the chat prompts of a pipeline into the small vocabulary of the fixtures, with
+# the padding token 0.
+struct PromptBackend end
+function T.encode_ids(::PromptBackend, text::AbstractString; add_special_tokens = true)
+    return text == "<pad>" ? [0] : [Int(c) % 30 + 1 for c in text]
+end
+const PROMPT_TOKENIZER = T.TokenizersBackend(; tokenizer = PromptBackend(),
+    pad_token = "<pad>", added_tokens_decoder = Dict(0 => "<pad>"))
+
+with_tokenizer(p, tokenizer) = D.Flux2KleinPipeline(p.scheduler, p.vae, p.text_encoder,
+    tokenizer, p.transformer, p.is_distilled)
+
+@testset "tokenizer" begin
+    # a pipeline with the files of FLUX.2 [klein]'s tokenizer in tokenizer/
+    files = joinpath(pkgdir(Metalhead), "test", "fixtures", "processors",
+        "black-forest-labs--FLUX.2-klein-4B", "tokenizer")
+    mktempdir() do dir
+        cp(fixture("flux2_klein_tiny"), dir; force = true)
+        cp(files, joinpath(dir, "tokenizer"))
+        index = JSON.parsefile(joinpath(dir, "model_index.json"))
+        index["tokenizer"] = ["transformers", "Qwen2TokenizerFast"]
+        write(joinpath(dir, "model_index.json"), JSON.json(index))
+        pipe = create_model(dir)
+        tok = pipe.tokenizer
+        @test tok isa T.TokenizersBackend && tok.tokenizer_class == "Qwen2Tokenizer"
+        @test tok.pad_token == "<|endoftext|>" && tok.tokenizer === nothing
+        @test Metalhead.settings(create_processor(dir; subfolder = "tokenizer")) ==
+              Metalhead.settings(tok)
+        # strings need a backend
+        if Base.get_extension(Metalhead, :MetalheadHuggingFaceTokenizersExt) === nothing
+            @test_throws "HuggingFaceTokenizers" pipe("a prompt")
+        end
+        # Functors (`gpu`, `f16`) leave the tokenizer as it is
+        @test Metalhead.Functors.isleaf(tok)
+        @test Flux.f16(pipe).tokenizer === tok
+        @test length(Flux.trainables(pipe)) ==
+              length(Flux.trainables(create_model(fixture("flux2_klein_tiny"))))
+    end
+
+    # the prompts tokenized, padded and truncated to `max_sequence_length` as diffusers
+    # does: the chat prompt of the first has fewer than 80 characters, that of the second
+    # more
+    pipe = with_tokenizer(create_model(fixture("flux2_klein_tiny"); pretrained = true,
+            eltype = Float32), PROMPT_TOKENIZER)
+    prompts = ["a cat", "two dogs on a sofa, in the sun"]
+    codes = [T.encode_ids(PromptBackend(), D.chat_prompt(p)) for p in prompts]
+    n = length(codes[1])
+    @test n < 80 < length(codes[2])
+    ids = [[codes[1]; zeros(Int, 80 - n)] codes[2][1:80]] .+ 1
+    mask = [[ones(Int, n); zeros(Int, 80 - n)] ones(Int, 80)]
+    @test D.qwen3_prompt_inputs(pipe.tokenizer, prompts; max_sequence_length = 80) ==
+          (; input_ids = ids, attention_mask = mask)
+    encode(p, prompt) = D.encode_prompt(p, prompt; max_sequence_length = 80,
+        text_encoder_out_layers = (1, 2, 3))
+    embeds = encode(pipe, prompts)
+    @test size(embeds) == (48, 80, 2)
+    @test embeds ≈ D.encode_prompt(pipe, ids; attention_mask = mask,
+        text_encoder_out_layers = (1, 2, 3))
+    @test encode(pipe, "a cat") ≈ embeds[:, :, 1:1]
+    # the string call of the pipeline goes through `encode_prompt`
+    kwargs = (; height = 16, width = 20, num_inference_steps = 2,
+        latents = randn(Float32, 5, 4, 16, 1))
+    text = (; max_sequence_length = 80, text_encoder_out_layers = (1, 2, 3))
+    @test pipe("a cat"; kwargs..., text...) ≈ pipe(embeds[:, :, 1:1]; kwargs...)
+    # classifier-free guidance, with the empty prompt as negative prompt
+    base = with_tokenizer(create_model(fixture("flux2_klein_cfg"); pretrained = true,
+            eltype = Float32), PROMPT_TOKENIZER)
+    @test base("a cat"; kwargs..., text...) ≈ base(encode(base, "a cat");
+        negative_prompt_embeds = encode(base, ""), kwargs...)
+
+    # diffusers components have no processor; the tokenizer subfolder is a tokenizer
+    dir = fixture("flux2_klein_tiny")
+    @test_throws "pipe.tokenizer" create_processor(dir)
+    component = "AutoencoderKLFlux2, a component of a diffusers pipeline, has no processor"
+    @test_throws component create_processor(dir; subfolder = "vae")
+    @test_throws "has no processor" create_processor(dir; subfolder = "transformer")
 end
 
 TEST_NETWORK && @testset "references" begin

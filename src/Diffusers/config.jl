@@ -40,8 +40,8 @@ const SCHEDULERS = Dict{String, Any}()
 
 # The components of a pipeline are built from their subfolders, with the same `pretrained`
 # and `eltype`; the builder of the pipeline takes them as keyword arguments, with the other
-# keys of model_index.json it declares. A tokenizer, which Metalhead does not port, is passed
-# as the local directory of its files (see `tokenizer_dir`).
+# keys of model_index.json it declares. A tokenizer is a `TokenizersBackend` (see
+# `pipeline_tokenizer`).
 function instantiate(format::DiffusersPipelineFormat, spec, source, config;
         pretrained::Bool, eltype, kwargs...)
     components = map(collect(filter(p -> is_component(last(p)), config))) do (name, (library, class))
@@ -52,7 +52,7 @@ function instantiate(format::DiffusersPipelineFormat, spec, source, config;
             build = SCHEDULERS[class]
             build(; declared_args(build, JSON.parsefile(source_file(sub, "scheduler_config.json")))...)
         elseif occursin("Tokenizer", class)
-            tokenizer_dir(sub)
+            pipeline_tokenizer(sub)
         else
             subconfig = source_config(sub)
             subformat, architecture = identify(subconfig)
@@ -66,13 +66,22 @@ function instantiate(format::DiffusersPipelineFormat, spec, source, config;
     return spec.build(; components..., args...)
 end
 
-# The local directory of the tokenizer files of a pipeline, downloading `tokenizer.json` and
-# `tokenizer_config.json` from a Hub repository; `nothing` for a local directory without them.
-function tokenizer_dir(s::ModelSource)
-    if s.dir !== nothing
-        dir = joinpath(s.dir, s.subfolder)
-        return isfile(joinpath(dir, "tokenizer.json")) ? dir : nothing
-    end
-    source_file(s, "tokenizer_config.json")
-    return dirname(source_file(s, "tokenizer.json"))
+# The tokenizer of a pipeline, loaded from its subfolder as `create_processor(repo;
+# subfolder = "tokenizer")` loads it, without tokenizer.json until a string needs it;
+# `nothing` for a subfolder without the files of a tokenizer, such as that of a local
+# pipeline saved without one.
+function pipeline_tokenizer(s::ModelSource)
+    files = ProcessorFiles(s)
+    has_file(files, "tokenizer_config.json") || has_file(files, "tokenizer.json") ||
+        return nothing
+    return load_processor(TokenizersBackend, files)
+end
+
+# Diffusers components have no processor of their own: a pipeline preprocesses in its code.
+function instantiate_processor(::DiffusersFormat, files, config; kwargs...)
+    return error("$(config["_class_name"]), a component of a diffusers pipeline, has no processor: the pipeline prepares its inputs (`create_processor(repo; subfolder = \"tokenizer\")` loads the tokenizer of a pipeline)")
+end
+
+function instantiate_processor(::DiffusersPipelineFormat, files, config; kwargs...)
+    return error("$(config["_class_name"]) has no processor: it prepares its inputs itself, with the tokenizer `pipe.tokenizer` of `pipe = create_model(repo)`, which `create_processor(repo; subfolder = \"tokenizer\")` loads alone")
 end

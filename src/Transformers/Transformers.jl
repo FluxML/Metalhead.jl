@@ -7,6 +7,8 @@ name; build them with [`Metalhead.create_model`](@ref) from a Hub repository.
 
 Language models take token indices starting at 1, as Flux's `Embedding` does: add 1 to the
 ids of a Hugging Face tokenizer, and subtract 1 from the index of a logit to get its token id.
+The tokenizer of a repository, `create_processor(repo)`, gives them, and
+[`decode`](@ref Metalhead.Transformers.decode) takes them.
 """
 module Transformers
 
@@ -14,6 +16,7 @@ using Flux
 using NNlib
 using ConcreteStructs: @concrete
 using ChainRulesCore: ChainRulesCore
+using Functors: Functors
 using MLUtils: topk
 using JSON: JSON
 using ..Metalhead: Metalhead, ArchSpec, ConfigFormat, register!, declared_args

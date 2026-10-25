@@ -122,7 +122,8 @@ end
         @test tok.pad_token == "<pad>" && tok.eos_token == "<eos>"
         @test tok.bos_token === nothing && tok.unk_token === nothing
         @test tok.model_specific_special_tokens == (; boi_token = "<boi>", image_token = "<img>")
-        @test tok.extra_special_tokens == String[]
+        # a dictionary of `extra_special_tokens` leaves them to `additional_special_tokens`
+        @test tok.extra_special_tokens == ["<a>", "<b>"]
         @test tok.added_tokens_decoder == Dict(0 => "<pad>", 7 => "<eos>")
         @test tok.model_max_length === nothing
         @test tok([[5, 6], [5]]).input_ids == [6 1; 7 6]  # padded on the left
@@ -211,9 +212,10 @@ if TEST_NETWORK
             max_length = 512)
         @test out.input_ids == flux["input_ids"] .+ 1
         @test out.attention_mask == flux["attention_mask"]
-        dir = D.tokenizer_dir(Metalhead.subsource(Metalhead.model_source(repo, nothing),
-            "tokenizer"))
-        pipe = D.Flux2KleinPipeline(nothing, nothing, nothing, dir, nothing, true)
-        @test D.tokenize(pipe, [prompt]) == (out.input_ids, out.attention_mask)
+        # the tokenizer of the pipeline, and the inputs of its `encode_prompt`
+        source = Metalhead.model_source(repo, nothing)
+        tok = D.pipeline_tokenizer(Metalhead.subsource(source, "tokenizer"))
+        @test Metalhead.settings(tok) == Metalhead.settings(qwen)
+        @test D.qwen3_prompt_inputs(tok, prompt) == out
     end
 end

@@ -32,6 +32,9 @@ end
     @test eltype(half.model.embed_tokens.weight) == Float16
 end
 
+# the output of a tokenizer, padded on either side
+foreach(check_tokenizer_inputs, ["llama_tiny", "llama_rope"])
+
 @testset "config" begin
     tiny = (; vocab_size = 16, hidden_size = 8, intermediate_size = 12,
         num_hidden_layers = 1, num_attention_heads = 2)

@@ -82,8 +82,16 @@ function (m::DecoderModel)(input_ids::AbstractVector{<:Integer}; attention_mask 
     return dropdims(m(reshape(input_ids, :, 1); attention_mask = mask); dims = 3)
 end
 
-# A causal language model: a decoder `model` (a `DecoderModel`) and the output projection
-# `lm_head` of its `forward_head`.
+"""
+    CausalLM
+
+A causal language model (Llama, Qwen2, Qwen3, Qwen3.5, Gemma 3, Granite): a decoder `model`
+and the output projection `lm_head` of its [`forward_head`](@ref Metalhead.forward_head).
+It maps token indices to logits, `model(input_ids; attention_mask = nothing)`, as described
+by its builder, such as [`llama_for_causal_lm`](@ref
+Metalhead.Transformers.llama_for_causal_lm), or the output of its tokenizer,
+`model(inputs)`.
+"""
 abstract type CausalLM end
 
 function forward_features(m::CausalLM, input_ids; attention_mask = nothing)
@@ -92,6 +100,31 @@ end
 
 function (m::CausalLM)(input_ids; attention_mask = nothing)
     return forward_head(m, forward_features(m, input_ids; attention_mask))
+end
+
+"""
+    (model::CausalLM)(inputs::NamedTuple)
+
+The logits of a language model for the output of its tokenizer, a [`TokenizersBackend`](@ref
+Metalhead.Transformers.TokenizersBackend) that [`create_processor`](@ref
+Metalhead.create_processor) loads from the model's repository: its `input_ids` and
+`attention_mask`, if it has one; other keys are ignored. A batch may be padded on either
+side: the tokenizers of Llama 3, Gemma 3 and Granite pad on the left, which puts the last
+token of each text at the last position. The model moves such a batch to the right and its
+logits back, so that the logits of the tokens are those of transformers on the padded batch.
+
+```julia
+model = create_model("Qwen/Qwen3-0.6B"; pretrained = true)
+tok = create_processor("Qwen/Qwen3-0.6B")    # strings need `using HuggingFaceTokenizers`
+logits = model(tok(["The capital of France is", "Hello"]))   # (vocab_size, 5, 2)
+```
+"""
+function (m::CausalLM)(inputs::NamedTuple)
+    check_inputs(m, inputs, (:input_ids,);
+        hint = "pass the output of the model's tokenizer, `create_processor(repo)(text)`")
+    input_ids, attention_mask, restore = right_padded(inputs.input_ids,
+        get(inputs, :attention_mask, nothing))
+    return restore(m(input_ids; attention_mask))
 end
 
 @concrete struct LlamaForCausalLM <: CausalLM
@@ -141,7 +174,9 @@ The model maps token indices of size `(seq_len, batch_size)`, or a vector for a 
 sequence, to logits of size `(vocab_size, seq_len, batch_size)`, with causal attention. Token
 indices start at 1: add 1 to the ids of a Hugging Face tokenizer. A batch of sequences of
 different lengths, padded on the right, takes the tokenizer's `attention_mask` of size
-`(seq_len, batch_size)` as a keyword argument, which keeps the padding out of the keys.
+`(seq_len, batch_size)` as a keyword argument, which keeps the padding out of the keys. The
+model also takes the output of its tokenizer as it is, `model(tok(texts))`, padded on either
+side (see [`CausalLM`](@ref Metalhead.Transformers.CausalLM)).
 [`forward_features`](@ref) returns the hidden states after the final norm, and
 [`forward_intermediates`](@ref) those of each layer.
 """
