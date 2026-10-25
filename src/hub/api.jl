@@ -39,17 +39,16 @@ end
 
 # The `config.json` of a source, or the `model_index.json` of a diffusers pipeline.
 function source_config(s::ModelSource)
-    for file in ("config.json", "model_index.json")
-        path = try
-            source_file(s, file)
-        catch e
-            is_not_found(e) || rethrow()
-            continue
-        end
+    files = [join_path(s.subfolder, f) for f in ("config.json", "model_index.json")]
+    if s.dir === nothing
+        _, path = hf_download_first(s.repo, files, "configuration"; revision = s.revision)
+        return JSON.parsefile(path)
+    end
+    for file in files
+        path = joinpath(s.dir, file)
         isfile(path) && return JSON.parsefile(path)
     end
-    where = s.dir === nothing ? "$(s.repo)@$(s.revision)" : s.dir
-    return error("$(join_path(where, s.subfolder)) has neither a config.json nor a model_index.json")
+    return error("$(join_path(s.dir, s.subfolder)) has neither a config.json nor a model_index.json")
 end
 
 function bare_spec(name)
