@@ -71,7 +71,8 @@ end
 
 function (m::SpatialGatingUnit)(x)
     u, v = Flux.chunk(x, 2; dims = 1)
-    return u .* transpose_tokens(m.proj(transpose_tokens(m.norm(v))))
+    # a copy of the view, which LayerNorm can't take on a GPU
+    return u .* transpose_tokens(m.proj(transpose_tokens(m.norm(copy(v)))))
 end
 
 @concrete struct SpatialGatingBlock
