@@ -11,10 +11,11 @@ This page is about adding a model. Metalhead admits models whose weights are on 
 [transformers](https://github.com/huggingface/transformers) language models and
 [diffusers](https://github.com/huggingface/diffusers) models and pipelines. A port is a Flux
 reimplementation of the PyTorch code, validated as described in
-[How models are validated](@ref validation). The registry and `create_model` are not specific
-to timm: a library other than timm gets its own module, `src/<Name>/`, and a
-[`Metalhead.ConfigFormat`](@ref) saying how its `config.json` names an architecture, like
-`src/Timm/config.jl`.
+[How models are validated](@ref validation). It includes what the checkpoint determines
+besides the model, such as its preprocessing, but not general-purpose machinery: see
+[Scope](@ref). The registry and `create_model` are not specific to timm: a library other than
+timm gets its own module, `src/<Name>/`, and a [`Metalhead.ConfigFormat`](@ref) saying how
+its `config.json` names an architecture, like `src/Timm/config.jl`.
 
 ## Setup
 

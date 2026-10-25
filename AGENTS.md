@@ -8,6 +8,23 @@ Granite for now), and text-to-image pipelines of
 mirrors the PyTorch module tree, loads the original safetensors weights by name, and is
 checked numerically against PyTorch. `create_model` is the entry point.
 
+## Scope
+
+Port what a checkpoint determines and validate it against PyTorch; don't reimplement the
+general-purpose machinery of timm, transformers and diffusers. A feature belongs when the
+checkpoint determines it (its configuration, its weights, or upstream code specific to the
+architecture), and getting it wrong would silently change the results.
+
+- In: architectures and weights, the feature interface, the inference pre- and
+  post-processing a checkpoint sets, the schedulers and sampling loops of ported pipelines,
+  the key-value cache.
+- Out: tokenization algorithms (HuggingFaceTokenizers.jl, through an extension), chat
+  templates, decoding strategies, training utilities, augmentation, data loading, task APIs,
+  quantization, LoRA.
+
+General-purpose code that parity needs stays internal. The README's "Scope" section has the
+reasons.
+
 ## Layout
 
 - `src/hub/`: Hub downloads, safetensors checkpoints, the strict weight loader
