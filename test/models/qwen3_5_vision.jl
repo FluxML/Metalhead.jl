@@ -79,4 +79,27 @@ end
     @test y.pooler_output == model(inputs.pixel_values, inputs.image_grid_thw).pooler_output
     @test model(merge(inputs, (; input_ids = [1, 2]))).pooler_output == y.pooler_output
     @test_throws "has no `image_grid_thw`" model((; inputs.pixel_values))
+
+    # the image processor takes the forms that transformers takes, and checks its settings
+    # as it is made
+    IP = Metalhead.Transformers.Qwen2VLImageProcessor
+    same = IP(; patch_size = 4.0, size = (; shortest_edge = 1, longest_edge = 4096.0),
+        resample = :bicubic, image_mean = [0.48145466, 0.4578275, 0.40821073])
+    @test same.patch_size === 4 && same.resample === 3 && same.image_mean isa Tuple
+    image = rand(UInt8, 30, 20, 3)
+    @test same(image) == IP(; patch_size = 4,
+        size = (; shortest_edge = 1, longest_edge = 4096))(image)
+    for (kwargs, message) in (
+        (; patch_size = 2.5) => "`patch_size` of Qwen2VLImageProcessor is an integer",
+        (; do_convert_rgb = "yes") => "`do_convert_rgb` of Qwen2VLImageProcessor is true or false",
+        (; merge_size = 0) => "`merge_size` must be positive",
+        (; size = 3136) => "`size` must have positive `shortest_edge` and `longest_edge` only",
+        (; image_mean = (0.5, 0.5)) => "`image_mean` has one value per RGB channel",
+        (; resample = :hamming) => "`resample = 5` (hamming) is not supported")
+        @test_throws message IP(; kwargs...)
+    end
+    @test_throws "multiples of `patch_size * merge_size` (8)" IP(; patch_size = 4,
+        do_resize = false)(rand(UInt8, 30, 20, 3))
+    @test size(IP(; patch_size = 4, do_resize = false)(rand(UInt8, 32, 16, 3)).pixel_values) ==
+          (3 * 2 * 4 * 4, 8 * 4)
 end

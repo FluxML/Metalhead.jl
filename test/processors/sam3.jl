@@ -165,8 +165,12 @@ end
             @test s.boxes ≈ result("instance$name", i, "boxes")
             @test s.masks == result("instance$name", i, "masks")
             @test semantic[i].segmentation == result("semantic$name", i, "segmentation")
-            @test vec(semantic[i].scores) ≈
-                  vec(result("semantic$name", i, "segmentation_scores"))
+            @test semantic[i].segmentation_scores ≈
+                  result("semantic$name", i, "segmentation_scores")
+            # transformers' keys
+            @test keys(d) == (:scores, :boxes)
+            @test keys(s) == (:scores, :boxes, :masks)
+            @test keys(semantic[i]) == (:segmentation, :segmentation_scores)
         end
     end
     # the image processor post-processes as well, and target sizes may be a matrix

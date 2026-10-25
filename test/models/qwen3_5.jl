@@ -231,6 +231,18 @@ end
     @test y[:, 1:n, 1] ≈ logits
     second = proc(; images = images[2], text = [62, 60, 63, 9, 10, 11, 12, 13, 14])
     @test y[:, :, 2] ≈ model(second)
+    # padded on the left, as transformers pads for generation: each prompt as alone
+    left = T.Qwen3VLProcessor(ip, T.TokenizersBackend(; tok.pad_token,
+        tok.added_tokens_decoder, padding_side = "left"))
+    batch = left(; images, text = [prompt, [62, 60, 63, 9, 10, 11, 12, 13, 14]])
+    @test batch.attention_mask == [0 1; ones(Int, n) ones(Int, n)]
+    y = model(batch)
+    @test y[:, 2:end, 1] ≈ logits
+    @test y[:, :, 2] ≈ model(second)
+    @test model.model(batch)[:, 2:end, 1] ≈ model.model(one)
+    text = left(; text = [[1, 2, 3], [4, 5, 6, 7, 8]])  # 0-based
+    @test model(text)[:, 3:5, 1] ≈ model([2, 3, 4])
+    @test model(text)[:, :, 2] ≈ model([5, 6, 7, 8, 9])
     # text alone, and inputs of another model
     @test model((; input_ids = [1, 2, 3])) ≈ model([1, 2, 3])
     @test_throws "has no `input_ids`" model((; one.pixel_values, one.image_grid_thw))

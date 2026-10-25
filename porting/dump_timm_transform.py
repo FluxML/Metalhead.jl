@@ -2,8 +2,8 @@
 
     uv run dump_timm_transform.py
 
-Writes test/references/timm_transforms.safetensors, for `eval_transform`, `pil_resize` and
-`EvalTransform` in src/Timm/: the outputs of timm's full path,
+Writes test/references/timm_transforms.safetensors, for `pil_resize` and `EvalTransform` in
+src/Timm/: the outputs of timm's full path,
 `create_transform(**resolve_data_config({}, pretrained_cfg = cfg))`, applied to PIL images, for
 `pretrained_cfg`s that cover the interpolations, crop modes and statistics of timm's tags, and
 of `PIL.Image.resize` on tiny random 8-bit images. Images are stored (channels, height, width).

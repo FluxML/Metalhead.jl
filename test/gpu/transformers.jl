@@ -58,3 +58,23 @@ end
     @test y_gpu isa CUDA.CuArray
     @test Array(y_gpu) ≈ y rtol = GPU_RTOL
 end
+
+# The vision-language model of Qwen3.5 on the GPU takes a processor's output padded on the
+# left.
+@testset "Qwen3.5 processor outputs" begin
+    T = Metalhead.Transformers
+    model = fixture_model(fixture("qwen3_5_tiny"); eltype = Float32)
+    tok = T.TokenizersBackend(; pad_token = "<pad>", padding_side = "left",
+        added_tokens_decoder = Dict(0 => "<pad>", 60 => "<|image_pad|>",
+            61 => "<|video_pad|>"))
+    ip = T.Qwen2VLImageProcessor(; patch_size = 2, image_mean = 0.5, image_std = 0.5,
+        size = (; shortest_edge = 16, longest_edge = 256))
+    proc = T.Qwen3VLProcessor(ip, tok)
+    inputs = proc(; images = [rand(UInt8, 12, 8, 3), rand(UInt8, 9, 7, 3)],
+        text = [[5, 62, 60, 63, 7, 8], [62, 60, 63, 9, 10, 11, 12, 13, 14]])
+    @test inputs.attention_mask[1, :] == [0, 1]
+    y = model(inputs)
+    y_gpu = GPU(model)(GPU(inputs))
+    @test y_gpu isa CUDA.CuArray
+    @test Array(y_gpu) ≈ y rtol = GPU_RTOL
+end

@@ -88,7 +88,9 @@ or of reals from 0 to 1. Each image is
  4. cut into patches of `patch_size × patch_size` pixels.
 
 An 8-bit image gives the same `pixel_values` as transformers, and an image of reals the
-same to Float32 precision.
+same to Float32 precision. The settings are checked as the processor is made, and also
+take the forms that transformers takes: `resample` as the name of PIL's filter (`:bicubic`);
+`image_mean` and `image_std` as one value for all channels.
 """
 Base.@kwdef struct Qwen2VLImageProcessor <: ImageProcessor
     do_resize::Bool = true
@@ -104,6 +106,11 @@ Base.@kwdef struct Qwen2VLImageProcessor <: ImageProcessor
     temporal_patch_size::Int = 2
     merge_size::Int = 2
     provenance::NamedTuple = (;)
+    function Qwen2VLImageProcessor(args...)
+        ip = new(image_processor_fields(Qwen2VLImageProcessor, args)...)
+        check_processor(ip)
+        return ip
+    end
 end
 
 register_processor!("Qwen2VLImageProcessor", Qwen2VLImageProcessor)
@@ -117,41 +124,31 @@ function legacy_keys(::Type{Qwen2VLImageProcessor})
     return (; min_pixels = (:size, :shortest_edge), max_pixels = (:size, :longest_edge))
 end
 
-# The bounds (min_pixels, max_pixels) of the area of resized images, from a `size` of
-# {"shortest_edge", "longest_edge"}.
 function pixel_bounds(size)
     size isa NamedTuple && issetequal(keys(size), (:shortest_edge, :longest_edge)) &&
-        all(>(0), values(size)) ||
-        error("`size` must have positive `shortest_edge` and `longest_edge` only, got $(repr(size))")
+        all(v -> v isa Real && isinteger(v) && v > 0, values(size)) ||
+        error("`size` must have positive `shortest_edge` and `longest_edge` only, as integers, got $(repr(size))")
     return Int(size.shortest_edge), Int(size.longest_edge)
 end
 
 function check_processor(ip::Qwen2VLImageProcessor)
     check_resample(ip.resample)
     pixel_bounds(ip.size)
+    check_channel_stats(ip)
     for k in (:patch_size, :temporal_patch_size, :merge_size)
         getfield(ip, k) > 0 || error("`$k` must be positive, got $(getfield(ip, k))")
     end
     return nothing
 end
 
-# The patches of an image, and its grid of patches (1, h, w).
 function qwen2_vl_patches(ip::Qwen2VLImageProcessor, image)
-    x = ip.do_convert_rgb ? convert_to_rgb(image) : image
-    eightbit = is_8bit(x)
     factor = ip.patch_size * ip.merge_size
-    width, height = size(x, 1), size(x, 2)
-    if ip.do_resize
-        min_pixels, max_pixels = pixel_bounds(ip.size)
-        h, w = smart_resize(height, width; factor, min_pixels, max_pixels)
-        x = resize_image(x, (w, h), ip.resample)
-    else
-        width % factor == 0 && height % factor == 0 ||
-            error("without `do_resize`, the sides of an image must be multiples of `patch_size * merge_size` ($factor), got $width × $height")
-        x = Float32.(x)
-    end
-    x = rescale_and_normalize(x, eightbit, ip.do_rescale, ip.rescale_factor,
-        ip.do_normalize, ip.image_mean, ip.image_std)
+    width, height = size(image, 1), size(image, 2)
+    ip.do_resize || width % factor == 0 && height % factor == 0 ||
+        error("without `do_resize`, the sides of an image must be multiples of `patch_size * merge_size` ($factor), got $width × $height")
+    min_pixels, max_pixels = pixel_bounds(ip.size)
+    x = prepare_image(ip, image,
+        (h, w) -> smart_resize(h, w; factor, min_pixels, max_pixels))
     grid = [1, size(x, 2) ÷ ip.patch_size, size(x, 1) ÷ ip.patch_size]
     return patchify(x, ip.patch_size, ip.temporal_patch_size, ip.merge_size), grid
 end

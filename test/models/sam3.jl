@@ -177,7 +177,44 @@ end
         target_sizes = [(4, 6), (8, 8)])
     @test size(semantic[1].segmentation) == (6, 4)
     @test all(semantic[2].segmentation)
-    @test semantic[2].scores ≈ fill(Metalhead.NNlib.sigmoid(1.0f0), 8, 8)
+    @test semantic[2].segmentation_scores ≈ fill(Metalhead.NNlib.sigmoid(1.0f0), 8, 8, 1)
+end
+
+@testset "image processor" begin
+    image = rand(UInt8, 13, 9, 3)
+    ip = Sam3ImageProcessor(; size = (; height = 12, width = 16))
+    # the forms that transformers takes
+    square = Sam3ImageProcessor(; size = 12, resample = :bicubic, image_mean = 0.5,
+        image_std = [0.5, 0.5, 0.5], rescale_factor = 1 // 255)
+    @test square.size == (; height = 12, width = 12)
+    @test square.resample === 3 && square.rescale_factor === 1 / 255
+    @test square.image_mean === 0.5 && square.image_std === (0.5, 0.5, 0.5)
+    @test Sam3ImageProcessor(; resample = "bilinear").resample === 2
+    @test square(image).pixel_values == Sam3ImageProcessor(;
+        size = (; height = 12, width = 12), resample = 3)(image).pixel_values
+    repo = joinpath(pkgdir(Metalhead), "test", "fixtures", "processors", "unsloth--sam3.1")
+    proc = create_processor(repo; size = 12, resample = :bicubic)
+    @test proc.image_processor.size == square.size && proc.image_processor.resample === 3
+    # others are errors that name the form of the setting, checked as the processor is made
+    for (kwargs, message) in (
+        (; do_resize = nothing) => "`do_resize` of Sam3ImageProcessor is true or false",
+        (; rescale_factor = "1/255") => "`rescale_factor` of Sam3ImageProcessor is a number",
+        (; resample = 2.5) => "`resample` of Sam3ImageProcessor is an integer",
+        (; resample = :cubic) => "`resample = :cubic` is not a filter of PIL",
+        (; resample = :lanczos) => "`resample = 1` (lanczos) is not supported",
+        (; image_mean = "0.5") => "`image_mean` is a number, or one per channel",
+        (; image_std = (0.5, 0.5)) => "`image_std` has one value per RGB channel",
+        (; size = (12, 16)) => "`size` must have `height` and `width` only, as positive integers",
+        (; size = (; height = 0, width = 16)) => "`size` must have `height` and `width` only")
+        @test_throws message Sam3ImageProcessor(; kwargs...)
+        @test_throws message create_processor(repo; kwargs...)
+    end
+    @test_throws "`size` must have" Sam3ImageProcessor(; Metalhead.settings(ip)...,
+        size = (; height = 12), ip.provenance)
+    # without converting to RGB, statistics of other channels
+    grey = Sam3ImageProcessor(; size = (; height = 12, width = 16), do_convert_rgb = false,
+        image_mean = (0.5,), image_std = (0.5,))
+    @test size(grey(image[:, :, 1:1]).pixel_values) == (16, 12, 1, 1)
 end
 
 if TEST_NETWORK

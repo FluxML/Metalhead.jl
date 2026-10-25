@@ -17,11 +17,61 @@ const IMAGES_KWARGS_IGNORED = (;
 # resizes with and are ported.
 const RESAMPLE_PORTED = (2, 3)
 
+resample_supported() = join(("$r ($(RESAMPLE_FILTERS[r]))" for r in RESAMPLE_PORTED), ", ")
+
 function check_resample(resample)
     resample in RESAMPLE_PORTED && return nothing
-    supported = join(("$r ($(RESAMPLE_FILTERS[r]))" for r in RESAMPLE_PORTED), ", ")
     name = get(RESAMPLE_FILTERS, resample, "unknown")
-    return error("`resample = $(repr(resample))` ($name) is not supported (supported: $supported)")
+    return error("`resample = $(repr(resample))` ($name) is not supported (supported: $(resample_supported()))")
+end
+
+# The fields of an image processor of type `T` from the arguments of its constructor, in the
+# types of the fields or the forms that transformers takes (`resample = :bilinear`); another
+# value is an error naming the form of the setting, rather than `convert`'s MethodError.
+function image_processor_fields(::Type{T}, args) where {T}
+    return map((name, v) -> field_setting(T, name, v), fieldnames(T), args)
+end
+
+# `size` as the image processor of type `T` takes it; checked by `check_processor`.
+size_setting(T, v) = v
+
+function field_setting(T, name, v)
+    name === :size && return size_setting(T, v)
+    name === :resample && v isa Union{Symbol, AbstractString} && return resample_number(v)
+    name in (:image_mean, :image_std) && return stats_setting(name, v)
+    F = fieldtype(T, name)
+    v isa F && return v
+    F === Int && v isa Real && !(v isa Bool) && isinteger(v) && return Int(v)
+    F === Float64 && v isa Real && !(v isa Bool) && return Float64(v)
+    form = F === Bool ? "true or false" :
+           F === Int ? "an integer" :
+           F === Float64 ? "a number" : "a $F"
+    throw(ArgumentError("`$name = $(repr(v))`: `$name` of $(nameof(T)) is $form"))
+end
+
+function resample_number(name)
+    for (k, filter) in RESAMPLE_FILTERS
+        filter === Symbol(name) && return k
+    end
+    throw(ArgumentError("`resample = $(repr(name))` is not a filter of PIL (supported: $(resample_supported()))"))
+end
+
+function stats_setting(name, v)
+    v isa Real && !(v isa Bool) && return Float64(v)
+    v isa Union{Tuple, AbstractVector} && !isempty(v) && all(x -> x isa Real, v) &&
+        return Tuple(Float64.(v))
+    throw(ArgumentError("`$name = $(repr(v))`: `$name` is a number, or one per channel"))
+end
+
+# With `do_convert_rgb`, images have 3 channels, so that other statistics fail at loading.
+function check_channel_stats(ip)
+    ip.do_convert_rgb || return nothing
+    for name in (:image_mean, :image_std)
+        v = getfield(ip, name)
+        v isa Real || length(v) == 3 ||
+            error("`$name` has one value per RGB channel, or one for all, got $(repr(v))")
+    end
+    return nothing
 end
 
 # The image `(width, height, channels)` resized to `(w, h)` with PIL's filter `resample`
@@ -77,15 +127,30 @@ function rescale_and_normalize(x, eightbit, do_rescale, rescale_factor, do_norma
     return do_rescale ? x .* Float32(rescale_factor) : x
 end
 
-# The (height, width) of a `size` of {"height", "width"}; the torchvision backend would
-# resize by `shortest_edge` or `max_height` first, which aren't ported.
+# The torchvision backend would resize by `shortest_edge` or `max_height` first, which
+# aren't ported.
 function size_hw(size)
-    size isa NamedTuple && issetequal(keys(size), (:height, :width)) ||
-        error("`size` must have `height` and `width` only, got $(repr(size))")
+    size isa NamedTuple && issetequal(keys(size), (:height, :width)) &&
+        all(v -> v isa Real && isinteger(v) && v > 0, values(size)) ||
+        error("`size` must have `height` and `width` only, as positive integers, got $(repr(size))")
     return Int(size.height), Int(size.width)
 end
 
-# Images as a batch (width, height, channels, batch), which needs images of one size.
+# An image as the torchvision backend prepares it for the image processor `ip`, resized to
+# the `(height, width)` that `target_size(height, width)` gives.
+function prepare_image(ip, image, target_size)
+    x = ip.do_convert_rgb ? convert_to_rgb(image) : image
+    eightbit = is_8bit(x)
+    if ip.do_resize
+        h, w = target_size(size(x, 2), size(x, 1))
+        x = resize_image(x, (w, h), ip.resample)
+    else
+        x = Float32.(x)
+    end
+    return rescale_and_normalize(x, eightbit, ip.do_rescale, ip.rescale_factor,
+        ip.do_normalize, ip.image_mean, ip.image_std)
+end
+
 function stack_images(images)
     allequal(size.(images)) ||
         error("images of different sizes $(unique(size.(images))) can't be batched; resize them (`do_resize = true`)")
