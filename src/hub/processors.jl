@@ -70,7 +70,8 @@ restricted_keys(::Type) = (;)
 Former names of settings of the processor class `T`, as `key = path`, where `path` is the
 name of a setting or the path to an entry of a nested one, e.g.
 `(; min_pixels = (:size, :shortest_edge))`. The value of a legacy key replaces the one at
-its path, in files and overrides.
+its path, in files and overrides, and drops the entry of the legacy key from the nested
+setting, as transformers does.
 """
 legacy_keys(::Type) = (;)
 
@@ -114,6 +115,11 @@ nested_at(path::Tuple{}, value) = value
 function nested_at(path::Tuple, value)
     return NamedTuple{(first(path),)}((nested_at(Base.tail(path), value),))
 end
+
+# A nested setting without the entry of the legacy key `key`, which transformers drops when
+# the legacy key sets its new entry (Qwen2-VL's `size["min_pixels"]`).
+drop_legacy(setting::NamedTuple, key) = Base.structdiff(setting, NamedTuple{(key,)})
+drop_legacy(setting, key) = setting
 
 # Keys that every configuration may have, which name classes rather than set them.
 const SERVICE_KEYS = (; processor_class = "names the class of the processor",
@@ -210,16 +216,20 @@ function processor_from_entries(::Type{T}, entries; components::NamedTuple = (;)
             warn_unknown(T, key, file)
         end
     end
+    legacy_names = Dict{Symbol, Vector{String}}()
     for (key, v, file) in legacy
         path = legacy_keys(T)[key]
         name = first(path)
-        values[name] = merge_nested(get(values, name, defaults[name]),
+        values[name] = merge_nested(drop_legacy(get(values, name, defaults[name]), key),
             nested_at(Base.tail(path), v))
-        origins[name] = Origin("$file (`$key`)", values[name])
+        former = push!(get!(legacy_names, name, String[]), "`$key`")
+        origins[name] = Origin("$file ($(join(former, ", ")))", values[name])
     end
     for (key, v) in pairs(NamedTuple(kwargs))
         if haskey(legacy_keys(T), key)
             path = legacy_keys(T)[key]
+            haskey(values, first(path)) &&
+                (values[first(path)] = drop_legacy(values[first(path)], key))
             key, v = first(path), nested_at(Base.tail(path), v)
         end
         if !haskey(defaults, key)
@@ -567,7 +577,7 @@ end
 function Base.show(io::IO, p::Processor)
     print(io, nameof(typeof(p)), "(")
     join(io, ("$k = $(repr(v; context = io))" for (k, v) in pairs(components(p))), ", ")
-    isempty(components(p)) || print(io, "; ")
+    isempty(components(p)) || isempty(settings(p)) || print(io, "; ")
     join(io, ("$k = $(setting_repr(k, v))" for (k, v) in pairs(settings(p))), ", ")
     return print(io, ")")
 end

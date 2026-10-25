@@ -516,7 +516,10 @@ first. The workflow is the one above, with these differences.
 A model that takes images, text or boxes gets the processor of its checkpoint, which
 `create_processor(repo)` (`src/hub/processors.jl`) loads as transformers' `AutoProcessor`
 does. `src/Transformers/processing_sam3.jl`, `image_processing_sam3.jl` and
-`tokenization_utils_tokenizers.jl` are the reference ports.
+`tokenization_utils_tokenizers.jl` are the reference ports; `processing_qwen3_vl.jl` expands
+the image placeholders of a prompt (in strings before tokenizing, as transformers does, and in
+token ids), and `image_processing_qwen2_vl.jl` maps legacy keys (`min_pixels`) to nested
+settings.
 
 - **Classes.** One immutable struct per upstream class, defined with `Base.@kwdef`: its fields
   are the attributes of the Python class with that class's defaults (not a checkpoint's),

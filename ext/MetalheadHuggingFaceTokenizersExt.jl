@@ -4,7 +4,7 @@ using Metalhead: Metalhead, create_processor
 using Metalhead.Transformers: Transformers, TokenizersBackend
 using Metalhead.Diffusers: Flux2KleinPipeline, chat_prompt
 using HuggingFaceTokenizers: HuggingFaceTokenizers, Tokenizer
-using HuggingFaceTokenizers.PythonCall: pyis, pybuiltins
+using HuggingFaceTokenizers.PythonCall: pyis, pybuiltins, pyimport, pyconvert, pylist
 
 # The backend of a TokenizersBackend: HuggingFaceTokenizers' tokenizer of its
 # tokenizer.json, loaded once per file.
@@ -19,9 +19,33 @@ function load_tokenizer(file::AbstractString)
             # TokenizersBackend pads and truncates; transformers takes these as defaults
             pyis(py.padding, pybuiltins.None) && pyis(py.truncation, pybuiltins.None) ||
                 error("$file pads or truncates, which Metalhead doesn't read")
+            add_config_tokens!(py, joinpath(dirname(file), "tokenizer_config.json"))
             return tokenizer
         end
     end
+end
+
+# The tokens of the `added_tokens_decoder` of tokenizer_config.json that tokenizer.json
+# lacks, added in the order of their ids as transformers' `TokenizersBackend.__init__` adds
+# them (Qwen3.5's audio tokens), which must then have the ids of the configuration.
+function add_config_tokens!(py, config_file)
+    isfile(config_file) || return nothing
+    decoder = get(Metalhead.JSON.parsefile(config_file), "added_tokens_decoder", nothing)
+    decoder === nothing && return nothing
+    absent = sort!([(parse(Int, id), t) for (id, t) in decoder
+                     if pyis(py.token_to_id(t["content"]), pybuiltins.None)]; by = first)
+    isempty(absent) && return nothing
+    AddedToken = pyimport("tokenizers").AddedToken
+    flags(t) = (; (Symbol(k) => Bool(t[k])
+                   for k in ("single_word", "lstrip", "rstrip", "normalized", "special")
+                   if haskey(t, k))...)
+    py.add_tokens(pylist([AddedToken(t["content"]; flags(t)...) for (_, t) in absent]))
+    for (id, t) in absent
+        added = pyconvert(Int, py.token_to_id(t["content"]))
+        added == id ||
+            error("$(t["content"]) of the `added_tokens_decoder` of $config_file has the id $id, but $added in its tokenizer.json")
+    end
+    return nothing
 end
 
 function Transformers.encode_ids(t::Tokenizer, text::AbstractString;

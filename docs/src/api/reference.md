@@ -37,6 +37,8 @@ Metalhead.Timm.pretrained_cfg
 Metalhead.Transformers.Sam3Model
 Metalhead.Transformers.Sam3VideoModel
 Metalhead.Transformers.Sam3VisionModel
+Metalhead.Transformers.Qwen3VLProcessor
+Metalhead.Transformers.Qwen2VLImageProcessor
 Metalhead.Transformers.Sam3Processor
 Metalhead.Transformers.Sam3ImageProcessor
 Metalhead.Transformers.post_process_object_detection
