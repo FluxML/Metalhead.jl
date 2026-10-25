@@ -91,6 +91,16 @@ compares its number of parameters and tensors with timm's, recorded by `porting/
 checks that the registered defaults reproduce what `timm.create_model` builds, including for
 architectures that are too large for a fixture.
 
+## GPU
+
+With `METALHEAD_TEST_GPU=true`, the test suite adds CUDA.jl and cuDNN to its environment and
+also runs every fixture on a CUDA GPU in Float32, with scalar indexing disallowed. The
+outputs must match the references to 1e-2, as cuDNN convolutions run in TF32 by default:
+the fixtures differ by up to 3e-3. A few fixtures also check gradients and BFloat16 on the
+GPU. cuDNN's 3 × 3 mean pooling with padding is wrong on maps of 1 × 1 or 2 × 2 pixels, so
+the Inception v3, v4 and Res2Net fixtures are compared with the CPU on larger images there.
+CI runs these tests on a GPU.
+
 ## What this guarantees
 
 - An architecture listed by [`list_models`](@ref) computes what timm computes, in eval mode,

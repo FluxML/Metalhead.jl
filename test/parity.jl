@@ -250,28 +250,31 @@ function check_sam3_reference(file)
 end
 
 """
-    check_pipeline_fixture(dir; eltype = Float64) -> NamedTuple
+    check_pipeline_fixture(dir; eltype = Float64, device = identity) -> NamedTuple
 
 Compare a diffusers text-to-image pipeline written by porting/dump.py (a directory with a
 model_index.json) with diffusers': the relative errors of the prompt embeddings of its token ids
 (and of the negative prompt's, for classifier-free guidance), and of the denoised latents and
-the images that the pipeline makes from diffusers' embeddings and initial noise.
+the images that the pipeline makes from diffusers' embeddings and initial noise. `device`
+(e.g. `gpu_device()`) moves the pipeline and its inputs.
 """
-function check_pipeline_fixture(dir; eltype = Float64)
+function check_pipeline_fixture(dir; eltype = Float64, device = identity)
     file = joinpath(dir, "acts.safetensors")
     acts = Checkpoint(file)
     spec = Metalhead.JSON.parse(SafeTensors.deserialize(file).metadata["spec"])
-    pipe = create_model(dir; pretrained = true, eltype)
-    encode(prefix) = Metalhead.Diffusers.encode_prompt(pipe, acts[prefix * "input_ids"] .+ 1;
-        attention_mask = acts[prefix * "attention_mask"],
-        text_encoder_out_layers = Tuple(spec["text_encoder_out_layers"]))
+    pipe = device(create_model(dir; pretrained = true, eltype))
+    input(key) = device(Base.eltype(acts[key]) <: AbstractFloat ? eltype.(acts[key]) :
+                        acts[key])
+    encode(prefix) = cpu(Metalhead.Diffusers.encode_prompt(pipe,
+        input(prefix * "input_ids") .+ 1; attention_mask = input(prefix * "attention_mask"),
+        text_encoder_out_layers = Tuple(spec["text_encoder_out_layers"])))
     guided = haskey(acts, "negative_prompt_embeds")
     kwargs = (; height = spec["height"], width = spec["width"],
         num_inference_steps = spec["num_inference_steps"],
-        guidance_scale = spec["guidance_scale"], latents = acts["latents"],
-        negative_prompt_embeds = guided ? acts["negative_prompt_embeds"] : nothing)
-    latents = pipe(acts["prompt_embeds"]; kwargs..., output_type = :latent)
-    image = pipe(acts["prompt_embeds"]; kwargs...)
+        guidance_scale = spec["guidance_scale"], latents = input("latents"),
+        negative_prompt_embeds = guided ? input("negative_prompt_embeds") : nothing)
+    latents = cpu(pipe(input("prompt_embeds"); kwargs..., output_type = :latent))
+    image = cpu(pipe(input("prompt_embeds"); kwargs...))
     return (; prompt_embeds = relerr(encode(""), acts["prompt_embeds"]),
         negative_prompt_embeds = guided ?
                                  relerr(encode("negative_"), acts["negative_prompt_embeds"]) :

@@ -62,7 +62,9 @@ The skill is also the reference for porting by hand. In short:
    `uv run dump_reference.py timm/<repo>`, check them with `check_reference.jl`, and add the
    printed `repo => sha` to the architecture's `references`.
 7. **Add tests** in `test/models/<family>.jl`, following the existing ones, and run
-   `julia --project -e 'using Pkg; Pkg.test(test_args = ["models"])'`.
+   `julia --project -e 'using Pkg; Pkg.test(test_args = ["models"])'`. On a machine with
+   an NVIDIA GPU, `METALHEAD_TEST_GPU=true` and `test_args = ["gpu"]` run the fixtures on
+   it (see [How models are validated](@ref validation)).
 
 A transformers model follows the same steps, with three differences. The port goes in
 `src/Transformers/<model>.jl`, and registers the transformers class (`"LlamaForCausalLM"`),

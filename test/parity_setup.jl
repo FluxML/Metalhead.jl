@@ -79,7 +79,8 @@ function check_gradient(model, x...; unused = (), kwargs...)
         haskey(skip, a) && continue
         dp = g !== nothing && Functors.haskeypath(g, kp) ? Functors.getkeypath(g, kp) :
              nothing
-        dp isa AbstractArray && all(isfinite, dp) || push!(bad, string(kp))
+        # broadcast, as a gradient can wrap a GPU array lazily (NNlib.BatchedTranspose)
+        dp isa AbstractArray && all(isfinite.(dp)) || push!(bad, string(kp))
     end
     isempty(bad) || @info "parameters without a finite gradient" bad
     return isempty(bad)

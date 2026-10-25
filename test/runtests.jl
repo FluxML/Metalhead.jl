@@ -1,3 +1,16 @@
+using Pkg
+
+# METALHEAD_TEST_GPU=true also runs the tests of test/gpu/ on a CUDA GPU, and adds CUDA and
+# cuDNN to the test environment for them. Precompile once at the end: on Julia 1.13.2,
+# `Pkg.add` fails to auto-precompile an indirect dependency whose version it changes
+# (JuliaLang/Pkg.jl#4866).
+const TEST_GPU = parse(Bool, get(ENV, "METALHEAD_TEST_GPU", "false"))
+if TEST_GPU
+    withenv(() -> Pkg.add(["CUDA", "cuDNN"]), "JULIA_PKG_PRECOMPILE_AUTO" => "0")
+    Pkg.precompile()
+end
+
+# Load only now: adding CUDA can change the versions of Metalhead's dependencies.
 using Metalhead: Metalhead
 using ParallelTestRunner
 
@@ -5,6 +18,7 @@ using ParallelTestRunner
 # family as `models/resnet`; a `!` prefix excludes, e.g. `!hub`.
 # METALHEAD_TEST_NETWORK=true also runs the tests that download pretrained weights.
 testsuite = find_tests(@__DIR__)
-foreach(helper -> delete!(testsuite, helper), ["parity", "parity_setup"])
+foreach(helper -> delete!(testsuite, helper), ["parity", "parity_setup", "gpu_setup"])
+TEST_GPU || filter!(((name, _),) -> !startswith(name, "gpu/"), testsuite)
 
 runtests(Metalhead, ARGS; testsuite)

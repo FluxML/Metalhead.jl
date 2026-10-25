@@ -12,6 +12,7 @@ steps:
     agents:
       queue: "cuda"
     env:
+      METALHEAD_TEST_GPU: "true"
       PTR_NUM_JOBS: 2
       # JULIA_CUDA_HARD_MEMORY_LIMIT: "50%"
     if: build.message !~ /\[skip tests\]/
