@@ -60,15 +60,11 @@ objects = post_process_instance_segmentation(proc, model(inputs); threshold = 0.
 boxes = proc(; images = image, input_boxes = [[(10, 20, 300, 400)]])  # needs a backend
 ```
 """
-Base.@kwdef struct Sam3Processor <: Processor
+Metalhead.@processor (image_processor, tokenizer) struct Sam3Processor <: Processor
     image_processor::Any = nothing
     tokenizer::Any = nothing
     point_pad_value::Int = -10
     provenance::NamedTuple = (;)
-end
-
-function Sam3Processor(image_processor, tokenizer; kwargs...)
-    return Sam3Processor(; image_processor, tokenizer, kwargs...)
 end
 
 register_processor!("Sam3Processor", Sam3Processor; aliases = ["Sam3VideoProcessor"],
@@ -86,16 +82,14 @@ end
 # The length of the prompts of SAM 3, written in processing_sam3.py
 const SAM3_TEXT_LENGTH = 32
 
-# The boxes of each image, `nothing` for none, from nested vectors or an array
-# (4, num_boxes, num_images).
-function sam3_box_list(boxes::AbstractArray{<:Real, 3})
-    return [collect(eachcol(b)) for b in eachslice(boxes; dims = 3)]
+# The boxes or the labels of each image, `nothing` for none, from nested vectors or an
+# array whose last dimension is the image: (4, num_boxes, num_images) boxes,
+# (num_boxes, num_images) labels.
+function per_image(x::AbstractArray{<:Real, 3})
+    return [collect(eachcol(b)) for b in eachslice(x; dims = 3)]
 end
-sam3_box_list(boxes) = [b === nothing || isempty(b) ? nothing : collect(b) for b in boxes]
-sam3_label_list(labels::AbstractMatrix{<:Integer}) = collect.(eachcol(labels))
-function sam3_label_list(labels)
-    return [l === nothing || isempty(l) ? nothing : collect(l) for l in labels]
-end
+per_image(x::AbstractMatrix{<:Real}) = collect.(eachcol(x))
+per_image(x) = [b === nothing || isempty(b) ? nothing : collect(b) for b in x]
 
 # The prompts, as `_resolve_text_prompts`: "visual" for boxes without text.
 function sam3_texts(text, boxes)
@@ -118,7 +112,7 @@ end
 function sam3_boxes(p::Sam3Processor, boxes, labels, original_sizes)
     labels = labels === nothing ?
              [b === nothing ? nothing : ones(Int, length(b)) for b in boxes] :
-             sam3_label_list(labels)
+             per_image(labels)
     length(labels) == length(boxes) ||
         error("got the labels of $(length(labels)) images and the boxes of $(length(boxes))")
     length(original_sizes) == length(boxes) ||
@@ -144,8 +138,21 @@ function sam3_boxes(p::Sam3Processor, boxes, labels, original_sizes)
     return (; input_boxes, input_boxes_labels = box_labels)
 end
 
+# The tokens of the prompts, each padded to 32 tokens, or kept whole if longer: a batch of
+# prompts longer than others makes no array, as in transformers.
+function sam3_tokens(tok, texts)
+    tokens = [tok(t; padding = :max_length, max_length = SAM3_TEXT_LENGTH) for t in texts]
+    lengths = [length(t.input_ids) for t in tokens]
+    allequal(lengths) ||
+        error("SAM 3 pads its prompts to $SAM3_TEXT_LENGTH tokens, and can't batch prompts of $(join(unique(lengths), ", ")) tokens: truncate the prompts of more than $SAM3_TEXT_LENGTH tokens, or pass them in separate calls")
+    names = keys(first(tokens))
+    return NamedTuple{names}(Tuple(stack(t[k] for t in tokens) for k in names))
+end
+
 function (p::Sam3Processor)(; images = nothing, text = nothing, input_boxes = nothing,
         input_boxes_labels = nothing, original_sizes = nothing)
+    images === nothing || p.image_processor !== nothing ||
+        error("Sam3Processor has no image processor for `images`")
     inputs = if images !== nothing
         p.image_processor(images)
     elseif original_sizes !== nothing
@@ -155,11 +162,11 @@ function (p::Sam3Processor)(; images = nothing, text = nothing, input_boxes = no
             error("box prompts need the images, or their `original_sizes`")
         (;)
     end
-    boxes = input_boxes === nothing ? nothing : sam3_box_list(input_boxes)
+    boxes = input_boxes === nothing ? nothing : per_image(input_boxes)
     texts = sam3_texts(text, boxes)
     if texts !== nothing
-        tokens = p.tokenizer(texts; padding = :max_length, max_length = SAM3_TEXT_LENGTH)
-        inputs = merge(inputs, tokens)
+        p.tokenizer === nothing && error("Sam3Processor has no tokenizer to encode `text`")
+        inputs = merge(inputs, sam3_tokens(p.tokenizer, texts))
     end
     if boxes !== nothing
         inputs = merge(inputs,

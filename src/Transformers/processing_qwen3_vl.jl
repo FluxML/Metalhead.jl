@@ -1,8 +1,9 @@
 # Ported from transformers.models.qwen3_vl.processing_qwen3_vl and processing_utils
 # (transformers 5.20, Apache-2.0, The Qwen Team and The Hugging Face Team):
 # `Qwen3VLProcessor`, the processor of Qwen3.5, for images and text (not videos), with the
-# expansion of the image placeholders of `ProcessorMixin.__call__`. Validated against
-# test/references/processors/qwen3_vl.safetensors.
+# expansion of the image placeholders and the merge of the keywords of the tokenizer of
+# `ProcessorMixin.__call__`. Validated against
+# test/references/processors/qwen3_vl.safetensors and tokenizers.safetensors.
 
 """
     Qwen3VLProcessor(image_processor, tokenizer)
@@ -12,8 +13,9 @@ Metalhead.Transformers.Qwen2VLImageProcessor) and a [`TokenizersBackend`](@ref
 Metalhead.Transformers.TokenizersBackend), which [`create_processor`](@ref
 Metalhead.create_processor) loads from a repository such as `"Qwen/Qwen3.5-0.8B"`.
 
-    (processor::Qwen3VLProcessor)(; images = nothing, text = nothing, padding = nothing,
-                                  truncation = nothing, max_length = nothing)
+    (processor::Qwen3VLProcessor)(; images = nothing, text = nothing, padding,
+                                  truncation, max_length, padding_side,
+                                  add_special_tokens)
 
 The inputs of a Qwen3.5 vision-language model ([`qwen3_5_for_conditional_generation`](@ref
 Metalhead.Transformers.qwen3_5_for_conditional_generation)) from `images` (one image or a
@@ -36,9 +38,10 @@ where `D = 3 * temporal_patch_size * patch_size^2` (1536 for Qwen3.5).
 `text` is a string or a vector of strings, which need a tokenizer backend
 (`using HuggingFaceTokenizers`), or the token ids of a tokenizer (from 0), a vector or a
 vector of them. One text gives vectors `(seq_len,)`, as the model takes them, so that the
-logits of its next token are `model(inputs)[:, end]`. `padding`, `truncation` and
-`max_length` are the tokenizer's (see [`TokenizersBackend`](@ref
-Metalhead.Transformers.TokenizersBackend)).
+logits of its next token are `model(inputs)[:, end]`. The other keywords are the
+tokenizer's (see [`TokenizersBackend`](@ref Metalhead.Transformers.TokenizersBackend)),
+whose defaults are the `init_kwargs` of the tokenizer, those of tokenizer_config.json (such
+as `max_length`), as in transformers.
 
 Each image placeholder of the texts, `<|image_pad|>` (the tokenizer's `image_token`), stands
 for the next image, in order through the texts, and becomes as many image tokens as the
@@ -61,14 +64,10 @@ logits = model(inputs)                                 # vocab_size × seq_len
 Metalhead.Transformers.decode(proc, [argmax(logits[:, end])])
 ```
 """
-Base.@kwdef struct Qwen3VLProcessor <: Processor
+Metalhead.@processor (image_processor, tokenizer) struct Qwen3VLProcessor <: Processor
     image_processor::Any = nothing
     tokenizer::Any = nothing
     provenance::NamedTuple = (;)
-end
-
-function Qwen3VLProcessor(image_processor, tokenizer; kwargs...)
-    return Qwen3VLProcessor(; image_processor, tokenizer, kwargs...)
 end
 
 register_processor!("Qwen3VLProcessor", Qwen3VLProcessor; model_types = ["qwen3_5"])
@@ -81,16 +80,14 @@ function ignored_keys(::Type{Qwen3VLProcessor})
         video_processor = "the video processor, as videos are out of scope")
 end
 
-# A token of a model that `Qwen3VLProcessor.__init__` takes from the tokenizer
-# (`image_token`), else its default.
-function named_token(tok::TokenizersBackend, name, default)
-    return String(get(tok.model_specific_special_tokens, name, default))
+function check_processor(p::Qwen3VLProcessor)
+    Metalhead.check_components(p)
+    return check_init_kwargs(Qwen3VLProcessor, p.tokenizer)
 end
 
-# The id (from 0) of an added token of `tok`, or `nothing`.
-function added_token_id(tok::TokenizersBackend, token)
-    ids = [id for (id, t) in tok.added_tokens_decoder if t == token]
-    return isempty(ids) ? nothing : minimum(ids)
+# `Qwen3VLProcessor.__init__` takes these tokens from the tokenizer, else their defaults.
+function named_token(tok::TokenizersBackend, name, default)
+    return String(get(tok.model_specific_special_tokens, name, default))
 end
 
 count_placeholders(text::AbstractString, token, _) = count(token, text)
@@ -126,8 +123,7 @@ function expand_image_tokens(texts, token, id, counts)
     end
 end
 
-# transformers' `_check_special_mm_tokens`: the image tokens of the texts are all in
-# `input_ids`, which truncation could cut.
+# transformers' `_check_special_mm_tokens`: truncation could cut image tokens.
 function check_image_tokens(texts, input_ids, token, id)
     columns = input_ids isa AbstractVector ? [input_ids] : eachcol(input_ids)
     expected = [count_placeholders(t, token, id) for t in texts]
@@ -143,14 +139,18 @@ function mm_token_type_ids(input_ids, image_id, video_id)
     return types
 end
 
-function (p::Qwen3VLProcessor)(; images = nothing, text = nothing, padding = nothing,
-        truncation = nothing, max_length::Union{Nothing, Integer} = nothing)
+function (p::Qwen3VLProcessor)(; images = nothing, text = nothing, kwargs...)
     images === nothing && text === nothing &&
         error("Qwen3VLProcessor needs `images` or `text`")
+    images === nothing || p.image_processor !== nothing ||
+        error("Qwen3VLProcessor has no image processor for `images`")
+    tok = p.tokenizer
+    text === nothing || tok !== nothing ||
+        error("Qwen3VLProcessor has no tokenizer to encode `text`")
+    text_kwargs = tok === nothing ? (;) :
+                  merged_text_kwargs(Qwen3VLProcessor, tok, NamedTuple(kwargs))
     image_inputs = images === nothing ? (;) : p.image_processor(images)
     text === nothing && return image_inputs
-    tok = p.tokenizer
-    tok === nothing && error("Qwen3VLProcessor has no tokenizer to encode `text`")
     one_text = is_one_text(text)
     texts = one_text ? [text] : collect(text)
     token = named_token(tok, :image_token, "<|image_pad|>")
@@ -160,9 +160,9 @@ function (p::Qwen3VLProcessor)(; images = nothing, text = nothing, padding = not
         counts = [prod(g) ÷ merge_length for g in eachcol(image_inputs.image_grid_thw)]
         texts = expand_image_tokens(texts, token, id, counts)
     end
-    text_inputs = tok(one_text ? only(texts) : texts; padding, truncation, max_length)
+    text_inputs = tok(one_text ? only(texts) : texts; text_kwargs...)
     check_image_tokens(texts, text_inputs.input_ids, token, id)
-    video_id = added_token_id(tok, named_token(tok, :video_token, "<|video_pad|>"))
+    video_id = find_token_id(tok, named_token(tok, :video_token, "<|video_pad|>"))
     types = mm_token_type_ids(text_inputs.input_ids, id, video_id)
     return merge(text_inputs, (; mm_token_type_ids = types), image_inputs)
 end

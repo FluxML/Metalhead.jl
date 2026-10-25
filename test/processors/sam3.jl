@@ -284,3 +284,22 @@ if TEST_NETWORK
               "<|startoftext|>visual <|endoftext|>"
     end
 end
+
+@testset "processors built by hand, and prompts that make no batch" begin
+    proc = create_processor(SAM3)
+    ip, tok = proc.image_processor, proc.tokenizer
+    image = rand(UInt8, 8, 6, 3)
+    ids = [49406, 320, 2368, 49407]
+    @test_throws "Sam3Processor has no tokenizer to encode `text`" Sam3Processor(ip,
+        nothing)(; images = image, text = ids)
+    @test Sam3Processor(ip, nothing)(; images = image) == ip(image)
+    @test_throws "Sam3Processor has no image processor for `images`" Sam3Processor(nothing,
+        tok)(; images = image, text = ids)
+    @test Sam3Processor(nothing, tok)(; text = ids) == tok([ids]; padding = :max_length)
+    @test_throws "the `image_processor` of Sam3Processor is a Sam3ImageProcessor" Sam3Processor(
+        tok, ip)
+    # a prompt of more than 32 tokens, kept whole, makes no batch with the others
+    long = only(numbered("long/text_ids"))
+    @test_throws "SAM 3 pads its prompts to 32 tokens, and can't batch prompts of $(length(long)), 32 tokens" proc(;
+        text = [long, ids])
+end

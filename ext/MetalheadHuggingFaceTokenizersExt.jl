@@ -6,7 +6,7 @@ using HuggingFaceTokenizers: HuggingFaceTokenizers, Tokenizer
 using HuggingFaceTokenizers.PythonCall: pyis, pybuiltins, pyimport, pyconvert, pylist
 
 # The backend of a TokenizersBackend: HuggingFaceTokenizers' tokenizer of its
-# tokenizer.json, loaded once per file.
+# tokenizer.json, loaded once per file. `Transformers.backend` checks the file first.
 const TOKENIZERS = Dict{String, Tokenizer}()
 const LOCK = ReentrantLock()
 
@@ -14,11 +14,8 @@ function load_tokenizer(file::AbstractString)
     return lock(LOCK) do
         get!(TOKENIZERS, file) do
             tokenizer = HuggingFaceTokenizers.from_file(Tokenizer, file)
-            py = tokenizer.py_tokenizer
-            # TokenizersBackend pads and truncates; transformers takes these as defaults
-            pyis(py.padding, pybuiltins.None) && pyis(py.truncation, pybuiltins.None) ||
-                error("$file pads or truncates, which Metalhead doesn't read")
-            add_config_tokens!(py, joinpath(dirname(file), "tokenizer_config.json"))
+            add_config_tokens!(tokenizer.py_tokenizer,
+                joinpath(dirname(file), "tokenizer_config.json"))
             return tokenizer
         end
     end

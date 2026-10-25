@@ -23,7 +23,8 @@ files of Qwen/Qwen3.5-0.8B and test/references/processors/qwen3_vl.safetensors, 
 SAM 3's (see `qwen3_vl`).
 
 tokenizers: the tokenizers of the validated language models, of the FLUX.2 [klein] pipeline,
-of Qwen3.5 and of SAM 3, as `AutoTokenizer.from_pretrained(repo)` loads them, for
+of Qwen3.5, of SAM 3 and of GPT-2, as `AutoTokenizer.from_pretrained(repo)` loads them, and
+Qwen3.5's processor with keywords of calls in its tokenizer_config.json, for
 src/Transformers/tokenization_utils_tokenizers.jl (see `tokenizers`).
 """
 import json
@@ -405,6 +406,8 @@ TOKENIZER_REPOS = [
     (QWEN_REPO, QWEN_REVISION, ""),
     ("black-forest-labs/FLUX.2-klein-4B", "e7b7dc27f91deacad38e78976d1f2b499d76a294", "tokenizer"),
     (SAM3_REPO, SAM3_REVISION, ""),
+    # not a validated language model: the defaults of GPT2Tokenizer, which its files don't set
+    ("openai-community/gpt2", "607a30d783dfa663caf39e06633721c8d4cfcd7e", ""),
 ]
 # and config.json, whose `model_type` can decide the class of the tokenizer
 TOKENIZER_FILES = ["tokenizer_config.json", "special_tokens_map.json", "added_tokens.json",
@@ -427,6 +430,7 @@ TOKENIZER_TEXTS = [
     "é combining vs é precomposed,  nbsp em​zero-width",
     "multiple     spaces\t\t\ttabs\n\n\nnewlines \r\n crlf   end   ",
     "",
+    "<mask> token <mask>",
 ]
 
 
@@ -439,7 +443,12 @@ def tokenizers():
     metadata "<key>/<call>", with the message of the error that transformers raises if it does.
     The metadata "<key>" have the tokenizer's class and settings, the ids of its special tokens,
     and the decoded ids of each text, by transformers ("text") and by tokenizer.json alone
-    ("raw"). Copies the small JSON files of each repository to
+    ("raw"; for skip_special_tokens also "raw_unnamed", of the ids without those of the
+    tokenizer's named and extra special tokens, which transformers marks special). Under the
+    key "Qwen3VLProcessor/<case>", the outputs of `AutoProcessor.from_pretrained` on the files
+    of Qwen3.5 with keywords of calls in tokenizer_config.json ("init"), called on texts with
+    keywords ("call"): `ProcessorMixin._merge_kwargs` makes the first the defaults of the
+    second. Copies the small JSON files of each repository to
     test/fixtures/processors/<org>--<repo>/[<subfolder>/]; the tokenizer_config.json of
     gemma-3-270m (1.1 MB) keeps only the `added_tokens_decoder` entries that the tests use."""
     from huggingface_hub import list_repo_files
@@ -463,6 +472,7 @@ def tokenizers():
                                                   revision=revision))
         used = set()
         decoded = {}
+        named = set(tok.all_special_ids)
         for i, text in enumerate(TOKENIZER_TEXTS):
             ids = tok(text)["input_ids"]
             used.update(ids)
@@ -472,6 +482,8 @@ def tokenizers():
             decoded[i + 1] = {str(skip): dict(text=tok.decode(ids, skip_special_tokens=skip),
                                               raw=raw.decode(ids, skip_special_tokens=skip))
                               for skip in (False, True)}
+            decoded[i + 1]["True"]["raw_unnamed"] = raw.decode(
+                [t for t in ids if t not in named], skip_special_tokens=True)
         specials = sorted({str(t) for t in tok.all_special_tokens} |
                           {str(t) for t in tok.special_tokens_map.values() if t})
         special_ids = {t: tok.convert_tokens_to_ids(t) for t in specials}
@@ -514,6 +526,8 @@ def tokenizers():
             repo=repo, revision=revision, subfolder=subfolder, cls=type(tok).__name__,
             model_type=type(raw.model).__name__, settings=dict(bos_token=tok.bos_token, eos_token=tok.eos_token,
                           unk_token=tok.unk_token, pad_token=tok.pad_token,
+                          sep_token=tok.sep_token, cls_token=tok.cls_token,
+                          mask_token=tok.mask_token,
                           padding_side=tok.padding_side, truncation_side=tok.truncation_side,
                           model_max_length=max_length if max_length < 1e20 else None,
                           clean_up_tokenization_spaces=tok.clean_up_tokenization_spaces,
@@ -538,10 +552,39 @@ def tokenizers():
             with open(out / "tokenizer_config.json", "w") as f:
                 json.dump(config, f, indent=2, ensure_ascii=False)
                 f.write("\n")
+    processor_text_kwargs(tensors, meta)
     meta["keys"] = json.dumps(keys)
     path = ROOT / "test" / "references" / "processors" / "tokenizers.safetensors"
     save_file(tensors, path, metadata=meta)
     print(f"{path}: {path.stat().st_size / 1e3:.1f} kB")
+
+
+# (keywords in tokenizer_config.json, keywords of the call, indices of the texts) of each case
+PROCESSOR_TEXT_KWARGS = {
+    "max_length": (dict(max_length=5), {}, [3, 6]),
+    "call_max_length": (dict(max_length=5), dict(max_length=7), [3, 6]),
+    "padding": (dict(padding="max_length", max_length=9), {}, [1, 2]),
+    "truncation": (dict(truncation=True, max_length=6), dict(padding=True), [1, 3]),
+}
+
+
+def processor_text_kwargs(tensors, meta):
+    """The cases of `tokenizers` "Qwen3VLProcessor/<case>"."""
+    files = QWEN_FILES + ["tokenizer.json"]
+    for name, (init, call, texts) in PROCESSOR_TEXT_KWARGS.items():
+        with tempfile.TemporaryDirectory() as dir:
+            for file in files:
+                shutil.copyfile(hf_hub_download(QWEN_REPO, file, revision=QWEN_REVISION),
+                                pathlib.Path(dir) / file)
+            config = pathlib.Path(dir) / "tokenizer_config.json"
+            config.write_text(json.dumps({**json.loads(config.read_text()), **init}))
+            proc = AutoProcessor.from_pretrained(dir)
+            out = proc(text=[TOKENIZER_TEXTS[i - 1] for i in texts], return_tensors="pt",
+                       **call)
+        key = f"Qwen3VLProcessor/{name}"
+        for k in ("input_ids", "attention_mask", "mm_token_type_ids"):
+            tensors[f"{key}/{k}"] = out[k].int().contiguous()
+        meta[key] = json.dumps(dict(cls=type(proc).__name__, init=init, call=call, text=texts))
 
 
 if __name__ == "__main__":

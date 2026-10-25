@@ -122,7 +122,7 @@ end
     @test occursin(r"resample = 3 \(bicubic\) +class default", text)
     @test startswith(sprint(show, proc),
         "Qwen3VLProcessor(image_processor = Qwen2VLImageProcessor(do_resize = true, ")
-    @test endswith(sprint(show, proc), "]))")
+    @test endswith(sprint(show, proc), "init_kwargs = NamedTuple()))")
     # by the model type of config.json, without a `processor_class`
     mktempdir() do dir
         foreach(file -> cp(joinpath(QWEN, file), joinpath(dir, file)), readdir(QWEN))
@@ -203,9 +203,20 @@ end
         max_length = 5)
     @test_throws "longer than `max_length = 5`" proc(; images = image, text = ids,
         max_length = 5)
-    # a processor without a tokenizer takes images only
+    # a processor without a tokenizer takes images only, and one without an image
+    # processor text only
     @test Qwen3VLProcessor(ip, nothing)(; images = image) == ip(image)
     @test_throws "no tokenizer" Qwen3VLProcessor(ip, nothing)(; text = ids)
+    text_only = Qwen3VLProcessor(nothing, proc.tokenizer)
+    @test text_only(; text = ids) == proc(; text = ids)
+    @test_throws "Qwen3VLProcessor has no image processor for `images`" text_only(;
+        images = image, text = ids)
+    @test_throws "the `image_processor` of Qwen3VLProcessor is a Qwen2VLImageProcessor" Qwen3VLProcessor(
+        proc.tokenizer, nothing)
+    # the keywords of the tokenizer
+    @test proc(; text = [ids, ids[1:3]], padding_side = "left").attention_mask[1, 2] == 0
+    @test_throws "Qwen3VLProcessor has no keyword `return_tensors`" proc(; text = ids,
+        return_tensors = "pt")
 end
 
 @testset "image processor" begin

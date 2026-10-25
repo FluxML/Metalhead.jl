@@ -79,9 +79,54 @@ legacy_keys(::Type) = (;)
     check_processor(p)
 
 Throw if a setting of the processor `p` has a value that its port doesn't implement, naming
-the supported values. Called after loading, so that `create_processor` fails early.
+the supported values, or if a component isn't of its class (see
+[`processor_components`](@ref Metalhead.processor_components)). The constructors of the
+processor classes call it, so that a processor built by hand fails early too, and so does
+`create_processor`.
 """
-check_processor(p) = nothing
+check_processor(p) = check_components(p)
+
+function check_components(p)
+    for (name, T) in pairs(processor_components(typeof(p)))
+        c = getfield(p, name)
+        c === nothing || c isa T ||
+            error("the `$name` of $(nameof(typeof(p))) is a $(nameof(T)) (or `nothing`), got a $(typeof(c))")
+    end
+    return nothing
+end
+
+"""
+    @processor struct T <: Processor ... end
+    @processor (components...,) struct T <: Processor ... end
+
+`Base.@kwdef` for a processor class, whose constructors also run [`check_processor`](@ref
+Metalhead.check_processor) on the processor they make. With the names of its components,
+`T(components...; kwargs...)` also makes it from them, e.g.
+`Sam3Processor(image_processor, tokenizer; point_pad_value = -10)`.
+"""
+macro processor(args...)
+    def = last(args)
+    components = length(args) == 2 ? first(args).args : ()
+    Meta.isexpr(def, :struct) || error("@processor takes a struct definition")
+    name = Meta.isexpr(def.args[2], :<:) ? def.args[2].args[1] : def.args[2]
+    fields = Symbol[]
+    for line in def.args[3].args
+        field = Meta.isexpr(line, :(=)) ? line.args[1] : line
+        field = Meta.isexpr(field, :(::)) ? field.args[1] : field
+        field isa Symbol && push!(fields, field)
+    end
+    push!(def.args[3].args, :(function $name($(fields...))
+        p = new($(fields...))
+        $check_processor(p)
+        return p
+    end))
+    out = Expr(:block, :(Base.@kwdef $def))
+    if !isempty(components)
+        call = Expr(:call, name, Expr(:parameters, components..., :(kwargs...)))
+        push!(out.args, :($name($(components...); kwargs...) = $call))
+    end
+    return esc(out)
+end
 
 # The settings of a class, as `name = default`: the fields of its default instance that
 # aren't components.
@@ -190,7 +235,9 @@ The processor of class `T` with the settings of `entries`, `(key, value, file)` 
 the order the files are read (a later entry replaces an earlier one), over the defaults of
 the class, and then with the overrides `kwargs` merged into them with
 [`merge_nested`](@ref Metalhead.merge_nested). Values are Julia values (see `jsonvalue`);
-`nothing` is missing. `components` are passed to the constructor as they are.
+`nothing` is missing, and `Some(nothing)` sets `nothing` (a `null` special token of a
+tokenizer, which replaces the default of its class). `components` are passed to the
+constructor as they are.
 
 The keys of `entries` are checked strictly: a legacy key sets the setting at its path, a
 restricted key must have an allowed value, an ignored or a service key is skipped, and any
@@ -204,6 +251,7 @@ function processor_from_entries(::Type{T}, entries; components::NamedTuple = (;)
     legacy = Tuple{Symbol, Any, String}[]
     for (k, v, file) in entries
         v === nothing && continue
+        v isa Some && (v = something(v))
         key = Symbol(k)
         if haskey(defaults, key)
             values[key] = v
@@ -233,7 +281,10 @@ function processor_from_entries(::Type{T}, entries; components::NamedTuple = (;)
             key, v = first(path), nested_at(Base.tail(path), v)
         end
         if !haskey(defaults, key)
-            haskey(restricted_keys(T), key) && check_restricted(T, key, v, "")
+            if haskey(restricted_keys(T), key)
+                check_restricted(T, key, v, "")
+                continue
+            end
             reason = ignored_reason(key, (T,))
             reason === nothing || error(reason)
             error("$(nameof(T)) has no setting `$key`$(close_match(key, (T,)))")
@@ -262,30 +313,56 @@ json_entries(dict, file) = [(String(k), jsonvalue(v), file) for (k, v) in dict]
 
 The files of a processor's source (a repository at a revision, or a directory, see
 `ModelSource`), each JSON file read once with `read_json(files, name)` (`nothing` if the
-source doesn't have it).
+source doesn't have it). A branch or a tag is pinned to its commit when the first file is
+found, as transformers' `resolve_revision` pins it: the files of one processor come from
+one commit, and the files it downloads later (tokenizer.json) are then found in the cache
+without asking the Hub.
 """
-struct ProcessorFiles
+mutable struct ProcessorFiles
     source::ModelSource
-    json::Dict{String, Any}
+    const json::Dict{String, Any}
 end
 ProcessorFiles(source::ModelSource) = ProcessorFiles(source, Dict{String, Any}())
 
 function read_json(files::ProcessorFiles, name)
     return get!(files.json, name) do
-        path = source_file_if_exists(files.source, name)
+        path = source_file_if_exists(files, name)
         return path === nothing ? nothing : JSON.parsefile(path)
     end
 end
 function has_file(files::ProcessorFiles, name)
     haskey(files.json, name) && return files.json[name] !== nothing
-    return source_file_if_exists(files.source, name) !== nothing
+    return source_file_if_exists(files, name) !== nothing
 end
 
-# Files that a repository lacks, so that each is asked of the Hub once per session.
-const MISSING_FILES = Set{Tuple{String, String, String}}()
+function source_file_if_exists(files::ProcessorFiles, name)
+    path = source_file_if_exists(files.source, name)
+    path === nothing || (files.source = pinned(files.source, name, path))
+    return path
+end
 
-# The local path of `file` of a source, or `nothing` if it doesn't have it. Offline, a file
-# that isn't in the cache counts as missing.
+is_commit(revision) = occursin(r"^[0-9a-f]{40}$", revision)
+
+# `s` at the commit of the snapshot of the cache that holds `path`, its `file`.
+function pinned(s::ModelSource, file, path)
+    s.dir === nothing && !is_commit(s.revision) || return s
+    snapshot = path
+    for _ in split(join_path(s.subfolder, file), '/')
+        snapshot = dirname(snapshot)
+    end
+    sha = basename(snapshot)
+    is_commit(sha) && basename(dirname(snapshot)) == "snapshots" || return s
+    return ModelSource(s.repo, s.dir, sha, s.subfolder)
+end
+
+# Files that a repository lacks, so that each is asked of the Hub once per session. A file
+# that is only absent from the cache, offline or without network, isn't recorded.
+const MISSING_FILES = Set{Tuple{String, String, String}}()
+const MISSING_LOCK = ReentrantLock()
+
+# The local path of `file` of a source, or `nothing` if it doesn't have it. Offline or
+# without network, a file that isn't in the cache counts as missing, as in
+# `hf_download_first`.
 function source_file_if_exists(s::ModelSource, file)
     file = join_path(s.subfolder, file)
     if s.dir !== nothing
@@ -293,14 +370,15 @@ function source_file_if_exists(s::ModelSource, file)
         return isfile(path) ? path : nothing
     end
     key = (s.repo, s.revision, file)
-    key in MISSING_FILES && return nothing
+    lock(() -> key in MISSING_FILES, MISSING_LOCK) && return nothing
     try
         return hf_download(s.repo, file; revision = s.revision)
     catch e
-        if is_not_found(e) || HF.offline_mode() && is_uncached(e, s.repo, file, s.revision)
-            push!(MISSING_FILES, key)
+        if is_not_found(e)
+            lock(() -> push!(MISSING_FILES, key), MISSING_LOCK)
             return nothing
         end
+        is_uncached(e, s.repo, file, s.revision) && return nothing
         rethrow()
     end
 end
@@ -323,10 +401,20 @@ The local path of a `SourceFile`, downloading it, or of a path.
 """
 local_path(path::AbstractString) = path
 function local_path(f::SourceFile)
-    path = source_file_if_exists(f.source, f.file)
-    path === nothing && error("$(source_name(f.source)) has no $(f.file)")
-    return path
+    s = f.source
+    if s.dir !== nothing
+        path = source_file_if_exists(s, f.file)
+        path === nothing && error("$(source_name(s)) has no $(f.file)")
+        return path
+    end
+    file = join_path(s.subfolder, f.file)
+    return last(hf_download_first(s.repo, [file], f.file; revision = s.revision))
 end
+
+# The local path of a `SourceFile`, or `nothing` if its source lacks it or it isn't in the
+# cache, offline or without network.
+local_path_if_exists(f::SourceFile) = source_file_if_exists(f.source, f.file)
+local_path_if_exists(path::AbstractString) = isfile(path) ? path : nothing
 
 function source_name(s::ModelSource)
     s.dir === nothing || return joinpath(s.dir, s.subfolder)

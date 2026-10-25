@@ -91,6 +91,11 @@ end
         Dict("image_processor_type" => "BeitImageProcessorFast"))]) do dir
         @test_throws "the processor class `BeitImageProcessorFast` (`image_processor_type` in preprocessor_config.json) has not been ported" create_processor(dir)
     end
+    # an unported feature can be overridden with the value it is ported with
+    @test create_processor(SAM3; do_center_crop = false) isa Sam3Processor
+    @test create_processor(SAM3; do_pad = false).image_processor isa Sam3ImageProcessor
+    @test_throws "`do_center_crop = true` is not supported by Sam3ImageProcessor (supported: false)" create_processor(SAM3;
+        do_center_crop = true)
     @test_throws "already registered" Metalhead.register_processor!("Sam3Processor",
         Sam3ImageProcessor)
     @test Metalhead.processor_type("Sam3VideoProcessor", "") === Sam3Processor

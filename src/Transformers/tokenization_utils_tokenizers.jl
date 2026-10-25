@@ -1,10 +1,13 @@
 # Ported from transformers.tokenization_utils_tokenizers and tokenization_utils_base
 # (transformers 5.20, Apache-2.0, The Hugging Face Team): `TokenizersBackend`, the tokenizer
 # of transformers 5 for a tokenizer.json, with the settings of tokenizer_config.json
-# (special tokens, padding, truncation) read as `from_pretrained` reads them. Tokenizing a
-# string, a tokenization algorithm, is left to a backend: the HuggingFaceTokenizers.jl
-# extension, or any type with methods of `encode_ids` and `decode_ids`. Validated against
+# (special tokens, padding, truncation) read as `from_pretrained` reads them, over the
+# defaults of the class that `AutoTokenizer` builds. Tokenizing a string, a tokenization
+# algorithm, is left to a backend: the HuggingFaceTokenizers.jl extension, or any type with
+# methods of `encode_ids` and `decode_ids`. Validated against
 # test/references/processors/sam3.safetensors and tokenizers.safetensors.
+
+include("tokenization_auto.jl")
 
 """
     encode_ids(backend, text::AbstractString; add_special_tokens = true) -> Vector{Int}
@@ -31,58 +34,40 @@ function decode_ids end
     TokenizersBackend(; tokenizer = nothing, tokenizer_file = nothing, pad_token = nothing,
                       padding_side = "right", ...)
 
-transformers' `TokenizersBackend`, the tokenizer of a tokenizer.json, which
-[`create_processor`](@ref Metalhead.create_processor) loads from a repository with its
-settings in tokenizer_config.json (with special_tokens_map.json for files without
-`added_tokens_decoder`, as transformers reads them): the processor of a language model,
-such as `"Qwen/Qwen3-0.6B"`, the `tokenizer` of a processor or of a diffusers pipeline. It
-stands for transformers' tokenizer classes, which derive from it (`GPT2Tokenizer`,
-`Qwen2Tokenizer`, `GemmaTokenizer`, `CLIPTokenizer`, ...): the tokenizer.json of the
-validated repositories tokenizes strings as these classes do, and `tokenizer_class` keeps
-the name for what a class changes (CLIP's decoding). Its fields are transformers'
-attributes:
+transformers' tokenizer of a tokenizer.json, which [`create_processor`](@ref
+Metalhead.create_processor) loads with the settings of the repository's
+tokenizer_config.json: the processor of a language model such as `"Qwen/Qwen3-0.6B"`, and
+the `tokenizer` of a processor or of a diffusers pipeline. Its fields are transformers'
+attributes, with the defaults of `tokenizer_class`, the class that transformers'
+`AutoTokenizer` builds (`GPT2Tokenizer`, `Qwen2Tokenizer`, ...; loading a class that
+Metalhead hasn't validated warns).
 
-  - `tokenizer`: the backend that encodes and decodes strings (`encode_ids` and
-    `decode_ids`), or `nothing` until a string needs it, when the HuggingFaceTokenizers.jl
-    extension loads `tokenizer_file`, the repository's tokenizer.json;
-  - `tokenizer_class`: the class that transformers' `AutoTokenizer` instantiates, the one
-    that tokenizer_config.json names or that of the model type of config.json (Qwen3.5's
-    `Qwen3_5Tokenizer`, where the file says `Qwen2Tokenizer`);
-  - the special tokens `bos_token`, `eos_token`, `unk_token`, `sep_token`, `pad_token`,
-    `cls_token` and `mask_token`, `extra_special_tokens`, and the named tokens of a model
-    (`model_specific_special_tokens`, such as `image_token`);
-  - `added_tokens_decoder`: the content of the added tokens by id (from 0), from which the
-    ids of special tokens are known without a backend;
-  - `model_max_length` (`nothing` for no limit), `padding_side`, `truncation_side`,
-    `clean_up_tokenization_spaces` and `model_input_names`;
-  - `add_bos_token` and `add_eos_token`: `nothing` for the special tokens that the
-    post-processor of tokenizer.json adds (transformers ignores these keys of
-    tokenizer_config.json), or set when creating the processor, e.g.
-    `create_processor(repo; add_bos_token = false)`, for the BOS and EOS tokens they ask for
-    and none other, as in transformers (an unset one counts as `false`, and
-    `CLIPTokenizer` ignores both).
+`tokenizer` is the backend that encodes and decodes strings: `nothing` until a string needs
+it, when the HuggingFaceTokenizers.jl extension loads `tokenizer_file`, or yours (see
+[`encode_ids`](@ref Metalhead.Transformers.encode_ids)). `add_bos_token` and
+`add_eos_token` are `nothing` for the special tokens of tokenizer.json, or set at creation
+(`create_processor(repo; add_bos_token = false)`) for those they ask for. `init_kwargs` are
+the keywords of calls that tokenizer_config.json sets, which processors that combine the
+tokenizer (`Qwen3VLProcessor`) take as the defaults of their calls, as transformers does.
 
     (tok::TokenizersBackend)(text; padding = nothing, truncation = nothing,
                              max_length = nothing, padding_side = nothing,
                              add_special_tokens = true)
 
-The inputs of a language model for `text`: a string or the token ids of a tokenizer (from
-0, with its special tokens, which need no backend), or a vector of them, as a NamedTuple
-that the model takes as it is (`model(tok(text))`):
+The inputs of a language model for `text`, a string, the token ids of a tokenizer (from 0,
+with its special tokens, which need no backend), or a vector of them:
 
-| Key              | Size                                       | Contents                                                                  |
-|:---------------- |:------------------------------------------ |:------------------------------------------------------------------------- |
-| `input_ids`      | `(seq_len, batch)`, `(seq_len,)` for one text | token indices, 1-based, padded on the side `padding_side`               |
-| `attention_mask` | as `input_ids`                             | 1 for the tokens, 0 for the padding; unless `model_input_names` omits it  |
+| Key              | Size                                          | Contents                                                                 |
+|:---------------- |:--------------------------------------------- |:------------------------------------------------------------------------ |
+| `input_ids`      | `(seq_len, batch)`, `(seq_len,)` for one text | token indices, 1-based, padded on the side `padding_side`                |
+| `attention_mask` | as `input_ids`                                | 1 for the tokens, 0 for the padding; unless `model_input_names` omits it |
 
-The keywords are transformers', with its defaults: `padding` is `true` (or `:longest`),
-`:max_length` or `false`, and is an error without a `pad_token`, as in transformers (set one
-with `create_processor(repo; pad_token = ...)`); `truncation` (`true`, or implied by
-`max_length` without padding) cuts the tokens of a string, keeping the special tokens;
-`max_length` defaults to `model_max_length`; `padding_side` overrides the tokenizer's.
-Without `padding`, a batch of different lengths is padded to the longest, as a Julia array
-needs, where transformers would fail to make a tensor of it. [`decode`](@ref
-Metalhead.Transformers.decode) turns indices back into text.
+The keywords are transformers': `padding` is `true` (`:longest`), `:max_length` or `false`,
+and needs a `pad_token` (`create_processor(repo; pad_token = ...)`); `truncation` cuts the
+tokens of a string, keeping its special tokens; `max_length` defaults to
+`model_max_length`. Without `padding`, a batch of different lengths is padded to the
+longest, where transformers fails. [`decode`](@ref Metalhead.Transformers.decode) turns
+indices back into text.
 
 ```julia
 using Metalhead, HuggingFaceTokenizers
@@ -94,7 +79,7 @@ logits = model(inputs)                                # (vocab_size, 6, 2)
 [decode(tok, [argmax(l)]) for l in eachcol(logits[:, end, :])]   # the next tokens
 ```
 """
-Base.@kwdef struct TokenizersBackend <: Processor
+Metalhead.@processor struct TokenizersBackend <: Processor
     tokenizer::Any = nothing
     tokenizer_file::Any = nothing
     tokenizer_class::String = "TokenizersBackend"
@@ -114,7 +99,9 @@ Base.@kwdef struct TokenizersBackend <: Processor
     clean_up_tokenization_spaces::Bool = false
     add_bos_token::Union{Nothing, Bool} = nothing
     add_eos_token::Union{Nothing, Bool} = nothing
+    add_prefix_space::Bool = false
     model_input_names::Vector{String} = ["input_ids", "attention_mask"]
+    init_kwargs::NamedTuple = (;)
     provenance::NamedTuple = (;)
 end
 
@@ -127,31 +114,45 @@ Functors.@leaf TokenizersBackend
 const SPECIAL_TOKENS = (:bos_token, :eos_token, :unk_token, :sep_token, :pad_token,
     :cls_token, :mask_token)
 
-const TOKENIZER_JSON_KEY = "configures the tokenizer that transformers rebuilds, which " *
-                           "the backend reads from tokenizer.json"
+# The keywords of transformers' processor calls (`TextKwargs`) that tokenizer_config.json
+# can set: `ProcessorMixin._merge_kwargs` takes them as defaults of the calls
+# (`init_kwargs`). `add_special_tokens` is one, but transformers fails on it, the name of a
+# method.
+const TEXT_KWARGS = (:padding, :truncation, :max_length, :stride,
+    :is_split_into_words, :pad_to_multiple_of, :return_token_type_ids,
+    :return_attention_mask, :return_overflowing_tokens, :return_special_tokens_mask,
+    :return_offsets_mapping, :return_length, :return_mm_token_type_ids,
+    :return_text_replacement_offsets, :return_tensors)
+
 const CHAT_KEY = "chat templates are out of scope"
+const BERT_KEY = "configures the normaliser of BERT's tokenizer classes, which Metalhead " *
+                 "hasn't validated"
+const SENTENCEPIECE_KEY = "configures sentencepiece tokenizer classes (Llama 2, T5), " *
+                          "which Metalhead hasn't validated"
+const CALL_KEY = "a keyword of its call: pass it to the call, or to the calls of a " *
+                 "processor as the tokenizer's `init_kwargs`"
 
 function ignored_keys(::Type{TokenizersBackend})
     return (; chat_template = CHAT_KEY, use_default_system_prompt = CHAT_KEY,
         response_template = CHAT_KEY, response_schema = CHAT_KEY,
-        chat_control_tokens = CHAT_KEY, add_prefix_space = TOKENIZER_JSON_KEY,
-        do_lower_case = TOKENIZER_JSON_KEY,
-        errors = TOKENIZER_JSON_KEY, pretokenize_regex = TOKENIZER_JSON_KEY,
-        legacy = TOKENIZER_JSON_KEY, sp_model_kwargs = TOKENIZER_JSON_KEY,
-        strip_accents = TOKENIZER_JSON_KEY, tokenize_chinese_chars = TOKENIZER_JSON_KEY,
-        do_basic_tokenize = TOKENIZER_JSON_KEY, never_split = TOKENIZER_JSON_KEY,
+        chat_control_tokens = CHAT_KEY, do_lower_case = BERT_KEY, strip_accents = BERT_KEY,
+        tokenize_chinese_chars = BERT_KEY, do_basic_tokenize = BERT_KEY,
+        never_split = BERT_KEY, legacy = SENTENCEPIECE_KEY,
+        sp_model_kwargs = SENTENCEPIECE_KEY,
+        errors = "stored but not read by transformers 5, whose decoder of bytes replaces " *
+                 "the invalid ones",
+        pretokenize_regex = "not read by Qwen3_5Tokenizer, which pre-tokenizes with its " *
+                            "own expression, that of tokenizer.json",
         vocab_size = "the size of the vocabulary of tokenizer.json",
         spaces_between_special_tokens = "used by transformers' slow tokenizers only",
-        max_length = "not read by transformers' tokenizers (model_max_length is the limit)",
-        stride = "not read by transformers' tokenizers",
-        truncation_strategy = "not read by transformers' tokenizers",
-        pad_to_multiple_of = "not read by transformers' tokenizers",
+        truncation_strategy = "not read by transformers 5",
         pad_token_type_id = "the type id of padding tokens, which Metalhead doesn't return",
         name_or_path = "the name of the repository",
         tokenizer_file = "a file of the repository",
         vocab_file = "a file of the repository", merges_file = "a file of the repository",
         verbose = "logging",
-        backend = "the library of the tokenizer", files_loaded = "the files loaded")
+        backend = "the library of the tokenizer", files_loaded = "the files loaded",
+        (k => CALL_KEY for k in TEXT_KWARGS)...)
 end
 restricted_keys(::Type{TokenizersBackend}) = (; split_special_tokens = (false,),
     clean_up_tokenization_spaces_for_bpe_even_though_it_will_corrupt_output = (false,))
@@ -164,6 +165,46 @@ function check_processor(tok::TokenizersBackend)
     end
     issubset(tok.model_input_names, ("input_ids", "attention_mask")) ||
         error("`model_input_names = $(repr(tok.model_input_names))` is not supported (supported: input_ids, attention_mask)")
+    for k in keys(tok.init_kwargs)
+        k in TEXT_KWARGS ||
+            error("`init_kwargs` has `$k`, which isn't a keyword of transformers' processors (`TextKwargs`: $(join(TEXT_KWARGS, ", ")))")
+    end
+    return nothing
+end
+
+# The defaults that the `__init__` of transformers' tokenizer classes and their class
+# attributes set, for the classes that Metalhead validates: those of the validated
+# repositories, whose tokenizer.json tokenizes strings as the class, which rebuilds its
+# pipeline, does. LlamaTokenizer isn't one: it pre-tokenizes Llama 2's tokenizer.json
+# otherwise.
+const TOKENIZER_CLASSES = Dict(
+    "TokenizersBackend" => (;),
+    "GPT2Tokenizer" => (; unk_token = "<|endoftext|>", bos_token = "<|endoftext|>",
+        eos_token = "<|endoftext|>"),
+    "Qwen2Tokenizer" => (; unk_token = "<|endoftext|>", eos_token = "<|endoftext|>",
+        pad_token = "<|endoftext|>"),
+    "Qwen3_5Tokenizer" => (; unk_token = "<|endoftext|>", eos_token = "<|endoftext|>",
+        pad_token = "<|endoftext|>"),
+    "GemmaTokenizer" => (; unk_token = "<unk>", bos_token = "<bos>", eos_token = "<eos>",
+        pad_token = "<pad>", mask_token = "<mask>", padding_side = "left"),
+    "CLIPTokenizer" => (; unk_token = "<|endoftext|>", bos_token = "<|startoftext|>",
+        eos_token = "<|endoftext|>", pad_token = "<|endoftext|>"))
+
+# Classes that rebuild the pre-tokenizer of tokenizer.json with their `add_prefix_space`.
+const PREFIX_SPACE_CLASSES = ("GPT2Tokenizer", "Qwen2Tokenizer", "Qwen3_5Tokenizer")
+
+const WARNED_CLASSES = Set{String}()
+const WARNED_CLASSES_LOCK = ReentrantLock()
+
+function warn_unvalidated(class, source)
+    first_time = lock(WARNED_CLASSES_LOCK) do
+        class in WARNED_CLASSES && return false
+        push!(WARNED_CLASSES, class)
+        return true
+    end
+    validated = join(sort!(collect(keys(TOKENIZER_CLASSES))), ", ")
+    first_time &&
+        @warn "$class, the tokenizer class of $source, hasn't been validated in Metalhead: it has the defaults of TokenizersBackend, and tokenizer.json tokenizes its strings, which $class may do otherwise (validated: $validated)"
     return nothing
 end
 
@@ -182,7 +223,8 @@ is_named_token(k, v) = endswith(k, "_token") && !(Symbol(k) in SPECIAL_TOKENS) &
 # as entries of `processor_from_entries`: tokenizer_config.json, whose
 # `additional_special_tokens` stand for empty `extra_special_tokens`, and only without its
 # `added_tokens_decoder` the legacy special_tokens_map.json, which overrides it (and adds to
-# a list of extra special tokens), and added_tokens.json.
+# a list of extra special tokens), and added_tokens.json. A `null` special token replaces
+# the default of the class.
 function tokenizer_entries(files::ProcessorFiles)
     kw = Dict{String, Tuple{Any, String}}()
     order = String[]
@@ -223,6 +265,7 @@ function tokenizer_entries(files::ProcessorFiles)
         set!("extra_special_tokens", kw["additional_special_tokens"]...)
     end
     entries = Tuple{String, Any, String}[]
+    init_kwargs = Pair{Symbol, Any}[]
     for k in unique(order)
         haskey(kw, k) || continue
         v, file = kw[k]
@@ -234,7 +277,9 @@ function tokenizer_entries(files::ProcessorFiles)
         elseif k == "extra_special_tokens"
             falsy(v) || push!(entries, (k, token_content.(v), file))
         elseif Symbol(k) in SPECIAL_TOKENS
-            push!(entries, (k, token_content(v), file))
+            push!(entries, (k, v === nothing ? Some(nothing) : token_content(v), file))
+        elseif Symbol(k) in TEXT_KWARGS
+            v === nothing || push!(init_kwargs, Symbol(k) => jsonvalue(v))
         elseif is_named_token(k, v)
             push!(named, Symbol(k) => token_content(v))
         elseif k == "model_max_length" || k == "max_len"
@@ -250,59 +295,108 @@ function tokenizer_entries(files::ProcessorFiles)
         (; sort(named; by = first)...), "tokenizer_config.json"))
     isempty(added) ||
         push!(entries, ("added_tokens_decoder", added, "tokenizer_config.json"))
+    isempty(init_kwargs) ||
+        push!(entries, ("init_kwargs", (; init_kwargs...), "tokenizer_config.json"))
     return entries
 end
 
 function load_processor(::Type{TokenizersBackend}, files::ProcessorFiles; kwargs...)
     has_file(files, "tokenizer_config.json") || has_file(files, "tokenizer.json") ||
         error("$(Metalhead.source_name(files.source)) has no tokenizer (tokenizer_config.json or tokenizer.json)")
-    entries = filter(e -> e[1] != "tokenizer_class", tokenizer_entries(files))
-    config = read_json(files, "config.json")
-    model_type = config === nothing ? nothing : get(config, "model_type", nothing)
-    hub = read_json(files, "tokenizer_config.json")
-    hub = hub === nothing ? nothing : get(hub, "tokenizer_class", nothing)
-    class = tokenizer_class(hub, model_type)
-    class === nothing || push!(entries, ("tokenizer_class", class,
-        hub !== nothing && class == normalized_class(hub) ? "tokenizer_config.json" :
-        "config.json (`model_type`)"))
+    config = something(read_json(files, "config.json"), Dict{String, Any}())
+    tokenizer_config = something(read_json(files, "tokenizer_config.json"),
+        Dict{String, Any}())
+    class, decided_by = tokenizer_class(get(tokenizer_config, "tokenizer_class", nothing),
+        get(config, "tokenizer_class", nothing), get(config, "model_type", nothing))
+    defaults = get(TOKENIZER_CLASSES, class, nothing)
+    defaults === nothing && warn_unvalidated(class, Metalhead.source_name(files.source))
+    entries = Tuple{String, Any, String}[(String(k), v, "class default ($class)")
+                                         for (k, v) in pairs(something(defaults, (;)))]
+    append!(entries, filter(e -> e[1] != "tokenizer_class", tokenizer_entries(files)))
+    decided_by === nothing || push!(entries, ("tokenizer_class", class, decided_by))
     push!(entries,
         ("tokenizer_file", SourceFile(files.source, "tokenizer.json"), "repository"))
     return processor_from_entries(TokenizersBackend, entries; kwargs...)
-end
-
-# AutoTokenizer's tokenizer classes of the model types of the ported architectures
-# (`TOKENIZER_MAPPING_NAMES`), and whether one replaces the class that tokenizer_config.json
-# names (`MODELS_WITH_INCORRECT_HUB_TOKENIZER_CLASS`).
-const MODEL_TYPE_TOKENIZERS = Dict(
-    "qwen2" => ("Qwen2Tokenizer", true), "qwen3" => ("Qwen2Tokenizer", false),
-    "qwen3_5" => ("Qwen3_5Tokenizer", true), "qwen3_5_text" => ("Qwen3_5Tokenizer", false),
-    "gemma3" => ("GemmaTokenizer", false), "gemma3_text" => ("GemmaTokenizer", false),
-    "granite" => ("TokenizersBackend", false), "granitemoe" => ("TokenizersBackend", false),
-    "granitemoeshared" => ("TokenizersBackend", false),
-    "granitemoehybrid" => ("TokenizersBackend", false),
-    "sam3" => ("CLIPTokenizer", false), "sam3_video" => ("CLIPTokenizer", false))
-
-# transformers 5 names `PreTrainedTokenizerFast` TokenizersBackend
-function normalized_class(name)
-    name = Metalhead.class_name(name)
-    return name == "PreTrainedTokenizer" ? "TokenizersBackend" : name
-end
-
-# The class that AutoTokenizer instantiates for the class `hub` that tokenizer_config.json
-# names and the model type of config.json (`nothing` if unknown): where they differ, the
-# model type's class if it is generic or the Hub's is known to be wrong, else the Hub's.
-function tokenizer_class(hub, model_type)
-    registered, wrong_hub = get(MODEL_TYPE_TOKENIZERS, model_type, (nothing, false))
-    hub isa AbstractString || return registered
-    hub = normalized_class(hub)
-    (registered === nothing || registered == hub) && return hub
-    return registered == "TokenizersBackend" || wrong_hub ? registered : hub
 end
 
 function Metalhead.setting_origin(tok::TokenizersBackend, key, value)
     key === :tokenizer && value === nothing && tok.tokenizer_file !== nothing &&
         return "loaded from tokenizer_file when a string needs it"
     return Metalhead.origin_text(get(tok.provenance, key, nothing), value)
+end
+
+# What Metalhead reads of a tokenizer.json, once per file: the type of its model, whether it
+# pads or truncates, the `add_prefix_space` of its pre-tokenizer, and its added tokens.
+struct TokenizerJSON
+    model_type::String
+    pads::Bool
+    truncates::Bool
+    add_prefix_space::Union{Nothing, Bool}
+    added_tokens::Dict{String, Int}
+end
+
+const TOKENIZER_JSONS = Dict{String, TokenizerJSON}()
+const VOCABULARY_IDS = Dict{Tuple{String, String}, Union{Nothing, Int}}()
+const TOKENIZER_JSONS_LOCK = ReentrantLock()
+
+function tokenizer_json(path)
+    return lock(TOKENIZER_JSONS_LOCK) do
+        get!(TOKENIZER_JSONS, path) do
+            json = JSON.parsefile(path)
+            added = Dict{String, Int}()
+            for t in get(json, "added_tokens", ())
+                get!(added, t["content"], t["id"])
+            end
+            return TokenizerJSON(model_type(json["model"]),
+                get(json, "padding", nothing) !== nothing,
+                get(json, "truncation", nothing) !== nothing,
+                prefix_space(get(json, "pre_tokenizer", nothing)), added)
+        end
+    end
+end
+
+# The type of a model of tokenizer.json, which older files leave to its keys.
+function model_type(model)
+    haskey(model, "type") && return String(model["type"])
+    haskey(model, "merges") && return "BPE"
+    get(model, "vocab", nothing) isa AbstractVector && return "Unigram"
+    return haskey(model, "max_input_chars_per_word") ? "WordPiece" : "WordLevel"
+end
+
+prefix_space(::Nothing) = nothing
+function prefix_space(pre_tokenizer)
+    type = get(pre_tokenizer, "type", nothing)
+    type == "ByteLevel" && return pre_tokenizer["add_prefix_space"]
+    type == "Sequence" || return nothing
+    found = filter(!isnothing, map(prefix_space, pre_tokenizer["pretokenizers"]))
+    return isempty(found) ? nothing : first(found)
+end
+
+# The id of `token` in the vocabulary of tokenizer.json, or `nothing`.
+function vocabulary_id(path, token)
+    return lock(TOKENIZER_JSONS_LOCK) do
+        get!(VOCABULARY_IDS, (path, token)) do
+            vocab = get(JSON.parsefile(path)["model"], "vocab", ())
+            vocab isa AbstractDict && return get(vocab, token, nothing)
+            i = findfirst(v -> (v isa AbstractVector ? first(v) : v) == token, vocab)
+            return i === nothing ? nothing : i - 1
+        end
+    end
+end
+
+# transformers' tokenizer classes read these of tokenizer.json in ways that Metalhead
+# doesn't port: padding and truncation are the defaults of every call, and the classes that
+# rebuild the pre-tokenizer of tokenizer.json do it with their own `add_prefix_space`.
+function check_tokenizer_json(tok::TokenizersBackend, path)
+    json = tokenizer_json(path)
+    for (sets, what) in ((json.pads, "padding"), (json.truncates, "truncation"))
+        sets &&
+            error("the tokenizer.json of $(tok.tokenizer_class) ($path) sets `$what`, which transformers applies to every call of the tokenizer: Metalhead doesn't support such a tokenizer.json")
+    end
+    tok.tokenizer_class in PREFIX_SPACE_CLASSES || return nothing
+    json.add_prefix_space === nothing || json.add_prefix_space == tok.add_prefix_space ||
+        error("`add_prefix_space = $(tok.add_prefix_space)` isn't supported: $(tok.tokenizer_class) rebuilds the pre-tokenizer of tokenizer.json with it, and that of $path has `add_prefix_space = $(json.add_prefix_space)`, which Metalhead tokenizes with")
+    return nothing
 end
 
 # The backend of a tokenizer: its own, or the HuggingFaceTokenizers.jl tokenizer of its
@@ -314,17 +408,37 @@ function backend(tok::TokenizersBackend)
     ext = Base.get_extension(Metalhead, :MetalheadHuggingFaceTokenizersExt)
     ext === nothing &&
         error("encoding or decoding strings needs a tokenizer backend: run `using HuggingFaceTokenizers`, or pass token ids")
-    return Base.invokelatest(ext.load_tokenizer, Metalhead.local_path(tok.tokenizer_file))
+    path = Metalhead.local_path(tok.tokenizer_file)
+    check_tokenizer_json(tok, path)
+    return Base.invokelatest(ext.load_tokenizer, path)
 end
 
-# The id (from 0) of a token: from the added tokens, else from the backend.
-function token_id(tok::TokenizersBackend, token)
-    for id in sort!(collect(keys(tok.added_tokens_decoder)))
-        tok.added_tokens_decoder[id] == token && return id
+# The id (from 0) of a token, as transformers' `convert_tokens_to_ids` finds it, or
+# `nothing`: an added token of the configuration, else a single token of the backend `b`
+# (that of the tokenizer, if it holds one), else an added token or a token of the
+# vocabulary of tokenizer.json, which needs no backend.
+function find_token_id(tok::TokenizersBackend, token, b = tok.tokenizer)
+    ids = [id for (id, t) in tok.added_tokens_decoder if t == token]
+    isempty(ids) || return minimum(ids)
+    if b !== nothing
+        ids = encode_ids(b, token; add_special_tokens = false)
+        return length(ids) == 1 ? Int(only(ids)) : nothing
     end
-    ids = encode_ids(backend(tok), token; add_special_tokens = false)
-    length(ids) == 1 || error("`$token` is not a token of $(tok.tokenizer_class)")
-    return only(ids)
+    path = tok.tokenizer_file === nothing ? nothing :
+           Metalhead.local_path_if_exists(tok.tokenizer_file)
+    path === nothing && return nothing
+    id = get(tokenizer_json(path).added_tokens, token, nothing)
+    return id === nothing ? vocabulary_id(path, token) : id
+end
+
+function token_id(tok::TokenizersBackend, token, b = tok.tokenizer)
+    id = find_token_id(tok, token, b)
+    id === nothing || return id
+    known = b !== nothing ? "its backend" :
+            tok.tokenizer_file === nothing ?
+            "a tokenizer.json or a backend, which it lacks" :
+            "its tokenizer.json ($(tok.tokenizer_file))"
+    return error("`$token` is not a token of $(tok.tokenizer_class): neither an added token (`added_tokens_decoder`) nor a token of $known")
 end
 
 function check_pad_token(tok::TokenizersBackend)
@@ -350,9 +464,9 @@ function encode_text(tok::TokenizersBackend, b, text, add_special_tokens)
     template || return collect(Int, encode_ids(b, text; add_special_tokens))
     ids = collect(Int, encode_ids(b, text; add_special_tokens = false))
     something(tok.add_bos_token, false) && tok.bos_token !== nothing &&
-        pushfirst!(ids, token_id(tok, tok.bos_token))
+        pushfirst!(ids, token_id(tok, tok.bos_token, b))
     something(tok.add_eos_token, false) && tok.eos_token !== nothing &&
-        push!(ids, token_id(tok, tok.eos_token))
+        push!(ids, token_id(tok, tok.eos_token, b))
     return ids
 end
 
@@ -443,27 +557,86 @@ function (tok::TokenizersBackend)(text; padding = nothing, truncation = nothing,
     return (; input_ids, attention_mask)
 end
 
+# The keywords of the tokenizer's call, and the values with which the other keywords of
+# `TEXT_KWARGS` change nothing in the call of a processor (`stride` and `return_tensors`
+# change nothing whatever their value: Metalhead returns no overflowing tokens, and arrays).
+const CALL_KEYWORDS = (:padding, :truncation, :max_length, :padding_side,
+    :add_special_tokens)
+const INERT_TEXT_KWARGS = (; is_split_into_words = false, pad_to_multiple_of = nothing,
+    return_token_type_ids = false, return_attention_mask = true,
+    return_overflowing_tokens = false, return_special_tokens_mask = false,
+    return_offsets_mapping = false, return_length = false,
+    return_mm_token_type_ids = true, return_text_replacement_offsets = false)
+
+# Throw if the `init_kwargs` of the tokenizer of the processor `P` set a keyword of its
+# calls that Metalhead doesn't implement.
+function check_init_kwargs(P, tok)
+    tok isa TokenizersBackend || return nothing
+    for (k, v) in pairs(tok.init_kwargs)
+        (k in CALL_KEYWORDS || k in (:stride, :return_tensors)) && continue
+        inert = get(INERT_TEXT_KWARGS, k, missing)
+        isequal(v, inert) ||
+            error("`$k = $(repr(v))` in the `init_kwargs` of the tokenizer of $(nameof(P)) (from tokenizer_config.json), a default of its calls, is not supported" *
+                  (inert === missing ? "" : " (supported: $(repr(inert)))"))
+    end
+    return nothing
+end
+
+# The keywords of the call of the tokenizer in that of a processor `P`, as transformers'
+# `_merge_kwargs` merges them: those of the call, `kwargs`, over the `init_kwargs` of the
+# tokenizer, over the defaults of the tokenizer's call.
+function merged_text_kwargs(P, tok::TokenizersBackend, kwargs)
+    for k in keys(kwargs)
+        k in CALL_KEYWORDS ||
+            throw(ArgumentError("$(nameof(P)) has no keyword `$k` (its keywords of text are $(join(CALL_KEYWORDS, ", ")))"))
+    end
+    init = (; (k => v for (k, v) in pairs(tok.init_kwargs) if k in CALL_KEYWORDS)...)
+    return merge(init, kwargs)
+end
+
 """
     decode(processor, indices; skip_special_tokens = false)
 
 The text of the token indices `indices` (1-based, as the models take and give them) of the
 tokenizer of `processor`, a [`TokenizersBackend`](@ref
 Metalhead.Transformers.TokenizersBackend) or a processor with one, as transformers'
-`decode`: a string for a vector of indices, a vector of strings for a matrix
+`decode`: a string for an index or a vector of them, a vector of strings for a matrix
 `(seq_len, batch)`. Needs a tokenizer backend (`using HuggingFaceTokenizers`).
 """
-function decode(tok::TokenizersBackend, indices::AbstractVector{<:Integer};
+function decode(tok::TokenizersBackend, indices::AbstractVector;
         skip_special_tokens::Bool = false)
-    text = decode_ids(backend(tok), collect(Int, indices) .- 1; skip_special_tokens)
+    all(i -> i isa Integer, indices) ||
+        throw(ArgumentError("token indices are integers, got $(eltype(indices))"))
+    b = backend(tok)
+    ids = Int[i - 1 for i in indices]
+    skip_special_tokens && (ids = filter(!in(special_token_ids(tok, b)), ids))
+    text = decode_ids(b, ids; skip_special_tokens)
     return clean_decoded(tok, text)
 end
-function decode(tok::TokenizersBackend, indices::AbstractMatrix{<:Integer}; kwargs...)
+function decode(tok::TokenizersBackend, indices::AbstractMatrix; kwargs...)
     return [decode(tok, ids; kwargs...) for ids in eachcol(indices)]
 end
+decode(tok::TokenizersBackend, index::Integer; kwargs...) = decode(tok, [index]; kwargs...)
+function decode(tok::TokenizersBackend, indices; kwargs...)
+    throw(ArgumentError("decode takes token indices, as an integer, a vector or a matrix, got a $(typeof(indices))"))
+end
 function decode(p::Processor, indices; kwargs...)
-    haskey(processor_components(typeof(p)), :tokenizer) ||
+    haskey(processor_components(typeof(p)), :tokenizer) && p.tokenizer !== nothing ||
         error("$(nameof(typeof(p))) has no tokenizer")
     return decode(p.tokenizer, indices; kwargs...)
+end
+
+# The ids of the named special tokens and of the extra special tokens, which transformers'
+# `__init__` adds to the backend as special: decoding skips them as those of tokenizer.json.
+function special_token_ids(tok::TokenizersBackend, b)
+    tokens = [(getfield(tok, k) for k in SPECIAL_TOKENS)...,
+        values(tok.model_specific_special_tokens)..., tok.extra_special_tokens...]
+    ids = Set{Int}()
+    for t in unique(filter(!isnothing, tokens))
+        id = find_token_id(tok, t, b)
+        id === nothing || push!(ids, id)
+    end
+    return ids
 end
 
 # What the classes of transformers' tokenizers change in the text of their backend: CLIP's
@@ -471,21 +644,13 @@ end
 const DECODED_FIXES = Dict{String, Function}(
     "CLIPTokenizer" => text -> strip(replace(text, "</w>" => " ")))
 
-const MODEL_TYPES = Dict{String, String}()
-
-# The type of the model of tokenizer.json (BPE, WordPiece, ...), read once.
-function tokenizer_model_type(tok::TokenizersBackend)
-    tok.tokenizer_file === nothing && return "unknown"
-    path = Metalhead.local_path(tok.tokenizer_file)
-    return get!(MODEL_TYPES, path) do
-        return string(get(JSON.parsefile(path)["model"], "type", "unknown"))
-    end
-end
-
 function clean_decoded(tok::TokenizersBackend, text)
     text = String(get(DECODED_FIXES, tok.tokenizer_class, identity)(text))
+    tok.clean_up_tokenization_spaces || return text
     # transformers skips the clean-up for BPE tokenizers, which it would corrupt
-    tok.clean_up_tokenization_spaces && tokenizer_model_type(tok) != "BPE" || return text
+    tok.tokenizer_file === nothing ||
+        tokenizer_json(Metalhead.local_path(tok.tokenizer_file)).model_type != "BPE" ||
+        return text
     for (a, b) in (" ." => ".", " ?" => "?", " !" => "!", " ," => ",", " ' " => "'",
         " n't" => "n't", " 'm" => "'m", " 's" => "'s", " 've" => "'ve", " 're" => "'re")
         text = replace(text, a => b)
