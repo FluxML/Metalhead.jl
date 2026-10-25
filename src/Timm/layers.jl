@@ -498,15 +498,18 @@ function BlurPool2d(channels = nothing; filt_size = 3, stride = 2, pad_mode = "r
     return BlurPool2d(channels, filt_size, stride, get_padding(filt_size, stride), pad_mode)
 end
 
-function blur_filter(T, k, c)
+# The filter of `k` taps for `c` channels, with the eltype and on the device of `x`.
+function blur_filter(x, k, c)
+    T = eltype(x)
     coeffs = T[binomial(k - 1, i) / T(2)^(k - 1) for i in 0:(k - 1)]
-    return repeat(reshape(coeffs * coeffs', k, k, 1, 1), 1, 1, 1, c)
+    filt = repeat(reshape(coeffs * coeffs', k, k, 1, 1), 1, 1, 1, c)
+    return copyto!(similar(x, T, size(filt)), filt)
 end
 ChainRulesCore.@non_differentiable blur_filter(::Any, ::Any, ::Any)
 
 function (m::BlurPool2d)(x)
     c = something(m.channels, size(x, 3))
-    filt = blur_filter(eltype(x), m.filt_size, c)
+    filt = blur_filter(x, m.filt_size, c)
     pad = ntuple(_ -> m.pad, 4)
     x = m.pad_mode == "reflect" ? NNlib.pad_reflect(x, pad; dims = (1, 2)) :
         NNlib.pad_zeros(x, pad; dims = (1, 2))
