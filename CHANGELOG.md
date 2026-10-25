@@ -61,19 +61,15 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
   (`Qwen3_5ForConditionalGeneration`), validated against `Qwen/Qwen3.5-0.8B` on text and on
   an image (#340). Its decoder alternates gated attention with gated delta rule (linear
   attention) layers and has a multimodal rotary embedding; it is also ported alone
-  (`Qwen3_5ForCausalLM`), as is its vision encoder (`Qwen3_5VisionModel`).
-  `Metalhead.Transformers.qwen3_5_image_inputs` preprocesses images as the checkpoints'
-  processor does. Videos are not supported.
+  (`Qwen3_5ForCausalLM`), as is its vision encoder (`Qwen3_5VisionModel`). Videos are not
+  supported.
 - SAM 3, the detector of the Segment Anything Model 3 (`Sam3Model`), which finds and segments
   the objects of an image that a text prompt or box prompts describe, validated against
   `jetjodh/sam3`, an ungated copy of the weights of `facebook/sam3`, and SAM 3.1
   (`unsloth/sam3.1`, #343). Its ViT attends within windows with a 2D rotary embedding, and its
   CLIP text encoder, geometry encoder of boxes, DETR encoder and decoder and mask decoder
   are ported. The checkpoints of SAM 3 load as `Sam3VideoModel`, whose detector only is
-  ported, not its tracker. `Metalhead.Transformers.sam3_image_inputs`,
-  `sam3_box_inputs` and `sam3_text_inputs` make its inputs as transformers' processor does,
-  and `post_process_instance_segmentation`, `post_process_object_detection` and
-  `post_process_semantic_segmentation` read its outputs.
+  ported, not its tracker.
 - Flux ports of [diffusers](https://github.com/huggingface/diffusers) models and pipelines, in
   `Metalhead.Diffusers`: text-to-image generation with FLUX.2 [klein] (`Flux2KleinPipeline`,
   with `Flux2Transformer2DModel`, `AutoencoderKLFlux2` and `FlowMatchEulerDiscreteScheduler`),
@@ -83,6 +79,32 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
 - An extension for HuggingFaceTokenizers.jl (`ext/`): with it loaded,
   `Metalhead.Diffusers.tokenize` tokenizes prompts with the tokenizer and chat template of a
   pipeline, so that pipelines take prompts as strings (#332).
+- Processors (#348): `create_processor` loads the processor of a checkpoint, which turns raw
+  inputs (images, text, boxes) into the inputs of the model, and its outputs back into
+  results, as the checkpoint's configuration and its Python library do. It takes the names
+  that `create_model` takes, at the same revisions, and returns the most complete processor
+  that the repository describes, as transformers' `AutoProcessor` does:
+  - `Metalhead.Timm.EvalTransform`, timm's eval transform, for every timm checkpoint, with
+    `use_test_size`. It resizes with a port of Pillow's 8-bit filters, and returns an array.
+  - `Metalhead.Transformers.Qwen3VLProcessor` and its `Qwen2VLImageProcessor`, for Qwen3.5.
+    It expands each image placeholder of a prompt into the image's tokens.
+  - `Metalhead.Transformers.Sam3Processor` and its `Sam3ImageProcessor`, for SAM 3, with box
+    prompts. `post_process_instance_segmentation`, `post_process_object_detection` and
+    `post_process_semantic_segmentation` take the processor and the outputs of the model.
+  - `Metalhead.Transformers.TokenizersBackend`, the tokenizer of a `tokenizer.json`, with
+    the special tokens, padding and truncation of `tokenizer_config.json`.
+    `Metalhead.Transformers.decode` turns token indices back into text.
+
+  Settings are read from the repository's files over the defaults of the Python class,
+  strictly: a setting that the port doesn't implement is an error, and an unknown key a
+  warning. Keyword arguments override them, and `show` prints where each comes from.
+  Processors return NamedTuples with the keys of transformers, in Julia's layout, with token
+  indices from 1, which the models of several inputs take as they are
+  (`model(inputs::NamedTuple)`). They match timm and transformers bit for bit on 8-bit
+  images. Strings need a tokenizer backend, such as HuggingFaceTokenizers.jl through its
+  extension; token ids don't.
+- An extension for ImageCore: processors take matrices of colorants, such as the images that
+  `FileIO.load` returns (#348).
 - Mixed precision under `eltype = Float16` or `Flux.BFloat16` (or `f16`/`bf16`, #332): the
   RMSNorms of the language models and timm's `LayerNorm2d` keep their parameters in
   `Float32`, as Flux's `BatchNorm`, `GroupNorm` and `LayerNorm` do, and normalise in
@@ -101,8 +123,8 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
 ### Changed
 
 - New dependencies: HuggingFaceApi, SafeTensors, JSON and ConcreteStructs, and the weak
-  dependency HuggingFaceTokenizers. Flux 0.16.14, NNlib 0.9.54 and MLUtils 0.4.9 are now the
-  minimum versions (#335, #337, #341).
+  dependencies HuggingFaceTokenizers and ImageCore. Flux 0.16.14, NNlib 0.9.54 and MLUtils
+  0.4.9 are now the minimum versions (#335, #337, #341).
 - Downloads share the cache of Python's `huggingface_hub` (`~/.cache/huggingface/hub`), and
   its `HF_TOKEN`, `HF_HUB_CACHE` and `HF_HUB_OFFLINE` environment variables.
 

@@ -13,13 +13,12 @@ Install the packages of this tutorial in its Julia environment:
 
 ```julia
 using Pkg
-Pkg.add(["Metalhead", "Flux", "FileIO", "ImageIO", "ImageCore",
-    "ImageTransformations", "Interpolations"])
+Pkg.add(["Metalhead", "Flux", "FileIO", "ImageIO", "ImageCore"])
 ```
 
 ```julia
 using Metalhead, Flux
-using FileIO, ImageIO, ImageCore, ImageTransformations, Interpolations
+using FileIO, ImageIO, ImageCore
 using Downloads: download
 using Random: seed!, shuffle!
 using Statistics: mean
@@ -27,7 +26,7 @@ using Statistics: mean
 seed!(42)
 repo = "timm/resnet18.a1_in1k"
 model = create_model(repo; pretrained = true)
-cfg = Metalhead.Timm.pretrained_cfg(repo)
+transform = create_processor(repo)
 ```
 
 ResNet-18 is a convolutional neural network (CNN). Its successive stages reduce the spatial
@@ -38,53 +37,25 @@ links to its checkpoint and to other ported architectures.
 
 ## Prepare a photograph
 
-An image loaded by JuliaImages is a height × width matrix of colour values. A Metalhead
-vision model takes a width × height × channels × batch array. The checkpoint configuration
-specifies its input size in PyTorch order, along with the crop and channel normalisation:
+An image loaded by FileIO is a height × width matrix of colours. A Metalhead vision model
+takes a width × height × channels × batch array, prepared as the checkpoint was evaluated:
+resized, cropped and normalised. `transform`, the processor of the checkpoint, does both:
+it is timm's eval transform, with the settings of the checkpoint's configuration, which
+`show` prints with their source:
 
 ```julia
-cfg.input_size                 # (3, 224, 224): channels, height, width
-cfg.crop_pct                   # fraction retained by the centre crop
-cfg.interpolation
-cfg.mean, cfg.std
-```
-
-For this checkpoint, resize the shorter side while preserving the aspect ratio, crop a
-224 × 224 square from the centre, then normalise each RGB channel. This helper handles
-square RGB inputs with a centre crop and bilinear or bicubic interpolation:
-
-```julia
-function preprocess(img, cfg)
-    channels, h, w = cfg.input_size
-    @assert channels == 3 && h == w
-    @assert get(cfg, :crop_mode, "center") == "center"
-    method = if cfg.interpolation == "bicubic"
-        Cubic(Line(OnGrid()))
-    elseif cfg.interpolation == "bilinear"
-        Linear()
-    else
-        error("Unsupported interpolation: $(cfg.interpolation)")
-    end
-
-    img = RGB{Float32}.(img)
-    ih, iw = size(img)
-    short = floor(Int, h / cfg.crop_pct)
-    new_size = ih <= iw ? (short, floor(Int, iw * short / ih)) :
-               (floor(Int, ih * short / iw), short)
-    resized = imresize(img, new_size; method)
-    top, left = round.(Int, (size(resized) .- (h, w)) ./ 2)
-    cropped = resized[(top + 1):(top + h), (left + 1):(left + w)]
-
-    x = permutedims(Float32.(channelview(cropped)), (3, 2, 1))
-    x = clamp.(x, 0f0, 1f0)
-    μ = reshape(Float32.(collect(cfg.mean)), 1, 1, 3)
-    σ = reshape(Float32.(collect(cfg.std)), 1, 1, 3)
-    return reshape((x .- μ) ./ σ, w, h, 3, 1)
-end
+transform
+# EvalTransform
+#   input_size = (3, 224, 224)    config.json
+#   interpolation = "bicubic"     config.json
+#   mean = (0.485, 0.456, 0.406)  config.json
+#   std = (0.229, 0.224, 0.225)   config.json
+#   crop_pct = 0.95               config.json
+#   crop_mode = "center"          config.json
 
 photo_url = "https://upload.wikimedia.org/wikipedia/commons/2/26/YellowLabradorLooking_new.jpg"
 img = load(download(photo_url))
-x = preprocess(img, cfg)
+x = transform(img)
 size(x)                        # (224, 224, 3, 1)
 ```
 
@@ -93,15 +64,17 @@ size(x)                        # (224, 224, 3, 1)
 The [example photograph](https://commons.wikimedia.org/wiki/File:YellowLabradorLooking_new.jpg)
 is also used by the classification example in the getting started guide.
 
-`RGB{Float32}` converts the colour channels to floating-point values on the usual 0–1 scale.
-`channelview` produces channels × height × width; the permutation puts the axes in Flux's
-order, and the last dimension adds a batch of one image. An RGB matrix and a numeric
-three-dimensional array have different representations, so keep this conversion explicit.
+`input_size` is in PyTorch order: channels, height, width. The transform resizes the shorter
+side of the image to `floor(224 / 0.95) = 235` pixels with Pillow's bicubic filter, crops
+224 × 224 pixels from the centre, scales the values to [0, 1] and normalises each channel
+with `mean` and `std`. The result is the input that timm computes from the same pixels as a
+PIL image, bit for bit, so that scores reproduce those of timm. (A JPEG decoded by ImageIO
+can differ slightly from Pillow's decoding of it.)
 
-The resize uses [JuliaImages interpolation](https://juliaimages.org/ImageTransformations.jl/stable/reference/#ImageTransformations.imresize).
-Its cubic kernel and downsampling differ from Pillow's, so this helper does not reproduce
-timm's input pixels exactly. Reproducing benchmark scores requires matching the checkpoint's
-full evaluation transform, including its interpolation and antialiasing.
+With ImageCore loaded, the transform turns the matrix of colours into the width × height ×
+channels array that it works on, and the last dimension of `x` is a batch of one image. An
+array of that layout, of `UInt8` from 0 to 255 or of reals from 0 to 1, works without
+ImageCore.
 
 ## Classify the image
 
@@ -118,17 +91,18 @@ labels_url = "https://raw.githubusercontent.com/pytorch/hub/master/imagenet_clas
 imagenet_labels = readlines(download(labels_url))
 top5 = sortperm(vec(probabilities); rev = true)[1:5]
 [(; label = imagenet_labels[i], probability = probabilities[i, 1]) for i in top5]
+# Labrador retriever 0.735, Saluki 0.147, golden retriever 0.060, Ibizan hound 0.005, ...
 ```
 
 Those labels match this checkpoint's ImageNet class order. When using a different dataset
 or checkpoint, use its label order. Softmax scores describe the model's prediction over
 its classes; an image from a new class still receives one of these labels.
 
-To classify a batch, preprocess each photograph separately and concatenate along dimension 4:
+To classify a batch, pass a vector of photographs, of any sizes:
 
 ```julia
 images = [img, reverse(img; dims = 2)]
-xbatch = cat((preprocess(image, cfg) for image in images)...; dims = 4)
+xbatch = transform(images)
 size(model(xbatch))            # (1000, 2)
 ```
 
@@ -182,16 +156,16 @@ function image_samples(root, classes)
             if lowercase(splitext(file)[2]) in (".jpg", ".jpeg", ".png")]
 end
 
-function image_batch(samples, cfg, classes)
-    x = cat((preprocess(load(sample.path), cfg) for sample in samples)...; dims = 4)
+function image_batch(samples, transform, classes)
+    x = transform([load(sample.path) for sample in samples])
     y = Flux.onehotbatch([sample.label for sample in samples], classes)
     return x, y
 end
 
-function embed_images(model, samples, cfg, classes; batchsize = 8)
+function embed_images(model, samples, transform, classes; batchsize = 8)
     isempty(samples) && error("No images found")
     chunks = map(collect(Iterators.partition(samples, batchsize))) do batch
-        x, _ = image_batch(batch, cfg, classes)
+        x, _ = image_batch(batch, transform, classes)
         return forward_head(model, forward_features(model, x); pre_logits = true)
     end
     y = Flux.onehotbatch([sample.label for sample in samples], classes)
@@ -202,8 +176,8 @@ train_root, val_root = "data/train", "data/val"
 classes = sort(filter(name -> isdir(joinpath(train_root, name)), readdir(train_root)))
 train_samples = image_samples(train_root, classes)
 val_samples = image_samples(val_root, classes)
-train_z, train_y = embed_images(model, train_samples, cfg, classes)
-val_z, val_y = embed_images(model, val_samples, cfg, classes)
+train_z, train_y = embed_images(model, train_samples, transform, classes)
+val_z, val_y = embed_images(model, val_samples, transform, classes)
 ```
 
 Keep the backbone in test mode while computing these embeddings. Caching the vectors means
@@ -247,13 +221,13 @@ opt_state = Flux.setup(Adam(1e-5), tuned)
 for epoch in 1:3
     shuffle!(train_samples)
     for batch in Iterators.partition(train_samples, 8)
-        xb, yb = image_batch(batch, cfg, classes)
+        xb, yb = image_batch(batch, transform, classes)
         Flux.train!(classification_loss, tuned, [(xb, yb)], opt_state)
     end
 end
 
 Flux.testmode!(tuned)
-xb, _ = image_batch(val_samples[1:1], cfg, classes)
+xb, _ = image_batch(val_samples[1:1], transform, classes)
 Flux.onecold(tuned(xb), classes)
 ```
 
@@ -307,7 +281,7 @@ With `output_fmt = "NLC"` it keeps patch tokens as channels × tokens × batch; 
 `return_prefix_tokens = true` it also returns the prefix tokens separately. The integer
 `indices = 1` above selects the last transformer block.
 
-For useful pretrained embeddings, load a ViT checkpoint with `pretrained = true` and use
-that checkpoint's own preprocessing configuration. DINOv2, CLIP and SigLIP variants have
-different pooling and prefix-token conventions; `forward_head(...; pre_logits = true)`
+For useful pretrained embeddings, load a ViT checkpoint with `pretrained = true` and prepare
+its images with its processor, `create_processor(repo)`. DINOv2, CLIP and SigLIP variants
+have different pooling and prefix-token conventions; `forward_head(...; pre_logits = true)`
 applies the model's own pooling to its final features.

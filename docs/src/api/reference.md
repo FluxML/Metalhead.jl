@@ -18,36 +18,50 @@ feature_info
 ## Processors
 
 [`create_processor`](@ref) loads the processor of a checkpoint, which turns raw inputs into
-the inputs of its model and its outputs back into results.
+the inputs of its model and its outputs back into results. Each processor type ports a class
+of transformers, or timm's eval transform, with its settings as fields.
 
 ```@docs
 create_processor
+Metalhead.Timm.EvalTransform
+Metalhead.Transformers.Qwen3VLProcessor
+Metalhead.Transformers.Qwen2VLImageProcessor
+Metalhead.Transformers.Sam3Processor
+Metalhead.Transformers.Sam3ImageProcessor
+Metalhead.Transformers.TokenizersBackend
+```
+
+Post-processing and decoding take the processor and the outputs of the model:
+
+```@docs
+Metalhead.Transformers.decode
+Metalhead.Transformers.post_process_object_detection
+Metalhead.Transformers.post_process_instance_segmentation
+Metalhead.Transformers.post_process_semantic_segmentation
+```
+
+A tokenizer other than HuggingFaceTokenizers.jl's encodes and decodes the strings of a
+`TokenizersBackend` with methods of these functions:
+
+```@docs
+Metalhead.Transformers.encode_ids
+Metalhead.Transformers.decode_ids
 ```
 
 ## timm
 
 ```@docs
-Metalhead.Timm.EvalTransform
 Metalhead.Timm.pretrained_cfg
 ```
 
 ## transformers
 
 ```@docs
+Metalhead.Transformers.Qwen3_5ForConditionalGeneration
+Metalhead.Transformers.Qwen3_5VisionModel
 Metalhead.Transformers.Sam3Model
 Metalhead.Transformers.Sam3VideoModel
 Metalhead.Transformers.Sam3VisionModel
-Metalhead.Transformers.Qwen3VLProcessor
-Metalhead.Transformers.Qwen2VLImageProcessor
-Metalhead.Transformers.Sam3Processor
-Metalhead.Transformers.Sam3ImageProcessor
-Metalhead.Transformers.post_process_object_detection
-Metalhead.Transformers.post_process_instance_segmentation
-Metalhead.Transformers.post_process_semantic_segmentation
-Metalhead.Transformers.TokenizersBackend
-Metalhead.Transformers.decode
-Metalhead.Transformers.encode_ids
-Metalhead.Transformers.decode_ids
 ```
 
 ## diffusers
@@ -123,6 +137,7 @@ Metalhead.check_processor
 Metalhead.load_processor
 Metalhead.processor_from_entries
 Metalhead.instantiate_processor
+Metalhead.check_inputs
 Metalhead.merge_nested
 Metalhead.ProcessorFiles
 Metalhead.SourceFile

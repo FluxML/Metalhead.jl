@@ -19,11 +19,14 @@ to [Flux.jl](https://fluxml.ai). It ports models from three Hugging Face librari
 The [list of models](https://fluxml.ai/Metalhead.jl/dev/models/) gives every ported
 architecture and the Hub checkpoints validated for it.
 
-`create_model` downloads a repository's configuration and weights and returns an ordinary Flux
-model, ready for inference or fine-tuning, on the CPU or a GPU. The models run in Julia,
-without PyTorch. Each port mirrors the module tree of the PyTorch original, loads its
-safetensors weights by name, and is
-[checked numerically against PyTorch](https://fluxml.ai/Metalhead.jl/dev/validation/).
+`create_model` downloads a repository's configuration and weights and returns an ordinary
+Flux model, ready for inference or fine-tuning, on the CPU or a GPU. `create_processor`
+loads the processor of the same repository, which turns images, text and boxes into the
+inputs of the model, and its outputs back into results. The models run in Julia, without
+PyTorch. Each port mirrors the module tree of the PyTorch original, loads its safetensors
+weights by name, and is
+[checked numerically against PyTorch](https://fluxml.ai/Metalhead.jl/dev/validation/), and
+so is each processor.
 
 ## Contents
 
@@ -32,13 +35,14 @@ safetensors weights by name, and is
 - [Usage](#usage)
   - [Creating a model](#creating-a-model)
   - [Inputs and outputs](#inputs-and-outputs)
-  - [Preprocessing](#preprocessing)
+  - [Processors](#processors)
   - [Features and the classifier](#features-and-the-classifier)
   - [Multi-scale features](#multi-scale-features)
   - [Fine-tuning](#fine-tuning)
   - [Model structure](#model-structure)
   - [Language models](#language-models)
   - [Vision-language models](#vision-language-models)
+  - [Segmenting objects](#segmenting-objects)
   - [Text-to-image generation](#text-to-image-generation)
 - [Validated against PyTorch](#validated-against-pytorch)
 - [Scope](#scope)
@@ -75,13 +79,15 @@ list_models(; byfamily = true)["resnet"]  # the architectures of a family
 ## Usage
 
 ```julia
-using Metalhead
+using Metalhead, FileIO, ImageCore
 
 # Download the configuration and weights of a Hub repository
 model = create_model("timm/convnext_tiny.fb_in1k"; pretrained = true)
+# and the preprocessing of the checkpoint: timm's eval transform, with its settings
+transform = create_processor("timm/convnext_tiny.fb_in1k")
 
-x = rand(Float32, 224, 224, 3, 1)   # width × height × channels × batch
-logits = model(x)                   # 1000 × 1
+x = transform(load("dog.jpg"))   # 224 × 224 × 3 × 1: width × height × channels × batch
+logits = model(x)                # 1000 × 1
 ```
 
 ### Creating a model
@@ -120,21 +126,54 @@ PyTorch order. Classifiers return logits, of size classes × batch.
 Models are returned in test mode: dropout is off and batch normalisation uses its running
 statistics. Call `Flux.trainmode!(model)` before training.
 
-### Preprocessing
+### Processors
 
-The preprocessing a checkpoint was trained with is in its configuration:
+A checkpoint expects its inputs prepared in a particular way, with settings stored in its
+repository: the image size, crop and normalisation, the special tokens of its tokenizer.
+`create_processor` reads them, from the same repository and revision as `create_model`, and
+returns the processor of the checkpoint, which applies them as its Python library does.
+`create_model` makes the forward pass match PyTorch; `create_processor` makes the whole path
+from raw input to result match. The output of a processor is what the model takes,
+`model(proc(...))`:
+
+| Checkpoints | `create_processor` returns | Called as |
+|:--|:--|:--|
+| timm | `Timm.EvalTransform`, timm's eval transform | `transform(images)` |
+| Qwen3.5 | `Transformers.Qwen3VLProcessor` | `proc(; images, text)` |
+| SAM 3 | `Transformers.Sam3Processor` | `proc(; images, text, input_boxes)` |
+
+timm's transform returns an array of size width × height × channels × batch. The others
+return a NamedTuple with the keys of transformers (`input_ids`, `pixel_values`, ...), in
+Julia's layout, with token indices that start at 1. Turning outputs back into results takes
+the processor too: `Transformers.decode(proc, indices)` for text, and SAM 3's
+`post_process_instance_segmentation(proc, outputs)` for masks.
+
+- Images are arrays of size width × height × channels, of `UInt8` from 0 to 255 or of reals
+  from 0 to 1. With ImageCore loaded (Images.jl loads it), processors also take the matrices
+  of colours that `FileIO.load` returns.
+- Text as strings needs a tokenizer backend: `using HuggingFaceTokenizers`. Token ids, as a
+  tokenizer gives them (from 0), need none.
+
+The settings are read strictly: one that the port doesn't implement is an error, and an
+unknown key in a file a warning. `show` prints each setting and where it comes from, and
+keyword arguments override them:
 
 ```julia
-cfg = Metalhead.Timm.pretrained_cfg("timm/convnext_tiny.fb_in1k")
-cfg.input_size     # (3, 224, 224)
-cfg.crop_pct       # 0.875
-cfg.mean, cfg.std  # ((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
+create_processor("timm/convnext_tiny.fb_in1k"; crop_pct = 1.0)
+# EvalTransform
+#   input_size = (3, 224, 224)    config.json
+#   interpolation = "bicubic"     config.json
+#   mean = (0.485, 0.456, 0.406)  config.json
+#   std = (0.229, 0.224, 0.225)   config.json
+#   crop_pct = 1.0                override (config.json: 0.875)
+#   crop_mode = "center"          config.json
 ```
 
-Resize the shorter side of the image to `input_size / crop_pct`, crop the centre, and normalise
-each channel with `mean` and `std`. The
-[getting started guide](https://fluxml.ai/Metalhead.jl/dev/tutorials/quickstart/) does this
-with Images.jl to classify a photo.
+For timm checkpoints, `use_test_size = true` resizes to the larger `test_input_size` at
+which many are evaluated, and `Metalhead.Timm.pretrained_cfg` returns the settings as they
+are stored. The
+[getting started guide](https://fluxml.ai/Metalhead.jl/dev/tutorials/quickstart/) classifies
+a photo.
 
 ### Features and the classifier
 
@@ -211,51 +250,58 @@ decode(tokenizer, [argmax(logits[:, end]) - 1])          # " Paris"
 
 ### Vision-language models
 
-Qwen3.5 answers prompts about images. `qwen3_5_image_inputs` resizes and cuts an image into
-the patches the model takes, and the prompt holds one image token for each 2 × 2 patches:
+Qwen3.5 answers prompts about images. Its processor resizes each image to sides that are
+multiples of 32 pixels, cuts it into the patches of 16 × 16 pixels that the model takes, and
+replaces the image placeholder `<|image_pad|>` of the prompt with one image token for each
+2 × 2 patches. It doesn't apply the chat template: the prompt is written as the template
+writes it.
 
 ```julia
-using HuggingFaceTokenizers
-using Metalhead.Transformers: qwen3_5_image_inputs
+using FileIO, ImageCore, HuggingFaceTokenizers
+using Metalhead.Transformers: decode
 
 model = create_model("Qwen/Qwen3.5-0.8B"; pretrained = true)
-tokenizer = from_pretrained(Tokenizer, "Qwen/Qwen3.5-0.8B")
+proc = create_processor("Qwen/Qwen3.5-0.8B")
 
-image = rand(Float32, 640, 480, 3)    # width × height × channels, in [0, 1]
-pixel_values, image_grid_thw = qwen3_5_image_inputs(image)
-n = prod(image_grid_thw) ÷ 4                              # the number of image tokens
-prompt = "<|im_start|>user\n<|vision_start|>" * "<|image_pad|>"^n *
-         "<|vision_end|>Describe this image.<|im_end|>\n<|im_start|>assistant\n" *
-         "<think>\n\n</think>\n\n"
-ids = encode(tokenizer, prompt).ids .+ 1
-for _ in 1:20                                             # greedy decoding
-    push!(ids, argmax(model(ids; pixel_values, image_grid_thw)[:, end]))
+prompt = "<|im_start|>user\n<|vision_start|><|image_pad|><|vision_end|>" *
+         "Describe this image.<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n"
+inputs = proc(; images = load("dog.jpg"), text = prompt)  # 396 tokens for 36 × 44 patches
+logits = model(inputs)                                   # vocabulary × sequence length
+decode(proc, [argmax(logits[:, end])])                   # "This"
+
+(; input_ids, pixel_values, image_grid_thw) = inputs
+for _ in 1:20                                            # greedy decoding
+    push!(input_ids, argmax(model(input_ids; pixel_values, image_grid_thw)[:, end]))
 end
-decode(tokenizer, ids[(end - 19):end] .- 1)
+decode(proc, input_ids[(end - 19):end])
+# "This image features a medium-to-large dog standing in profile on a grassy field. The
+#  dog has"
 ```
 
 ### Segmenting objects
 
 SAM 3 finds and segments the objects of an image that a text prompt names, or that box
-prompts show. `sam3_image_inputs` resizes images to the model's 1008 × 1008 pixels, and the
-post-processing keeps the objects found, with their boxes and masks at the size of the image:
+prompts show. Its processor resizes the images to the model's 1008 × 1008 pixels and pads
+the prompts to 32 tokens, and its post-processing keeps the objects found, with their boxes
+and masks at the size of the image:
 
 ```julia
-using HuggingFaceTokenizers
-using Metalhead.Transformers: sam3_image_inputs, sam3_text_inputs,
-                              post_process_instance_segmentation
+using FileIO, ImageCore, HuggingFaceTokenizers
+using Metalhead.Transformers: post_process_instance_segmentation
 
 model = create_model("unsloth/sam3.1"; pretrained = true)   # SAM 3.1; SAM 3: "jetjodh/sam3"
-tokenizer = from_pretrained(Tokenizer, "unsloth/sam3.1")
+proc = create_processor("unsloth/sam3.1")
 
-image = rand(Float32, 640, 480, 3)    # width × height × channels, in [0, 1]
-pixel_values, original_sizes = sam3_image_inputs(image)
-input_ids, attention_mask = sam3_text_inputs([encode(tokenizer, "a cat").ids])
-outputs = model(pixel_values, input_ids; attention_mask)
-objects = only(post_process_instance_segmentation(model, outputs; threshold = 0.5,
-    target_sizes = original_sizes))
-objects.scores, objects.boxes, objects.masks             # n, 4 × n and 640 × 480 × n
+inputs = proc(; images = load("dog.jpg"), text = "a dog")
+objects = only(post_process_instance_segmentation(proc, model(inputs); threshold = 0.5,
+    target_sizes = inputs.original_sizes))
+objects.scores, objects.boxes, objects.masks
+# [0.94], 4 × 1 boxes (x1, y1, x2, y2) and 700 × 577 × 1 masks, for a photo of 700 × 577
 ```
+
+A box prompt is `(x1, y1, x2, y2)` in the pixels of its image, a vector of them per image:
+`proc(; images, input_boxes = [[(56, 38, 647, 550)]])`. Without HuggingFaceTokenizers, pass
+the token ids of the prompts: `text = [49406, 320, 1929, 49407]` is "a dog".
 
 Both repositories are ungated; `jetjodh/sam3` holds the same weights as Meta's gated
 `facebook/sam3`. Only the detector of SAM 3's video model is ported, not the tracker of

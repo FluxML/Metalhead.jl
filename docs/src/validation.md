@@ -84,6 +84,46 @@ differ from its float64 ones by 6e-4. In float64, the port and PyTorch generate 
 to 1e-12. The transformer and the pipeline download 8 and 16 GB, and run only with
 `METALHEAD_TEST_LARGE=true` as well.
 
+## Processors
+
+A processor (see [`create_processor`](@ref)) is checked against the full upstream path, from
+the raw input to the inputs of the model, with the configuration files of real repositories.
+The references are in `test/references/`. The tests need no Python, and only the checks
+marked below as such need network access.
+
+For timm, `porting/dump_timm_transform.py` stores the output of timm's
+`create_transform(**resolve_data_config({}, pretrained_cfg = cfg))` on PIL images, for 14
+configurations: the six interpolations of Pillow, the `"center"` and `"squash"` crop modes,
+non-square input sizes, a `crop_pct` above 1 (which pads), the ImageNet, Inception and CLIP
+statistics, and `use_test_size`. They run on seven small images (one grayscale, one RGBA),
+and the configuration of `timm/convnext_tiny.fb_in1k` also on an image of 500 × 375 pixels.
+[`Timm.EvalTransform`](@ref Metalhead.Timm.EvalTransform) must give the same `Float32`
+values, **bit for bit**, which takes a port of Pillow's 8-bit resampling: it matches
+`Image.resize` exactly for each of its six filters. With network access, the settings that
+`create_processor` resolves for each of the 56 timm checkpoints in the references, with and
+without `use_test_size`, must be those that timm resolves, and the logits of
+`timm/convnext_tiny.fb_in1k` for the transformed 500 × 375 image must match PyTorch's to 1e-4.
+
+For transformers, `porting/dump_processor.py` calls the processor that
+`AutoProcessor.from_pretrained(repo)` loads, on small images, prompts and boxes: 18 cases
+for SAM 3 (`unsloth/sam3.1` and `jetjodh/sam3`) and 19 for Qwen3.5 (`Qwen/Qwen3.5-0.8B`),
+which cover batches, grey and RGBA images, upscaling and downscaling, box prompts,
+`do_resize`, `do_rescale` and `do_normalize` off, overridden settings, and Qwen2-VL's legacy
+`min_pixels` and `max_pixels`. Every output must be transformers', with the same keys. For
+8-bit images, `pixel_values` are equal **bit for bit**: the resize ports the fixed-point
+antialiased resize of `uint8` tensors that torchvision, transformers' default backend, runs
+on x86 CPUs with AVX2. For images of reals, which take a floating-point path, they match to
+a relative error of **1e-6**. Token ids, attention masks, boxes, labels and image grids are
+equal. The tests pass the prompts as the token ids of transformers' tokenizer, so that they
+need no tokenizer backend; with `METALHEAD_TEST_NETWORK=true`, they also tokenize the
+strings with HuggingFaceTokenizers.jl and the repository's `tokenizer.json`. SAM 3's
+post-processing is checked on random outputs of the model: the same scores and boxes, to
+floating-point precision, and the same masks.
+
+Configuration files are read strictly, an unknown key with a warning, and the tests load
+those of the fixtures without one. Pixels are compared after decoding: a JPEG decoded by
+ImageIO can differ slightly from Pillow's decoding of the same file.
+
 ## Parameter counts
 
 The test suite builds every registered timm architecture with its default arguments and
@@ -116,5 +156,4 @@ Not checked:
 - Training-mode behaviour. Dropout and stochastic depth are random, and batch normalisation
   updates its statistics like Flux does.
 - The initialisation of randomly initialised models, which only roughly follows timm.
-- Image preprocessing. [`Metalhead.Timm.pretrained_cfg`](@ref) returns the settings a checkpoint
-  expects, but applying them is up to you.
+- Training augmentation, which processors don't do, and the decoding of image files.
