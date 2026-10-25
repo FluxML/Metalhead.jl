@@ -25,9 +25,8 @@ function check_resample(resample)
     return error("`resample = $(repr(resample))` ($name) is not supported (supported: $(resample_supported()))")
 end
 
-# The fields of an image processor of type `T` from the arguments of its constructor, in the
-# types of the fields or the forms that transformers takes (`resample = :bilinear`); another
-# value is an error naming the form of the setting, rather than `convert`'s MethodError.
+# The `processor_fields` of the image processors: the forms that transformers takes
+# (`resample = :bilinear`) in the types of the fields.
 function image_processor_fields(::Type{T}, args) where {T}
     return map((name, v) -> field_setting(T, name, v), fieldnames(T), args)
 end

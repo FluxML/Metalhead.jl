@@ -128,10 +128,12 @@ Metalhead.instantiate
 Metalhead.Processor
 Metalhead.ImageProcessor
 Metalhead.register_processor!
+Metalhead.@processor
 Metalhead.processor_components
 Metalhead.ignored_keys
 Metalhead.restricted_keys
 Metalhead.legacy_keys
+Metalhead.processor_fields
 Metalhead.check_processor
 Metalhead.load_processor
 Metalhead.processor_from_entries

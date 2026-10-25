@@ -7,8 +7,6 @@
 # methods of `encode_ids` and `decode_ids`. Validated against
 # test/references/processors/sam3.safetensors and tokenizers.safetensors.
 
-include("tokenization_auto.jl")
-
 """
     encode_ids(backend, text::AbstractString; add_special_tokens = true) -> Vector{Int}
 
@@ -79,7 +77,7 @@ logits = model(inputs)                                # (vocab_size, 6, 2)
 [decode(tok, [argmax(l)]) for l in eachcol(logits[:, end, :])]   # the next tokens
 ```
 """
-Metalhead.@processor struct TokenizersBackend <: Processor
+@processor struct TokenizersBackend <: Processor
     tokenizer::Any = nothing
     tokenizer_file::Any = nothing
     tokenizer_class::String = "TokenizersBackend"
@@ -171,27 +169,6 @@ function check_processor(tok::TokenizersBackend)
     end
     return nothing
 end
-
-# The defaults that the `__init__` of transformers' tokenizer classes and their class
-# attributes set, for the classes that Metalhead validates: those of the validated
-# repositories, whose tokenizer.json tokenizes strings as the class, which rebuilds its
-# pipeline, does. LlamaTokenizer isn't one: it pre-tokenizes Llama 2's tokenizer.json
-# otherwise.
-const TOKENIZER_CLASSES = Dict(
-    "TokenizersBackend" => (;),
-    "GPT2Tokenizer" => (; unk_token = "<|endoftext|>", bos_token = "<|endoftext|>",
-        eos_token = "<|endoftext|>"),
-    "Qwen2Tokenizer" => (; unk_token = "<|endoftext|>", eos_token = "<|endoftext|>",
-        pad_token = "<|endoftext|>"),
-    "Qwen3_5Tokenizer" => (; unk_token = "<|endoftext|>", eos_token = "<|endoftext|>",
-        pad_token = "<|endoftext|>"),
-    "GemmaTokenizer" => (; unk_token = "<unk>", bos_token = "<bos>", eos_token = "<eos>",
-        pad_token = "<pad>", mask_token = "<mask>", padding_side = "left"),
-    "CLIPTokenizer" => (; unk_token = "<|endoftext|>", bos_token = "<|startoftext|>",
-        eos_token = "<|endoftext|>", pad_token = "<|endoftext|>"))
-
-# Classes that rebuild the pre-tokenizer of tokenizer.json with their `add_prefix_space`.
-const PREFIX_SPACE_CLASSES = ("GPT2Tokenizer", "Qwen2Tokenizer", "Qwen3_5Tokenizer")
 
 const WARNED_CLASSES = Set{String}()
 const WARNED_CLASSES_LOCK = ReentrantLock()

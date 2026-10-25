@@ -76,6 +76,18 @@ setting, as transformers does.
 legacy_keys(::Type) = (;)
 
 """
+    processor_fields(T, args::Tuple) -> Tuple
+
+The values of the fields of a processor of class `T` from `args`, the arguments of its
+constructor in the order of the fields: the forms of a setting that the Python library also
+takes, or that read naturally, converted to the type of its field (an integer `size` to
+`(; height, width)`), and an `ArgumentError` naming the forms of a setting for another
+value, rather than `convert`'s `MethodError`. `args` as they are by default, which `new`
+converts to the types of the fields.
+"""
+processor_fields(::Type, args::Tuple) = args
+
+"""
     check_processor(p)
 
 Throw if a setting of the processor `p` has a value that its port doesn't implement, naming
@@ -99,9 +111,10 @@ end
     @processor struct T <: Processor ... end
     @processor (components...,) struct T <: Processor ... end
 
-`Base.@kwdef` for a processor class, whose constructors also run [`check_processor`](@ref
-Metalhead.check_processor) on the processor they make. With the names of its components,
-`T(components...; kwargs...)` also makes it from them, e.g.
+`Base.@kwdef` for a processor class, whose constructors make the processor from
+[`processor_fields`](@ref Metalhead.processor_fields) of their arguments, and then run
+[`check_processor`](@ref Metalhead.check_processor) on it. With the names of its
+components, `T(components...; kwargs...)` also makes it from them, e.g.
 `Sam3Processor(image_processor, tokenizer; point_pad_value = -10)`.
 """
 macro processor(args...)
@@ -116,7 +129,7 @@ macro processor(args...)
         field isa Symbol && push!(fields, field)
     end
     push!(def.args[3].args, :(function $name($(fields...))
-        p = new($(fields...))
+        p = new($processor_fields($name, ($(fields...),))...)
         $check_processor(p)
         return p
     end))

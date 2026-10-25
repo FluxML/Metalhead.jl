@@ -168,3 +168,24 @@ function tokenizer_class(hub, config_class, model_type)
     registered === nothing && return "TokenizersBackend", nothing
     return known_tokenizer(registered), by_model_type
 end
+
+# The defaults that the `__init__` of transformers' tokenizer classes and their class
+# attributes set, for the classes that Metalhead validates: those of the validated
+# repositories, whose tokenizer.json tokenizes strings as the class, which rebuilds its
+# pipeline, does. LlamaTokenizer isn't one: it pre-tokenizes Llama 2's tokenizer.json
+# otherwise.
+const TOKENIZER_CLASSES = Dict(
+    "TokenizersBackend" => (;),
+    "GPT2Tokenizer" => (; unk_token = "<|endoftext|>", bos_token = "<|endoftext|>",
+        eos_token = "<|endoftext|>"),
+    "Qwen2Tokenizer" => (; unk_token = "<|endoftext|>", eos_token = "<|endoftext|>",
+        pad_token = "<|endoftext|>"),
+    "Qwen3_5Tokenizer" => (; unk_token = "<|endoftext|>", eos_token = "<|endoftext|>",
+        pad_token = "<|endoftext|>"),
+    "GemmaTokenizer" => (; unk_token = "<unk>", bos_token = "<bos>", eos_token = "<eos>",
+        pad_token = "<pad>", mask_token = "<mask>", padding_side = "left"),
+    "CLIPTokenizer" => (; unk_token = "<|endoftext|>", bos_token = "<|startoftext|>",
+        eos_token = "<|endoftext|>", pad_token = "<|endoftext|>"))
+
+# Classes that rebuild the pre-tokenizer of tokenizer.json with their `add_prefix_space`.
+const PREFIX_SPACE_CLASSES = ("GPT2Tokenizer", "Qwen2Tokenizer", "Qwen3_5Tokenizer")

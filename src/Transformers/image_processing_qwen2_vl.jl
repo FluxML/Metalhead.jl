@@ -92,7 +92,7 @@ same to Float32 precision. The settings are checked as the processor is made, an
 take the forms that transformers takes: `resample` as the name of PIL's filter (`:bicubic`);
 `image_mean` and `image_std` as one value for all channels.
 """
-Base.@kwdef struct Qwen2VLImageProcessor <: ImageProcessor
+@processor struct Qwen2VLImageProcessor <: ImageProcessor
     do_resize::Bool = true
     resample::Int = 3
     size::Any = (; shortest_edge = 56 * 56, longest_edge = 28 * 28 * 1280)
@@ -106,14 +106,13 @@ Base.@kwdef struct Qwen2VLImageProcessor <: ImageProcessor
     temporal_patch_size::Int = 2
     merge_size::Int = 2
     provenance::NamedTuple = (;)
-    function Qwen2VLImageProcessor(args...)
-        ip = new(image_processor_fields(Qwen2VLImageProcessor, args)...)
-        check_processor(ip)
-        return ip
-    end
 end
 
 register_processor!("Qwen2VLImageProcessor", Qwen2VLImageProcessor)
+
+function processor_fields(T::Type{Qwen2VLImageProcessor}, args::Tuple)
+    return image_processor_fields(T, args)
+end
 
 function ignored_keys(::Type{Qwen2VLImageProcessor})
     unread = "not read by Qwen2VLImageProcessor"

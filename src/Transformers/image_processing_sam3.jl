@@ -38,7 +38,7 @@ take the forms that transformers takes: `size` as an integer, the side of a squa
 `resample` as the name of PIL's filter (`:bilinear`); `image_mean` and `image_std` as one
 value for all channels.
 """
-Base.@kwdef struct Sam3ImageProcessor <: ImageProcessor
+@processor struct Sam3ImageProcessor <: ImageProcessor
     do_resize::Bool = true
     size::Any = (; height = 1008, width = 1008)
     resample::Int = 2
@@ -49,14 +49,11 @@ Base.@kwdef struct Sam3ImageProcessor <: ImageProcessor
     image_std::Any = (0.5, 0.5, 0.5)
     do_convert_rgb::Bool = true
     provenance::NamedTuple = (;)
-    function Sam3ImageProcessor(args...)
-        ip = new(image_processor_fields(Sam3ImageProcessor, args)...)
-        check_processor(ip)
-        return ip
-    end
 end
 
 register_processor!("Sam3ImageProcessor", Sam3ImageProcessor)
+
+processor_fields(T::Type{Sam3ImageProcessor}, args::Tuple) = image_processor_fields(T, args)
 
 # transformers' `get_size_dict(size, default_to_square = True)` of an integer
 size_setting(::Type{Sam3ImageProcessor}, v::Integer) = (; height = v, width = v)

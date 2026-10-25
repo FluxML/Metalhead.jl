@@ -119,7 +119,7 @@ larger size than the one they were trained at. The other keywords of `create_pro
 override the settings, e.g. `crop_pct = 1.0`. [`Timm.pretrained_cfg`](@ref
 Metalhead.Timm.pretrained_cfg) returns the `pretrained_cfg` as it is.
 """
-Base.@kwdef struct EvalTransform <: ImageProcessor
+@processor struct EvalTransform <: ImageProcessor
     input_size::NTuple{3, Int} = (3, 224, 224)
     interpolation::String = "bicubic"
     mean::NTuple{3, Float64} = IMAGENET_DEFAULT_MEAN
@@ -127,14 +127,13 @@ Base.@kwdef struct EvalTransform <: ImageProcessor
     crop_pct::Float64 = DEFAULT_CROP_PCT
     crop_mode::String = "center"
     provenance::NamedTuple = (;)
-    function EvalTransform(input_size, interpolation, mean, std, crop_pct, crop_mode,
-            provenance)
-        t = new(timm_input_size(input_size), timm_name(:interpolation, interpolation),
-            timm_stats(:mean, mean), timm_stats(:std, std), timm_crop_pct(crop_pct),
-            timm_name(:crop_mode, something(crop_mode, "center")), provenance)
-        check_processor(t)
-        return t
-    end
+end
+
+function processor_fields(::Type{EvalTransform}, args::Tuple)
+    input_size, interpolation, mean, std, crop_pct, crop_mode, provenance = args
+    return (timm_input_size(input_size), timm_name(:interpolation, interpolation),
+        timm_stats(:mean, mean), timm_stats(:std, std), timm_crop_pct(crop_pct),
+        timm_name(:crop_mode, something(crop_mode, "center")), provenance)
 end
 
 function timm_input_size(x)

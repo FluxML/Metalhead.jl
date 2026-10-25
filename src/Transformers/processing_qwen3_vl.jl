@@ -64,7 +64,7 @@ logits = model(inputs)                                 # vocab_size × seq_len
 Metalhead.Transformers.decode(proc, [argmax(logits[:, end])])
 ```
 """
-Metalhead.@processor (image_processor, tokenizer) struct Qwen3VLProcessor <: Processor
+@processor (image_processor, tokenizer) struct Qwen3VLProcessor <: Processor
     image_processor::Any = nothing
     tokenizer::Any = nothing
     provenance::NamedTuple = (;)
