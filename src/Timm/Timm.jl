@@ -18,6 +18,8 @@ import ..Metalhead: layer_params, architecture_of, model_args, skip_prefix
 import ..Metalhead: forward_features, forward_head, forward_intermediates, feature_info
 
 include("config.jl")
+include("pil.jl")
+include("transforms.jl")
 include("layers.jl")
 include("pos_embed.jl")
 include("features.jl")
