@@ -229,6 +229,12 @@ def exact_float64(model):
             m.exact_inv_freq = _exact_axial_inv_freq(m)
             m.forward = types.MethodType(_axial_rotary_forward, m)
             _exact_float64_vision(sys.modules[type(m).__module__])
+        elif name == "Sam3ViTRotaryEmbedding":  # SAM 3's, which rotates pairs of features
+            m.exact_inv_freq = _exact_axial_inv_freq(m)
+            m.forward = types.MethodType(_axial_rotary_forward, m)
+            _exact_float64_sam3(sys.modules[type(m).__module__])
+        elif name == "Sam3ViTLayer":
+            m.position_ids = _exact_sam3_positions(m)
         elif name.endswith("RotaryEmbedding"):
             if isinstance(m.rope_type, dict):  # a table for each layer type (Gemma 3)
                 m.exact_inv_freq = {t: _exact_inv_freq(m.config.rope_parameters[t],
@@ -401,6 +407,42 @@ def _exact_float64_vision(module):
     module.apply_rotary_pos_emb_vision = apply_rotary_pos_emb_vision
     vision_utils._interpolation_axis_taps_weights = _interpolation_axis_taps_weights_float64
     module._metalhead_exact_float64 = True
+
+
+def _exact_float64_sam3(module):
+    """Patch the ViT of `module` (`modeling_sam3`) to rotate float64 queries and keys in
+    float64. transformers rotates them in float32."""
+    if getattr(module, "_metalhead_exact_float64", False):
+        return
+    original = module.apply_rotary_pos_emb_2d
+
+    def apply_rotary_pos_emb_2d(q, k, cos, sin):
+        if q.dtype != torch.float64:
+            return original(q, k, cos, sin)
+        cos, sin = cos.to(q.dtype), sin.to(q.dtype)
+        return (q * cos + module.rotate_pairwise(q) * sin,
+                k * cos + module.rotate_pairwise(k) * sin)
+
+    module.apply_rotary_pos_emb_2d = apply_rotary_pos_emb_2d
+    module._metalhead_exact_float64 = True
+
+
+def _exact_sam3_positions(layer):
+    """The rotary positions of a `Sam3ViTLayer` (`precompute_positions`) in float64:
+    transformers computes them in float32, where the positions of the global attention layers,
+    scaled to the window by `window_size / grid`, are rounded."""
+    config, window = layer.config, layer.window_size
+    pair = lambda s: tuple(s) if isinstance(s, (list, tuple)) else (s, s)
+    if window > 0:
+        grid = (window, window)
+    else:
+        image, patch = pair(config.image_size), pair(config.patch_size)
+        grid = (image[1] // patch[1], image[0] // patch[0])
+    h, w = torch.meshgrid(torch.arange(grid[0]), torch.arange(grid[1]), indexing="ij")
+    positions = (torch.stack([w.flatten(), h.flatten()], dim=-1).double()
+                 * (config.window_size / grid[1]))
+    assert torch.allclose(positions, layer.position_ids.double(), rtol=1e-6, atol=0)
+    return positions
 
 
 def _interpolation_axis_taps_weights_float64(index, size, side, mode, align_corners,

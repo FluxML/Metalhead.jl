@@ -11,7 +11,8 @@ to [Flux.jl](https://fluxml.ai). It ports models from three Hugging Face librari
   300 architectures, including ResNet, ConvNeXt, EfficientNet, MobileNet and ViT, for
   classification or as backbones.
 - **Language models** from [transformers](https://github.com/huggingface/transformers): Llama,
-  Qwen, Gemma 3 and Granite, and the Qwen3.5 vision-language models, which also read images.
+  Qwen, Gemma 3 and Granite, and the Qwen3.5 vision-language models, which also read images;
+  and SAM 3, which segments the objects of an image that a text or box prompts describe.
 - **Text-to-image pipelines** from [diffusers](https://github.com/huggingface/diffusers):
   FLUX.2 [klein].
 
@@ -57,7 +58,7 @@ julia> ]add Metalhead
 | Library | Ported families |
 |:--|:--|
 | [timm](https://github.com/huggingface/pytorch-image-models) | ResNet, ResNeXt, Wide ResNet, SE- and ECA-ResNet, Res2Net, ConvNeXt, DenseNet, VGG, Inception, Inception-ResNet, Xception, EfficientNet and EfficientNetV2, MobileNetV1 to V4, MNASNet, MixNet, FBNet, LCNet, ConvMixer, MLP-Mixer, ResMLP, gMLP, and ViT with the image encoders of DINOv2, CLIP and SigLIP |
-| [transformers](https://github.com/huggingface/transformers) | Llama, Qwen2 and Qwen3, Gemma 3, and Granite, with its mixtures of experts and the Granite 4.0 models without Mamba layers; Qwen3.5, a vision-language model |
+| [transformers](https://github.com/huggingface/transformers) | Llama, Qwen2 and Qwen3, Gemma 3, and Granite, with its mixtures of experts and the Granite 4.0 models without Mamba layers; Qwen3.5, a vision-language model; SAM 3 and SAM 3.1, which segment the objects that a prompt describes |
 | [diffusers](https://github.com/huggingface/diffusers) | FLUX.2 [klein]: the text-to-image pipeline, its transformer and its autoencoder |
 
 The [list of models](https://fluxml.ai/Metalhead.jl/dev/models/) gives each architecture of
@@ -231,6 +232,33 @@ for _ in 1:20                                             # greedy decoding
 end
 decode(tokenizer, ids[(end - 19):end] .- 1)
 ```
+
+### Segmenting objects
+
+SAM 3 finds and segments the objects of an image that a text prompt names, or that box
+prompts show. `sam3_image_inputs` resizes images to the model's 1008 × 1008 pixels, and the
+post-processing keeps the objects found, with their boxes and masks at the size of the image:
+
+```julia
+using HuggingFaceTokenizers
+using Metalhead.Transformers: sam3_image_inputs, sam3_text_inputs,
+                              post_process_instance_segmentation
+
+model = create_model("unsloth/sam3.1"; pretrained = true)   # SAM 3.1; SAM 3: "jetjodh/sam3"
+tokenizer = from_pretrained(Tokenizer, "unsloth/sam3.1")
+
+image = rand(Float32, 640, 480, 3)    # width × height × channels, in [0, 1]
+pixel_values, original_sizes = sam3_image_inputs(image)
+input_ids, attention_mask = sam3_text_inputs([encode(tokenizer, "a cat").ids])
+outputs = model(pixel_values, input_ids; attention_mask)
+objects = only(post_process_instance_segmentation(model, outputs; threshold = 0.5,
+    target_sizes = original_sizes))
+objects.scores, objects.boxes, objects.masks             # n, 4 × n and 640 × 480 × n
+```
+
+Both repositories are ungated; `jetjodh/sam3` holds the same weights as Meta's gated
+`facebook/sam3`. Only the detector of SAM 3's video model is ported, not the tracker of
+objects across frames.
 
 ### Text-to-image generation
 

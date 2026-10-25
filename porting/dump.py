@@ -11,7 +11,8 @@ With "lengths", the batch is padded on the right and the model takes an `attenti
 With "mrope_positions": true, it takes random `position_ids` of size (3, batch, seq_len), the
 temporal, height and width positions of a multimodal rotary embedding (Qwen3.5).
 A vision encoder (Qwen3_5VisionModel) has "grid_thw" instead of "input_shape": the
-(t, h, w) grids of patches of its images (see `dump_transformers_vision`).
+(t, h, w) grids of patches of its images (see `dump_transformers_vision`). A Sam3Model has
+"inputs", the sizes of its images and prompts (see `dump_sam3`).
 
 A spec with "library": "diffusers" describes a diffusers model, "architecture" (the class, e.g.
 "Flux2Transformer2DModel") with the arguments "config", saved with `save_pretrained`, and the
@@ -194,6 +195,8 @@ def dump_transformers(spec, out, args):
     intermediates are those of the language model."""
     if "grid_thw" in spec:
         return dump_transformers_vision(spec, out, args)
+    if spec["architecture"] == "Sam3Model":
+        return dump_sam3(spec, out, args)
     seed = spec.get("seed", 0)
     torch.manual_seed(seed)
     model = build(spec).eval()
@@ -314,6 +317,71 @@ def dump_transformers_vision(spec, out, args):
     acts = {"inputs/1": pixel_values, "inputs/2": grid_thw,
             "output/last_hidden_state": outputs.last_hidden_state.contiguous(),
             "output/pooler_output": outputs.pooler_output.contiguous(), **taps}
+    meta = {"spec": json.dumps(spec), "call_order": json.dumps(order),
+            "num_params": str(sum(p.numel() for p in model.parameters())), **versions()}
+    save_file(acts, out / "acts.safetensors", metadata=meta)
+
+    size = sum(f.stat().st_size for f in out.iterdir())
+    print(f"{out}: {len(model.state_dict())} tensors, {len(taps)} taps, {size / 1e6:.2f} MB")
+    return size <= args.max_bytes or bool(args.out)
+
+
+SAM3_OUTPUTS = ("pred_masks", "pred_boxes", "pred_logits", "presence_logits", "semantic_seg")
+
+
+def dump_sam3(spec, out, args):
+    """Write the fixture of a Sam3Model, whose inputs `spec["inputs"]` sizes: "batch" random
+    images of the model's `image_size` ("inputs/1") and random token ids ("inputs/2", 1-based
+    as the Julia model takes them) of `max_position_embeddings` tokens, or "seq_len". Each
+    sequence ends with the end-of-text token, as a tokenizer writes it; with "lengths", it is
+    padded on the right with that token, as SAM 3's tokenizer does, and the model takes the
+    "kwargs/attention_mask". With "boxes", the model also takes that many random box prompts
+    per image ("kwargs/input_boxes", normalized (cx, cy, w, h), some partly outside the image),
+    and with "labels" their labels ("kwargs/input_boxes_labels": 1 positive, 0 negative,
+    -10 padding). The outputs are "output/<name>" for the fields of `SAM3_OUTPUTS`."""
+    seed = spec.get("seed", 0)
+    torch.manual_seed(seed)
+    model = build(spec).eval()
+    rerandomize(model, seed)
+    model.save_pretrained(out)
+    model = model.double()
+    exact_float64(model)
+
+    tap_dtype = getattr(torch, args.tap_dtype or ("float32" if args.all_taps else "float16"))
+    taps, order = {}, []
+    names = {n for n, m in model.named_modules()
+             if n and any(True for _ in m.parameters())
+             and (args.all_taps or n.count(".") <= spec.get("tap_depth", 1))}
+    cfg, sizes = model.config, spec["inputs"]
+    gen = torch.Generator().manual_seed(seed + 1)
+    b, image = sizes["batch"], cfg.vision_config.backbone_config.image_size
+    pixel_values = torch.randn(b, 3, image, image, generator=gen, dtype=torch.float64)
+    text = cfg.text_config
+    n = sizes.get("seq_len", text.max_position_embeddings)
+    lengths = sizes.get("lengths", [n] * b)
+    input_ids = torch.randint(text.vocab_size - 1, (b, n), generator=gen)
+    input_ids += (input_ids >= text.eos_token_id).long()  # no other end-of-text token
+    for i, length in enumerate(lengths):
+        input_ids[i, length - 1:] = text.eos_token_id
+    kwargs = {}
+    if "lengths" in sizes:
+        kwargs["attention_mask"] = torch.stack([torch.arange(n) < l for l in lengths]).long()
+    if "boxes" in sizes:
+        k = sizes["boxes"]
+        centers = torch.rand(b, k, 2, generator=gen, dtype=torch.float64) * 1.2 - 0.1
+        sides = torch.rand(b, k, 2, generator=gen, dtype=torch.float64) * 0.6 + 0.05
+        kwargs["input_boxes"] = torch.cat([centers, sides], dim=-1)
+        if "labels" in sizes:
+            kwargs["input_boxes_labels"] = torch.tensor(sizes["labels"])
+    with torch.no_grad():
+        handles = tap_hooks(model, names, taps, order, tap_dtype)
+        outputs = model(pixel_values=pixel_values, input_ids=input_ids, **kwargs)
+        for h in handles:
+            h.remove()
+
+    acts = {"inputs/1": pixel_values, "inputs/2": input_ids + 1, **taps,
+            **{f"output/{k}": getattr(outputs, k).contiguous() for k in SAM3_OUTPUTS},
+            **{f"kwargs/{k}": v.contiguous() for k, v in kwargs.items()}}
     meta = {"spec": json.dumps(spec), "call_order": json.dumps(order),
             "num_params": str(sum(p.numel() for p in model.parameters())), **versions()}
     save_file(acts, out / "acts.safetensors", metadata=meta)

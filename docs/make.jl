@@ -41,14 +41,18 @@ function write_model_list(path)
         "qwen" => "Qwen",
         "res2net" => "Res2Net",
         "resnet" => "ResNet",
+        "sam3" => "SAM 3",
         "vgg" => "VGG",
         "vision_transformer" => "Vision Transformer (ViT)",
         "xception_aligned" => "Aligned Xception")
     title(family) = get(titles, family, family)
     notes = Dict("granite" => "Granite 4.0 models load without Mamba layers, so the hybrid " *
-                              "\"H\" models (`granite-4.0-h-*`) don't load.")
+                              "\"H\" models (`granite-4.0-h-*`) don't load.",
+        "sam3" => "`jetjodh/sam3` is an ungated copy of the weights of Meta's gated " *
+                  "`facebook/sam3`. Only the detector of `Sam3VideoModel` is ported, not " *
+                  "its tracker.")
     libraries = ["timm" => "Vision models (timm)",
-        "transformers" => "Language models (transformers)",
+        "transformers" => "Language and segmentation models (transformers)",
         "diffusers" => "Image generation (diffusers)"]
     library(spec) = replace(string(spec.format), " pipeline" => "")
     ArchSpec = Metalhead.ArchSpec

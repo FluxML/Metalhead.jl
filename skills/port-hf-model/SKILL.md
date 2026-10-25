@@ -271,12 +271,16 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
 - Zygote can't differentiate `cumsum` of a Tuple of Ints (it fails with
   `length(::ZeroTangent)`): compute such channel ranges in a helper marked
   `ChainRulesCore.@non_differentiable` (`split_ranges` in `layers.jl`).
+- `foldl(f, layers; init = x)` loses the gradient of `x` under Zygote: loop over the layers.
+- Flux's `Chain()` returns `nothing`: an empty `nn.ModuleList` applied in sequence (SAM 3's
+  scale 1 of its feature pyramid) is `Chain(identity)`.
 - Each test file runs in a module of its own, so helpers shared by several files go in
   `test/parity_setup.jl`, exported. Statistics is not in the test environment.
 - Zygote gradients mirror the model, with `Chain` entries under `.layers`, `LayerNorm` weights
   under `.diag.scale` and a `Conv2dSame`'s under `.conv.weight`. `check_gradient(model, x)`
   avoids writing these paths: it checks that every trainable array gets a finite gradient,
-  which also catches submodules the forward pass never calls.
+  which also catches submodules the forward pass never calls. Pass the submodules that the
+  original never calls either as `unused` (SAM 3's last level of the feature pyramid).
 
 ## Half precision
 
@@ -481,6 +485,19 @@ first. The workflow is the one above, with these differences.
   `dump.py` stores the patches and grids as `kwargs/`. For a checkpoint with a
   `vision_config`, `dump_reference.py` adds a prompt about an image (`image/...` keys,
   `check_image_reference`).
+- **Detection and segmentation** (SAM 3, `sam3.jl`). A spec has `"inputs"`, the sizes of
+  the random images, token ids and box prompts (`dump_sam3`); the outputs are fields of a
+  NamedTuple, compared one by one. transformers rotates the queries and keys of the ViT and
+  computes its rotary positions in float32: `exact_float64` patches both. Weights of modules
+  the original computes but doesn't use (CLIP's `text_projection`) still load and run, so
+  their taps match. torchvision's `roi_align` is a matrix of bilinear weights per box
+  (`roi_align_weights`). `dump_reference.py` stores a small image that the processor
+  upsamples, and outputs of a text and a box prompt (`check_sam3_reference`); masks are
+  stored for the best queries only, every other pixel. A checkpoint whose `config.json` holds
+  a larger model (`facebook/sam3` is a `Sam3VideoModel`) loads as a wrapper with the
+  ported part as its field (`detector_model`), whose other weights go in `ignore`. On the
+  CPU, NNlib's `conv` allocates a workspace per thread, gigabytes for 3 × 3 convolutions of
+  288 × 288 maps.
 - **References.** `uv run dump_reference.py <org>/<repo>` tokenizes `PROMPTS` with the repo's
   tokenizer and stores the ids, the hidden states, the last-position logits and the greedy
   continuation (`check_lm_reference` in `test/parity.jl`); the logits come from the model's

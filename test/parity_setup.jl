@@ -8,7 +8,7 @@ using Flux, Functors
 using Test
 using ChainRulesCore: unthunk
 
-export Parity, check_fixture, check_lm_reference, check_image_reference,
+export Parity, check_fixture, check_lm_reference, check_image_reference, check_sam3_reference,
        check_pipeline_fixture, check_diffusers_reference, fixture_model, fixture_inputs,
        shrink_channels,
        reference_input, relerr, tapify, fixture, reference_files, reference_files_of,
@@ -62,17 +62,21 @@ sum_abs2(y) = sum(abs2, y)
 sum_abs2(y::NamedTuple) = sum(sum_abs2, values(y))
 
 """
-    check_gradient(model, x...; kwargs...) -> Bool
+    check_gradient(model, x...; unused = (), kwargs...) -> Bool
 
 Whether a gradient of `sum(abs2, model(x...; kwargs...))` (summed over the fields of a
 NamedTuple output) in train mode reaches every trainable array of `model` and is finite. Logs
 the arrays that get none (e.g. of a submodule the forward pass never calls) or a non-finite one.
+The arrays of the submodules in `unused`, which the original model doesn't use either, are
+not checked.
 """
-function check_gradient(model, x...; kwargs...)
+function check_gradient(model, x...; unused = (), kwargs...)
     model = Flux.trainmode!(model)
     g = Flux.gradient(m -> sum_abs2(m(x...; kwargs...)), model)[1]
+    skip = IdDict(a => true for u in unused for a in Flux.trainables(u))
     bad = String[]
-    for (kp, _) in Flux.trainables(model; path = true)
+    for (kp, a) in Flux.trainables(model; path = true)
+        haskey(skip, a) && continue
         dp = g !== nothing && Functors.haskeypath(g, kp) ? Functors.getkeypath(g, kp) :
              nothing
         dp isa AbstractArray && all(isfinite, dp) || push!(bad, string(kp))
