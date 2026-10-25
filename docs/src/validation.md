@@ -48,6 +48,8 @@ the attention, MLP and norms of each layer. transformers computes its RMSNorms a
 embeddings in float32, even in a float64 model. `dump.py` computes them in float64, so that the
 1e-8 comparison tests the architecture rather than that rounding. One fixture pads a batch on
 the right and passes its `attention_mask`, and each records the hidden states of every layer.
+The model of each fixture also takes a batch as a tokenizer makes it, padded on the right or
+on the left, and must give each text the logits it gets alone.
 
 For a diffusers model, the fixture is a small configuration of the class, saved with
 `save_pretrained`, run on random inputs: images for an autoencoder; image tokens, text tokens,
@@ -102,7 +104,7 @@ values, **bit for bit**, which takes a port of Pillow's 8-bit resampling: it mat
 `Image.resize` exactly for each of its six filters. With network access, the settings that
 `create_processor` resolves for each of the 56 timm checkpoints in the references, with and
 without `use_test_size`, must be those that timm resolves, and the logits of
-`timm/convnext_tiny.fb_in1k` for the transformed 500 × 375 image must match PyTorch's to 1e-4.
+`timm/convnext_tiny.fb_in1k` for its transformed image must match PyTorch's to 1e-4.
 
 For transformers, `porting/dump_processor.py` calls the processor that
 `AutoProcessor.from_pretrained(repo)` loads, on small images, prompts and boxes: 18 cases
@@ -119,6 +121,19 @@ need no tokenizer backend; with `METALHEAD_TEST_NETWORK=true`, they also tokeniz
 strings with HuggingFaceTokenizers.jl and the repository's `tokenizer.json`. SAM 3's
 post-processing is checked on random outputs of the model: the same scores and boxes, to
 floating-point precision, and the same masks.
+
+For tokenizers, `porting/dump_processor.py tokenizers` calls the tokenizer that
+`AutoTokenizer.from_pretrained(repo)` loads, for the 12 tokenizers of the ported
+checkpoints: those of the nine validated language models, of Qwen3.5, of SAM 3 and of the
+FLUX.2 [klein] pipeline. Each tokenizes 15 strings where tokenizer classes can differ: case,
+accents and unicode normal forms, scripts and emoji, runs of whitespace, digits,
+contractions, code, special tokens written in the text, and the empty string. The token ids
+must be transformers', with and without special tokens, as must batches padded on either
+side, `max_length`, truncation on either side, the settings `pad_token`, `add_bos_token` and
+`add_eos_token` set at creation, the error of padding without a padding token, the text
+decoded with and without `skip_special_tokens`, the class, and the settings read from the
+files. The tests run offline with a backend that returns transformers' ids, and with
+`METALHEAD_TEST_NETWORK=true` through HuggingFaceTokenizers.jl and each repository's files.
 
 Configuration files are read strictly, an unknown key with a warning, and the tests load
 those of the fixtures without one. Pixels are compared after decoding: a JPEG decoded by

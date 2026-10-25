@@ -51,8 +51,8 @@ reasons.
 - `src/Diffusers/`: diffusers models (`transformer_flux2.jl`, `autoencoder_kl_flux2.jl`, the
   autoencoders' encoder and decoder in `vae.jl`), schedulers and pipelines. `config.jl` has two
   `ConfigFormat`s: a model's `config.json` and a pipeline's `model_index.json`, whose components
-  load from subfolders of the repository. The tokenizer of a pipeline loads through the
-  HuggingFaceTokenizers.jl extension (`ext/`).
+  load from subfolders of the repository. The tokenizer of a pipeline is a
+  `TokenizersBackend`, from its `tokenizer/` subfolder.
 - `ext/`: package extensions. HuggingFaceTokenizers.jl is the backend that encodes and
   decodes the strings of a `TokenizersBackend`; ImageCore lets processors take images of
   colorants; CUDA.

@@ -141,12 +141,14 @@ from raw input to result match. The output of a processor is what the model take
 | timm | `Timm.EvalTransform`, timm's eval transform | `transform(images)` |
 | Qwen3.5 | `Transformers.Qwen3VLProcessor` | `proc(; images, text)` |
 | SAM 3 | `Transformers.Sam3Processor` | `proc(; images, text, input_boxes)` |
+| language models | `Transformers.TokenizersBackend`, the tokenizer | `tok(texts)` |
 
 timm's transform returns an array of size width × height × channels × batch. The others
 return a NamedTuple with the keys of transformers (`input_ids`, `pixel_values`, ...), in
 Julia's layout, with token indices that start at 1. Turning outputs back into results takes
 the processor too: `Transformers.decode(proc, indices)` for text, and SAM 3's
-`post_process_instance_segmentation(proc, outputs)` for masks.
+`post_process_instance_segmentation(proc, outputs)` for masks. A diffusers pipeline has no
+processor: it prepares its inputs itself, with its tokenizer `pipe.tokenizer`.
 
 - Images are arrays of size width × height × channels, of `UInt8` from 0 to 255 or of reals
   from 0 to 1. With ImageCore loaded (Images.jl loads it), processors also take the matrices
@@ -233,20 +235,26 @@ as usual, and models move to a GPU with Flux's `gpu_device()`.
 ### Language models
 
 Language models take token indices, which start at 1, and return logits, of size
-vocabulary × sequence length (× batch). Metalhead has no tokenizers:
-[HuggingFaceTokenizers.jl](https://github.com/MurrellGroup/HuggingFaceTokenizers.jl) loads
-them from the Hub.
+vocabulary × sequence length (× batch). Their processor is the tokenizer of the repository,
+which returns the token indices and the attention mask of texts, with the special tokens and
+padding of the repository's `tokenizer_config.json`.
+[HuggingFaceTokenizers.jl](https://github.com/MurrellGroup/HuggingFaceTokenizers.jl)
+tokenizes the strings.
 
 ```julia
 using HuggingFaceTokenizers
+using Metalhead.Transformers: decode
 
 model = create_model("HuggingFaceTB/SmolLM2-135M"; pretrained = true)
-tokenizer = from_pretrained(Tokenizer, "HuggingFaceTB/SmolLM2-135M")
+tok = create_processor("HuggingFaceTB/SmolLM2-135M")
 
-ids = encode(tokenizer, "The capital of France is the city of").ids .+ 1   # ids start at 0
-logits = model(ids)                                      # vocabulary × sequence length
-decode(tokenizer, [argmax(logits[:, end]) - 1])          # " Paris"
+inputs = tok("The capital of France is the city of")   # (; input_ids, attention_mask)
+logits = model(inputs)                                  # vocabulary × sequence length
+decode(tok, [argmax(logits[:, end])])                   # " Paris"
 ```
+
+A vector of texts makes a batch, padded on the side of the tokenizer (on the left for
+Llama 3, Gemma 3 and Granite), which the model takes either way.
 
 ### Vision-language models
 
@@ -310,7 +318,8 @@ objects across frames.
 ### Text-to-image generation
 
 A diffusers repository holds a pipeline, whose components `create_model` builds from the
-subfolders of the repository. With HuggingFaceTokenizers.jl loaded, it takes prompts:
+subfolders of the repository, its tokenizer too. With HuggingFaceTokenizers.jl loaded, it
+takes prompts:
 
 ```julia
 using Flux, HuggingFaceTokenizers

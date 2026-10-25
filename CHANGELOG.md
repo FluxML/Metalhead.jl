@@ -54,9 +54,10 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
   The rotary embeddings may be scaled as in Llama 3.1 and later (`rope_type = "llama3"`) or
   linearly (`"linear"`) (#336). `create_model` loads them from their Hub repository, and
   takes the fields of `config.json` as keyword arguments. They take token indices starting
-  at 1 and return logits; there is no key-value cache yet. Batches padded on the right take
-  the tokenizer's `attention_mask`, and `forward_intermediates` returns the hidden states of
-  the decoder layers.
+  at 1, or the output of their tokenizer (`model(tok(texts))`, #348), and return logits;
+  there is no key-value cache yet. Batches take the tokenizer's `attention_mask`, padded on
+  the right, or on either side in the output of the tokenizer, and `forward_intermediates`
+  returns the hidden states of the decoder layers.
 - Qwen3.5, the vision-language model of the Qwen3.5 checkpoints
   (`Qwen3_5ForConditionalGeneration`), validated against `Qwen/Qwen3.5-0.8B` on text and on
   an image (#340). Its decoder alternates gated attention with gated delta rule (linear
@@ -73,12 +74,16 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
 - Flux ports of [diffusers](https://github.com/huggingface/diffusers) models and pipelines, in
   `Metalhead.Diffusers`: text-to-image generation with FLUX.2 [klein] (`Flux2KleinPipeline`,
   with `Flux2Transformer2DModel`, `AutoencoderKLFlux2` and `FlowMatchEulerDiscreteScheduler`),
-  validated against `black-forest-labs/FLUX.2-klein-4B` (#332). `create_model` builds a pipeline from
-  the `model_index.json` of a repository, or one of its components with `subfolder`
-  (`"org/name/vae"` also names one).
-- An extension for HuggingFaceTokenizers.jl (`ext/`): with it loaded,
-  `Metalhead.Diffusers.tokenize` tokenizes prompts with the tokenizer and chat template of a
-  pipeline, so that pipelines take prompts as strings (#332).
+  validated against `black-forest-labs/FLUX.2-klein-4B` (#332). `create_model` builds a
+  pipeline from the `model_index.json` of a repository, or one of its components with
+  `subfolder` (`"org/name/vae"` also names one). The tokenizer of a pipeline,
+  `pipe.tokenizer`, is a `Metalhead.Transformers.TokenizersBackend`, and
+  `Metalhead.Diffusers.encode_prompt(pipe, prompts)` embeds prompts as diffusers'
+  `encode_prompt` does, with the chat template of the text encoder (#348).
+- An extension for HuggingFaceTokenizers.jl (`ext/`): with it loaded, tokenizers encode and
+  decode strings, so that processors and pipelines take text as strings (#332, #348).
+  Another tokenizer plugs in with methods of `Metalhead.Transformers.encode_ids` and
+  `decode_ids`.
 - Processors (#348): `create_processor` loads the processor of a checkpoint, which turns raw
   inputs (images, text, boxes) into the inputs of the model, and its outputs back into
   results, as the checkpoint's configuration and its Python library do. It takes the names
@@ -92,17 +97,19 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
     prompts. `post_process_instance_segmentation`, `post_process_object_detection` and
     `post_process_semantic_segmentation` take the processor and the outputs of the model.
   - `Metalhead.Transformers.TokenizersBackend`, the tokenizer of a `tokenizer.json`, with
-    the special tokens, padding and truncation of `tokenizer_config.json`.
-    `Metalhead.Transformers.decode` turns token indices back into text.
+    the special tokens, padding and truncation of `tokenizer_config.json`: the processor of
+    every validated language model, and the tokenizer of the other processors and of the
+    FLUX.2 [klein] pipeline. It returns token indices from 1, padded on the side of the
+    tokenizer, and `Metalhead.Transformers.decode` turns them back into text.
 
   Settings are read from the repository's files over the defaults of the Python class,
   strictly: a setting that the port doesn't implement is an error, and an unknown key a
   warning. Keyword arguments override them, and `show` prints where each comes from.
   Processors return NamedTuples with the keys of transformers, in Julia's layout, with token
-  indices from 1, which the models of several inputs take as they are
-  (`model(inputs::NamedTuple)`). They match timm and transformers bit for bit on 8-bit
-  images. Strings need a tokenizer backend, such as HuggingFaceTokenizers.jl through its
-  extension; token ids don't.
+  indices from 1, which the models take as they are (`model(inputs::NamedTuple)`: the
+  language models, Qwen3.5 and SAM 3). They match timm and transformers bit for bit on 8-bit
+  images, and the tokenizers match transformers' on strings. Strings need a tokenizer
+  backend, such as HuggingFaceTokenizers.jl through its extension; token ids don't.
 - An extension for ImageCore: processors take matrices of colorants, such as the images that
   `FileIO.load` returns (#348).
 - Mixed precision under `eltype = Float16` or `Flux.BFloat16` (or `f16`/`bf16`, #332): the
