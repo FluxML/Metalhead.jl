@@ -93,9 +93,9 @@ Whether the Float32 `model` converted to `T` (by `f16` or `bf16`) runs in mixed 
 the inputs `x` (floating-point arrays are converted to `T`) and keyword arguments `kwargs`:
 the layers with a conversion method of their own (the norms, such as
 `Flux.f16(::LayerNorm2d, cx)`) keep `Float32` arrays and every other floating-point array is
-`T`, the output has eltype `T`, no warning is logged (such as Flux's eltype mismatch), and
-the relative error of the output against `model(x)` is at most `rtol`. A NamedTuple output
-is checked field by field. Logs what fails.
+`T`, the output has eltype `T`, no warning other than a deprecation is logged (such as
+Flux's eltype mismatch), and the relative error of the output against `model(x)` is at most
+`rtol`. A NamedTuple output is checked field by field. Logs what fails.
 """
 function check_half_precision(model, x...; T = Float16, rtol = 1e-2, kwargs...)
     cast = Metalhead.ELTYPE_CONVERTERS[T]
@@ -121,7 +121,8 @@ function check_half_precision(model, x...; T = Float16, rtol = 1e-2, kwargs...)
     err = maximum(((a, b),) -> relerr(Float32.(a), b),
         zip(outputs(y), outputs(model(x...; kwargs...))))
     output = eltype.(outputs(y))
-    warnings = [l.message for l in logs]
+    # deprecations, such as Base's of `disable_sigint` on Julia 1.14, aren't about precision
+    warnings = [l.message for l in logs if l.group !== :depwarn]
     ok = isempty(wrong) && all(==(T), output) && isempty(warnings) && err <= rtol
     ok || @info "not in mixed precision" T wrong output warnings err
     return ok
