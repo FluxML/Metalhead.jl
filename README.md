@@ -145,9 +145,9 @@ the whole path from raw input to result match.
 | SAM 3 | `Transformers.Sam3Processor` | `proc(; images, text, input_boxes)` |
 | language models | the tokenizer, HuggingFaceTokenizers' `Tokenizer` | `encode(tok, text)` |
 
-timm's transform returns an array of size width × height × channels × batch. SAM 3's
-processor returns a NamedTuple with the keys of transformers (`input_ids`, `pixel_values`,
-...), in Julia's layout, with token indices that start at 1, and turns the outputs of the
+timm's transform returns an array of size width × height × channels × batch. The others
+return a NamedTuple with the keys of transformers (`input_ids`, `pixel_values`, ...), in
+Julia's layout, with token indices that start at 1, and SAM 3's turns the outputs of the
 model back into results: `post_process_instance_segmentation(proc, outputs)` for masks.
 Images are arrays of size width × height × channels, of `UInt8` from 0 to 255 or of reals
 from 0 to 1. The matrix of colours `img` that `FileIO.load` returns becomes one with
@@ -158,7 +158,7 @@ Metalhead ports no tokenizer. The tokenizer of a repository is a `Tokenizer` of
 runs Hugging Face's tokenizers library on the repository's `tokenizer.json`, with the padding
 token of its `tokenizer_config.json`. `create_processor` loads it after
 `using HuggingFaceTokenizers`, alone for a language model, or as the `tokenizer` of a
-processor that takes text, such as SAM 3's.
+processor that takes text, such as those of Qwen3.5 and SAM 3.
 
 The settings are read strictly: one that the port doesn't implement is an error, and an
 unknown key in a file a warning. `show` prints each setting and where it comes from, and
@@ -268,7 +268,6 @@ writes it.
 
 ```julia
 using FileIO, ImageCore, HuggingFaceTokenizers
-using Metalhead.Transformers: decode
 
 model = create_model("Qwen/Qwen3.5-0.8B"; pretrained = true)
 proc = create_processor("Qwen/Qwen3.5-0.8B")
@@ -278,20 +277,19 @@ prompt = "<|im_start|>user\n<|vision_start|><|image_pad|><|vision_end|>" *
 image = permutedims(rawview(channelview(load("dog.jpg"))), (3, 2, 1))
 inputs = proc(; images = image, text = prompt)           # 396 tokens for 36 × 44 patches
 logits = model(inputs)                                   # vocabulary × sequence length
-decode(proc, [argmax(logits[:, end])])                   # "This"
+decode(proc.tokenizer, [argmax(logits[:, end]) - 1])    # "This"
 
 (; input_ids, pixel_values, image_grid_thw) = inputs
 for _ in 1:20                                            # greedy decoding
     push!(input_ids, argmax(model(input_ids; pixel_values, image_grid_thw)[:, end]))
 end
-decode(proc, input_ids[(end - 19):end])
+decode(proc.tokenizer, input_ids[(end - 19):end] .- 1)
 # "This image features a medium-to-large dog standing in profile on a grassy field. The
 #  dog has"
 ```
 
-A vector of prompts makes a batch, which the model takes padded on either side. The
-processor takes the keywords of the tokenizer, `padding`, `truncation`, `max_length`,
-`padding_side` and `add_special_tokens`, with the defaults of `tokenizer_config.json`.
+A vector of prompts makes a batch, padded on the right with an `attention_mask`, which the
+model takes as it is.
 
 ### Segmenting objects
 

@@ -47,18 +47,6 @@ end
     @test size(objects[2].masks)[1:2] == (20, 60)
 end
 
-# A tokenizer of the tests: the ids written in a text, and those of the placeholders of
-# the tiny Qwen3.5
-struct IdsTokenizer end
-const PLACEHOLDERS = Dict("<|image_pad|>" => 60, "<|video_pad|>" => 61)
-function Metalhead.encode_ids(::IdsTokenizer, text::AbstractString;
-        add_special_tokens::Bool = true)
-    return [get(() -> parse(Int, m.match), PLACEHOLDERS, m.match)
-            for m in eachmatch(r"<\|\w+\|>|\d+", text)]
-end
-Metalhead.token_id(::IdsTokenizer, token::AbstractString) = get(PLACEHOLDERS, token, nothing)
-Metalhead.pad_token_id(::IdsTokenizer) = 0
-
 # The vision-language model of Qwen3.5 on the GPU takes a processor's output, a batch
 # padded on the right.
 @testset "Qwen3.5 processor outputs" begin
@@ -66,7 +54,8 @@ Metalhead.pad_token_id(::IdsTokenizer) = 0
     model = fixture_model(fixture("qwen3_5_tiny"); eltype = Float32)
     ip = T.Qwen2VLImageProcessor(; patch_size = 2, image_mean = 0.5, image_std = 0.5,
         size = (; shortest_edge = 16, longest_edge = 256))
-    proc = T.Qwen3VLProcessor(ip, IdsTokenizer())
+    proc = T.Qwen3VLProcessor(ip,
+        IdsTokenizer(Dict("<|image_pad|>" => 60, "<|video_pad|>" => 61)))
     inputs = proc(; images = [rand(UInt8, 12, 8, 3), rand(UInt8, 9, 7, 3)],
         text = ["5 62 <|image_pad|> 63 7 8", "62 <|image_pad|> 63 9 10 11 12 13 14"])
     @test inputs.attention_mask[end, :] == [0, 1]

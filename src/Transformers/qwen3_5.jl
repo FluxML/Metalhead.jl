@@ -709,10 +709,9 @@ The model on the output of a [`Qwen3VLProcessor`](@ref
 Metalhead.Transformers.Qwen3VLProcessor): its `input_ids` and `attention_mask`, and
 `pixel_values` and `image_grid_thw` if it has images; other keys (`mm_token_type_ids`) are
 ignored. The `input_ids` of one text, a vector, give the logits (or hidden states) of size
-`(vocab_size, seq_len)`, so that `logits[:, end]` are those of the next token. A batch may
-be padded on either side, as for a [`CausalLM`](@ref Metalhead.Transformers.CausalLM): a
-batch padded on the left is moved to the right and its outputs back, so that each text
-gets the outputs it gets alone, as in transformers.
+`(vocab_size, seq_len)`, so that `logits[:, end]` are those of the next token. A batch is
+padded on the right, as the processor pads it, and each text gets the outputs it gets
+alone, at the positions of its tokens.
 """
 (m::Qwen3_5ForConditionalGeneration)(inputs::NamedTuple) = qwen3_5_on_inputs(m, inputs)
 (m::Qwen3_5Model)(inputs::NamedTuple) = qwen3_5_on_inputs(m, inputs)
@@ -720,10 +719,9 @@ gets the outputs it gets alone, as in transformers.
 function qwen3_5_on_inputs(m, inputs)
     check_inputs(m, inputs, (:input_ids,);
         hint = "pass `text` to the processor, with an image placeholder for each image")
-    input_ids, attention_mask, restore = right_padded(inputs.input_ids,
-        get(inputs, :attention_mask, nothing))
-    return restore(m(input_ids; pixel_values = get(inputs, :pixel_values, nothing),
-        image_grid_thw = get(inputs, :image_grid_thw, nothing), attention_mask))
+    return m(inputs.input_ids; pixel_values = get(inputs, :pixel_values, nothing),
+        image_grid_thw = get(inputs, :image_grid_thw, nothing),
+        attention_mask = get(inputs, :attention_mask, nothing))
 end
 
 function forward_head(m::Qwen3_5ForConditionalGeneration, x; pre_logits::Bool = false)

@@ -204,14 +204,12 @@ end
     # (its own tests are in test/processors/qwen3_vl.jl)
     T = Metalhead.Transformers
     model = fixture_model(fixture("qwen3_5_tiny"); eltype = Float32)
-    tok = T.TokenizersBackend(; pad_token = "<pad>",
-        added_tokens_decoder = Dict(0 => "<pad>", 60 => "<|image_pad|>",
-            61 => "<|video_pad|>"))
+    tok = IdsTokenizer(Dict("<|image_pad|>" => 60, "<|video_pad|>" => 61))
     ip = T.Qwen2VLImageProcessor(; patch_size = 2, image_mean = (0.5, 0.5, 0.5),
         image_std = (0.5, 0.5, 0.5), size = (; shortest_edge = 16, longest_edge = 256))
     proc = T.Qwen3VLProcessor(ip, tok)
     images = [rand(UInt8, 12, 8, 3), rand(UInt8, 9, 7, 3)]
-    prompt = [5, 62, 60, 63, 7, 8]  # <|vision_start|><|image_pad|><|vision_end|>
+    prompt = "5 62 <|image_pad|> 63 7 8"  # <|vision_start|><|image_pad|><|vision_end|>
     one = proc(; images = images[1], text = prompt)
     @test count(==(61), one.input_ids) == 6  # (8 ÷ 2) × (12 ÷ 2) ÷ 2²
     logits = model(one)
@@ -220,25 +218,17 @@ end
     @test model.model(one) ≈ forward_features(model, one.input_ids; one.pixel_values,
         one.image_grid_thw)
     # a batch, padded on the right: each prompt as alone
-    batch = proc(; images, text = [prompt, [62, 60, 63, 9, 10, 11, 12, 13, 14]])
+    other = "62 <|image_pad|> 63 9 10 11 12 13 14"
+    batch = proc(; images, text = [prompt, other])
     n = length(one.input_ids)
     @test size(batch.input_ids) == (n + 1, 2)
     @test batch.attention_mask == [ones(Int, n) ones(Int, n); 0 1]
     y = model(batch)
     @test y[:, 1:n, 1] ≈ logits
-    second = proc(; images = images[2], text = [62, 60, 63, 9, 10, 11, 12, 13, 14])
-    @test y[:, :, 2] ≈ model(second)
-    # padded on the left, as transformers pads for generation: each prompt as alone
-    left = T.Qwen3VLProcessor(ip, T.TokenizersBackend(; tok.pad_token,
-        tok.added_tokens_decoder, padding_side = "left"))
-    batch = left(; images, text = [prompt, [62, 60, 63, 9, 10, 11, 12, 13, 14]])
-    @test batch.attention_mask == [0 1; ones(Int, n) ones(Int, n)]
-    y = model(batch)
-    @test y[:, 2:end, 1] ≈ logits
-    @test y[:, :, 2] ≈ model(second)
-    @test model.model(batch)[:, 2:end, 1] ≈ model.model(one)
-    text = left(; text = [[1, 2, 3], [4, 5, 6, 7, 8]])  # 0-based
-    @test model(text)[:, 3:5, 1] ≈ model([2, 3, 4])
+    @test y[:, :, 2] ≈ model(proc(; images = images[2], text = other))
+    @test model.model(batch)[:, 1:n, 1] ≈ model.model(one)
+    text = proc(; text = ["1 2 3", "4 5 6 7 8"])  # ids from 0
+    @test model(text)[:, 1:3, 1] ≈ model([2, 3, 4])
     @test model(text)[:, :, 2] ≈ model([5, 6, 7, 8, 9])
     # text alone, and inputs of another model
     @test model((; input_ids = [1, 2, 3])) ≈ model([1, 2, 3])

@@ -1,8 +1,7 @@
 using Metalhead, Test
 using JSON: JSON
 using SafeTensors: SafeTensors
-using Metalhead.Transformers: Qwen3VLProcessor, Qwen2VLImageProcessor, TokenizersBackend,
-                              decode
+using Metalhead.Transformers: Qwen3VLProcessor, Qwen2VLImageProcessor
 const T = Metalhead.Transformers
 
 include(joinpath(@__DIR__, "..", "processors_setup.jl"))
@@ -21,25 +20,42 @@ const CASES = sort!([k for (k, v) in META
 numbered(prefix) = [REF["$prefix/$i"] for i in 1:count(startswith("$prefix/"), keys(REF))]
 settings(name) = JSON.parse(META[name])
 
-# A backend that knows the prompts of the reference, with their placeholders expanded as
-# transformers expands them: a tokenizer backend is any type with a method of `encode_ids`.
-struct ReferenceBackend
+# The ids of the image and video placeholders and of the padding token of the tokenizer
+const IMAGE_ID = 248_056
+const VIDEO_ID = only(unique(REF["text_only/input_ids"][REF["text_only/mm_token_type_ids"] .== 2]))
+const PAD_ID = only(unique(REF["batch/input_ids"][REF["batch/attention_mask"] .== 0]))
+
+# A stand-in for the tokenizer of Qwen3.5, offline: the ids of the prompts of the cases,
+# with their placeholders expanded as transformers expands them
+struct ReferenceTokenizer
     ids::Dict{String, Vector{Int}}
+    pad::Union{Nothing, Int}
 end
-function ReferenceBackend()
+function ReferenceTokenizer()
     ids = Dict{String, Vector{Int}}()
     for name in CASES, (i, text) in enumerate(something(settings(name)["expanded"], []))
         tokens, mask = REF["$name/input_ids"][:, i], REF["$name/attention_mask"][:, i]
         ids[text] = tokens[mask .== 1]
     end
-    return ReferenceBackend(ids)
+    return ReferenceTokenizer(ids, PAD_ID)
 end
-function T.encode_ids(b::ReferenceBackend, text::AbstractString; add_special_tokens = true)
-    return b.ids[text]
+function Metalhead.encode_ids(tok::ReferenceTokenizer, text::AbstractString;
+        add_special_tokens::Bool = true)
+    return tok.ids[text]
 end
+function Metalhead.token_id(::ReferenceTokenizer, token::AbstractString)
+    return get(Dict("<|image_pad|>" => IMAGE_ID, "<|video_pad|>" => VIDEO_ID), token, nothing)
+end
+Metalhead.pad_token_id(tok::ReferenceTokenizer) = tok.pad
+
+const TOKENIZER = ReferenceTokenizer()
+
+# `proc` with the tokenizer `tok`
+with_tokenizer(proc, tok = TOKENIZER) = Qwen3VLProcessor(proc.image_processor, tok;
+    proc.provenance)
 
 # The fixture's files with `legacy` added to its preprocessor_config.json (and the
-# tokenizer.json of the repository, for strings).
+# tokenizer.json of the repository, with `tokenizer_json`).
 function with_legacy(f, legacy; tokenizer_json = false)
     mktempdir() do dir
         foreach(file -> cp(joinpath(QWEN, file), joinpath(dir, file)), readdir(QWEN))
@@ -52,25 +68,23 @@ function with_legacy(f, legacy; tokenizer_json = false)
     end
 end
 
-# The outputs of the processor of a case, with its prompts as token ids (`strings = false`)
-# or as strings, encoded by `tokenizer` (the reference backend, or tokenizer.json with
-# `nothing`). Python's float images are already rescaled (`do_rescale = False`), which
-# Metalhead's images of reals are.
-function run_case(name; strings = false, tokenizer = ReferenceBackend(), kwargs...)
+# The outputs of the processor of a case: offline, the processor of the fixture files with
+# the stand-in for the tokenizer; with `network`, that of the repository, whose tokenizer is
+# HuggingFaceTokenizers' of its tokenizer.json. The only keyword of the calls of the cases,
+# the `padding = True` of "batch", is how the processor pads a batch. Python's float images
+# are already rescaled (`do_rescale = False`), which Metalhead's images of reals are.
+function run_case(name; network = false)
     m = settings(name)
-    create = (; Metalhead.jsonvalue(m["create"])..., kwargs...)
+    create = Metalhead.jsonvalue(m["create"])
     name == "float" && (create = Base.structdiff(create, (; do_rescale = false)))
-    strings && tokenizer !== nothing && (create = (; create..., tokenizer))
-    ids = numbered("$name/text_ids")
-    text = m["text"] === nothing ? nothing : strings ? m["text"] :
-           m["text"] isa String ? only(ids) : ids
     images = numbered("$name/image")
-    call = Metalhead.jsonvalue(something(m["call"], Dict()))
-    process(dir) = create_processor(dir; create...)(;
-        images = isempty(images) ? nothing : images, text, call...)
-    tokenizer_json = strings && tokenizer === nothing
-    m["legacy"] === nothing && return process(tokenizer_json ? QWEN_REPO : QWEN)
-    return with_legacy(process, m["legacy"]; tokenizer_json)
+    function process(dir)
+        proc = create_processor(dir; create...)
+        network || (proc = with_tokenizer(proc))
+        return proc(; images = isempty(images) ? nothing : images, text = m["text"])
+    end
+    m["legacy"] === nothing && return process(network ? QWEN_REPO : QWEN)
+    return with_legacy(process, m["legacy"]; tokenizer_json = network)
 end
 
 # Whether the outputs of the processor are transformers': exact, but for images of reals.
@@ -102,7 +116,7 @@ end
     @test proc isa Qwen3VLProcessor
     ip = proc.image_processor
     @test ip isa Qwen2VLImageProcessor
-    @test proc.tokenizer isa TokenizersBackend
+    @test proc.tokenizer === nothing  # the fixture has no tokenizer.json
     # preprocessor_config.json over the defaults of the Python class
     @test ip.patch_size == 16 && ip.merge_size == 2 && ip.temporal_patch_size == 2
     @test ip.size == (; longest_edge = 16_777_216, shortest_edge = 65_536)
@@ -112,17 +126,13 @@ end
     @test default.patch_size == 14
     @test default.image_mean == (0.48145466, 0.4578275, 0.40821073)
     @test default.size == (; shortest_edge = 3136, longest_edge = 1_003_520)
-    tok = proc.tokenizer
-    @test tok.model_specific_special_tokens.image_token == "<|image_pad|>"
-    @test tok.added_tokens_decoder[248_056] == "<|image_pad|>"
-    @test tok.pad_token == "<|endoftext|>" && tok.padding_side == "right"
     @test all(settings(name)["cls"] == "Qwen3VLProcessor" for name in CASES)
     text = sprint(show, MIME("text/plain"), proc)
     @test occursin(r"patch_size = 16 +preprocessor_config\.json", text)
     @test occursin(r"resample = 3 \(bicubic\) +class default", text)
     @test startswith(sprint(show, proc),
         "Qwen3VLProcessor(image_processor = Qwen2VLImageProcessor(do_resize = true, ")
-    @test endswith(sprint(show, proc), "init_kwargs = NamedTuple()))")
+    @test endswith(sprint(show, proc), "), tokenizer = nothing)")
     # by the model type of config.json, without a `processor_class`
     mktempdir() do dir
         foreach(file -> cp(joinpath(QWEN, file), joinpath(dir, file)), readdir(QWEN))
@@ -142,17 +152,6 @@ end
     end
 end
 
-@testset "strings" begin
-    # the placeholders of strings are expanded before tokenizing, as in transformers: the
-    # reference backend knows the expanded prompts only
-    for name in CASES
-        settings(name)["text"] === nothing && continue
-        @testset "$name" begin
-            check_outputs(name, run_case(name; strings = true))
-        end
-    end
-end
-
 @testset "documented outputs" begin
     outputs = [run_case(name) for name in CASES]
     check_documented_keys(Qwen3VLProcessor, outputs)
@@ -165,19 +164,18 @@ end
 end
 
 @testset "placeholders" begin
-    proc = create_processor(QWEN; patch_size = 4,
-        size = (; shortest_edge = 64, longest_edge = 4096))
+    proc = with_tokenizer(create_processor(QWEN; patch_size = 4,
+        size = (; shortest_edge = 64, longest_edge = 4096)))
     image = only(numbered("exact/image"))  # 6 image tokens
-    ids = only(numbered("exact/text_ids"))
-    pad = 248_056
-    @test count(==(pad), ids) == 1
-    one = proc(; images = image, text = ids)
+    prompt = settings("exact")["text"]
+    @test count("<|image_pad|>", prompt) == 1
+    one = proc(; images = image, text = prompt)
     @test one.input_ids isa Vector{Int} && one.mm_token_type_ids isa Vector{Int}
-    @test count(==(pad + 1), one.input_ids) == 6
-    @test one.mm_token_type_ids == Int.(one.input_ids .== pad + 1)
+    @test count(==(IMAGE_ID + 1), one.input_ids) == 6
+    @test one.mm_token_type_ids == Int.(one.input_ids .== IMAGE_ID + 1)
     @test keys(one) == (:input_ids, :attention_mask, :mm_token_type_ids, :pixel_values,
         :image_grid_thw)
-    batch = proc(; images = [image], text = [ids])
+    batch = proc(; images = [image], text = [prompt])
     @test batch.input_ids == reshape(one.input_ids, :, 1)
     # the image processor alone
     ip = proc.image_processor
@@ -185,38 +183,35 @@ end
     @test ip(cat(image, image; dims = 4)).image_grid_thw == [1 1; 4 4; 6 6]
     # as many placeholders as images
     @test_throws "2 image placeholders (`<|image_pad|>`) for 1 images" proc(;
-        images = image, text = [ids; ids])
+        images = image, text = prompt^2)
     @test_throws "1 image placeholders (`<|image_pad|>`) for 2 images" proc(;
-        images = [image, image], text = ids)
-    @test_throws "0 image placeholders" proc(; images = image, text = [1, 2, 3])
+        images = [image, image], text = prompt)
+    @test_throws "0 image placeholders" proc(; images = image, text = "No image")
     # without images, the placeholders are left as they are
-    @test proc(; text = ids).input_ids == ids .+ 1
+    text = settings("text_only")["text"]
+    @test proc(; text).input_ids == vec(REF["text_only/input_ids"]) .+ 1
     @test_throws "`images` or `text`" proc()
-    # strings, and truncation that cuts image tokens
-    strings = create_processor(QWEN; patch_size = 4, tokenizer = ReferenceBackend(),
-        size = (; shortest_edge = 64, longest_edge = 4096))
-    prompt = settings("exact")["text"]
-    @test strings(; images = image, text = prompt) == one
-    @test_throws "0 image placeholders" strings(; images = image, text = "No image")
-    @test_throws "2 image placeholders" strings(; images = image, text = prompt^2)
-    @test_throws "image tokens" strings(; images = image, text = prompt, truncation = true,
-        max_length = 5)
-    @test_throws "longer than `max_length = 5`" proc(; images = image, text = ids,
-        max_length = 5)
+    # strings only: token ids aren't text, as in transformers
+    ids = only(numbered("exact/text_ids"))
+    @test_throws "`text` is a string or a vector of strings" proc(; images = image,
+        text = ids)
+    @test_throws "`text` is a string or a vector of strings" proc(; text = [ids])
+    # a batch needs a padding token
+    nopad = Qwen3VLProcessor(nothing, ReferenceTokenizer(TOKENIZER.ids, nothing))
+    @test_throws "the tokenizer has no padding token" nopad(;
+        text = settings("batch")["expanded"])
     # a processor without a tokenizer takes images only, and one without an image
     # processor text only
     @test Qwen3VLProcessor(ip, nothing)(; images = image) == ip(image)
-    @test_throws "no tokenizer" Qwen3VLProcessor(ip, nothing)(; text = ids)
+    @test_throws ["Qwen3VLProcessor has no tokenizer to encode text",
+        "`using HuggingFaceTokenizers` before `create_processor`"] Qwen3VLProcessor(ip,
+        nothing)(; text = prompt)
     text_only = Qwen3VLProcessor(nothing, proc.tokenizer)
-    @test text_only(; text = ids) == proc(; text = ids)
+    @test text_only(; text) == proc(; text)
     @test_throws "Qwen3VLProcessor has no image processor for `images`" text_only(;
-        images = image, text = ids)
+        images = image, text = prompt)
     @test_throws "the `image_processor` of Qwen3VLProcessor is a Qwen2VLImageProcessor" Qwen3VLProcessor(
         proc.tokenizer, nothing)
-    # the keywords of the tokenizer
-    @test proc(; text = [ids, ids[1:3]], padding_side = "left").attention_mask[1, 2] == 0
-    @test_throws "Qwen3VLProcessor has no keyword `return_tensors`" proc(; text = ids,
-        return_tensors = "pt")
 end
 
 @testset "image processor" begin
@@ -316,36 +311,52 @@ end
     proc = create_processor(QWEN)
     ip = Qwen2VLImageProcessor(; patch_size = 4, image_mean = (0.5, 0.5, 0.5),
         image_std = (0.5, 0.5, 0.5), size = (; shortest_edge = 64, longest_edge = 4096))
-    swapped = Qwen3VLProcessor(ip, proc.tokenizer)
-    out = swapped(; images = numbered("exact/image"), text = only(numbered("exact/text_ids")))
+    swapped = Qwen3VLProcessor(ip, TOKENIZER)
+    out = swapped(; images = numbered("exact/image"), text = settings("exact")["text"])
     @test out.input_ids == vec(REF["exact/input_ids"]) .+ 1
 end
 
-# Strings through HuggingFaceTokenizers.jl, which METALHEAD_TEST_NETWORK adds to the test
-# environment (runtests.jl), with the tokenizer.json of the repository
+# The tokenizer of the repository, HuggingFaceTokenizers' of its tokenizer.json, which
+# METALHEAD_TEST_NETWORK adds to the test environment (runtests.jl)
 const TEST_NETWORK = parse(Bool, get(ENV, "METALHEAD_TEST_NETWORK", "false"))
 if TEST_NETWORK
-    @eval using HuggingFaceTokenizers: HuggingFaceTokenizers
+    @eval using HuggingFaceTokenizers: HuggingFaceTokenizers, Tokenizer
     @testset "HuggingFaceTokenizers" begin
         proc = @test_logs create_processor(QWEN_REPO)
+        @test proc.tokenizer isa Tokenizer
         @test Metalhead.settings(proc.image_processor) ==
               Metalhead.settings(create_processor(QWEN).image_processor)
+        tok = proc.tokenizer
+        # transformers' tokenizer (Qwen3_5Tokenizer) also has the tokens of
+        # tokenizer_config.json that tokenizer.json lacks (`<|audio_pad|>`, `<tts_pad>`),
+        # which HuggingFaceTokenizers' tokenizer of tokenizer.json doesn't: texts with them
+        # differ
+        added = JSON.parsefile(joinpath(QWEN, "tokenizer_config.json"))["added_tokens_decoder"]
+        lacking = [t["content"] for t in values(added)
+                   if Metalhead.token_id(tok, t["content"]) === nothing]
+        @test "<|audio_pad|>" in lacking && !("<|image_pad|>" in lacking)
+        with_lacking(text) = any(t -> occursin(t, text), lacking)
         for name in CASES
-            settings(name)["text"] === nothing && continue
+            text = settings(name)["text"]
+            (text === nothing || any(with_lacking, vcat(text))) && continue
             @testset "$name" begin
-                check_outputs(name, run_case(name; strings = true, tokenizer = nothing))
+                check_outputs(name, run_case(name; network = true))
             end
         end
-        # the tokenizer of transformers (Qwen3_5Tokenizer) rebuilds the normaliser and the
+        # the ids of the stand-in are the tokenizer's
+        @test Metalhead.token_id(tok, "<|image_pad|>") == IMAGE_ID
+        @test Metalhead.token_id(tok, "<|video_pad|>") == VIDEO_ID
+        @test Metalhead.pad_token_id(tok) == PAD_ID
+        # transformers' tokenizer (Qwen3_5Tokenizer) rebuilds the normaliser and the
         # pre-tokenizer of tokenizer.json in Python: the same ids and texts
         @test META["tokenizer/class"] == "Qwen3_5Tokenizer"
-        tok = proc.tokenizer
         decoded = JSON.parse(META["tokenizer/decoded"])
         for (i, text) in enumerate(JSON.parse(META["tokenizer/texts"]))
+            with_lacking(text) && continue
             ids = REF["tokenizer/ids/$i"]
-            @test tok(text).input_ids == ids .+ 1
+            @test Metalhead.encode_ids(tok, text) == ids
             for skip in (false, true)
-                @test decode(tok, ids .+ 1; skip_special_tokens = skip) ==
+                @test HuggingFaceTokenizers.decode(tok, ids; skip_special_tokens = skip) ==
                       decoded[i][skip ? "True" : "False"]
             end
         end
@@ -354,7 +365,8 @@ if TEST_NETWORK
                  "Describe this image.<|im_end|>\n<|im_start|>assistant\n" *
                  "<think>\n\n</think>\n\n"
         inputs = proc(; images = rand(UInt8, 640, 480, 3), text = prompt)
-        @test count(==(248_056 + 1), inputs.input_ids) == 300
-        @test decode(proc, inputs.input_ids[1:3]) == "<|im_start|>user\n"
+        @test count(==(IMAGE_ID + 1), inputs.input_ids) == 300
+        @test HuggingFaceTokenizers.decode(tok, inputs.input_ids[1:3] .- 1;
+            skip_special_tokens = false) == "<|im_start|>user\n"
     end
 end
