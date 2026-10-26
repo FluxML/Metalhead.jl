@@ -19,20 +19,22 @@ were validated against.
 
 ## Generating text
 
-Metalhead has no tokenizers. [HuggingFaceTokenizers.jl](https://github.com/MurrellGroup/HuggingFaceTokenizers.jl)
-loads the tokenizer of a Hub repository:
+Metalhead ports no tokenizer: the tokenizer of a repository is a `Tokenizer` of
+[HuggingFaceTokenizers.jl](https://github.com/MurrellGroup/HuggingFaceTokenizers.jl), which
+runs Hugging Face's tokenizers library on the repository's `tokenizer.json`. With it loaded,
+[`create_processor`](@ref) loads the tokenizer of a model, at the revision of its weights:
 
 ```julia
 using HuggingFaceTokenizers
 
-tokenizer = from_pretrained(Tokenizer, "HuggingFaceTB/SmolLM2-135M")
+tok = create_processor("HuggingFaceTB/SmolLM2-135M")
 
 prompt = "The capital of France is Paris, and the capital of Italy is"
-ids = encode(tokenizer, prompt).ids .+ 1          # Metalhead token indices start at 1
+ids = encode(tok, prompt).ids .+ 1                # Metalhead token indices start at 1
 for _ in 1:8                                      # greedy decoding
     push!(ids, argmax(model(ids)[:, end]))
 end
-println(decode(tokenizer, ids .- 1))
+println(decode(tok, ids .- 1))
 ```
 
 ```
@@ -42,10 +44,32 @@ The capital of the
 ```
 
 Token indices start at 1, as for Flux's `Embedding`: add 1 to the ids of a Hugging Face
-tokenizer, and subtract 1 from the index of a logit to get its token id.
+tokenizer, and subtract 1 from the index of a logit to get its token id, as in
+`decode(tok, [argmax(logits[:, end]) - 1])`.
+
+The tokenizer is that of `tokenizer.json`, with the padding token (`pad_token`) of
+`tokenizer_config.json`. transformers reads the other settings of `tokenizer_config.json`
+too, such as `add_bos_token`, which `create_processor` doesn't.
 
 There is no key-value cache yet, so each step of this loop runs the model on the whole
 sequence.
+
+## Batches
+
+Texts of different lengths make a batch padded on the right, with an `attention_mask` that is
+0 for the padding:
+
+```julia
+texts = ["The capital of France is", "Hello"]
+ids = [encode(tok, text).ids .+ 1 for text in texts]
+n = maximum(length, ids)
+input_ids = [i <= length(x) ? x[i] : 1 for i in 1:n, x in ids]   # 5 × 2
+attention_mask = [Int(i <= length(x)) for i in 1:n, x in ids]   # [1 1; 1 0; 1 0; 1 0; 1 0]
+logits = model(input_ids; attention_mask)
+```
+
+The padding takes no part in the attention of the other tokens, so its token doesn't matter,
+and the logits of each text are those it has alone, at the positions of its tokens.
 
 ## Inputs and outputs
 

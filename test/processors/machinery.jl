@@ -312,8 +312,8 @@ try
         with_files(["image/preprocessor_config.json" => IMAGE]) do dir
             @test create_processor(dir; subfolder = "image").size ==
                   (; height = 6, width = 6)
-            message = "has no processor files (processor_config.json or " *
-                      "preprocessor_config.json)"
+            message = "has no processor files (processor_config.json, " *
+                      "preprocessor_config.json, tokenizer_config.json or tokenizer.json)"
             @test_throws message create_processor(dir)
         end
 

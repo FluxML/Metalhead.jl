@@ -131,7 +131,9 @@ end
     @test pipe.is_distilled && pipe.tokenizer === nothing
     @test pipe.text_encoder isa Metalhead.Transformers.LlamaForCausalLM
     @test create_model(dir; subfolder = "vae") isa D.AutoencoderKLFlux2
-    @test_throws "HuggingFaceTokenizers" pipe("a prompt")
+    # with METALHEAD_TEST_NETWORK, a worker may have loaded HuggingFaceTokenizers
+    ext = Base.get_extension(Metalhead, :MetalheadHuggingFaceTokenizersExt)
+    @test_throws (ext === nothing ? "HuggingFaceTokenizers" : "no tokenizer") pipe("a prompt")
     embeds = randn(Float32, 48, 7, 1)
     image = pipe(embeds; height = 16, width = 20, num_inference_steps = 2)
     @test size(image) == (20, 16, 3, 1) && eltype(image) == Float32

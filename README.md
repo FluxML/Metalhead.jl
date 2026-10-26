@@ -19,11 +19,12 @@ to [Flux.jl](https://fluxml.ai). It ports models from three Hugging Face librari
 The [list of models](https://fluxml.ai/Metalhead.jl/dev/models/) gives every ported
 architecture and the Hub checkpoints validated for it.
 
-`create_model` downloads a repository's configuration and weights and returns an ordinary Flux
-model, ready for inference or fine-tuning, on the CPU or a GPU. The models run in Julia,
-without PyTorch. Each port mirrors the module tree of the PyTorch original, loads its
-safetensors weights by name, and is
-[checked numerically against PyTorch](https://fluxml.ai/Metalhead.jl/dev/validation/).
+`create_model` downloads a repository's configuration and weights and returns an ordinary
+Flux model, ready for inference or fine-tuning, on the CPU or a GPU. `create_processor`
+loads the processor of the same repository, which prepares the inputs of the model, such as
+the tokenizer of a language model. The models run in Julia, without PyTorch. Each port
+mirrors the module tree of the PyTorch original, loads its safetensors weights by name, and
+is [checked numerically against PyTorch](https://fluxml.ai/Metalhead.jl/dev/validation/).
 
 ## Contents
 
@@ -32,7 +33,7 @@ safetensors weights by name, and is
 - [Usage](#usage)
   - [Creating a model](#creating-a-model)
   - [Inputs and outputs](#inputs-and-outputs)
-  - [Preprocessing](#preprocessing)
+  - [Processors](#processors)
   - [Features and the classifier](#features-and-the-classifier)
   - [Multi-scale features](#multi-scale-features)
   - [Fine-tuning](#fine-tuning)
@@ -121,9 +122,24 @@ PyTorch order. Classifiers return logits, of size classes × batch.
 Models are returned in test mode: dropout is off and batch normalisation uses its running
 statistics. Call `Flux.trainmode!(model)` before training.
 
-### Preprocessing
+### Processors
 
-The preprocessing a checkpoint was trained with is in its configuration:
+A checkpoint expects its inputs prepared in a particular way, with settings stored in its
+repository. `create_processor` loads the processor of a checkpoint, which prepares them, from
+the same repository and revision as `create_model`. It reads the files of a branch at one
+commit, that of the first file it finds, and offline or without network those of the cache.
+
+| Checkpoints | `create_processor` returns | Called as |
+|:--|:--|:--|
+| language models | the tokenizer, HuggingFaceTokenizers' `Tokenizer` | `encode(tok, text)` |
+
+Metalhead ports no tokenizer. The tokenizer of a repository is a `Tokenizer` of
+[HuggingFaceTokenizers.jl](https://github.com/MurrellGroup/HuggingFaceTokenizers.jl), which
+runs Hugging Face's tokenizers library on the repository's `tokenizer.json`, with the padding
+token of its `tokenizer_config.json`. `create_processor` loads it after
+`using HuggingFaceTokenizers`.
+
+The preprocessing a timm checkpoint was trained with is in its configuration:
 
 ```julia
 cfg = Metalhead.Timm.pretrained_cfg("timm/convnext_tiny.fb_in1k")
@@ -195,20 +211,23 @@ as usual, and models move to a GPU with Flux's `gpu_device()`.
 ### Language models
 
 Language models take token indices, which start at 1, and return logits, of size
-vocabulary × sequence length (× batch). Metalhead has no tokenizers:
-[HuggingFaceTokenizers.jl](https://github.com/MurrellGroup/HuggingFaceTokenizers.jl) loads
-them from the Hub.
+vocabulary × sequence length (× batch). Their processor is the tokenizer of the repository,
+HuggingFaceTokenizers.jl's, whose token ids start at 0:
 
 ```julia
 using HuggingFaceTokenizers
 
 model = create_model("HuggingFaceTB/SmolLM2-135M"; pretrained = true)
-tokenizer = from_pretrained(Tokenizer, "HuggingFaceTB/SmolLM2-135M")
+tok = create_processor("HuggingFaceTB/SmolLM2-135M")
 
-ids = encode(tokenizer, "The capital of France is the city of").ids .+ 1   # ids start at 0
+ids = encode(tok, "The capital of France is the city of").ids .+ 1   # ids start at 0
 logits = model(ids)                                      # vocabulary × sequence length
-decode(tokenizer, [argmax(logits[:, end]) - 1])          # " Paris"
+decode(tok, [argmax(logits[:, end]) - 1])                # " Paris"
 ```
+
+Texts of different lengths make a batch padded on the right, with an `attention_mask` that
+is 0 for the padding: `model(ids; attention_mask)` (see the
+[language models guide](https://fluxml.ai/Metalhead.jl/dev/tutorials/language_models/)).
 
 ### Vision-language models
 

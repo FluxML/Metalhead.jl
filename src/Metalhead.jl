@@ -16,6 +16,7 @@ include("legacy/legacy.jl")
 
 # Hugging Face Hub ports
 using ConcreteStructs: @concrete
+using ChainRulesCore: ChainRulesCore
 using Downloads: RequestError
 import HuggingFaceApi as HF
 using JSON: JSON
@@ -27,6 +28,7 @@ include("hub/loadweights.jl")
 include("hub/registry.jl")
 include("hub/api.jl")
 include("hub/processors.jl")
+include("hub/tokenizers.jl")
 
 include("Timm/Timm.jl")
 include("Transformers/Transformers.jl")

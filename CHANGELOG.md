@@ -80,9 +80,12 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
   validated against `black-forest-labs/FLUX.2-klein-4B` (#332). `create_model` builds a pipeline from
   the `model_index.json` of a repository, or one of its components with `subfolder`
   (`"org/name/vae"` also names one).
-- An extension for HuggingFaceTokenizers.jl (`ext/`): with it loaded,
-  `Metalhead.Diffusers.tokenize` tokenizes prompts with the tokenizer and chat template of a
-  pipeline, so that pipelines take prompts as strings (#332).
+- An extension for HuggingFaceTokenizers.jl (`ext/`): with it loaded, `create_processor`
+  returns the tokenizer of a language model, HuggingFaceTokenizers' `Tokenizer` of the
+  repository's `tokenizer.json` with the padding token of its `tokenizer_config.json`
+  (Metalhead ports no tokenizer, #348), and `Metalhead.Diffusers.tokenize` tokenizes prompts
+  with the tokenizer and chat template of a pipeline, so that pipelines take prompts as
+  strings (#332).
 - Processors (#348): `create_processor` loads the processor of a checkpoint, which turns raw
   inputs into the inputs of the model, and its outputs back into results, as the
   checkpoint's configuration and its Python library do. It takes the names that

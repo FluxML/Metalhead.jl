@@ -75,6 +75,13 @@ position and transformers' greedy continuation of the first prompt. The Flux mod
 the hidden states and logits to 1e-4, and reproduce the continuation exactly. The tests need
 neither Python nor a tokenizer.
 
+Metalhead ports no tokenizer: HuggingFaceTokenizers.jl runs Hugging Face's tokenizers library
+on the repository's `tokenizer.json` (see [Language models](@ref language_models)). With
+`METALHEAD_TEST_NETWORK=true`, the test suite adds it to its environment and checks that the
+tokenizer that `create_processor` loads gives the token ids of these references, and of the
+FLUX.2 [klein] pipeline below, as transformers' tokenizers gave them, with the padding token
+of `tokenizer_config.json`.
+
 For FLUX.2 [klein] 4B, the references are the latents and image of a few images through its
 autoencoder, the output of its transformer for random inputs, and an image of 256 × 256 pixels
 generated in 4 steps from a prompt and fixed noise, with the token ids and the prompt
