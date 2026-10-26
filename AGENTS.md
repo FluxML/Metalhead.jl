@@ -32,10 +32,11 @@ reasons.
 - `src/hub/`: Hub downloads, safetensors checkpoints, the strict weight loader
   (`loadweights.jl`), the architecture registry (`ArchSpec`, `AbstractConfigFormat`,
   `register!`), the public API (`api.jl`), and `processors.jl`: `create_processor`, the
-  registry of processor classes (`register_processor!`), AutoProcessor's lookup and the
-  strict reading of settings; `tokenizers.jl`, the internal interface through which
-  processors and pipelines use a tokenizer (`load_tokenizer`, `encode_ids`, `token_id`,
-  `pad_token_id`, `pad_ids`). Nothing there is specific to one library.
+  interface of processor classes (`@processor`, `register_processor!`,
+  `standardize_settings`), AutoProcessor's lookup and the strict reading of settings;
+  `tokenizers.jl`, the internal interface through which processors and pipelines use a
+  tokenizer (`load_tokenizer`, `encode_ids`, `token_id`, `pad_token_id`, `pad_ids`).
+  Nothing there is specific to one library.
 - `src/Timm/`: one file per timm family. Ports of `timm.layers` classes go in `layers.jl`.
   `config.jl` is timm's `AbstractConfigFormat`, the template for any other library: it says
   how a `config.json` names an architecture and its arguments. A library gets its own
