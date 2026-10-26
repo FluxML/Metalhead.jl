@@ -28,8 +28,10 @@ reasons.
 ## Layout
 
 - `src/hub/`: Hub downloads, safetensors checkpoints, the strict weight loader
-  (`loadweights.jl`), the architecture registry (`ArchSpec`, `ConfigFormat`, `register!`) and
-  the public API (`api.jl`). Nothing there is specific to timm or to vision.
+  (`loadweights.jl`), the architecture registry (`ArchSpec`, `ConfigFormat`, `register!`),
+  the public API (`api.jl`), and `processors.jl`: `create_processor`, the registry of
+  processor classes (`register_processor!`), AutoProcessor's lookup and the strict reading
+  of settings. Nothing there is specific to one library.
 - `src/Timm/`: one file per timm family. Ports of `timm.layers` classes go in `layers.jl`.
   `config.jl` is timm's `ConfigFormat`, the template for any other library: it says how a
   `config.json` names an architecture and its arguments. A library gets its own `src/<Name>/`
@@ -47,7 +49,8 @@ reasons.
   helpers are in `test/parity.jl` and `test/parity_setup.jl`; tiny PyTorch fixtures in
   `test/fixtures/`, real-weight references and parameter counts in `test/references/`.
   `test/gpu/` runs the fixtures on a CUDA GPU, only with `METALHEAD_TEST_GPU=true`
-  (helpers in `test/gpu_setup.jl`).
+  (helpers in `test/gpu_setup.jl`). `test/processors/` checks the processors (helpers in
+  `test/processors_setup.jl`).
 - `porting/`: the Python (uv) project that writes the fixtures and references. The package
   and its tests never run Python.
 - `skills/port-hf-model/SKILL.md`: the porting workflow, conventions and numerical pitfalls.

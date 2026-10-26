@@ -15,6 +15,15 @@ forward_intermediates
 feature_info
 ```
 
+## Processors
+
+[`create_processor`](@ref) loads the processor of a checkpoint, which turns raw inputs into
+the inputs of its model and its outputs back into results.
+
+```@docs
+create_processor
+```
+
 ## timm
 
 ```@docs
@@ -85,6 +94,24 @@ Metalhead.model_args
 Metalhead.skip_prefix
 Metalhead.weights_name
 Metalhead.instantiate
+Metalhead.Processor
+Metalhead.ImageProcessor
+Metalhead.register_processor!
+Metalhead.@processor
+Metalhead.processor_components
+Metalhead.ignored_keys
+Metalhead.restricted_keys
+Metalhead.legacy_keys
+Metalhead.processor_fields
+Metalhead.check_processor
+Metalhead.load_processor
+Metalhead.processor_from_entries
+Metalhead.instantiate_processor
+Metalhead.check_inputs
+Metalhead.merge_nested
+Metalhead.ProcessorFiles
+Metalhead.SourceFile
+Metalhead.local_path
 Metalhead.Checkpoint
 Metalhead.load_state!
 Metalhead.torch_params

@@ -83,6 +83,17 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
 - An extension for HuggingFaceTokenizers.jl (`ext/`): with it loaded,
   `Metalhead.Diffusers.tokenize` tokenizes prompts with the tokenizer and chat template of a
   pipeline, so that pipelines take prompts as strings (#332).
+- Processors (#348): `create_processor` loads the processor of a checkpoint, which turns raw
+  inputs into the inputs of the model, and its outputs back into results, as the
+  checkpoint's configuration and its Python library do. It takes the names that
+  `create_model` takes, at the same revisions, reads the files of a branch at the commit of
+  the first it finds (offline or without network, those of the cache), and returns the most
+  complete processor that the repository describes, as transformers' `AutoProcessor` does.
+  Settings are read from the repository's files over the defaults of the Python class,
+  strictly: a setting that the port doesn't implement is an error, and an unknown key a
+  warning. Keyword arguments override them, and `show` prints where each comes from. The
+  processor classes are ported along with their models, and a class that isn't ported is
+  an error.
 - Mixed precision under `eltype = Float16` or `Flux.BFloat16` (or `f16`/`bf16`, #332): the
   RMSNorms of the language models and timm's `LayerNorm2d` keep their parameters in
   `Float32`, as Flux's `BatchNorm`, `GroupNorm` and `LayerNorm` do, and normalise in

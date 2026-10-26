@@ -511,6 +511,49 @@ first. The workflow is the one above, with these differences.
   the architecture. Tokenizers are not part of Metalhead; HuggingFaceTokenizers.jl loads
   them for end-to-end checks outside the test suite.
 
+## Processors
+
+A model that takes images or text gets the processor of its checkpoint, which
+`create_processor(repo)` (`src/hub/processors.jl`) loads as transformers' `AutoProcessor`
+does.
+
+- **Classes.** One immutable struct per upstream class, defined with `Metalhead.@processor`
+  (`Base.@kwdef` whose constructors convert and check the settings): its fields are the
+  attributes of the Python class with that class's defaults (not a checkpoint's), and a last
+  field `provenance::NamedTuple = (;)` for `show`. Image processors subtype
+  `Metalhead.ImageProcessor`, others `Metalhead.Processor`. Register the class name that
+  configurations give with `register_processor!("ClassName", T; aliases, model_types)`;
+  the suffixes `Fast` and `Pil` are dropped. A processor that combines others
+  is `@processor (image_processor, tokenizer) struct ...`, which adds
+  `T(image_processor, tokenizer; kwargs...)`, and declares `processor_components(::Type{T}) =
+  (; image_processor = ..., tokenizer = ...)`, components defaulting to
+  `nothing`; the generic `load_processor` loads them and routes each override to the
+  component with a setting of its name. A tokenizer has a `load_processor` of its own.
+- **Constructors.** Two hooks, methods on the class like those below, documented in
+  `src/hub/processors.jl`. `processor_fields(T, args)` converts the arguments of the
+  constructor to the types of the fields, taking the forms that read naturally (an integer
+  for a size, one value for every channel), with an `ArgumentError` that names the forms
+  for others. `check_processor(p)` errors on values the port
+  doesn't implement, naming the supported ones; that of a processor with components calls
+  `Metalhead.check_components(p)`. Every constructor runs both, so a processor built by hand
+  fails as early as a loaded one.
+- **Strict settings.** Declare `ignored_keys(T)` (`key = "reason"`), `restricted_keys(T)`
+  (`key = allowed values`) for options that aren't ported, and `legacy_keys(T)`
+  (`old = path`). Other keys warn once, so test that each validated repository's files load
+  with `@test_logs` and no warning.
+- **Other libraries.** A config.json that carries the preprocessing (timm's
+  `pretrained_cfg`) gets a method `instantiate_processor(::Format, files, config; kwargs...)`
+  that builds the processor with `processor_from_entries(T, json_entries(dict, file);
+  kwargs...)`, which reads strictly and applies the overrides. Without one,
+  `create_processor` finds the class as `AutoProcessor` does.
+- **Calling.** The output is a NamedTuple with transformers' keys in Julia layout, 1-based
+  token indices.
+- **Outputs.** The docstring of each class has a Returns table, whose header begins with
+  "Key", with a row per key of its output; `check_documented_keys(T, outputs)`
+  (`test/processors_setup.jl`) tests the outputs on the fixtures against it. The model takes
+  them through a method `model(inputs::NamedTuple)`, which calls `check_inputs(model,
+  inputs, required; hint)` on the keys it can't do without.
+
 ## diffusers models and pipelines
 
 `src/Diffusers/transformer_flux2.jl` and `src/Diffusers/autoencoder_kl_flux2.jl` are the

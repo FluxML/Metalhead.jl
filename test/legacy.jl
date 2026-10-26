@@ -54,7 +54,8 @@ end
     architectures = [m[1] for r in replacements for m in eachmatch(r"\"(\w+)\"", r)]
     @test length(architectures) > 30
     @test setdiff(architectures, list_models()) == []
-    new = [:Metalhead, :create_model, :list_models, :forward_features, :forward_head,
+    new = [:Metalhead, :create_model, :create_processor, :list_models, :forward_features,
+        :forward_head,
         :forward_intermediates, :feature_info]
     @test setdiff(names(Metalhead), new, keys(Metalhead.LEGACY_REPLACEMENTS)) == []
 end
