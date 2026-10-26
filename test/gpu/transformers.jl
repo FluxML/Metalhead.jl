@@ -2,6 +2,7 @@ using Metalhead, Test
 include("../gpu_setup.jl")
 using .GPUSetup
 using Flux: BFloat16
+using CUDA: CUDA
 
 @testset "fixtures" begin
     @testset "$name" for name in fixtures_of(:Transformers)
