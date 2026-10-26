@@ -18,7 +18,7 @@ using ConcreteStructs: @concrete
 using ChainRulesCore: ChainRulesCore
 using MLUtils: topk
 using JSON: JSON
-using ..Metalhead: Metalhead, ArchSpec, ConfigFormat, register!, declared_args
+using ..Metalhead: Metalhead, ArchSpec, AbstractConfigFormat, register!, declared_args
 using ..Metalhead: AbstractProcessor, ProcessorFiles, SourceFile, register_processor!,
                    processor_from_entries, read_json, has_file, jsonvalue, check_inputs,
                    @processor

@@ -13,9 +13,9 @@ using ConcreteStructs: @concrete
 using MLUtils: chunk
 using Statistics: mean
 using ChainRulesCore: ChainRulesCore
-using ..Metalhead: ArchSpec, ConfigFormat, JSON, register!, model_source, nt, source_file,
-                   image_array, image_batch, convert_to_rgb, AbstractImageProcessor,
-                   processor_from_entries, jsonvalue, @processor
+using ..Metalhead: ArchSpec, AbstractConfigFormat, JSON, register!, model_source, nt,
+                   source_file, image_array, image_batch, convert_to_rgb,
+                   AbstractImageProcessor, processor_from_entries, jsonvalue, @processor
 import ..Metalhead: layer_params, architecture_of, model_args, skip_prefix
 import ..Metalhead: forward_features, forward_head, forward_intermediates, feature_info
 import ..Metalhead: instantiate_processor, ignored_keys, check_processor, processor_fields

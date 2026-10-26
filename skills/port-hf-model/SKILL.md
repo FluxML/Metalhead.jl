@@ -408,7 +408,7 @@ first. The workflow is the one above, with these differences.
   `head_dim`). Declare those too, or `model_args` drops them. The config's validators
   (`validate_architecture`) say what to reject: `LlamaConfig` requires `hidden_size`
   divisible by `num_attention_heads` even with an explicit `head_dim`; Qwen3's doesn't.
-- **Registry.** Register the class name with the transformers `ConfigFormat`
+- **Registry.** Register the class name with the transformers `AbstractConfigFormat`
   (`src/Transformers/config.jl`) and its model line as the family, which can span several
   transformers modules (`granite` holds Granite, GraniteMoe, GraniteMoeShared and
   GraniteMoeHybrid), e.g.
