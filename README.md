@@ -326,8 +326,8 @@ objects across frames.
 ### Text-to-image generation
 
 A diffusers repository holds a pipeline, whose components `create_model` builds from the
-subfolders of the repository, its tokenizer too. With HuggingFaceTokenizers.jl loaded, it
-takes prompts:
+subfolders of the repository, its tokenizer too. With HuggingFaceTokenizers.jl loaded
+first, it takes prompts:
 
 ```julia
 using Flux, HuggingFaceTokenizers
