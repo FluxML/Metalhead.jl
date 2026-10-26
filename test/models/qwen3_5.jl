@@ -55,6 +55,9 @@ function recurrent_delta_rule(q, k, v, g, beta, w)
     return total
 end
 
+# the output of a tokenizer, padded on either side
+check_tokenizer_inputs("qwen3_5_text_tiny")
+
 @testset "gated delta rule" begin
     dk, dv, h, n, b = 4, 3, 2, 70, 2
     q, k, v = randn(dk, h, n, b), randn(dk, h, n, b), randn(dv, h, n, b)

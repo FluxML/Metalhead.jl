@@ -37,7 +37,7 @@ Origin(source, value) = Origin(source, value, nothing)
 
 The components of the processor class `T`, as `name = type`: the fields that hold the
 processors it combines, loaded from the same repository, e.g.
-`(; image_processor = ..., tokenizer = ...)`. Empty (the
+`(; image_processor = ..., tokenizer = TokenizersBackend)`. Empty (the
 default) for an image processor or a tokenizer. A component is loaded by
 [`load_processor`](@ref Metalhead.load_processor) of its type, and the fields of `T` that
 aren't components (nor `provenance`) are its settings.
@@ -620,9 +620,18 @@ component has is an error.
 
 Returns the most complete processor the repository describes, as transformers'
 `AutoProcessor` does: a processor that combines an image processor and a tokenizer; else
-an image processor; else a tokenizer. Calling it returns what the model takes, a
-NamedTuple. The processor classes are ported along with their models, and a class that
-isn't ported is an error. `show` prints each setting and where it comes from.
+an image processor; else a tokenizer, `Transformers.TokenizersBackend`. Calling it returns
+what the model takes, a NamedTuple:
+
+```julia
+tok = create_processor("HuggingFaceTB/SmolLM2-135M")
+inputs = tok("The capital of France is")
+logits = model(inputs)
+Transformers.decode(tok, [argmax(logits[:, end])])
+```
+
+Strings need a tokenizer backend (`using HuggingFaceTokenizers`); token ids, as a tokenizer
+gives them (from 0), don't. `show` prints each setting and where it comes from.
 """
 function create_processor(name::AbstractString;
         revision::Union{Nothing, AbstractString} = nothing, subfolder::AbstractString = "",

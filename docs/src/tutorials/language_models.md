@@ -19,20 +19,29 @@ were validated against.
 
 ## Generating text
 
-Metalhead has no tokenizers. [HuggingFaceTokenizers.jl](https://github.com/MurrellGroup/HuggingFaceTokenizers.jl)
-loads the tokenizer of a Hub repository:
+The processor of a language model is the tokenizer of its repository, which
+[`create_processor`](@ref) loads as a
+[`TokenizersBackend`](@ref Metalhead.Transformers.TokenizersBackend), with the special
+tokens, padding and maximum length of its `tokenizer_config.json`, over the defaults of its
+tokenizer class, the one that transformers' `AutoTokenizer` builds (a class that Metalhead
+hasn't validated warns). It turns texts into the
+inputs of the model, and [`decode`](@ref Metalhead.Transformers.decode) turns token indices
+back into text. Strings need
+[HuggingFaceTokenizers.jl](https://github.com/MurrellGroup/HuggingFaceTokenizers.jl), which
+tokenizes them with the repository's `tokenizer.json`:
 
 ```julia
 using HuggingFaceTokenizers
+using Metalhead.Transformers: decode
 
-tokenizer = from_pretrained(Tokenizer, "HuggingFaceTB/SmolLM2-135M")
+tok = create_processor("HuggingFaceTB/SmolLM2-135M")
 
 prompt = "The capital of France is Paris, and the capital of Italy is"
-ids = encode(tokenizer, prompt).ids .+ 1          # Metalhead token indices start at 1
+ids = tok(prompt).input_ids
 for _ in 1:8                                      # greedy decoding
     push!(ids, argmax(model(ids)[:, end]))
 end
-println(decode(tokenizer, ids .- 1))
+println(decode(tok, ids))
 ```
 
 ```
@@ -41,21 +50,57 @@ The capital of France is Paris, and the capital of Italy is Rome.
 The capital of the
 ```
 
-Token indices start at 1, as for Flux's `Embedding`: add 1 to the ids of a Hugging Face
-tokenizer, and subtract 1 from the index of a logit to get its token id.
+Token indices start at 1, as for Flux's `Embedding`: the tokenizer returns the ids of
+Hugging Face's tokenizers plus 1, and `decode` takes such indices. Without
+HuggingFaceTokenizers, the tokenizer still takes token ids, from 0 as a tokenizer gives
+them, and pads them.
 
 There is no key-value cache yet, so each step of this loop runs the model on the whole
 sequence.
+
+## Batches
+
+A vector of texts makes a batch: token indices of size `(seq_len, batch_size)`, padded to
+the longest text with the tokenizer's padding token, and an `attention_mask` that is 0 for
+the padding. The model takes the output of the tokenizer as it is:
+
+```julia
+model = create_model("Qwen/Qwen3-0.6B"; pretrained = true)
+tok = create_processor("Qwen/Qwen3-0.6B")
+
+inputs = tok(["The capital of France is", "Hello"])
+inputs.attention_mask          # [1 1; 1 0; 1 0; 1 0; 1 0]
+logits = model(inputs)         # 151936 × 5 × 2
+decode(tok, inputs.input_ids; skip_special_tokens = true)
+# ["The capital of France is", "Hello"]
+```
+
+The tokenizer pads on its side, `tok.padding_side`: on the right for SmolLM2 and Qwen, on
+the left for Llama 3, Gemma 3 and Granite. The model takes either, and gives each text the
+logits it has alone, at the positions of its tokens. Padded on the left, the last position
+holds the last token of every text, from which to generate:
+
+```julia
+inputs = tok(["The capital of France is", "Hello"]; padding_side = "left")
+next = model(inputs)[:, end, :]                     # the logits of the next tokens
+[decode(tok, [argmax(l)]) for l in eachcol(next)]   # [" Paris", " Answer"]
+```
+
+A tokenizer without a padding token, such as SmolLM2's, can't pad, as in transformers. Set
+one when creating it:
+`create_processor("HuggingFaceTB/SmolLM2-135M"; pad_token = "<|endoftext|>")`. Likewise,
+`add_bos_token` and `add_eos_token` set which of the BOS and EOS tokens surround each text,
+and `show(tok)` prints each setting and where it comes from.
 
 ## Inputs and outputs
 
 - `model(ids)` takes token indices of size `(seq_len, batch_size)`, or a vector for a single
   sequence, and returns logits of size `(vocab_size, seq_len, batch_size)` (or
-  `(vocab_size, seq_len)`).
-- Attention is causal. Sequences of different lengths are batched by padding them on the right
-  and passing the tokenizer's `attention_mask`, of size `(seq_len, batch_size)`, as a keyword
-  argument: `model(ids; attention_mask)`. The padding takes no part in the attention of the
-  other tokens.
+  `(vocab_size, seq_len)`). `model(inputs)` takes the output of the tokenizer.
+- Attention is causal. A batch padded on the right takes the tokenizer's `attention_mask`,
+  of size `(seq_len, batch_size)`, as a keyword argument: `model(ids; attention_mask)`. The
+  padding takes no part in the attention of the other tokens. `model(inputs)` also takes a
+  batch padded on the left.
 - [`forward_features`](@ref) returns the hidden states after the final norm, of size
   `(hidden_size, seq_len, batch_size)`, and [`forward_head`](@ref) applies the output
   projection `lm_head` to them.

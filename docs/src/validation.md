@@ -48,6 +48,8 @@ the attention, MLP and norms of each layer. transformers computes its RMSNorms a
 embeddings in float32, even in a float64 model. `dump.py` computes them in float64, so that the
 1e-8 comparison tests the architecture rather than that rounding. One fixture pads a batch on
 the right and passes its `attention_mask`, and each records the hidden states of every layer.
+The model of each fixture also takes a batch as a tokenizer makes it, padded on the right or
+on the left, and must give each text the logits it gets alone.
 
 For a diffusers model, the fixture is a small configuration of the class, saved with
 `save_pretrained`, run on random inputs: images for an autoencoder; image tokens, text tokens,
@@ -83,6 +85,30 @@ to 1e-3: rounding errors grow over the denoising steps, so that PyTorch's own fl
 differ from its float64 ones by 6e-4. In float64, the port and PyTorch generate the same latents
 to 1e-12. The transformer and the pipeline download 8 and 16 GB, and run only with
 `METALHEAD_TEST_LARGE=true` as well.
+
+## Processors
+
+A processor (see [`create_processor`](@ref)) is checked against the full upstream path, from
+the raw input to the inputs of the model, with the configuration files of real repositories.
+The references are in `test/references/`. The tests need no Python, and only the checks
+marked below as such need network access.
+
+For tokenizers, `porting/dump_processor.py tokenizers` calls the tokenizer that
+`AutoTokenizer.from_pretrained(repo)` loads, for 13 tokenizers: those of the nine validated
+language models, of Qwen3.5, of SAM 3 and of the FLUX.2 [klein] pipeline, and GPT-2's, whose
+files leave the defaults of its class. Each tokenizes 16 strings where tokenizer classes can
+differ: case, accents and unicode normal forms, scripts and emoji, runs of whitespace,
+digits, contractions, code, special tokens written in the text, and the empty string. The
+token ids must be transformers', with and without special tokens, as must batches padded on
+either side, `max_length`, truncation on either side, the settings `pad_token`,
+`add_bos_token` and `add_eos_token` set at creation, the error of padding without a padding
+token, the text decoded with and without `skip_special_tokens`, the class, and the settings
+read from the files over the defaults of the class. The tests run offline with a backend
+that returns transformers' ids, and with `METALHEAD_TEST_NETWORK=true` through
+HuggingFaceTokenizers.jl and each repository's files.
+
+Configuration files are read strictly, an unknown key with a warning, and the tests load
+those of the fixtures without one.
 
 ## Parameter counts
 
