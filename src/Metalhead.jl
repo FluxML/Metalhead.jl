@@ -27,6 +27,7 @@ include("hub/loadweights.jl")
 include("hub/registry.jl")
 include("hub/api.jl")
 include("hub/processors.jl")
+include("hub/tokenizers.jl")
 
 include("Timm/Timm.jl")
 include("Transformers/Transformers.jl")

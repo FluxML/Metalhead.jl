@@ -18,26 +18,10 @@ feature_info
 ## Processors
 
 [`create_processor`](@ref) loads the processor of a checkpoint, which turns raw inputs into
-the inputs of its model and its outputs back into results. Each processor type ports a class
-of transformers, with its settings as fields.
+the inputs of its model and its outputs back into results.
 
 ```@docs
 create_processor
-Metalhead.Transformers.TokenizersBackend
-```
-
-Decoding takes the processor and the token indices of the model's outputs:
-
-```@docs
-Metalhead.Transformers.decode
-```
-
-A tokenizer other than HuggingFaceTokenizers.jl's encodes and decodes the strings of a
-`TokenizersBackend` with methods of these functions:
-
-```@docs
-Metalhead.Transformers.encode_ids
-Metalhead.Transformers.decode_ids
 ```
 
 ## timm
@@ -49,7 +33,6 @@ Metalhead.Timm.pretrained_cfg
 ## transformers
 
 ```@docs
-Metalhead.Transformers.CausalLM
 Metalhead.Transformers.Sam3Model
 Metalhead.Transformers.Sam3VideoModel
 Metalhead.Transformers.Sam3VisionModel
@@ -83,8 +66,7 @@ diffusers builders the arguments of the model's constructor.
 ```@autodocs
 Modules = [Metalhead.Timm, Metalhead.Transformers]
 Order = [:function]
-Filter = f -> !(f in (Metalhead.Timm.pretrained_cfg, Metalhead.Transformers.decode,
-    Metalhead.Transformers.encode_ids, Metalhead.Transformers.decode_ids))
+Filter = f -> f !== Metalhead.Timm.pretrained_cfg
 ```
 
 ```@docs

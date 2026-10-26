@@ -33,7 +33,9 @@ reasons.
   (`loadweights.jl`), the architecture registry (`ArchSpec`, `AbstractConfigFormat`,
   `register!`), the public API (`api.jl`), and `processors.jl`: `create_processor`, the
   registry of processor classes (`register_processor!`), AutoProcessor's lookup and the
-  strict reading of settings. Nothing there is specific to one library.
+  strict reading of settings; `tokenizers.jl`, the internal interface through which
+  processors and pipelines use a tokenizer (`load_tokenizer`, `encode_ids`, `token_id`,
+  `pad_token_id`, `pad_ids`). Nothing there is specific to one library.
 - `src/Timm/`: one file per timm family. Ports of `timm.layers` classes go in `layers.jl`.
   `config.jl` is timm's `AbstractConfigFormat`, the template for any other library: it says
   how a `config.json` names an architecture and its arguments. A library gets its own
@@ -42,17 +44,16 @@ reasons.
 - `src/Transformers/`: one file per transformers model, and `config.jl`, its
   `AbstractConfigFormat`. Blocks that models share (RMSNorm, the rotary tables, the tied
   output head) go in `layers.jl`. Processors go next to their models, one file per upstream
-  class under transformers' file names (`tokenization_utils_tokenizers.jl` for
-  `TokenizersBackend`, `tokenization_auto.jl` for the tokenizer class that `AutoTokenizer`
-  builds and its defaults).
+  class under transformers' file names. Tokenizers aren't ported.
 - `src/Diffusers/`: diffusers models (`transformer_flux2.jl`, `autoencoder_kl_flux2.jl`, the
   autoencoders' encoder and decoder in `vae.jl`), schedulers and pipelines. `config.jl` has two
   `AbstractConfigFormat`s: a model's `config.json` and a pipeline's `model_index.json`,
   whose components load from subfolders of the repository. The tokenizer of a pipeline loads
   through the HuggingFaceTokenizers.jl extension (`ext/`).
-- `ext/`: package extensions. HuggingFaceTokenizers.jl is the backend that encodes and
-  decodes the strings of a `TokenizersBackend`, and tokenizes the prompts of pipelines
-  (`Diffusers.tokenize`); CUDA.
+- `ext/`: package extensions. HuggingFaceTokenizers.jl's `Tokenizer` is the tokenizer of a
+  checkpoint: its extension loads it from `tokenizer.json` and implements the interface of
+  `src/hub/tokenizers.jl`, and tokenizes the prompts of pipelines (`Diffusers.tokenize`);
+  CUDA.
 - `src/legacy/`: the hand-written models of Metalhead 0.9 (`ResNet(50)`, `Metalhead.Layers`,
   `pretrain = true`). Deprecated, untested, and removed in 0.11: don't extend them.
 - `test/`: run with ParallelTestRunner. Each file is a `@testset` in its own module. Shared

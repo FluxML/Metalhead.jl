@@ -18,7 +18,6 @@ uv run dump_reference.py HuggingFaceTB/SmolLM2-135M   # a language model: tokeni
 uv run dump.py specs/qwen3_5_vision_tiny.json    # a vision encoder: random patches of "grid_thw"
 uv run dump_image_processor.py                   # Qwen3.5's image processor on tiny images
 uv run dump_processor.py sam3                    # SAM 3's tokenizer, via AutoTokenizer
-uv run dump_processor.py tokenizers              # tokenizers of the language models, via AutoTokenizer
 uv run dump.py specs/qwen3_5_tiny.json           # a vision-language model ("images")
 uv run dump_reference.py Qwen/Qwen3.5-0.8B       # with a vision_config: also an image prompt
 uv run dump.py specs/transformer_flux2_tiny.json specs/flux2_klein_tiny.json   # diffusers model, pipeline

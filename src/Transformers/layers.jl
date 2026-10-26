@@ -119,35 +119,6 @@ ChainRulesCore.@non_differentiable kv_lengths_of(::Any...)
 # for the gradient of `model(inputs::NamedTuple)`
 ChainRulesCore.@non_differentiable check_inputs(::Any...)
 
-# A batch padded on the left, as the tokenizers of Llama 3, Gemma 3 and Granite pad it,
-# moved to the right for `kv_lengths_of`: the token indices and the mask, of size
-# `(seq_len, batch)` or `(seq_len,)`, with each sequence rotated by its padding, and the
-# function that moves outputs `(features, seq_len, ...)` back to the positions of the
-# tokens. With rotary embeddings, which depend on relative positions only, each token gets
-# the output it has in transformers' left-padded batch.
-function right_padded(input_ids, attention_mask)
-    attention_mask === nothing && return input_ids, attention_mask, identity
-    size(attention_mask) == size(input_ids) ||
-        error("`attention_mask` has size $(size(attention_mask)), the token indices $(size(input_ids))")
-    n = size(input_ids, 1)
-    mask = reshape(Array(attention_mask) .!= 0, n, :)
-    shifts = map(eachcol(mask)) do m
-        k = something(findfirst(m), n + 1) - 1
-        return k < n && all(view(m, (k + 1):n)) ? k : 0
-    end
-    all(iszero, shifts) && return input_ids, attention_mask, identity
-    rotate(x, s) = vec([x[mod1(i + s * shifts[b], n), b] for i in 1:n, b in axes(x, 2)])
-    move(x, s) = reshape(rotate(reshape(Array(x), n, :), s), size(x))
-    restore = rotate(reshape(1:length(mask), n, :), -1)
-    function back(y)
-        z = NNlib.gather(reshape(y, size(y, 1), :), device_indices(y, restore))
-        return reshape(z, size(y))
-    end
-    return to_device_of(input_ids, move(input_ids, 1)),
-    to_device_of(attention_mask, move(attention_mask, 1)), back
-end
-ChainRulesCore.@non_differentiable right_padded(::Any...)
-
 # transformers' `rope_parameters`, from it or from the older `rope_theta` and `rope_scaling`
 # keys of config.json, as in `RotaryEmbeddingConfigMixin.convert_rope_params_to_dict`.
 function rope_parameters_of(name; rope_theta, rope_scaling, rope_parameters,
