@@ -60,7 +60,7 @@ objects = post_process_instance_segmentation(proc, model(inputs); threshold = 0.
 boxes = proc(; images = image, input_boxes = [[(10, 20, 300, 400)]])  # needs a backend
 ```
 """
-@processor (image_processor, tokenizer) struct Sam3Processor <: Processor
+@processor (image_processor, tokenizer) struct Sam3Processor <: AbstractProcessor
     image_processor::Any = nothing
     tokenizer::Any = nothing
     point_pad_value::Int = -10

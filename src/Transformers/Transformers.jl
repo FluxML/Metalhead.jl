@@ -19,9 +19,10 @@ using ChainRulesCore: ChainRulesCore
 using MLUtils: topk
 using JSON: JSON
 using ..Metalhead: Metalhead, ArchSpec, ConfigFormat, register!, declared_args
-using ..Metalhead: Processor, ImageProcessor, ProcessorFiles, SourceFile, register_processor!,
-                   processor_from_entries, read_json, has_file, jsonvalue, image_batch,
-                   convert_to_rgb, is_8bit, RESAMPLE_FILTERS, check_inputs, @processor
+using ..Metalhead: AbstractProcessor, AbstractImageProcessor, ProcessorFiles, SourceFile,
+                   register_processor!, processor_from_entries, read_json, has_file,
+                   jsonvalue, image_batch, convert_to_rgb, is_8bit, RESAMPLE_FILTERS,
+                   check_inputs, @processor
 using ..Timm: dropout_or_identity, attention_fdrop, feature_take_indices, stage_outputs,
               pil_resize
 import ..Metalhead: layer_params, architecture_of, model_args
