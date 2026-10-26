@@ -86,8 +86,7 @@ model = create_model(repo; pretrained = true)
 transform = create_processor(repo)
 
 img = load(download("https://upload.wikimedia.org/wikipedia/commons/2/26/YellowLabradorLooking_new.jpg"))
-image = permutedims(rawview(channelview(img)), (3, 2, 1))  # width × height × channels, UInt8
-x = transform(image)              # 224 × 224 × 3 × 1
+x = transform(img)                # 224 × 224 × 3 × 1
 probs = softmax(model(x))
 labels = readlines(download("https://raw.githubusercontent.com/pytorch/hub/master/imagenet_classes.txt"))
 labels[sortperm(vec(probs); rev = true)[1:5]]
@@ -95,10 +94,10 @@ labels[sortperm(vec(probs); rev = true)[1:5]]
 ```
 
 FileIO reads the photo with ImageIO, which must be installed, as a height × width matrix of
-colours. Processors take arrays in the layout of Flux, width × height × channels, of `UInt8`
-from 0 to 255 or of reals from 0 to 1: `channelview` makes the colours a channels × height ×
-width array, `rawview` gives its 8-bit values, and `permutedims` reverses its dimensions. A
-vector of images makes a batch.
+colours. With ImageCore loaded (Images.jl loads it too), processors take such matrices, and
+turn them into the width × height × channels arrays of Flux. Without it, pass an array of
+that layout, of `UInt8` from 0 to 255 or of reals from 0 to 1. A vector of images makes a
+batch.
 
 The transform resizes the shorter side of the image to `floor(224 / 0.875) = 256` pixels
 with Pillow's bicubic filter, crops the centre 224 × 224 pixels, and normalises each channel

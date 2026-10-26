@@ -636,9 +636,9 @@ Transformers.post_process_instance_segmentation(proc, outputs;
 ```
 
 Images are arrays of size `(width, height, channels)`, of integers from 0 to 255 or of reals
-from 0 to 1 (see [`image_array`](@ref Metalhead.image_array)). Strings need a tokenizer
-backend (`using HuggingFaceTokenizers`); token ids, as a tokenizer gives them (from 0),
-don't.
+from 0 to 1, or, with ImageCore loaded, matrices of colorants (see
+[`image_array`](@ref Metalhead.image_array)). Strings need a tokenizer backend
+(`using HuggingFaceTokenizers`); token ids, as a tokenizer gives them (from 0), don't.
 `show` prints each setting and where it comes from.
 """
 function create_processor(name::AbstractString;

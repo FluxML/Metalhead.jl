@@ -6,9 +6,13 @@
 
 `image` as processors take it: an array of size `(width, height, channels)` (torch's
 `(channels, height, width)` reversed) of integers from 0 to 255 (an 8-bit image, such as
-`UInt8`) or of reals from 0 to 1. A matrix is a grey image of one channel. With ImageCore,
-`permutedims(rawview(channelview(img)), (3, 2, 1))` is the 8-bit image of the
-`Matrix{RGB{N0f8}}` `img` that `FileIO.load` returns.
+`UInt8`) or of reals from 0 to 1. A matrix is a grey image of one channel.
+
+With ImageCore loaded (as by Images.jl), it also takes a matrix of colorants of size
+`(height, width)`, such as the `Matrix{RGB{N0f8}}` that `FileIO.load` returns, as
+`permutedims(channelview(img), (3, 2, 1))` but with the channels of any colorant in the
+order R, G, B (then alpha), or gray (then alpha). `N0f8` values, those of 8-bit images,
+become the `UInt8` values they store, and others reals from 0 to 1.
 """
 image_array(x::AbstractArray{<:Real, 3}) = x
 image_array(x::AbstractMatrix{<:Real}) = reshape(x, size(x)..., 1)

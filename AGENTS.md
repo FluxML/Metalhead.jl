@@ -55,7 +55,8 @@ reasons.
   load from subfolders of the repository. The tokenizer of a pipeline is a
   `TokenizersBackend`, from its `tokenizer/` subfolder.
 - `ext/`: package extensions. HuggingFaceTokenizers.jl is the backend that encodes and
-  decodes the strings of a `TokenizersBackend`; CUDA.
+  decodes the strings of a `TokenizersBackend`; ImageCore lets processors take images of
+  colorants; CUDA.
 - `src/legacy/`: the hand-written models of Metalhead 0.9 (`ResNet(50)`, `Metalhead.Layers`,
   `pretrain = true`). Deprecated, untested, and removed in 0.11: don't extend them.
 - `test/`: run with ParallelTestRunner. Each file is a `@testset` in its own module. Shared

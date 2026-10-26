@@ -39,7 +39,7 @@ links to its checkpoint and to other ported architectures.
 
 An image loaded by FileIO is a height × width matrix of colours. A Metalhead vision model
 takes a width × height × channels × batch array, prepared as the checkpoint was evaluated:
-resized, cropped and normalised. `transform`, the processor of the checkpoint, prepares it:
+resized, cropped and normalised. `transform`, the processor of the checkpoint, does both:
 it is timm's eval transform, with the settings of the checkpoint's configuration, which
 `show` prints with their source:
 
@@ -55,8 +55,7 @@ transform
 
 photo_url = "https://upload.wikimedia.org/wikipedia/commons/2/26/YellowLabradorLooking_new.jpg"
 img = load(download(photo_url))
-pixels(img) = permutedims(rawview(channelview(RGB.(img))), (3, 2, 1))
-x = transform(pixels(img))
+x = transform(img)
 size(x)                        # (224, 224, 3, 1)
 ```
 
@@ -72,11 +71,10 @@ with `mean` and `std`. The result is the input that timm computes from the same 
 PIL image, bit for bit, so that scores reproduce those of timm. (A JPEG decoded by ImageIO
 can differ slightly from Pillow's decoding of it.)
 
-`pixels` turns the matrix of colours into the width × height × channels array that the
-transform takes, of `UInt8` from 0 to 255 (reals from 0 to 1 work too): `RGB.` converts grey
-images and those with alpha, `channelview` makes the colours a channels × height × width
-array, `rawview` gives its 8-bit values, and `permutedims` reverses its dimensions. The last
-dimension of `x` is a batch of one image.
+With ImageCore loaded, the transform turns the matrix of colours into the width × height ×
+channels array that it works on, and the last dimension of `x` is a batch of one image. An
+array of that layout, of `UInt8` from 0 to 255 or of reals from 0 to 1, works without
+ImageCore.
 
 ## Classify the image
 
@@ -104,7 +102,7 @@ To classify a batch, pass a vector of photographs, of any sizes:
 
 ```julia
 images = [img, reverse(img; dims = 2)]
-xbatch = transform(pixels.(images))
+xbatch = transform(images)
 size(model(xbatch))            # (1000, 2)
 ```
 
@@ -159,7 +157,7 @@ function image_samples(root, classes)
 end
 
 function image_batch(samples, transform, classes)
-    x = transform([pixels(load(sample.path)) for sample in samples])
+    x = transform([load(sample.path) for sample in samples])
     y = Flux.onehotbatch([sample.label for sample in samples], classes)
     return x, y
 end

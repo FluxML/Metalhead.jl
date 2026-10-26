@@ -94,8 +94,9 @@ logits = model(transform(image))    # transform(image): 224 × 224 × 3 × 1
 An image is an array of size `(width, height, channels)` (torch's
 `(channels, height, width)` reversed) of integers from 0 to 255 (an 8-bit image, as `UInt8`)
 or of reals from 0 to 1, which are converted to 8 bits as torchvision's `ToPILImage`
-converts them (see [`image_array`](@ref Metalhead.image_array)). Grey images, and the alpha
-of RGBA, are converted to RGB as Pillow's `convert("RGB")` does. Each image is
+converts them, or, with ImageCore loaded, a matrix of colorants (see
+[`image_array`](@ref Metalhead.image_array)). Grey images, and the alpha of RGBA, are
+converted to RGB as Pillow's `convert("RGB")` does. Each image is
 
  1. resized with Pillow's filter `interpolation` (`"nearest"`, `"bilinear"`, `"bicubic"`,
     `"box"`, `"hamming"` or `"lanczos"`): its short side to `floor(input_size / crop_pct)`
