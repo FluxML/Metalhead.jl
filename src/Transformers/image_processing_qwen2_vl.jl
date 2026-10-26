@@ -92,7 +92,7 @@ same to Float32 precision. The settings are checked as the processor is made, an
 take the forms that transformers takes: `resample` as the name of PIL's filter (`:bicubic`);
 `image_mean` and `image_std` as one value for all channels.
 """
-@processor struct Qwen2VLImageProcessor <: ImageProcessor
+@processor struct Qwen2VLImageProcessor <: AbstractImageProcessor
     do_resize::Bool = true
     resample::Int = 3
     size::Any = (; shortest_edge = 56 * 56, longest_edge = 28 * 28 * 1280)
