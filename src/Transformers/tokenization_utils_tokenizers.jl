@@ -77,7 +77,7 @@ logits = model(inputs)                                # (vocab_size, 6, 2)
 [decode(tok, [argmax(l)]) for l in eachcol(logits[:, end, :])]   # the next tokens
 ```
 """
-@processor struct TokenizersBackend <: Processor
+@processor struct TokenizersBackend <: AbstractProcessor
     tokenizer::Any = nothing
     tokenizer_file::Any = nothing
     tokenizer_class::String = "TokenizersBackend"
@@ -600,7 +600,7 @@ decode(tok::TokenizersBackend, index::Integer; kwargs...) = decode(tok, [index];
 function decode(tok::TokenizersBackend, indices; kwargs...)
     throw(ArgumentError("decode takes token indices, as an integer, a vector or a matrix, got a $(typeof(indices))"))
 end
-function decode(p::Processor, indices; kwargs...)
+function decode(p::AbstractProcessor, indices; kwargs...)
     haskey(processor_components(typeof(p)), :tokenizer) && p.tokenizer !== nothing ||
         error("$(nameof(typeof(p))) has no tokenizer")
     return decode(p.tokenizer, indices; kwargs...)

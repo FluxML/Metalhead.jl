@@ -6,7 +6,7 @@
 # setting comes from.
 
 """
-    Processor
+    AbstractProcessor
 
 A processor: an image processor, a tokenizer, or a processor that combines them, as
 [`create_processor`](@ref) returns them. Each is a plain immutable struct whose fields are
@@ -14,15 +14,15 @@ the attributes of the Python class (its settings, and the processors it combines
 keyword constructor whose defaults are those of the Python class, and a `provenance` field
 that records where each setting comes from, for `show`.
 """
-abstract type Processor end
+abstract type AbstractProcessor end
 
 """
-    ImageProcessor <: Processor
+    AbstractImageProcessor <: AbstractProcessor
 
 A processor of images, called as `ip(images)` on one image or a vector of them (see
 [`image_array`](@ref Metalhead.image_array)).
 """
-abstract type ImageProcessor <: Processor end
+abstract type AbstractImageProcessor <: AbstractProcessor end
 
 # Where a setting comes from: `source` is the file that sets it, "class default" or
 # "override", and `value` its value then; an override keeps the origin it replaced.
@@ -108,8 +108,8 @@ function check_components(p)
 end
 
 """
-    @processor struct T <: Processor ... end
-    @processor (components...,) struct T <: Processor ... end
+    @processor struct T <: AbstractProcessor ... end
+    @processor (components...,) struct T <: AbstractProcessor ... end
 
 `Base.@kwdef` for a processor class, whose constructors make the processor from
 [`processor_fields`](@ref Metalhead.processor_fields) of their arguments, and then run
@@ -146,7 +146,7 @@ end
 setting_names(::Type{T}) where {T} = Tuple(k for k in fieldnames(T)
                                            if k !== :provenance &&
                                               !haskey(processor_components(T), k))
-default_settings(::Type{T}) where {T <: Processor} = settings(T())
+default_settings(::Type{T}) where {T <: AbstractProcessor} = settings(T())
 settings(p) = NamedTuple{setting_names(typeof(p))}(map(k -> getfield(p, k),
     setting_names(typeof(p))))
 function components(p)
@@ -529,7 +529,7 @@ override to the one component that has a setting of that name, and reads its own
 from processor_config.json. A tokenizer has a method of its own.
 """
 function load_processor(::Type{T}, files::ProcessorFiles;
-        kwargs...) where {T <: ImageProcessor}
+        kwargs...) where {T <: AbstractImageProcessor}
     found = image_processor_config(files)
     found === nothing &&
         error("$(source_name(files.source)) has no image processor (preprocessor_config.json, or `image_processor` in processor_config.json)")
@@ -540,7 +540,8 @@ function load_processor(::Type{T}, files::ProcessorFiles;
     return processor_from_entries(T, json_entries(dict, file); kwargs...)
 end
 
-function load_processor(::Type{T}, files::ProcessorFiles; kwargs...) where {T <: Processor}
+function load_processor(::Type{T}, files::ProcessorFiles;
+        kwargs...) where {T <: AbstractProcessor}
     parts = processor_components(T)
     isempty(parts) && error("$(nameof(T)) has no `load_processor` method")
     routed = route_overrides(T, NamedTuple(kwargs))
@@ -592,7 +593,7 @@ end
 
 """
     instantiate_processor(format::ConfigFormat, files::ProcessorFiles, config; kwargs...)
-        -> Union{Nothing, Processor}
+        -> Union{Nothing, AbstractProcessor}
 
 The processor of a repository whose config.json, parsed as `config`, is in `format` and
 carries the preprocessing of its checkpoint (timm's `pretrained_cfg`), with the overrides
@@ -678,7 +679,7 @@ function origin_text(o::Union{Nothing, Origin}, value)
     return "override ($(r.source): $(setting_repr(:value, r.value)))"
 end
 
-function Base.show(io::IO, p::Processor)
+function Base.show(io::IO, p::AbstractProcessor)
     print(io, nameof(typeof(p)), "(")
     join(io, ("$k = $(repr(v; context = io))" for (k, v) in pairs(components(p))), ", ")
     isempty(components(p)) || isempty(settings(p)) || print(io, "; ")
@@ -686,7 +687,7 @@ function Base.show(io::IO, p::Processor)
     return print(io, ")")
 end
 
-function Base.show(io::IO, ::MIME"text/plain", p::Processor)
+function Base.show(io::IO, ::MIME"text/plain", p::AbstractProcessor)
     return show_settings(io, p, "")
 end
 
@@ -700,6 +701,6 @@ function show_settings(io, p, indent)
     end
     for (name, c) in pairs(components(p))
         print(io, "\n", indent, "  ", name, ": ")
-        c isa Processor ? show_settings(io, c, indent * "  ") : show(io, c)
+        c isa AbstractProcessor ? show_settings(io, c, indent * "  ") : show(io, c)
     end
 end

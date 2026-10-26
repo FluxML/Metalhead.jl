@@ -119,7 +119,7 @@ larger size than the one they were trained at. The other keywords of `create_pro
 override the settings, e.g. `crop_pct = 1.0`. [`Timm.pretrained_cfg`](@ref
 Metalhead.Timm.pretrained_cfg) returns the `pretrained_cfg` as it is.
 """
-@processor struct EvalTransform <: ImageProcessor
+@processor struct EvalTransform <: AbstractImageProcessor
     input_size::NTuple{3, Int} = (3, 224, 224)
     interpolation::String = "bicubic"
     mean::NTuple{3, Float64} = IMAGENET_DEFAULT_MEAN
