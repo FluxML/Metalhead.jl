@@ -28,21 +28,23 @@ reasons.
 ## Layout
 
 - `src/hub/`: Hub downloads, safetensors checkpoints, the strict weight loader
-  (`loadweights.jl`), the architecture registry (`ArchSpec`, `ConfigFormat`, `register!`),
-  the public API (`api.jl`), and `processors.jl`: `create_processor`, the registry of
-  processor classes (`register_processor!`), AutoProcessor's lookup and the strict reading
-  of settings. Nothing there is specific to one library.
+  (`loadweights.jl`), the architecture registry (`ArchSpec`, `AbstractConfigFormat`,
+  `register!`), the public API (`api.jl`), and `processors.jl`: `create_processor`, the
+  registry of processor classes (`register_processor!`), AutoProcessor's lookup and the
+  strict reading of settings. Nothing there is specific to one library.
 - `src/Timm/`: one file per timm family. Ports of `timm.layers` classes go in `layers.jl`.
-  `config.jl` is timm's `ConfigFormat`, the template for any other library: it says how a
-  `config.json` names an architecture and its arguments. A library gets its own `src/<Name>/`
-  module, and its architecture names must not clash with those already registered.
-- `src/Transformers/`: one file per transformers model, and `config.jl`, its `ConfigFormat`.
-  Blocks that models share (RMSNorm, the rotary tables, the tied output head) go in `layers.jl`.
+  `config.jl` is timm's `AbstractConfigFormat`, the template for any other library: it says
+  how a `config.json` names an architecture and its arguments. A library gets its own
+  `src/<Name>/` module, and its architecture names must not clash with those already
+  registered.
+- `src/Transformers/`: one file per transformers model, and `config.jl`, its
+  `AbstractConfigFormat`. Blocks that models share (RMSNorm, the rotary tables, the tied
+  output head) go in `layers.jl`.
 - `src/Diffusers/`: diffusers models (`transformer_flux2.jl`, `autoencoder_kl_flux2.jl`, the
   autoencoders' encoder and decoder in `vae.jl`), schedulers and pipelines. `config.jl` has two
-  `ConfigFormat`s: a model's `config.json` and a pipeline's `model_index.json`, whose components
-  load from subfolders of the repository. The tokenizer of a pipeline loads through the
-  HuggingFaceTokenizers.jl extension (`ext/`).
+  `AbstractConfigFormat`s: a model's `config.json` and a pipeline's `model_index.json`,
+  whose components load from subfolders of the repository. The tokenizer of a pipeline loads
+  through the HuggingFaceTokenizers.jl extension (`ext/`).
 - `src/legacy/`: the hand-written models of Metalhead 0.9 (`ResNet(50)`, `Metalhead.Layers`,
   `pretrain = true`). Deprecated, untested, and removed in 0.11: don't extend them.
 - `test/`: run with ParallelTestRunner. Each file is a `@testset` in its own module. Shared

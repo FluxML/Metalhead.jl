@@ -14,8 +14,8 @@ reimplementation of the PyTorch code, validated as described in
 [How models are validated](@ref validation). It includes what the checkpoint determines
 besides the model, such as its preprocessing, but not general-purpose machinery: see
 [Scope](@ref). The registry and `create_model` are not specific to timm: a library other than
-timm gets its own module, `src/<Name>/`, and a [`Metalhead.ConfigFormat`](@ref) saying how
-its `config.json` names an architecture, like `src/Timm/config.jl`.
+timm gets its own module, `src/<Name>/`, and a [`Metalhead.AbstractConfigFormat`](@ref)
+saying how its `config.json` names an architecture, like `src/Timm/config.jl`.
 
 ## Setup
 
