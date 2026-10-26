@@ -1,7 +1,7 @@
 using Metalhead, Test
 using JSON: JSON
 using Metalhead: merge_nested, image_array, image_batch, ProcessorFiles
-using Metalhead.Transformers: Sam3Processor, Sam3ImageProcessor, TokenizersBackend
+using Metalhead.Transformers: Sam3Processor, Sam3ImageProcessor
 
 const SAM3 = joinpath(pkgdir(Metalhead), "test", "fixtures", "processors",
     "unsloth--sam3.1")
@@ -64,11 +64,17 @@ end
         "tokenizer_config.json" => tokenizer]) do dir
         @test create_processor(dir) isa Sam3Processor
     end
-    # else a tokenizer, else an image processor
-    with_files(["config.json" => Dict("architectures" => ["LlamaForCausalLM"],
-            "model_type" => "llama"),
-        "tokenizer_config.json" => tokenizer]) do dir
-        @test create_processor(dir) isa TokenizersBackend
+    # else the tokenizer, before an image processor (with METALHEAD_TEST_NETWORK, another
+    # test of this worker may have loaded HuggingFaceTokenizers)
+    llama = Dict("architectures" => ["LlamaForCausalLM"], "model_type" => "llama")
+    with_files(["config.json" => llama, "tokenizer_config.json" => tokenizer,
+        "preprocessor_config.json" => image_processor]) do dir
+        @test_throws "a tokenizer, which has no settings to override (got `padding_side`)" create_processor(
+            dir; padding_side = "left")
+        ext = Base.get_extension(Metalhead, :MetalheadHuggingFaceTokenizersExt)
+        @test_throws (ext === nothing ?
+                      "run `using HuggingFaceTokenizers` before `create_processor`" :
+                      "has no tokenizer.json") create_processor(dir)
     end
     with_files(["preprocessor_config.json" => image_processor]) do dir
         ip = create_processor(dir; size = (; height = 8, width = 8))
@@ -83,8 +89,7 @@ end
     with_files(["config.json" => config]) do dir
         @test_throws "has no image processor" create_processor(dir)
     end
-    with_files(["config.json" => Dict("architectures" => ["LlamaForCausalLM"],
-        "model_type" => "llama")]) do dir
+    with_files(["config.json" => llama]) do dir
         @test_throws "has no processor files" create_processor(dir)
     end
     with_files(["preprocessor_config.json" => merge(image_processor,

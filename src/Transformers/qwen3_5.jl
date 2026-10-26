@@ -406,8 +406,8 @@ function forward_features(m::Qwen3_5ForCausalLM, input_ids; attention_mask = not
     return m.model(input_ids; attention_mask, position_ids)
 end
 
-function (m::Qwen3_5ForCausalLM)(input_ids::AbstractArray{<:Integer};
-        attention_mask = nothing, position_ids = nothing)
+function (m::Qwen3_5ForCausalLM)(input_ids; attention_mask = nothing,
+        position_ids = nothing)
     return forward_head(m, forward_features(m, input_ids; attention_mask, position_ids))
 end
 

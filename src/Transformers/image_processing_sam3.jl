@@ -7,7 +7,8 @@
     Sam3ImageProcessor(; do_resize = true, size = (; height = 1008, width = 1008),
                        resample = 2, do_rescale = true, rescale_factor = 1 / 255,
                        do_normalize = true, image_mean = (0.5, 0.5, 0.5),
-                       image_std = (0.5, 0.5, 0.5), do_convert_rgb = true)
+                       image_std = (0.5, 0.5, 0.5), do_convert_rgb = true,
+                       do_center_crop = false, do_pad = false)
 
 transformers' image processor of SAM 3, with the defaults of its Python class; the image
 processor of a [`Sam3Processor`](@ref Metalhead.Transformers.Sam3Processor), with the
@@ -36,7 +37,8 @@ An 8-bit image gives the same `pixel_values` as transformers, and an image of re
 same to Float32 precision. The settings are checked as the processor is made, and also
 take the forms that transformers takes: `size` as an integer, the side of a square;
 `resample` as the name of PIL's filter (`:bilinear`); `image_mean` and `image_std` as one
-value for all channels.
+value for all channels. The center crop and the padding of transformers' image processors
+aren't ported: `do_center_crop` and `do_pad` are `false` (or `nothing`, Python's `None`).
 """
 @processor struct Sam3ImageProcessor <: AbstractImageProcessor
     do_resize::Bool = true
@@ -48,12 +50,18 @@ value for all channels.
     image_mean::Any = (0.5, 0.5, 0.5)
     image_std::Any = (0.5, 0.5, 0.5)
     do_convert_rgb::Bool = true
+    do_center_crop::Bool = false
+    do_pad::Bool = false
     provenance::NamedTuple = (;)
 end
 
 register_processor!("Sam3ImageProcessor", Sam3ImageProcessor)
 
-processor_fields(T::Type{Sam3ImageProcessor}, args::Tuple) = image_processor_fields(T, args)
+function standardize_settings(T::Type{Sam3ImageProcessor}, settings::NamedTuple)
+    s = standardize_image_settings(T, settings)
+    size_hw(s.size)
+    return s
+end
 
 # transformers' `get_size_dict(size, default_to_square = True)` of an integer
 size_setting(::Type{Sam3ImageProcessor}, v::Integer) = (; height = v, width = v)
@@ -65,17 +73,6 @@ function ignored_keys(::Type{Sam3ImageProcessor})
         pad_size = "only used with `do_pad`",
         image_seq_length = "not read by Sam3ImageProcessor")
 end
-function restricted_keys(::Type{Sam3ImageProcessor})
-    return (; do_center_crop = (false,), do_pad = (false,))
-end
-
-function check_processor(ip::Sam3ImageProcessor)
-    check_resample(ip.resample)
-    size_hw(ip.size)
-    check_channel_stats(ip)
-    return nothing
-end
-
 function (ip::Sam3ImageProcessor)(images)
     images = image_batch(images)
     isempty(images) && error("no images to process")

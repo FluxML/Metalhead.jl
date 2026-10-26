@@ -27,9 +27,6 @@ end
     end
 end
 
-# the output of a tokenizer, padded on either side
-foreach(check_tokenizer_inputs, ["gemma3_tiny", "gemma3_options"])
-
 @testset "config" begin
     tiny = (; vocab_size = 16, hidden_size = 8, intermediate_size = 12,
         num_hidden_layers = 6, num_attention_heads = 2, num_key_value_heads = 1,

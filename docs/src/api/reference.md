@@ -19,7 +19,7 @@ feature_info
 
 [`create_processor`](@ref) loads the processor of a checkpoint, which turns raw inputs into
 the inputs of its model and its outputs back into results. Each processor type ports a class
-of transformers, or timm's eval transform, with its settings as fields.
+of the Python library of its checkpoints, with its settings as fields.
 
 ```@docs
 create_processor
@@ -28,24 +28,21 @@ Metalhead.Transformers.Qwen3VLProcessor
 Metalhead.Transformers.Qwen2VLImageProcessor
 Metalhead.Transformers.Sam3Processor
 Metalhead.Transformers.Sam3ImageProcessor
-Metalhead.Transformers.TokenizersBackend
 ```
 
-Post-processing and decoding take the processor and the outputs of the model:
+Post-processing takes the processor and the outputs of the model:
 
 ```@docs
-Metalhead.Transformers.decode
 Metalhead.Transformers.post_process_object_detection
 Metalhead.Transformers.post_process_instance_segmentation
 Metalhead.Transformers.post_process_semantic_segmentation
 ```
 
-A tokenizer other than HuggingFaceTokenizers.jl's encodes and decodes the strings of a
-`TokenizersBackend` with methods of these functions:
+Image processors take images in one layout, to which an extension for another type of image
+adds a method:
 
 ```@docs
-Metalhead.Transformers.encode_ids
-Metalhead.Transformers.decode_ids
+Metalhead.image_array
 ```
 
 ## timm
@@ -57,7 +54,6 @@ Metalhead.Timm.pretrained_cfg
 ## transformers
 
 ```@docs
-Metalhead.Transformers.CausalLM
 Metalhead.Transformers.Qwen3_5ForConditionalGeneration
 Metalhead.Transformers.Qwen3_5VisionModel
 Metalhead.Transformers.Sam3Model
@@ -96,9 +92,7 @@ Order = [:function]
 Filter = f -> !(f in (Metalhead.Timm.pretrained_cfg, Metalhead.Timm.pil_resize,
     Metalhead.Transformers.post_process_object_detection,
     Metalhead.Transformers.post_process_instance_segmentation,
-    Metalhead.Transformers.post_process_semantic_segmentation,
-    Metalhead.Transformers.decode, Metalhead.Transformers.encode_ids,
-    Metalhead.Transformers.decode_ids))
+    Metalhead.Transformers.post_process_semantic_segmentation))
 ```
 
 ```@docs
@@ -128,24 +122,13 @@ Metalhead.weights_name
 Metalhead.instantiate
 Metalhead.AbstractProcessor
 Metalhead.AbstractImageProcessor
-Metalhead.register_processor!
 Metalhead.@processor
-Metalhead.processor_components
+Metalhead.register_processor!
 Metalhead.ignored_keys
-Metalhead.restricted_keys
 Metalhead.legacy_keys
-Metalhead.processor_fields
-Metalhead.check_processor
-Metalhead.load_processor
-Metalhead.processor_from_entries
+Metalhead.standardize_settings
 Metalhead.instantiate_processor
 Metalhead.check_inputs
-Metalhead.merge_nested
-Metalhead.ProcessorFiles
-Metalhead.SourceFile
-Metalhead.local_path
-Metalhead.image_array
-Metalhead.image_batch
 Metalhead.Timm.pil_resize
 Metalhead.Checkpoint
 Metalhead.load_state!
