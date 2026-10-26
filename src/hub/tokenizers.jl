@@ -5,18 +5,43 @@
 # `encode_ids`, `token_id` and `pad_token_id` (a test's) stands in for it. Token ids start
 # at 0, as tokenizers give them; the models take token indices, which start at 1.
 
+tokenizers_extension() = Base.get_extension(@__MODULE__, :MetalheadHuggingFaceTokenizersExt)
+
 # The tokenizer of the processor files `files`: their tokenizer.json, at the commit of the
 # other files, whose padding token is the `pad_token` of tokenizer_config.json unless
-# tokenizer.json sets its padding. `nothing` without HuggingFaceTokenizers.
+# tokenizer.json sets its padding. `nothing` without HuggingFaceTokenizers or without a
+# tokenizer.json, as the component `tokenizer` of a processor is then.
 function load_tokenizer(files::ProcessorFiles)
-    ext = Base.get_extension(@__MODULE__, :MetalheadHuggingFaceTokenizersExt)
+    ext = tokenizers_extension()
     ext === nothing && return nothing
     config = read_json(files, "tokenizer_config.json")
     path = source_file_if_exists(files, "tokenizer.json")
-    path === nothing &&
-        error("$(source_name(files.source)) has no tokenizer.json, the file that HuggingFaceTokenizers loads a tokenizer from")
+    path === nothing && return nothing
     pad = config === nothing ? nothing : token_content(get(config, "pad_token", nothing))
     return ext.load_tokenizer(path, pad)
+end
+
+# The class that AutoProcessor falls back on when a repository's processor is its tokenizer,
+# transformers' `AutoTokenizer`: `create_processor` returns the tokenizer, which has no
+# settings to override.
+struct AutoTokenizer end
+
+function load_processor(::Type{AutoTokenizer}, files::ProcessorFiles; kwargs...)
+    source = source_name(files.source)
+    isempty(kwargs) ||
+        throw(ArgumentError("the processor of $source is a tokenizer, which has no settings to override (got $(join(("`$k`" for k in keys(kwargs)), ", ")))"))
+    tokenizers_extension() === nothing &&
+        error("the processor of $source is a tokenizer, which needs HuggingFaceTokenizers.jl: run `using HuggingFaceTokenizers` before `create_processor`")
+    tok = load_tokenizer(files)
+    tok === nothing && error("$source has no tokenizer.json, the file of its tokenizer")
+    return tok
+end
+
+# The tokenizer of the processor `p`, which its text needs.
+function tokenizer_of(p)
+    p.tokenizer === nothing &&
+        error("$(nameof(typeof(p))) has no tokenizer to encode text: run `using HuggingFaceTokenizers` before `create_processor`, from a repository with a tokenizer.json")
+    return p.tokenizer
 end
 
 # A token of tokenizer_config.json: a string, or an `AddedToken` saved as a dictionary.

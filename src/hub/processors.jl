@@ -76,8 +76,10 @@ standardize_settings(::Type, settings::NamedTuple) = settings
 processor made by hand fails as early as a loaded one. `components` names the fields that
 hold the processors it combines, each of type `Union{Nothing, C}` with the default
 `nothing`, which [`create_processor`](@ref) loads as a processor of class `C` from the same
-repository; a component that isn't a `C` is an error. With components,
-`T(components...; kwargs...)` also makes it from them, e.g.
+repository; a component that isn't a `C` is an error. The component `tokenizer`, of type
+`Any`, is the tokenizer of the repository: HuggingFaceTokenizers.jl's `Tokenizer` of its
+tokenizer.json, or `nothing` without HuggingFaceTokenizers or without the file. With
+components, `T(components...; kwargs...)` also makes it from them, e.g.
 `T(image_processor, tokenizer; kwargs...)`.
 """
 macro processor(args...)
@@ -405,7 +407,7 @@ end
 # The class of a source's processor, as AutoProcessor finds it: the `processor_class` of
 # processor_config.json, preprocessor_config.json (or video_preprocessor_config.json
 # without it), tokenizer_config.json or config.json, the processor of the model type, else
-# the image processor of `image_processor_type`.
+# a tokenizer, else the image processor of `image_processor_type`.
 function auto_processor_class(files::ProcessorFiles, config)
     candidates = ["processor_config.json",
         has_file(files, "preprocessor_config.json") ? "preprocessor_config.json" :
@@ -424,6 +426,8 @@ function auto_processor_class(files::ProcessorFiles, config)
             return processor_type(PROCESSOR_MODEL_TYPES[model_type],
                 "the processor of the model type `$model_type`")
     end
+    (has_file(files, "tokenizer_config.json") || has_file(files, "tokenizer.json")) &&
+        return AutoTokenizer
     found = image_processor_config(files)
     if found !== nothing
         dict, file = found
@@ -432,7 +436,7 @@ function auto_processor_class(files::ProcessorFiles, config)
             error("the image processor of $file has no `image_processor_type`")
         return processor_type(class, "`image_processor_type` in $file")
     end
-    return error("$(source_name(files.source)) has no processor files (processor_config.json or preprocessor_config.json)")
+    return error("$(source_name(files.source)) has no processor files (processor_config.json, preprocessor_config.json, tokenizer_config.json or tokenizer.json)")
 end
 
 # The configuration of an image processor and its file: the `image_processor` of
@@ -449,7 +453,8 @@ end
 # An image processor reads the `image_processor` of processor_config.json, else
 # preprocessor_config.json. A processor with components loads each as a processor of its
 # class, routing each override to the one component that has a setting of that name, and
-# reads its own settings from processor_config.json. Other classes have their own method.
+# its tokenizer with `load_tokenizer`, and reads its own settings from
+# processor_config.json. Other classes have their own method.
 function load_processor(::Type{T}, files::ProcessorFiles;
         kwargs...) where {T <: AbstractImageProcessor}
     found = image_processor_config(files)
@@ -467,19 +472,25 @@ function load_processor(::Type{T}, files::ProcessorFiles;
     parts = component_classes(T)
     isempty(parts) && error("$(nameof(T)) has no `load_processor` method")
     routed = route_overrides(T, NamedTuple(kwargs))
-    loaded = map(k -> k => load_processor(parts[k], files; routed[k]...), keys(parts))
+    loaded = map(keys(parts)) do k
+        k === :tokenizer && return k => load_tokenizer(files)
+        return k => load_processor(parts[k], files; routed[k]...)
+    end
     dict = something(read_json(files, "processor_config.json"), Dict{String, Any}())
     entries = [(String(k), jsonvalue(v), "processor_config.json")
                for (k, v) in dict if !haskey(parts, Symbol(k))]
     return processor_from_entries(T, entries; components = (; loaded...), routed.self...)
 end
 
+# The components of `T` that have settings: all but the tokenizer.
+setting_components(T) = Base.structdiff(component_classes(T), NamedTuple{(:tokenizer,)})
+
 # The overrides of each component of `T` (and of `T` itself, `self`): each to the one that
 # has a setting of its name.
 function route_overrides(::Type{T}, kwargs::NamedTuple) where {T}
-    parts = component_classes(T)
+    parts = setting_components(T)
     accepts(C, key) = key in own_override_names(C) ||
-                      any(S -> accepts(S, key), component_classes(C))
+                      any(S -> accepts(S, key), setting_components(C))
     routed = Dict(name => Pair{Symbol, Any}[] for name in (:self, keys(parts)...))
     for (key, v) in pairs(kwargs)
         owners = [name for name in keys(parts) if accepts(parts[name], key)]
@@ -510,6 +521,7 @@ function check_inputs(model, inputs::NamedTuple, required; hint::AbstractString 
     names(ks) = join(("`$k`" for k in ks), ", ", " and ")
     return throw(ArgumentError("$(nameof(typeof(model))) needs the inputs $(names(required)), but `inputs` has no $(names(absent)) (it has $(isempty(inputs) ? "no keys" : names(keys(inputs))))$(isempty(hint) ? "" : "; $hint")"))
 end
+ChainRulesCore.@non_differentiable check_inputs(::Any...)
 
 """
     instantiate_processor(format::AbstractConfigFormat, files, config; kwargs...)
@@ -543,10 +555,23 @@ component has is an error.
 
 Returns the most complete processor the repository describes, as transformers'
 `AutoProcessor` does: the class that its files or its model type name, such as a processor
-that combines an image processor and a tokenizer; else its image processor. Calling it
-returns what the model takes, a NamedTuple. The processor classes are ported along with
-their models, and a class that isn't ported is an error. `show` prints each setting and
-where it comes from.
+that combines an image processor and a tokenizer; else its tokenizer; else its image
+processor. Calling a processor returns what the model takes, a NamedTuple. The processor
+classes are ported along with their models, and a class that isn't ported is an error.
+`show` prints each setting and where it comes from.
+
+Metalhead ports no tokenizer: the tokenizer of a repository is HuggingFaceTokenizers.jl's
+`Tokenizer` of its tokenizer.json, which needs `using HuggingFaceTokenizers` before
+`create_processor`, and whose token ids start at 0, the token indices of the models at 1:
+
+```julia
+using HuggingFaceTokenizers
+model = create_model("HuggingFaceTB/SmolLM2-135M"; pretrained = true)
+tok = create_processor("HuggingFaceTB/SmolLM2-135M")
+ids = encode(tok, "The capital of France is").ids .+ 1
+logits = model(ids)
+decode(tok, [argmax(logits[:, end]) - 1])   # " Paris"
+```
 """
 function create_processor(name::AbstractString;
         revision::Union{Nothing, AbstractString} = nothing, subfolder::AbstractString = "",
@@ -585,7 +610,7 @@ end
 
 function Base.show(io::IO, p::AbstractProcessor)
     print(io, nameof(typeof(p)), "(")
-    join(io, ("$k = $(repr(v; context = io))" for (k, v) in pairs(components(p))), ", ")
+    join(io, ("$k = $(component_repr(v, io))" for (k, v) in pairs(components(p))), ", ")
     isempty(components(p)) || isempty(settings(p)) || print(io, "; ")
     join(io, ("$k = $(setting_repr(k, v))" for (k, v) in pairs(settings(p))), ", ")
     return print(io, ")")
@@ -605,6 +630,12 @@ function show_settings(io, p, indent)
     end
     for (name, c) in pairs(components(p))
         print(io, "\n", indent, "  ", name, ": ")
-        c isa AbstractProcessor ? show_settings(io, c, indent * "  ") : show(io, c)
+        c isa AbstractProcessor ? show_settings(io, c, indent * "  ") :
+        print(io, component_repr(c, io))
     end
 end
+
+# A component that isn't a processor, the tokenizer, is shown by its type: the Python repr
+# of a `Tokenizer` holds its whole vocabulary.
+component_repr(c::Union{Nothing, AbstractProcessor}, io) = repr(c; context = io)
+component_repr(c, io) = string(nameof(typeof(c)))

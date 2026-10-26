@@ -2,7 +2,8 @@ using Metalhead, Test
 using JSON: JSON
 using SafeTensors: SafeTensors
 using Metalhead: ProcessorFiles, model_source, load_tokenizer, encode_ids, token_id,
-                 pad_token_id, pad_ids
+                 pad_token_id, pad_ids, tokenizer_of, load_processor, AbstractProcessor,
+                 AbstractImageProcessor, @processor
 
 const REFERENCES = joinpath(pkgdir(Metalhead), "test", "references")
 
@@ -10,6 +11,35 @@ files(name; subfolder = "") = ProcessorFiles(model_source(name, nothing, subfold
 reference_file(name) = joinpath(REFERENCES, name * ".safetensors")
 reference(name) = Metalhead.Checkpoint(reference_file(name))
 metadata(name) = SafeTensors.deserialize(reference_file(name)).metadata
+
+# A directory with the files `files` (name => Dict, or a string)
+function with_files(f, files)
+    mktempdir() do dir
+        for (name, content) in files
+            write(joinpath(dir, name), content isa String ? content : JSON.json(content))
+        end
+        return f(dir)
+    end
+end
+
+@processor struct MetalheadTestImageProcessor <: AbstractImageProcessor
+    size::Int = 4
+    provenance::NamedTuple = (;)
+end
+
+# A processor that combines an image processor and a tokenizer
+@processor (image_processor, tokenizer) struct MetalheadTestProcessor <: AbstractProcessor
+    image_processor::Union{Nothing, MetalheadTestImageProcessor} = nothing
+    tokenizer::Any = nothing
+    max_length::Int = 8
+    provenance::NamedTuple = (;)
+end
+
+struct MetalheadTestTokenizer end
+
+const COMPOSITE = ["preprocessor_config.json" => Dict("size" => 6),
+    "processor_config.json" => Dict("max_length" => 16),
+    "tokenizer_config.json" => Dict("pad_token" => "<pad>")]
 
 @testset "pad_ids" begin
     out = pad_ids([[5, 6, 7], [8]], 0)
@@ -24,6 +54,34 @@ metadata(name) = SafeTensors.deserialize(reference_file(name)).metadata
         [[5, 6], [7]], nothing)
     @test_throws "a text has 2 tokens, more than the 1" pad_ids([[5, 6]], 0; max_length = 1)
     @test size(pad_ids(Vector{Int}[], 0).input_ids) == (0, 0)
+end
+
+@testset "a processor with a tokenizer" begin
+    T = MetalheadTestProcessor
+    @test Metalhead.component_classes(T) ==
+          (; image_processor = MetalheadTestImageProcessor, tokenizer = Any)
+    # without tokenizer.json, no tokenizer, with HuggingFaceTokenizers or without it
+    with_files(COMPOSITE) do dir
+        p = load_processor(T, files(dir))
+        @test p.tokenizer === nothing && p.image_processor.size == 6 && p.max_length == 16
+        @test_throws ["MetalheadTestProcessor has no tokenizer to encode text",
+            "`using HuggingFaceTokenizers` before `create_processor`", "tokenizer.json"] tokenizer_of(p)
+        # overrides go to the components that have settings, never to the tokenizer
+        p = load_processor(T, files(dir); size = 3, max_length = 4)
+        @test p.image_processor.size == 3 && p.max_length == 4
+        @test_throws "no component of MetalheadTestProcessor has a setting `pad_token`" load_processor(
+            T, files(dir); pad_token = "<eos>")
+        @test_throws "(MetalheadTestProcessor has `max_length`)" load_processor(T,
+            files(dir); max_lenght = 4)
+        @test sprint(show, p) ==
+              "MetalheadTestProcessor(image_processor = MetalheadTestImageProcessor(size = 3), tokenizer = nothing; max_length = 4)"
+    end
+    # a tokenizer is shown by its type
+    p = T(MetalheadTestImageProcessor(), MetalheadTestTokenizer())
+    @test tokenizer_of(p) isa MetalheadTestTokenizer
+    @test occursin("tokenizer = MetalheadTestTokenizer;", sprint(show, p))
+    plain = sprint(show, MIME("text/plain"), p)
+    @test endswith(plain, "\n  tokenizer: MetalheadTestTokenizer")
 end
 
 # With METALHEAD_TEST_NETWORK, another test of this worker may have loaded
@@ -54,7 +112,7 @@ if TEST_NETWORK
         "Qwen/Qwen3-0.6B" => "<|endoftext|>" => 151643,
         "unsloth/Llama-3.2-1B" => "<|finetune_right_pad_id|>" => 128004,
         "unsloth/gemma-3-270m" => "<pad>" => 0]
-        tok = load_tokenizer(files(repo))
+        tok = @test_logs create_processor(repo)
         @test tok isa Tokenizer
         @test load_tokenizer(files(repo)) === tok
         name = replace(repo, "/" => "--")
@@ -106,18 +164,22 @@ if TEST_NETWORK
         end
     end
 
+    # A tokenizer.json of words, with the padding `padding`
+    function tokenizer_json(padding = nothing)
+        vocab = Dict("[UNK]" => 0, "[PAD]" => 1, "<pad>" => 2, "hello" => 3, "world" => 4)
+        model = Dict("type" => "WordLevel", "vocab" => vocab, "unk_token" => "[UNK]")
+        return Dict("version" => "1.0", "truncation" => nothing, "padding" => padding,
+            "added_tokens" => [], "normalizer" => nothing,
+            "pre_tokenizer" => Dict("type" => "Whitespace"), "post_processor" => nothing,
+            "decoder" => nothing, "model" => model)
+    end
+
     # The padding of tokenizer.json, if it has one, wins over the pad_token of
     # tokenizer_config.json
     @testset "padding token" begin
-        vocab = Dict("[UNK]" => 0, "[PAD]" => 1, "<pad>" => 2, "hello" => 3, "world" => 4)
-        model = Dict("type" => "WordLevel", "vocab" => vocab, "unk_token" => "[UNK]")
         padding = Dict("strategy" => "BatchLongest", "direction" => "Right",
             "pad_to_multiple_of" => nothing, "pad_id" => 1, "pad_type_id" => 0,
             "pad_token" => "[PAD]")
-        tokenizer_json(padding) = Dict("version" => "1.0", "truncation" => nothing,
-            "padding" => padding, "added_tokens" => [], "normalizer" => nothing,
-            "pre_tokenizer" => Dict("type" => "Whitespace"), "post_processor" => nothing,
-            "decoder" => nothing, "model" => model)
         function load(padding, config)
             dir = mktempdir()
             write(joinpath(dir, "tokenizer.json"), JSON.json(tokenizer_json(padding)))
@@ -137,7 +199,27 @@ if TEST_NETWORK
         # a tokenizer.json that pads to a fixed length: the ids are those of the text
         fixed = merge(padding, Dict("strategy" => Dict("Fixed" => 4)))
         @test encode_ids(load(fixed, nothing), "hello world") == [3, 4]
-        @test_throws "has no tokenizer.json" load_tokenizer(files(mktempdir()))
+    end
+
+    @testset "without tokenizer.json" begin
+        with_files(["tokenizer_config.json" => Dict("pad_token" => "<pad>")]) do dir
+            @test load_tokenizer(files(dir)) === nothing
+            @test_throws "has no tokenizer.json, the file of its tokenizer" create_processor(
+                dir)
+        end
+    end
+
+    @testset "a processor with a tokenizer, loaded" begin
+        with_files([COMPOSITE; "tokenizer.json" => JSON.json(tokenizer_json())]) do dir
+            p = load_processor(MetalheadTestProcessor, files(dir); size = 3)
+            @test p.tokenizer isa Tokenizer && p.image_processor.size == 3
+            @test tokenizer_of(p) === p.tokenizer
+            @test pad_token_id(p.tokenizer) == 2
+            # by its type, not its Python repr, which holds the vocabulary
+            @test occursin("tokenizer = Tokenizer;", sprint(show, p))
+            @test endswith(sprint(show, MIME("text/plain"), p), "\n  tokenizer: Tokenizer")
+            @test !occursin("WordLevel", sprint(show, MIME("text/plain"), p))
+        end
     end
 
     @testset "a leaf" begin
@@ -156,6 +238,8 @@ if TEST_NETWORK
         dir = D.tokenizer_dir(Metalhead.subsource(
             model_source("black-forest-labs/FLUX.2-klein-4B", nothing), "tokenizer"))
         pipe = D.Flux2KleinPipeline(nothing, nothing, nothing, dir, nothing, true)
+        tok = create_processor("black-forest-labs/FLUX.2-klein-4B"; subfolder = "tokenizer")
+        @test tok === load_tokenizer(files(dir))
         @test D.tokenize(pipe, [prompt]) == (ref["input_ids"] .+ 1, ref["attention_mask"])
         ids, mask = D.tokenize(pipe, [prompt, "a"]; max_sequence_length = 8)
         @test size(ids) == (8, 2) && all(==(1), mask[:, 1])

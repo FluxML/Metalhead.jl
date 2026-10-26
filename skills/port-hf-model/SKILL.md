@@ -530,7 +530,8 @@ does.
   which adds `T(image_processor, video_processor; kwargs...)`: each is a field
   `Union{Nothing, C} = nothing`, which `create_processor` loads as a processor of class `C`
   from the same repository, routing each override to the component that has a setting of
-  its name. A class that is neither an image processor nor a combination loads with an
+  its name. The component `tokenizer` is a field `tokenizer::Any = nothing` (see
+  "Tokenizers"), which takes no overrides. A class that is neither an image processor nor a combination loads with an
   internal method `Metalhead.load_processor(::Type{T}, files; kwargs...)` of its own.
 - **Settings.** `standardize_settings(T, settings)`, documented in `src/hub/processors.jl`,
   takes the settings as a NamedTuple and returns them as the fields store them: it converts
@@ -558,14 +559,16 @@ does.
   them through a method `model(inputs::NamedTuple)`, which calls `check_inputs(model,
   inputs, required; hint)` on the keys it can't do without.
 - **Tokenizers.** Not ported: the tokenizer of a checkpoint is HuggingFaceTokenizers.jl's
-  `Tokenizer` of its `tokenizer.json`, which the extension loads (`load_tokenizer(files)`,
-  `nothing` without the extension), with the `pad_token` of `tokenizer_config.json` as its
-  padding token. Processors use it only through the internal interface of
-  `src/hub/tokenizers.jl`: `encode_ids(tok, text; add_special_tokens)`, `token_id(tok,
-  token)` and `pad_token_id(tok)`, ids from 0, and `pad_ids(ids, pad_id; max_length)`, which
-  pads a batch on the right into 1-based `input_ids` and an `attention_mask`. In offline
-  tests, a type with methods of these functions that returns the ids of the references
-  stands in for the tokenizer; `METALHEAD_TEST_NETWORK` checks the real one.
+  `Tokenizer` of its `tokenizer.json`, which the extension loads (`load_tokenizer(files)`),
+  with the `pad_token` of `tokenizer_config.json` as its padding token. A processor's
+  `tokenizer` is `nothing` without the extension or without a `tokenizer.json`: its images
+  still work, and its text calls `tokenizer_of(p)`, whose error says why. Processors use the
+  tokenizer only through the internal interface of `src/hub/tokenizers.jl`:
+  `encode_ids(tok, text; add_special_tokens)`, `token_id(tok, token)` and
+  `pad_token_id(tok)`, ids from 0, and `pad_ids(ids, pad_id; max_length)`, which pads a
+  batch on the right into 1-based `input_ids` and an `attention_mask`. In offline tests, a
+  type with methods of these functions that returns the ids of the references stands in for
+  the tokenizer; `METALHEAD_TEST_NETWORK` checks the real one.
 
 ## diffusers models and pipelines
 

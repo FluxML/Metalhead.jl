@@ -116,8 +116,6 @@ function kv_lengths_of(attention_mask, input_ids)
     return lengths
 end
 ChainRulesCore.@non_differentiable kv_lengths_of(::Any...)
-# for the gradient of `model(inputs::NamedTuple)`
-ChainRulesCore.@non_differentiable check_inputs(::Any...)
 
 # transformers' `rope_parameters`, from it or from the older `rope_theta` and `rope_scaling`
 # keys of config.json, as in `RotaryEmbeddingConfigMixin.convert_rope_params_to_dict`.
