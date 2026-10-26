@@ -51,23 +51,28 @@ A vector of prompts makes a batch of images.
 
 ## The steps of the pipeline
 
-The prompt is formatted with the chat template of the Qwen3 text encoder, tokenized and padded
-to 512 tokens. The hidden states of three of its layers are its embeddings:
+The prompt is formatted with the chat template of the Qwen3 text encoder, tokenized by the
+pipeline's tokenizer, and padded to 512 tokens. The hidden states of three layers of the
+text encoder are its embeddings:
 
 ```julia
-using Metalhead.Diffusers: tokenize, encode_prompt
+using Metalhead.Diffusers: encode_prompt
 
-ids, mask = tokenize(pipe, ["A photo of a red fox"])  # 512 × 1 each
-embeds = encode_prompt(pipe, ids; attention_mask = mask)  # 7680 × 512 × 1
+embeds = encode_prompt(pipe, ["A photo of a red fox"])  # 7680 × 512 × 1
 ```
 
 The pipeline also takes the embeddings, `pipe(embeds; num_inference_steps = 4)`, which saves
-encoding the same prompt again and needs no tokenizer.
+encoding the same prompt again and needs no tokenizer. `encode_prompt` also takes the token
+indices of prompts tokenized otherwise, with their attention mask.
 
 The components are fields of the pipeline: `pipe.text_encoder` is a Qwen3 language model (see
 [Language models](@ref language_models)), `pipe.transformer` predicts the flow of the latents
 at each step, `pipe.vae` decodes the final latents into an image, and `pipe.scheduler` holds the
-noise levels of the steps. Each loads on its own too, with `subfolder`:
+noise levels of the steps. `pipe.tokenizer` is the tokenizer of the text encoder, a
+[`TokenizersBackend`](@ref Metalhead.Transformers.TokenizersBackend), which `gpu` and `bf16`
+leave as it is. A pipeline has no processor of its own: it prepares its inputs itself.
+`create_processor(repo; subfolder = "tokenizer")` loads the tokenizer alone, and each other
+component loads on its own with `subfolder` too:
 
 ```julia
 using Metalhead.Diffusers: encode, decode, mode

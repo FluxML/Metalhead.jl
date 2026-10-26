@@ -16,6 +16,7 @@ using Flux
 using NNlib
 using ConcreteStructs: @concrete
 using ChainRulesCore: ChainRulesCore
+using Functors: Functors
 using MLUtils: topk
 using JSON: JSON
 using ..Metalhead: Metalhead, ArchSpec, ConfigFormat, register!, declared_args

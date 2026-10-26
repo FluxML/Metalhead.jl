@@ -52,11 +52,10 @@ reasons.
 - `src/Diffusers/`: diffusers models (`transformer_flux2.jl`, `autoencoder_kl_flux2.jl`, the
   autoencoders' encoder and decoder in `vae.jl`), schedulers and pipelines. `config.jl` has two
   `ConfigFormat`s: a model's `config.json` and a pipeline's `model_index.json`, whose components
-  load from subfolders of the repository. The tokenizer of a pipeline loads through the
-  HuggingFaceTokenizers.jl extension (`ext/`).
+  load from subfolders of the repository. The tokenizer of a pipeline is a
+  `TokenizersBackend`, from its `tokenizer/` subfolder.
 - `ext/`: package extensions. HuggingFaceTokenizers.jl is the backend that encodes and
-  decodes the strings of a `TokenizersBackend`, and tokenizes the prompts of pipelines
-  (`Diffusers.tokenize`); CUDA.
+  decodes the strings of a `TokenizersBackend`; CUDA.
 - `src/legacy/`: the hand-written models of Metalhead 0.9 (`ResNet(50)`, `Metalhead.Layers`,
   `pretrain = true`). Deprecated, untested, and removed in 0.11: don't extend them.
 - `test/`: run with ParallelTestRunner. Each file is a `@testset` in its own module. Shared

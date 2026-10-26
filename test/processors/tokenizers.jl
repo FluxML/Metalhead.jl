@@ -320,10 +320,10 @@ if TEST_NETWORK
             max_length = 512)
         @test out.input_ids == flux["input_ids"] .+ 1
         @test out.attention_mask == flux["attention_mask"]
-        # the tokenizer of the pipeline, as `Diffusers.tokenize` loads it
-        dir = D.tokenizer_dir(Metalhead.subsource(Metalhead.model_source(repo, nothing),
-            "tokenizer"))
-        pipe = D.Flux2KleinPipeline(nothing, nothing, nothing, dir, nothing, true)
-        @test D.tokenize(pipe, [prompt]) == (out.input_ids, out.attention_mask)
+        # the tokenizer of the pipeline, and the inputs of its `encode_prompt`
+        source = Metalhead.model_source(repo, nothing)
+        tok = D.pipeline_tokenizer(Metalhead.subsource(source, "tokenizer"))
+        @test Metalhead.settings(tok) == Metalhead.settings(qwen)
+        @test D.qwen3_prompt_inputs(tok, prompt) == out
     end
 end

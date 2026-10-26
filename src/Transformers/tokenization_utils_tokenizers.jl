@@ -35,9 +35,10 @@ function decode_ids end
 transformers' tokenizer of a tokenizer.json, which [`create_processor`](@ref
 Metalhead.create_processor) loads with the settings of the repository's
 tokenizer_config.json: the processor of a language model such as `"Qwen/Qwen3-0.6B"`, and
-the `tokenizer` of a processor. Its fields are transformers' attributes, with the defaults
-of `tokenizer_class`, the class that transformers' `AutoTokenizer` builds (`GPT2Tokenizer`,
-`Qwen2Tokenizer`, ...; loading a class that Metalhead hasn't validated warns).
+the `tokenizer` of a processor or of a diffusers pipeline. Its fields are transformers'
+attributes, with the defaults of `tokenizer_class`, the class that transformers'
+`AutoTokenizer` builds (`GPT2Tokenizer`, `Qwen2Tokenizer`, ...; loading a class that
+Metalhead hasn't validated warns).
 
 `tokenizer` is the backend that encodes and decodes strings: `nothing` until a string needs
 it, when the HuggingFaceTokenizers.jl extension loads `tokenizer_file`, or yours (see
@@ -103,6 +104,10 @@ logits = model(inputs)                                # (vocab_size, 6, 2)
 end
 
 register_processor!("TokenizersBackend", TokenizersBackend)
+
+# `gpu`, `f16` and the other Functors traversals of a model leave its tokenizer (that of a
+# pipeline) as it is, with a backend that may be a Python object.
+Functors.@leaf TokenizersBackend
 
 const SPECIAL_TOKENS = (:bos_token, :eos_token, :unk_token, :sep_token, :pad_token,
     :cls_token, :mask_token)

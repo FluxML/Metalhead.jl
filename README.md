@@ -151,7 +151,8 @@ timm's transform returns an array of size width × height × channels × batch. 
 return a NamedTuple with the keys of transformers (`input_ids`, `pixel_values`, ...), in
 Julia's layout, with token indices that start at 1. Turning outputs back into results takes
 the processor too: `Transformers.decode(proc, indices)` for text, and SAM 3's
-`post_process_instance_segmentation(proc, outputs)` for masks.
+`post_process_instance_segmentation(proc, outputs)` for masks. A diffusers pipeline has no
+processor: it prepares its inputs itself, with its tokenizer `pipe.tokenizer`.
 
 - Images are arrays of size width × height × channels, of `UInt8` from 0 to 255 or of reals
   from 0 to 1. The matrix of colours `img` that `FileIO.load` returns becomes one with
@@ -329,7 +330,8 @@ objects across frames.
 ### Text-to-image generation
 
 A diffusers repository holds a pipeline, whose components `create_model` builds from the
-subfolders of the repository. With HuggingFaceTokenizers.jl loaded, it takes prompts:
+subfolders of the repository, its tokenizer too. With HuggingFaceTokenizers.jl loaded, it
+takes prompts:
 
 ```julia
 using Flux, HuggingFaceTokenizers

@@ -1,8 +1,7 @@
 module MetalheadHuggingFaceTokenizersExt
 
-using Metalhead: Metalhead, create_processor
-using Metalhead.Transformers: Transformers, TokenizersBackend
-using Metalhead.Diffusers: Flux2KleinPipeline, chat_prompt
+using Metalhead: Metalhead
+using Metalhead.Transformers: Transformers
 using HuggingFaceTokenizers: HuggingFaceTokenizers, Tokenizer
 using HuggingFaceTokenizers.PythonCall: pyis, pybuiltins, pyimport, pyconvert, pylist
 
@@ -53,17 +52,6 @@ end
 function Transformers.decode_ids(t::Tokenizer, ids::AbstractVector{<:Integer};
         skip_special_tokens::Bool = false)
     return HuggingFaceTokenizers.decode(t, collect(Int, ids); skip_special_tokens)
-end
-
-function Metalhead.Diffusers.tokenize(p::Flux2KleinPipeline,
-        prompts::AbstractVector{<:AbstractString}; max_sequence_length::Integer = 512)
-    p.tokenizer === nothing &&
-        error("the pipeline has no tokenizer; pass prompt embeddings instead")
-    tokenizer = create_processor(p.tokenizer)
-    tokenizer isa TokenizersBackend || error("$(p.tokenizer) holds no tokenizer")
-    out = tokenizer(chat_prompt.(prompts); padding = :max_length, truncation = true,
-        max_length = max_sequence_length)
-    return out.input_ids, out.attention_mask
 end
 
 end # module

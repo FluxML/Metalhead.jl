@@ -74,14 +74,16 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
 - Flux ports of [diffusers](https://github.com/huggingface/diffusers) models and pipelines, in
   `Metalhead.Diffusers`: text-to-image generation with FLUX.2 [klein] (`Flux2KleinPipeline`,
   with `Flux2Transformer2DModel`, `AutoencoderKLFlux2` and `FlowMatchEulerDiscreteScheduler`),
-  validated against `black-forest-labs/FLUX.2-klein-4B` (#332). `create_model` builds a pipeline from
-  the `model_index.json` of a repository, or one of its components with `subfolder`
-  (`"org/name/vae"` also names one).
+  validated against `black-forest-labs/FLUX.2-klein-4B` (#332). `create_model` builds a
+  pipeline from the `model_index.json` of a repository, or one of its components with
+  `subfolder` (`"org/name/vae"` also names one). The tokenizer of a pipeline,
+  `pipe.tokenizer`, is a `Metalhead.Transformers.TokenizersBackend`, and
+  `Metalhead.Diffusers.encode_prompt(pipe, prompts)` embeds prompts as diffusers'
+  `encode_prompt` does, with the chat template of the text encoder (#348).
 - An extension for HuggingFaceTokenizers.jl (`ext/`): with it loaded, tokenizers encode and
-  decode strings, so that processors take text as strings (#348), and
-  `Metalhead.Diffusers.tokenize` tokenizes prompts with the tokenizer and chat template of a
-  pipeline, so that pipelines take prompts as strings (#332). Another tokenizer plugs in
-  with methods of `Metalhead.Transformers.encode_ids` and `decode_ids`.
+  decode strings, so that processors and pipelines take text as strings (#332, #348).
+  Another tokenizer plugs in with methods of `Metalhead.Transformers.encode_ids` and
+  `decode_ids`.
 - Processors (#348): `create_processor` loads the processor of a checkpoint, which turns raw
   inputs (images, text, boxes) into the inputs of the model, and its outputs back into
   results, as the checkpoint's configuration and its Python library do. It takes the names
@@ -102,9 +104,10 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
     the special tokens, padding and truncation of `tokenizer_config.json` over the defaults
     of the tokenizer class that `AutoTokenizer` builds (a class that Metalhead hasn't
     validated warns): the processor of every validated language model, and the tokenizer of
-    the other processors. It returns token indices from 1, padded on the side of the
-    tokenizer, and `Metalhead.Transformers.decode` turns them back into text, with
-    `skip_special_tokens` without the special tokens, named ones included.
+    the other processors and of the FLUX.2 [klein] pipeline. It returns token indices from
+    1, padded on the side of the tokenizer, and `Metalhead.Transformers.decode` turns them
+    back into text, with `skip_special_tokens` without the special tokens, named ones
+    included.
 
   Settings are read from the repository's files over the defaults of the Python class,
   strictly: a setting that the port doesn't implement is an error, and an unknown key a

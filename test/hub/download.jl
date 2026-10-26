@@ -51,6 +51,18 @@ end
 
 processor_files(repo) = fixture_files(joinpath("processors", replace(repo, "/" => "--")))
 
+# The tiny FLUX.2 pipeline with the files of the tokenizer of FLUX.2 [klein], which lack a
+# config.json
+function pipeline_tokenizer_files(dir)
+    index = JSON.parsefile(joinpath(FIXTURES, "flux2_klein_tiny", "model_index.json"))
+    index["tokenizer"] = ["transformers", "Qwen2TokenizerFast"]
+    write(joinpath(dir, "model_index.json"), JSON.json(index))
+    files = filter(p -> first(p) != "model_index.json", fixture_files("flux2_klein_tiny"))
+    flux = joinpath("processors", "black-forest-labs--FLUX.2-klein-4B", "tokenizer")
+    tokenizer = [joinpath("tokenizer", f) => p for (f, p) in fixture_files(flux)]
+    return [files; tokenizer; "model_index.json" => joinpath(dir, "model_index.json")]
+end
+
 # A tokenizer.json for the tokenizer of Qwen3, which strings don't need
 function qwen3_files(dir)
     json = Dict("model" => Dict("type" => "BPE", "vocab" => Dict(), "merges" => []),
@@ -66,6 +78,8 @@ function with_cache(f; offline)
         sharded = cache_repo(cache, "metalhead/sharded", sharded_files(mktempdir(dir)))
         pipeline = cache_repo(cache, "metalhead/pipeline",
             fixture_files("flux2_klein_tiny"))
+        cache_repo(cache, "metalhead/pipeline_tokenizer",
+            pipeline_tokenizer_files(mktempdir(dir)))
         # processors of branches
         cache_repo(cache, "metalhead/qwen3", qwen3_files(mktempdir(dir)))
         cache_repo(cache, "metalhead/sam3", processor_files("unsloth/sam3.1"))
@@ -84,6 +98,9 @@ end
 # without asking the Hub. Without network, a branch warns once, when its first file is read.
 function check_processors(; offline)
     T = Metalhead.Transformers
+    pipe = @test_logs create_model("metalhead/pipeline_tokenizer"; revision = SHA)
+    @test pipe.tokenizer isa T.TokenizersBackend
+    @test pipe.tokenizer.tokenizer_class == "Qwen2Tokenizer"
     unreachable = (:warn, r"Cannot reach the Hub, using the cached version")
     load(repo) = offline ? (@test_logs create_processor(repo)) :
                  (@test_logs unreachable create_processor(repo))
