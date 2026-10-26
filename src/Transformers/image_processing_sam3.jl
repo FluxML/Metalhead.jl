@@ -38,7 +38,7 @@ take the forms that transformers takes: `size` as an integer, the side of a squa
 `resample` as the name of PIL's filter (`:bilinear`); `image_mean` and `image_std` as one
 value for all channels.
 """
-@processor struct Sam3ImageProcessor <: ImageProcessor
+@processor struct Sam3ImageProcessor <: AbstractImageProcessor
     do_resize::Bool = true
     size::Any = (; height = 1008, width = 1008)
     resample::Int = 2

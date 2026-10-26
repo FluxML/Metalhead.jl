@@ -126,8 +126,8 @@ Metalhead.model_args
 Metalhead.skip_prefix
 Metalhead.weights_name
 Metalhead.instantiate
-Metalhead.Processor
-Metalhead.ImageProcessor
+Metalhead.AbstractProcessor
+Metalhead.AbstractImageProcessor
 Metalhead.register_processor!
 Metalhead.@processor
 Metalhead.processor_components
