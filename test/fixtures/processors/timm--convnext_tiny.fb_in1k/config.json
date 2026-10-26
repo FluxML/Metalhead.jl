@@ -1,0 +1,41 @@
+{
+  "architecture": "convnext_tiny",
+  "num_classes": 1000,
+  "num_features": 768,
+  "pretrained_cfg": {
+    "tag": "fb_in1k",
+    "custom_load": false,
+    "input_size": [
+      3,
+      224,
+      224
+    ],
+    "test_input_size": [
+      3,
+      288,
+      288
+    ],
+    "fixed_input_size": false,
+    "interpolation": "bicubic",
+    "crop_pct": 0.875,
+    "test_crop_pct": 1.0,
+    "crop_mode": "center",
+    "mean": [
+      0.485,
+      0.456,
+      0.406
+    ],
+    "std": [
+      0.229,
+      0.224,
+      0.225
+    ],
+    "num_classes": 1000,
+    "pool_size": [
+      7,
+      7
+    ],
+    "first_conv": "stem.0",
+    "classifier": "head.fc"
+  }
+}

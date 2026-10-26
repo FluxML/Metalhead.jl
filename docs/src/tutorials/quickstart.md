@@ -65,45 +65,74 @@ validated checkpoints.
 Image models take Flux's layout: width × height × channels × batch, in `Float32` unless you chose
 another `eltype`. PyTorch's `(N, C, H, W)` is the same memory layout with the dimensions
 reversed. Sizes in timm configurations, such as `input_size = (3, 224, 224)`, are in PyTorch
-order.
+order. The processor of a checkpoint makes these inputs from images (see below).
 
 The model is returned in test mode: dropout is off and batch normalisation uses its running
 statistics. Call `Flux.trainmode!(model)` before training.
 
 ## Classifying an image
 
-The preprocessing a checkpoint expects (image size, crop, normalisation) is in its
-configuration; [`Metalhead.Timm.pretrained_cfg`](@ref) returns it. The steps below follow timm's
-evaluation transform: resize the shorter side to `input_size / crop_pct`, crop the centre, and
-normalise. They use [Images.jl](https://github.com/JuliaImages/Images.jl).
+A checkpoint expects its images prepared as in its evaluation: resized, cropped and
+normalised with the settings of its configuration. [`create_processor`](@ref) reads them
+from the same repository and revision as the weights, and returns the processor of the
+checkpoint, which applies them. For a timm checkpoint, it is timm's eval transform, a
+[`Timm.EvalTransform`](@ref Metalhead.Timm.EvalTransform):
 
 ```julia
-using Metalhead, Flux, Images
+using Metalhead, Flux, FileIO, ImageCore
 
 repo = "timm/convnext_tiny.fb_in1k"
 model = create_model(repo; pretrained = true)
-cfg = Metalhead.Timm.pretrained_cfg(repo)
-
-function preprocess(img, cfg)
-    _, h, w = cfg.input_size
-    scale = floor(Int, h / cfg.crop_pct) / minimum(size(img))
-    img = imresize(img; ratio = scale)
-    top, left = (size(img) .- (h, w)) .÷ 2
-    img = img[(top + 1):(top + h), (left + 1):(left + w)]
-    x = permutedims(Float32.(channelview(RGB.(img))), (3, 2, 1))  # C × H × W to W × H × C
-    x = (x .- reshape(Float32.(collect(cfg.mean)), 1, 1, 3)) ./
-        reshape(Float32.(collect(cfg.std)), 1, 1, 3)
-    return reshape(x, size(x)..., 1)
-end
+transform = create_processor(repo)
 
 img = load(download("https://upload.wikimedia.org/wikipedia/commons/2/26/YellowLabradorLooking_new.jpg"))
-probs = softmax(model(preprocess(img, cfg)))
+image = permutedims(rawview(channelview(img)), (3, 2, 1))  # width × height × channels, UInt8
+x = transform(image)              # 224 × 224 × 3 × 1
+probs = softmax(model(x))
 labels = readlines(download("https://raw.githubusercontent.com/pytorch/hub/master/imagenet_classes.txt"))
 labels[sortperm(vec(probs); rev = true)[1:5]]
+# "Labrador retriever", "kelpie", "dingo", "golden retriever", "Chesapeake Bay retriever"
 ```
 
-`channelview` gives channels × height × width, so the permutation is needed. Without it the
-model silently sees a transposed image.
+FileIO reads the photo with ImageIO, which must be installed, as a height × width matrix of
+colours. Processors take arrays in the layout of Flux, width × height × channels, of `UInt8`
+from 0 to 255 or of reals from 0 to 1: `channelview` makes the colours a channels × height ×
+width array, `rawview` gives its 8-bit values, and `permutedims` reverses its dimensions. A
+vector of images makes a batch.
+
+The transform resizes the shorter side of the image to `floor(224 / 0.875) = 256` pixels
+with Pillow's bicubic filter, crops the centre 224 × 224 pixels, and normalises each channel
+with `mean` and `std`. These are the values that timm computes from the same pixels as a PIL
+image, bit for bit (the pixels of a JPEG decoded by ImageIO can differ slightly from
+Pillow's). `show` prints each setting and where it comes from:
+
+```julia
+transform
+# EvalTransform
+#   input_size = (3, 224, 224)    config.json
+#   interpolation = "bicubic"     config.json
+#   mean = (0.485, 0.456, 0.406)  config.json
+#   std = (0.229, 0.224, 0.225)   config.json
+#   crop_pct = 0.875              config.json
+#   crop_mode = "center"          config.json
+```
+
+Many timm checkpoints are evaluated at a larger size than they were trained at, given by
+`test_input_size` and `test_crop_pct` in their configuration. `use_test_size = true` takes
+these, as timm's `resolve_data_config(use_test_size = True)` does. Other keyword arguments
+override a setting by name, also in natural forms (`input_size = 256` for
+`(3, 256, 256)`, `mean = 0.5` for every channel, `interpolation = :bilinear`):
+
+```julia
+transform = create_processor(repo; use_test_size = true)
+size(transform(img))              # (288, 288, 3, 1)
+transform = create_processor(repo; crop_pct = 1.0)
+transform.crop_pct                # 1.0, shown as "override (config.json: 0.875)"
+```
+
+A setting that the port doesn't implement, such as timm's `crop_mode = "border"`, is an
+error, and so is a keyword that isn't a setting. [`Metalhead.Timm.pretrained_cfg`](@ref)
+returns the settings as the configuration stores them.
 
 ## Features and the classifier
 

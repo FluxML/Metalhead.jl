@@ -87,18 +87,23 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
   with the tokenizer and chat template of a pipeline, so that pipelines take prompts as
   strings (#332).
 - Processors (#348): `create_processor` loads the processor of a checkpoint, which turns raw
-  inputs into the inputs of the model, and its outputs back into results, as the
-  checkpoint's configuration and its Python library do. It takes the names that
+  inputs (images, text) into the inputs of the model, and its outputs back into results, as
+  the checkpoint's configuration and its Python library do. It takes the names that
   `create_model` takes, at the same revisions, reads the files of a branch at the commit of
   the first it finds (offline or without network, those of the cache), and returns the most
-  complete processor that the repository describes, as transformers' `AutoProcessor` does.
+  complete processor that the repository describes, as transformers' `AutoProcessor` does:
+  - `Metalhead.Timm.EvalTransform`, timm's eval transform, for every timm checkpoint, with
+    `use_test_size`. It resizes with a port of Pillow's 8-bit filters, matches timm bit for
+    bit on 8-bit images, and returns an array.
+
   Settings are read from the repository's files over the defaults of the Python class,
   strictly: a setting that the port doesn't implement is an error, and an unknown key a
-  warning. Keyword arguments override them, and `show` prints where each comes from. The
-  processor classes are ported along with their models, and a class that isn't ported is
-  an error. A class is a struct defined with `Metalhead.@processor` and registered with
-  `Metalhead.register_processor!`, whose constructors check its settings with
-  `Metalhead.standardize_settings` (see "Porting internals" in the API reference).
+  warning. Keyword arguments override them, also in natural forms (an integer `input_size`,
+  one `mean` for every channel, a Symbol `interpolation`), and `show` prints where each
+  comes from. The processor classes are ported along with their models, and a class that
+  isn't ported is an error. A class is a struct defined with `Metalhead.@processor` and
+  registered with `Metalhead.register_processor!`, whose constructors check its settings
+  with `Metalhead.standardize_settings` (see "Porting internals" in the API reference).
 - Mixed precision under `eltype = Float16` or `Flux.BFloat16` (or `f16`/`bf16`, #332): the
   RMSNorms of the language models and timm's `LayerNorm2d` keep their parameters in
   `Float32`, as Flux's `BatchNorm`, `GroupNorm` and `LayerNorm` do, and normalise in

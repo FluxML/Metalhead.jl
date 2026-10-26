@@ -1,6 +1,6 @@
 using Metalhead, Test
 using JSON: JSON
-using Metalhead: merge_nested
+using Metalhead: merge_nested, image_array, image_batch
 
 # A directory with the JSON files `files` (name => Dict)
 function with_files(f, files)
@@ -20,6 +20,20 @@ end
           (; a = 1, b = (; c = 2, d = 3, f = (; g = 1)))
     @test merge_nested(1, (; x = 2)) == (; x = 2)
     @test merge_nested(base, (;)) == base
+end
+
+@testset "images" begin
+    x = rand(UInt8, 4, 3, 3)
+    @test image_array(x) === x
+    @test size(image_array(rand(Float32, 4, 3))) == (4, 3, 1)
+    @test_throws "(width, height, channels)" image_array("image")
+    @test image_batch(x) == [x]
+    @test image_batch([x, x]) == [x, x]
+    @test image_batch(cat(x, x; dims = 4)) == [x, x]
+    @test size.(image_batch(rand(4, 3))) == [(4, 3, 1)]
+    @test Metalhead.convert_to_rgb(image_array(x[:, :, 1])) == repeat(x[:, :, 1:1], 1, 1, 3)
+    @test Metalhead.convert_to_rgb(cat(x, x[:, :, 1:1]; dims = 3)) == x  # alpha dropped
+    @test_throws "1 to 4 channels" Metalhead.convert_to_rgb(rand(UInt8, 2, 2, 5))
 end
 
 @testset "AutoProcessor's lookup" begin

@@ -27,6 +27,7 @@ include("hub/download.jl")
 include("hub/loadweights.jl")
 include("hub/registry.jl")
 include("hub/api.jl")
+include("hub/images.jl")
 include("hub/processors.jl")
 include("hub/tokenizers.jl")
 

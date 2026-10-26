@@ -36,12 +36,14 @@ reasons.
   `standardize_settings`), AutoProcessor's lookup and the strict reading of settings;
   `tokenizers.jl`, the internal interface through which processors and pipelines use a
   tokenizer (`load_tokenizer`, `encode_ids`, `token_id`, `pad_token_id`, `pad_ids`).
-  Nothing there is specific to one library.
+  `images.jl` has the image layout that every processor takes (`image_array`). Nothing
+  there is specific to one library.
 - `src/Timm/`: one file per timm family. Ports of `timm.layers` classes go in `layers.jl`.
   `config.jl` is timm's `AbstractConfigFormat`, the template for any other library: it says
   how a `config.json` names an architecture and its arguments. A library gets its own
   `src/<Name>/` module, and its architecture names must not clash with those already
-  registered.
+  registered. `transforms.jl` is timm's eval transform (`EvalTransform`, the processor of
+  every timm checkpoint), and `pil.jl` a port of Pillow's 8-bit resize.
 - `src/Transformers/`: one file per transformers model, and `config.jl`, its
   `AbstractConfigFormat`. Blocks that models share (RMSNorm, the rotary tables, the tied
   output head) go in `layers.jl`. Processors go next to their models, one file per upstream
@@ -65,8 +67,8 @@ reasons.
   configuration files of real repositories in `test/fixtures/processors/` and references in
   `test/references/` (helpers in `test/processors_setup.jl`).
 - `porting/`: the Python (uv) project that writes the fixtures and references
-  (`dump_processor.py` those of processors, through the full upstream path). The package
-  and its tests never run Python.
+  (`dump_processor.py` and `dump_timm_transform.py` those of processors, through the full
+  upstream path). The package and its tests never run Python.
 - `skills/port-hf-model/SKILL.md`: the porting workflow, conventions and numerical pitfalls.
 - `docs/`: Documenter. `docs/make.jl` generates `index.md` (from the README) and `models.md`
   (from the registry), and checks that the migration guide names only ported architectures.

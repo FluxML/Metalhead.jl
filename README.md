@@ -21,10 +21,12 @@ architecture and the Hub checkpoints validated for it.
 
 `create_model` downloads a repository's configuration and weights and returns an ordinary
 Flux model, ready for inference or fine-tuning, on the CPU or a GPU. `create_processor`
-loads the processor of the same repository, which prepares the inputs of the model, such as
-the tokenizer of a language model. The models run in Julia, without PyTorch. Each port
-mirrors the module tree of the PyTorch original, loads its safetensors weights by name, and
-is [checked numerically against PyTorch](https://fluxml.ai/Metalhead.jl/dev/validation/).
+loads the processor of the same repository, which prepares the inputs of the model, such
+as the eval transform of a timm checkpoint or the tokenizer of a language model. The models
+run in Julia, without PyTorch. Each port mirrors the module tree of the PyTorch original,
+loads its safetensors weights by name, and is
+[checked numerically against PyTorch](https://fluxml.ai/Metalhead.jl/dev/validation/), and
+so is each processor.
 
 ## Contents
 
@@ -77,13 +79,17 @@ list_models(; byfamily = true)["resnet"]  # the architectures of a family
 ## Usage
 
 ```julia
-using Metalhead
+using Metalhead, FileIO, ImageCore
 
 # Download the configuration and weights of a Hub repository
 model = create_model("timm/convnext_tiny.fb_in1k"; pretrained = true)
+# and the preprocessing of the checkpoint: timm's eval transform, with its settings
+transform = create_processor("timm/convnext_tiny.fb_in1k")
 
-x = rand(Float32, 224, 224, 3, 1)   # width × height × channels × batch
-logits = model(x)                   # 1000 × 1
+img = load("dog.jpg")                                      # height × width matrix of colours
+image = permutedims(rawview(channelview(img)), (3, 2, 1))  # width × height × channels, UInt8
+x = transform(image)   # 224 × 224 × 3 × 1: width × height × channels × batch
+logits = model(x)      # 1000 × 1
 ```
 
 ### Creating a model
@@ -125,13 +131,22 @@ statistics. Call `Flux.trainmode!(model)` before training.
 ### Processors
 
 A checkpoint expects its inputs prepared in a particular way, with settings stored in its
-repository. `create_processor` loads the processor of a checkpoint, which prepares them, from
-the same repository and revision as `create_model`. It reads the files of a branch at one
-commit, that of the first file it finds, and offline or without network those of the cache.
+repository: the image size, crop and normalisation, the tokenizer. `create_processor` reads
+them, from the same repository and revision as `create_model`, and returns the processor of
+the checkpoint, which applies them as its Python library does. It reads the files of a
+branch at one commit, that of the first file it finds, and offline or without network those
+of the cache. `create_model` makes the forward pass match PyTorch; `create_processor` makes
+the whole path from raw input to result match.
 
 | Checkpoints | `create_processor` returns | Called as |
 |:--|:--|:--|
+| timm | `Timm.EvalTransform`, timm's eval transform | `transform(images)` |
 | language models | the tokenizer, HuggingFaceTokenizers' `Tokenizer` | `encode(tok, text)` |
+
+timm's transform returns an array of size width × height × channels × batch, which the model
+takes. Images are arrays of size width × height × channels, of `UInt8` from 0 to 255 or of
+reals from 0 to 1. The matrix of colours `img` that `FileIO.load` returns becomes one with
+ImageCore: `permutedims(rawview(channelview(img)), (3, 2, 1))`.
 
 Metalhead ports no tokenizer. The tokenizer of a repository is a `Tokenizer` of
 [HuggingFaceTokenizers.jl](https://github.com/MurrellGroup/HuggingFaceTokenizers.jl), which
@@ -139,19 +154,27 @@ runs Hugging Face's tokenizers library on the repository's `tokenizer.json`, wit
 token of its `tokenizer_config.json`. `create_processor` loads it after
 `using HuggingFaceTokenizers`.
 
-The preprocessing a timm checkpoint was trained with is in its configuration:
+The settings are read strictly: one that the port doesn't implement is an error, and an
+unknown key in a file a warning. `show` prints each setting and where it comes from, and
+keyword arguments override them, in the forms of the Python library or in natural ones
+(`input_size = 256`, `mean = 0.5`, `interpolation = :bilinear`):
 
 ```julia
-cfg = Metalhead.Timm.pretrained_cfg("timm/convnext_tiny.fb_in1k")
-cfg.input_size     # (3, 224, 224)
-cfg.crop_pct       # 0.875
-cfg.mean, cfg.std  # ((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
+create_processor("timm/convnext_tiny.fb_in1k"; crop_pct = 1.0)
+# EvalTransform
+#   input_size = (3, 224, 224)    config.json
+#   interpolation = "bicubic"     config.json
+#   mean = (0.485, 0.456, 0.406)  config.json
+#   std = (0.229, 0.224, 0.225)   config.json
+#   crop_pct = 1.0                override (config.json: 0.875)
+#   crop_mode = "center"          config.json
 ```
 
-Resize the shorter side of the image to `input_size / crop_pct`, crop the centre, and normalise
-each channel with `mean` and `std`. The
-[getting started guide](https://fluxml.ai/Metalhead.jl/dev/tutorials/quickstart/) does this
-with Images.jl to classify a photo.
+For timm checkpoints, `use_test_size = true` resizes to the larger `test_input_size` at
+which many are evaluated, and `Metalhead.Timm.pretrained_cfg` returns the settings as they
+are stored. The
+[getting started guide](https://fluxml.ai/Metalhead.jl/dev/tutorials/quickstart/) classifies
+a photo.
 
 ### Features and the classifier
 

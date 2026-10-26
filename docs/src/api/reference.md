@@ -18,10 +18,19 @@ feature_info
 ## Processors
 
 [`create_processor`](@ref) loads the processor of a checkpoint, which turns raw inputs into
-the inputs of its model and its outputs back into results.
+the inputs of its model and its outputs back into results. Each processor type ports a class
+of the Python library of its checkpoints, with its settings as fields.
 
 ```@docs
 create_processor
+Metalhead.Timm.EvalTransform
+```
+
+Image processors take images in one layout, to which an extension for another type of image
+adds a method:
+
+```@docs
+Metalhead.image_array
 ```
 
 ## timm
@@ -66,7 +75,7 @@ diffusers builders the arguments of the model's constructor.
 ```@autodocs
 Modules = [Metalhead.Timm, Metalhead.Transformers]
 Order = [:function]
-Filter = f -> f !== Metalhead.Timm.pretrained_cfg
+Filter = f -> !(f in (Metalhead.Timm.pretrained_cfg, Metalhead.Timm.pil_resize))
 ```
 
 ```@docs
@@ -103,6 +112,7 @@ Metalhead.legacy_keys
 Metalhead.standardize_settings
 Metalhead.instantiate_processor
 Metalhead.check_inputs
+Metalhead.Timm.pil_resize
 Metalhead.Checkpoint
 Metalhead.load_state!
 Metalhead.torch_params

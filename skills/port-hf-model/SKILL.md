@@ -525,19 +525,20 @@ does.
   processors subtype `Metalhead.AbstractImageProcessor`, others
   `Metalhead.AbstractProcessor`. Register the class name that configurations give with
   `register_processor!("ClassName", T; aliases, model_types)`; the suffixes `Fast` and `Pil`
-  are dropped. A processor that
-  combines others names them, `@processor (image_processor, video_processor) struct ...`,
-  which adds `T(image_processor, video_processor; kwargs...)`: each is a field
+  are dropped. A processor that combines others names them,
+  `@processor (image_processor, video_processor) struct ...`, which adds
+  `T(image_processor, video_processor; kwargs...)`: each is a field
   `Union{Nothing, C} = nothing`, which `create_processor` loads as a processor of class `C`
   from the same repository, routing each override to the component that has a setting of
   its name. The component `tokenizer` is a field `tokenizer::Any = nothing` (see
-  "Tokenizers"), which takes no overrides. A class that is neither an image processor nor a combination loads with an
-  internal method `Metalhead.load_processor(::Type{T}, files; kwargs...)` of its own.
+  "Tokenizers"), which takes no overrides. A class that is neither an image processor nor a
+  combination loads with an internal method
+  `Metalhead.load_processor(::Type{T}, files; kwargs...)` of its own.
 - **Settings.** `standardize_settings(T, settings)`, documented in `src/hub/processors.jl`,
   takes the settings as a NamedTuple and returns them as the fields store them: it converts
-  the forms that the Python library also takes (an integer for a size, one value for every
-  channel), and throws an `ArgumentError` that names the supported values for others. A
-  feature that isn't ported is still a setting, as upstream has it
+  the forms that the Python library also takes (an integer `input_size`, a scalar `mean`, a
+  Symbol `interpolation`), and throws an `ArgumentError` that names the supported values for
+  others. A feature that isn't ported is still a setting, as upstream has it
   (`do_center_crop::Bool = false`), whose unsupported values `standardize_settings` rejects.
   Name the setting in backticks in the message: the error of a loaded processor then names
   the file that set it. Every constructor calls it, so a processor built by hand fails as
@@ -549,10 +550,14 @@ does.
 - **Other libraries.** A config.json that carries the preprocessing (timm's
   `pretrained_cfg`) gets a method `instantiate_processor(::Format, files, config; kwargs...)`
   that builds the processor with the internal `processor_from_entries(T,
-  json_entries(dict, file); kwargs...)`, which reads strictly and applies the overrides.
-  Without one, `create_processor` finds the class as `AutoProcessor` does.
-- **Calling.** The output is a NamedTuple with transformers' keys in Julia layout, 1-based
-  token indices.
+  json_entries(dict, file); kwargs...)`, which reads strictly and applies the overrides
+  (timm's gives `Timm.EvalTransform`, in `src/Timm/transforms.jl`, checked by
+  `porting/dump_timm_transform.py`). Without one, `create_processor` finds the class as
+  `AutoProcessor` does.
+- **Calling.** Images go through `image_batch` (and so `image_array`) and
+  `convert_to_rgb`, and are resized by `Timm.pil_resize`, Pillow's 8-bit resize, bit for
+  bit. The output is a NamedTuple with transformers' keys in Julia layout, 1-based token
+  indices.
 - **Outputs.** The docstring of each class has a Returns table, whose header begins with
   "Key", with a row per key of its output; `check_documented_keys(T, outputs)`
   (`test/processors_setup.jl`) tests the outputs on the fixtures against it. The model takes
