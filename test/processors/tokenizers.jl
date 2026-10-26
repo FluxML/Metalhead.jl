@@ -232,17 +232,20 @@ if TEST_NETWORK
     # the Qwen3 tokenizer of FLUX.2 [klein], as its pipeline calls it
     @testset "FLUX.2 [klein]" begin
         D = Metalhead.Diffusers
-        name = "black-forest-labs--FLUX.2-klein-4B"
+        repo = "black-forest-labs/FLUX.2-klein-4B"
+        name = replace(repo, "/" => "--")
         ref = reference(name)
         prompt = metadata(name)["prompt"]
-        dir = D.tokenizer_dir(Metalhead.subsource(
-            model_source("black-forest-labs/FLUX.2-klein-4B", nothing), "tokenizer"))
-        pipe = D.Flux2KleinPipeline(nothing, nothing, nothing, dir, nothing, true)
-        tok = create_processor("black-forest-labs/FLUX.2-klein-4B"; subfolder = "tokenizer")
-        @test tok === load_tokenizer(files(dir))
-        @test D.tokenize(pipe, [prompt]) == (ref["input_ids"] .+ 1, ref["attention_mask"])
-        ids, mask = D.tokenize(pipe, [prompt, "a"]; max_sequence_length = 8)
-        @test size(ids) == (8, 2) && all(==(1), mask[:, 1])
-        @test ids[:, 1] == ref["input_ids"][1:8] .+ 1
+        tok = @test_logs create_processor(repo; subfolder = "tokenizer")
+        @test tok isa Tokenizer
+        # the tokenizer of the pipeline, and the inputs of its `encode_prompt`
+        @test D.pipeline_tokenizer(Metalhead.subsource(model_source(repo, nothing),
+            "tokenizer")) === tok
+        out = D.qwen3_prompt_inputs(tok, prompt)
+        @test out.input_ids == ref["input_ids"] .+ 1
+        @test out.attention_mask == ref["attention_mask"]
+        short = D.qwen3_prompt_inputs(tok, [prompt, "a"]; max_sequence_length = 8)
+        @test size(short.input_ids) == (8, 2) && all(==(1), short.attention_mask[:, 1])
+        @test short.input_ids[:, 1] == ref["input_ids"][1:8] .+ 1
     end
 end

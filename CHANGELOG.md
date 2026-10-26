@@ -73,15 +73,18 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
 - Flux ports of [diffusers](https://github.com/huggingface/diffusers) models and pipelines, in
   `Metalhead.Diffusers`: text-to-image generation with FLUX.2 [klein] (`Flux2KleinPipeline`,
   with `Flux2Transformer2DModel`, `AutoencoderKLFlux2` and `FlowMatchEulerDiscreteScheduler`),
-  validated against `black-forest-labs/FLUX.2-klein-4B` (#332). `create_model` builds a pipeline from
-  the `model_index.json` of a repository, or one of its components with `subfolder`
-  (`"org/name/vae"` also names one).
+  validated against `black-forest-labs/FLUX.2-klein-4B` (#332). `create_model` builds a
+  pipeline from the `model_index.json` of a repository, or one of its components with
+  `subfolder` (`"org/name/vae"` also names one). The tokenizer of a pipeline,
+  `pipe.tokenizer`, is HuggingFaceTokenizers' `Tokenizer` of its `tokenizer/` subfolder,
+  which `create_model` loads with the extension, and
+  `Metalhead.Diffusers.encode_prompt(pipe, prompts)` embeds prompts as diffusers'
+  `encode_prompt` does, with the chat template of the text encoder (#348).
 - An extension for HuggingFaceTokenizers.jl (`ext/`): with it loaded, `create_processor`
   returns the tokenizer of a language model, HuggingFaceTokenizers' `Tokenizer` of the
   repository's `tokenizer.json` with the padding token of its `tokenizer_config.json`
-  (Metalhead ports no tokenizer, #348), and `Metalhead.Diffusers.tokenize` tokenizes prompts
-  with the tokenizer and chat template of a pipeline, so that pipelines take prompts as
-  strings (#332).
+  (Metalhead ports no tokenizer, #348), and processors and pipelines take text as strings
+  (#332, #348).
 - Processors (#348): `create_processor` loads the processor of a checkpoint, which turns raw
   inputs (images, text, boxes) into the inputs of the model, and its outputs back into
   results, as the checkpoint's configuration and its Python library do. It takes the names

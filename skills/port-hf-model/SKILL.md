@@ -608,10 +608,13 @@ above, with these differences.
 - **Pipelines** register their class with `DIFFUSERS_PIPELINE` (identified by the `...Pipeline`
   suffix of `_class_name`). `instantiate` (`src/Diffusers/config.jl`) builds each component of
   `model_index.json` from its subfolder: a model from its `config.json`, a scheduler from
-  `scheduler_config.json` through `SCHEDULERS` (class name => builder), a tokenizer as the
-  directory of its files (the HuggingFaceTokenizers.jl extension in `ext/` tokenizes). The
-  builder takes the components and the other declared keys (`is_distilled`). Schedulers keep
-  no state: port `set_timesteps` and `step` as functions of the noise levels.
+  `scheduler_config.json` through `SCHEDULERS` (class name => builder), a tokenizer as
+  HuggingFaceTokenizers' `Tokenizer` (`pipeline_tokenizer`, `load_tokenizer` of its
+  subfolder; `nothing` without the extension). The builder takes the components and the
+  other declared keys (`is_distilled`). Schedulers keep no state: port `set_timesteps` and
+  `step` as functions of the noise levels. The pipeline's preprocessing is its own code (FLUX.2's
+  `encode_prompt` formats, tokenizes and pads the prompts): diffusers components have no
+  processor, and `create_processor` on them is an error (`instantiate_processor`).
 - **Layout.** Images are WHCN; tokens `(C, L, B)`; position ids `(n_axes, L)` integers (torch
   `(B, L, n_axes)`, of which diffusers takes the first); timesteps vectors. The Julia forward
   takes the positional arguments of the torch `forward`, in its order, so that fixtures call it

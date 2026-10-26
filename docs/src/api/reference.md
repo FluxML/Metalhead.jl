@@ -65,7 +65,6 @@ Metalhead.Transformers.Sam3VisionModel
 
 ```@docs
 Metalhead.Diffusers.Flux2KleinPipeline
-Metalhead.Diffusers.tokenize
 Metalhead.Diffusers.encode_prompt
 Metalhead.Diffusers.Flux2Transformer2DModel
 Metalhead.Diffusers.encode

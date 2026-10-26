@@ -16,6 +16,7 @@ using Flux
 using NNlib
 using ConcreteStructs: @concrete
 using ChainRulesCore: ChainRulesCore
+using Functors: Functors
 using MLUtils: topk
 using ..Metalhead: ArchSpec, AbstractConfigFormat, register!, declared_args
 using ..Metalhead: AbstractProcessor, AbstractImageProcessor, register_processor!,

@@ -14,12 +14,14 @@ a [`Flux2Transformer2DModel`](@ref Metalhead.Diffusers.flux2_transformer_2d_mode
 predicts the flow of the latents; `vae`, the
 [`AutoencoderKLFlux2`](@ref Metalhead.Diffusers.autoencoder_kl_flux2) that decodes them;
 `scheduler`, the [`FlowMatchEulerDiscreteScheduler`](@ref Metalhead.Diffusers.FlowMatchEulerDiscreteScheduler);
-and `tokenizer`, the directory of the tokenizer's files, which the HuggingFaceTokenizers.jl
-extension loads. `is_distilled` checkpoints (FLUX.2 [klein] 4B, 9B) sample in a few steps without
-classifier-free guidance; the base ones (FLUX.2 [klein] base 4B, 9B) take about 50 steps and a
-`guidance_scale` of 4.
+and `tokenizer`, the tokenizer of the text encoder: HuggingFaceTokenizers.jl's `Tokenizer`
+of the `tokenizer/` subfolder, which `create_model` loads with `using HuggingFaceTokenizers`
+first, or `nothing` without it (or for a pipeline saved without a tokenizer), when the
+pipeline takes prompt embeddings only. `is_distilled` checkpoints (FLUX.2 [klein] 4B, 9B)
+sample in a few steps without classifier-free guidance; the base ones (FLUX.2 [klein] base
+4B, 9B) take about 50 steps and a `guidance_scale` of 4.
 
-`gpu(pipeline)` and `bf16(pipeline)` move and convert every component.
+`gpu(pipeline)` and `bf16(pipeline)` move and convert every component but the tokenizer.
 
 ```julia
 using Metalhead, HuggingFaceTokenizers
@@ -52,15 +54,35 @@ register!(ArchSpec(DIFFUSERS_PIPELINE, "Flux2KleinPipeline", flux2_klein_pipelin
 vae_scale_factor(p::Flux2KleinPipeline) = 2^(length(p.vae.encoder.down_blocks) - 1)
 
 """
-    encode_prompt(pipeline, input_ids; attention_mask = nothing, text_encoder_out_layers = (9, 18, 27))
+    encode_prompt(pipeline, prompt; max_sequence_length = 512,
+                  text_encoder_out_layers = (9, 18, 27))
+    encode_prompt(pipeline, input_ids; attention_mask = nothing,
+                  text_encoder_out_layers = (9, 18, 27))
 
-The embeddings of the prompts tokenized as `input_ids` (1-based indices of size
+The embeddings of a prompt (a string) or of a vector of prompts, as diffusers'
+`encode_prompt` makes them, of size
+`(length(text_encoder_out_layers) * hidden_size, max_sequence_length, batch)`. Each prompt
+is formatted with the chat template of the Qwen3 text encoder (a user message, with thinking
+disabled and a generation prompt), tokenized with `pipeline.tokenizer` (which needs `using
+HuggingFaceTokenizers` before `create_model`), truncated to `max_sequence_length` tokens
+and padded on the right to them. The embeddings are the hidden states of the layers
+`text_encoder_out_layers` of the text encoder (transformers' `output_hidden_states`, of
+which that of the last layer is normed), concatenated along the features.
+
+The second method takes the prompts tokenized: `input_ids`, 1-based token indices of size
 `(seq_len, batch)`, padded on the right as `attention_mask` says, and moved to the device of
-the text encoder): the hidden states of the layers `text_encoder_out_layers` of the text
-encoder (transformers' `output_hidden_states`, of which that of the last layer is normed),
-concatenated along the features, of size
-`(length(text_encoder_out_layers) * hidden_size, seq_len, batch)`.
+the text encoder.
 """
+function encode_prompt(p::Flux2KleinPipeline,
+        prompt::Union{AbstractString, AbstractVector{<:AbstractString}};
+        max_sequence_length::Integer = 512, text_encoder_out_layers = (9, 18, 27))
+    p.tokenizer === nothing &&
+        error("the pipeline has no tokenizer to encode prompts: run `using HuggingFaceTokenizers` before `create_model`, from a repository with a tokenizer/tokenizer.json; or pass prompt embeddings, or the token indices of the prompts to `encode_prompt`")
+    inputs = qwen3_prompt_inputs(p.tokenizer, prompt; max_sequence_length)
+    return encode_prompt(p, inputs.input_ids; inputs.attention_mask,
+        text_encoder_out_layers)
+end
+
 function encode_prompt(p::Flux2KleinPipeline, input_ids::AbstractMatrix{<:Integer};
         attention_mask = nothing, text_encoder_out_layers = (9, 18, 27))
     layers = collect(Int, text_encoder_out_layers)
@@ -74,16 +96,14 @@ function encode_prompt(p::Flux2KleinPipeline, input_ids::AbstractMatrix{<:Intege
     return reduce(vcat, [state(l) for l in layers])
 end
 
-"""
-    tokenize(pipeline, prompts; max_sequence_length = 512) -> (input_ids, attention_mask)
-
-The 1-based token indices and the attention mask, of size `(max_sequence_length, batch)`, of the
-prompts formatted with the chat template of the text encoder and padded on the right, as
-diffusers' pipeline tokenizes them. Defined by the extension of Metalhead for
-HuggingFaceTokenizers.jl: run `using HuggingFaceTokenizers` first.
-"""
-function tokenize(p, prompts; kwargs...)
-    return error("tokenizing prompts needs HuggingFaceTokenizers.jl: run `using HuggingFaceTokenizers`, or pass prompt embeddings")
+# The token indices and attention mask `(max_sequence_length, batch)` of the prompts, as
+# diffusers' `_get_qwen3_prompt_embeds` tokenizes them (`padding = "max_length"`,
+# `truncation = True`).
+function qwen3_prompt_inputs(tokenizer, prompt; max_sequence_length::Integer = 512)
+    prompts = prompt isa AbstractString ? [prompt] : collect(prompt)
+    ids = [first(encode_ids(tokenizer, chat_prompt(p)), max_sequence_length)
+           for p in prompts]
+    return pad_ids(ids, pad_token_id(tokenizer); max_length = max_sequence_length)
 end
 
 # The text that Qwen3's chat template makes of a user message, with thinking disabled and a
@@ -141,8 +161,9 @@ end
                                    latents = nothing, rng = Random.default_rng(), ...)
     (pipeline::Flux2KleinPipeline)(prompt_embeds::AbstractArray{<:Real, 3}; ...)
 
-Generate an image for each prompt (a string or a vector of strings, which needs
-`using HuggingFaceTokenizers`), or for the prompt embeddings of
+Generate an image for each prompt (a string or a vector of strings, which the pipeline's
+tokenizer encodes, see [`encode_prompt`](@ref Metalhead.Diffusers.encode_prompt)), or for
+the prompt embeddings of
 [`encode_prompt`](@ref Metalhead.Diffusers.encode_prompt), of size
 `(joint_attention_dim, seq_len, batch)`. Returns an array of size `(width, height, 3, batch)`
 with values in [0, 1]: `colorview(RGB, permutedims(image[:, :, :, 1], (3, 2, 1)))` makes an
@@ -161,17 +182,13 @@ Keyword arguments, with the defaults of diffusers:
     from `rng` on the CPU by default.
   - `output_type`: `:image`, or `:latent` for the denoised latents before the autoencoder.
   - `max_sequence_length`, `text_encoder_out_layers`: as in
-    [`tokenize`](@ref Metalhead.Diffusers.tokenize) and
     [`encode_prompt`](@ref Metalhead.Diffusers.encode_prompt).
 """
 function (p::Flux2KleinPipeline)(prompt::Union{AbstractString, AbstractVector{<:AbstractString}};
         max_sequence_length::Integer = 512, text_encoder_out_layers = (9, 18, 27),
         guidance_scale = 4.0, kwargs...)
     prompts = prompt isa AbstractString ? [prompt] : collect(prompt)
-    function embed(texts)
-        ids, mask = tokenize(p, texts; max_sequence_length)
-        return encode_prompt(p, ids; attention_mask = mask, text_encoder_out_layers)
-    end
+    embed(texts) = encode_prompt(p, texts; max_sequence_length, text_encoder_out_layers)
     negative = guidance_scale > 1 && !p.is_distilled ? embed(fill("", length(prompts))) :
                nothing
     return p(embed(prompts); negative_prompt_embeds = negative, guidance_scale, kwargs...)

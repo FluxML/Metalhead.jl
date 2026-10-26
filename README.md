@@ -148,10 +148,11 @@ the whole path from raw input to result match.
 timm's transform returns an array of size width × height × channels × batch. The others
 return a NamedTuple with the keys of transformers (`input_ids`, `pixel_values`, ...), in
 Julia's layout, with token indices that start at 1, and SAM 3's turns the outputs of the
-model back into results: `post_process_instance_segmentation(proc, outputs)` for masks.
-Images are arrays of size width × height × channels, of `UInt8` from 0 to 255 or of reals
-from 0 to 1. The matrix of colours `img` that `FileIO.load` returns becomes one with
-ImageCore: `permutedims(rawview(channelview(img)), (3, 2, 1))`.
+model back into results: `post_process_instance_segmentation(proc, outputs)` for masks. A
+diffusers pipeline has no processor: it prepares its inputs itself, with its tokenizer
+`pipe.tokenizer`. Images are arrays of size width × height × channels, of `UInt8` from 0 to
+255 or of reals from 0 to 1. The matrix of colours `img` that `FileIO.load` returns becomes
+one with ImageCore: `permutedims(rawview(channelview(img)), (3, 2, 1))`.
 
 Metalhead ports no tokenizer. The tokenizer of a repository is a `Tokenizer` of
 [HuggingFaceTokenizers.jl](https://github.com/MurrellGroup/HuggingFaceTokenizers.jl), which
@@ -325,7 +326,8 @@ objects across frames.
 ### Text-to-image generation
 
 A diffusers repository holds a pipeline, whose components `create_model` builds from the
-subfolders of the repository. With HuggingFaceTokenizers.jl loaded, it takes prompts:
+subfolders of the repository, its tokenizer too. With HuggingFaceTokenizers.jl loaded
+first, it takes prompts:
 
 ```julia
 using Flux, HuggingFaceTokenizers

@@ -19,10 +19,11 @@ using ConcreteStructs: @concrete
 using ChainRulesCore: ChainRulesCore
 using JSON: JSON
 using ..Metalhead: ArchSpec, AbstractConfigFormat, ModelSource, register!, declared_args,
-                   identify, lookup, source_config, source_file, subsource
+                   identify, lookup, source_config, source_file, subsource, ProcessorFiles,
+                   load_tokenizer, encode_ids, pad_token_id, pad_ids
 using ..Transformers: RMSNorm, to_device_of
 import ..Metalhead: architecture_of, model_args, weights_name, instantiate,
-                    forward_intermediates
+                    instantiate_processor, forward_intermediates
 
 include("config.jl")
 include("layers.jl")

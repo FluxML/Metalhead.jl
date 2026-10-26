@@ -1,7 +1,6 @@
 module MetalheadHuggingFaceTokenizersExt
 
 using Metalhead: Metalhead, Functors
-using Metalhead.Diffusers: Flux2KleinPipeline, chat_prompt
 using HuggingFaceTokenizers: HuggingFaceTokenizers, Tokenizer
 using HuggingFaceTokenizers.PythonCall: pyis, pybuiltins, pyconvert
 
@@ -50,19 +49,6 @@ end
 function Metalhead.pad_token_id(tok::Tokenizer)
     padding = tok.py_tokenizer.padding
     return is_none(padding) ? nothing : pyconvert(Int, padding["pad_id"])
-end
-
-function Metalhead.Diffusers.tokenize(p::Flux2KleinPipeline,
-        prompts::AbstractVector{<:AbstractString}; max_sequence_length::Integer = 512)
-    p.tokenizer === nothing &&
-        error("the pipeline has no tokenizer; pass prompt embeddings instead")
-    tok = Metalhead.load_tokenizer(Metalhead.ProcessorFiles(Metalhead.model_source(
-        p.tokenizer, nothing)))
-    ids = [first(Metalhead.encode_ids(tok, chat_prompt(prompt)), max_sequence_length)
-           for prompt in prompts]
-    out = Metalhead.pad_ids(ids, Metalhead.pad_token_id(tok);
-        max_length = max_sequence_length)
-    return out.input_ids, out.attention_mask
 end
 
 end # module
