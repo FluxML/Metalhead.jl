@@ -208,9 +208,11 @@ prompt ("box/...") that share its vision features: the largest relative errors o
 logits, boxes and presence logits, of the masks of the best queries and of the semantic
 segmentation (every `stride` pixels), and of the scores and boxes of the processor's
 `post_process_instance_segmentation`, and whether its numbers of objects and the areas of
-their masks are those of transformers. The prompts are the stored token ids, which the
-processor pads, and the box of the box prompt in pixels: its `input_ids`, `attention_mask`,
-`input_boxes` and `input_boxes_labels` must be transformers'.
+their masks are those of transformers. The prompts are the strings of
+porting/dump_reference.py, "cat" and, for the box prompt, the "visual" of a box without text,
+which the processor encodes with the tokenizer of the repository (HuggingFaceTokenizers.jl
+must be loaded), and the box of the box prompt is in pixels: its `input_ids`,
+`attention_mask`, `input_boxes` and `input_boxes_labels` must be transformers'.
 """
 function check_sam3_reference(file)
     meta = SafeTensors.deserialize(file).metadata
@@ -224,14 +226,12 @@ function check_sam3_reference(file)
     errs = Dict(k => 0.0 for k in (:logits, :boxes, :presence, :masks, :semantic, :post))
     record!(k, x, key) = errs[k] = max(errs[k], relerr(x, ref[key]))
     post_same = true
-    for name in ("text", "box")
-        mask = ref["$name/attention_mask"]
+    for (name, text) in ("text" => "cat", "box" => nothing)
         boxes = haskey(ref, "$name/input_boxes") ?
                 [collect(eachcol(ref["$name/boxes_xyxy"]))] : nothing
-        inputs = proc(; images.original_sizes, text = [ref["$name/input_ids"][mask .== 1]],
-            input_boxes = boxes)
+        inputs = proc(; images.original_sizes, text, input_boxes = boxes)
         post_same &= inputs.input_ids == ref["$name/input_ids"] .+ 1 &&
-                     inputs.attention_mask == mask
+                     inputs.attention_mask == ref["$name/attention_mask"]
         if boxes !== nothing
             post_same &= inputs.input_boxes ≈ ref["$name/input_boxes"] &&
                          inputs.input_boxes_labels == ref["$name/input_boxes_labels"]

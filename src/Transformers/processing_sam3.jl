@@ -7,10 +7,12 @@
     Sam3Processor(image_processor, tokenizer; point_pad_value = -10)
 
 transformers' processor of SAM 3: a [`Sam3ImageProcessor`](@ref
-Metalhead.Transformers.Sam3ImageProcessor) and a [`TokenizersBackend`](@ref
-Metalhead.Transformers.TokenizersBackend), which [`create_processor`](@ref
+Metalhead.Transformers.Sam3ImageProcessor) and the tokenizer of the repository,
+HuggingFaceTokenizers.jl's `Tokenizer`, which [`create_processor`](@ref
 Metalhead.create_processor) loads from a repository such as `"unsloth/sam3.1"` (or
-`"jetjodh/sam3"`, whose `Sam3VideoProcessor` it loads as a `Sam3Processor`).
+`"jetjodh/sam3"`, whose `Sam3VideoProcessor` it loads as a `Sam3Processor`). The tokenizer
+needs `using HuggingFaceTokenizers` before `create_processor`; without it, `tokenizer` is
+`nothing`, and the processor takes images but no prompts.
 
     (processor::Sam3Processor)(; images = nothing, text = nothing, input_boxes = nothing,
                                input_boxes_labels = nothing, original_sizes = nothing)
@@ -30,12 +32,11 @@ reversed), which the model takes as it is (`model(inputs)`):
 | `input_boxes`        | `(4, num_boxes, batch)` | box prompts `(cx, cy, w, h)`, normalised to the image; only with box prompts     |
 | `input_boxes_labels` | `(num_boxes, batch)`    | 1 positive, 0 negative, `point_pad_value` (-10) padding; only with box prompts   |
 
-  - `text` is a string or a vector of strings, which need a tokenizer backend
-    (`using HuggingFaceTokenizers`), or the token ids of a tokenizer (from 0, with its
-    special tokens), a vector or a vector of them. Prompts are padded to 32 tokens, as
-    `processing_sam3.py` writes, and longer ones are kept whole. Without `text`, box
-    prompts have the text "visual", as in transformers, and an entry `nothing` of a vector
-    is "visual" where its image has boxes.
+  - `text` is a string or a vector of strings, which the tokenizer encodes with its special
+    tokens. Prompts are padded on the right to 32 tokens, as `processing_sam3.py` writes,
+    with the padding token of the tokenizer, and longer ones are kept whole. Without
+    `text`, box prompts have the text "visual", as in transformers, and an entry `nothing`
+    of a vector is "visual" where its image has boxes.
   - `input_boxes` holds the boxes `(x1, y1, x2, y2)` of each image in its pixels, a vector
     of boxes per image (or `nothing` for none), and `input_boxes_labels` their labels,
     1 (positive, the default) or 0 (negative). Images with fewer boxes are padded with
@@ -49,19 +50,19 @@ or [`post_process_semantic_segmentation`](@ref
 Metalhead.Transformers.post_process_semantic_segmentation) of the processor.
 
 ```julia
-using Metalhead
+using Metalhead, HuggingFaceTokenizers
 using Metalhead.Transformers: post_process_instance_segmentation
 model = create_model("unsloth/sam3.1"; pretrained = true)
 proc = create_processor("unsloth/sam3.1")
 image = rand(UInt8, 640, 480, 3)                     # width × height × channels
-inputs = proc(; images = image, text = [[49406, 320, 2368, 49407]])   # "a cat", as ids
+inputs = proc(; images = image, text = "a cat")
 objects = post_process_instance_segmentation(proc, model(inputs); threshold = 0.5,
     target_sizes = inputs.original_sizes)
-boxes = proc(; images = image, input_boxes = [[(10, 20, 300, 400)]])  # needs a backend
+boxes = proc(; images = image, input_boxes = [[(10, 20, 300, 400)]])  # the text "visual"
 ```
 """
 @processor (image_processor, tokenizer) struct Sam3Processor <: AbstractProcessor
-    image_processor::Any = nothing
+    image_processor::Union{Nothing, Sam3ImageProcessor} = nothing
     tokenizer::Any = nothing
     point_pad_value::Int = -10
     provenance::NamedTuple = (;)
@@ -70,9 +71,6 @@ end
 register_processor!("Sam3Processor", Sam3Processor; aliases = ["Sam3VideoProcessor"],
     model_types = ["sam3", "sam3_video"])
 
-function processor_components(::Type{Sam3Processor})
-    return (; image_processor = Sam3ImageProcessor, tokenizer = TokenizersBackend)
-end
 function ignored_keys(::Type{Sam3Processor})
     return (; target_size = "not read by Sam3Processor's `__call__`",
         video_processor = "the video processor of Sam3VideoProcessor, whose tracker " *
@@ -96,7 +94,9 @@ function sam3_texts(text, boxes)
     if text === nothing
         return boxes === nothing || isempty(boxes) ? nothing : ["visual"]
     end
-    is_one_text(text) && return [text]
+    text isa AbstractString && return [text]
+    text isa AbstractVector && all(t -> t isa Union{Nothing, AbstractString}, text) ||
+        throw(ArgumentError("`text` is a string or a vector of strings, got a $(typeof(text))"))
     texts = Any[t for t in text]
     if boxes !== nothing
         length(texts) == length(boxes) ||
@@ -141,12 +141,11 @@ end
 # The tokens of the prompts, each padded to 32 tokens, or kept whole if longer: a batch of
 # prompts longer than others makes no array, as in transformers.
 function sam3_tokens(tok, texts)
-    tokens = [tok(t; padding = :max_length, max_length = SAM3_TEXT_LENGTH) for t in texts]
-    lengths = [length(t.input_ids) for t in tokens]
-    allequal(lengths) ||
-        error("SAM 3 pads its prompts to $SAM3_TEXT_LENGTH tokens, and can't batch prompts of $(join(unique(lengths), ", ")) tokens: truncate the prompts of more than $SAM3_TEXT_LENGTH tokens, or pass them in separate calls")
-    names = keys(first(tokens))
-    return NamedTuple{names}(Tuple(stack(t[k] for t in tokens) for k in names))
+    ids = [encode_ids(tok, t) for t in texts]
+    lengths = unique(max.(length.(ids), SAM3_TEXT_LENGTH))
+    length(lengths) == 1 ||
+        error("SAM 3 pads its prompts to $SAM3_TEXT_LENGTH tokens, and can't batch prompts of $(join(lengths, ", ")) tokens: shorten the prompts of more than $SAM3_TEXT_LENGTH tokens, or pass them in separate calls")
+    return pad_ids(ids, pad_token_id(tok); max_length = only(lengths))
 end
 
 function (p::Sam3Processor)(; images = nothing, text = nothing, input_boxes = nothing,
@@ -164,10 +163,7 @@ function (p::Sam3Processor)(; images = nothing, text = nothing, input_boxes = no
     end
     boxes = input_boxes === nothing ? nothing : per_image(input_boxes)
     texts = sam3_texts(text, boxes)
-    if texts !== nothing
-        p.tokenizer === nothing && error("Sam3Processor has no tokenizer to encode `text`")
-        inputs = merge(inputs, sam3_tokens(p.tokenizer, texts))
-    end
+    texts === nothing || (inputs = merge(inputs, sam3_tokens(tokenizer_of(p), texts)))
     if boxes !== nothing
         inputs = merge(inputs,
             sam3_boxes(p, boxes, input_boxes_labels, inputs.original_sizes))

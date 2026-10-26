@@ -1,57 +1,54 @@
 module MetalheadHuggingFaceTokenizersExt
 
-using Metalhead: Metalhead
-using Metalhead.Transformers: Transformers
+using Metalhead: Metalhead, Functors
 using HuggingFaceTokenizers: HuggingFaceTokenizers, Tokenizer
-using HuggingFaceTokenizers.PythonCall: pyis, pybuiltins, pyimport, pyconvert, pylist
+using HuggingFaceTokenizers.PythonCall: pyis, pybuiltins, pyconvert
 
-# The backend of a TokenizersBackend: HuggingFaceTokenizers' tokenizer of its
-# tokenizer.json, loaded once per file. `Transformers.backend` checks the file first.
-const TOKENIZERS = Dict{String, Tokenizer}()
+# not a layer: `gpu`, `f16` and the like leave it as it is
+Functors.@leaf Tokenizer
+
+# The tokenizers loaded, by tokenizer.json and padding token
+const TOKENIZERS = Dict{Tuple{String, Union{Nothing, String}}, Tokenizer}()
 const LOCK = ReentrantLock()
 
-function load_tokenizer(file::AbstractString)
+# The tokenizer of the tokenizer.json at `path`, whose padding token is `pad` unless the file
+# sets its padding: the tokenizers library keeps the padding token in its padding.
+function load_tokenizer(path::AbstractString, pad::Union{Nothing, String})
     return lock(LOCK) do
-        get!(TOKENIZERS, file) do
-            tokenizer = HuggingFaceTokenizers.from_file(Tokenizer, file)
-            add_config_tokens!(tokenizer.py_tokenizer,
-                joinpath(dirname(file), "tokenizer_config.json"))
-            return tokenizer
+        get!(TOKENIZERS, (path, pad)) do
+            tok = HuggingFaceTokenizers.from_file(Tokenizer, path)
+            py = tok.py_tokenizer
+            if pad !== nothing && is_none(py.padding)
+                id = py.token_to_id(pad)
+                if is_none(id)
+                    @warn "the padding token $(repr(pad)) of tokenizer_config.json is not in the vocabulary of $path: the tokenizer has no padding token"
+                else
+                    py.enable_padding(; pad_id = id, pad_token = pad)
+                end
+            end
+            return tok
         end
     end
 end
 
-# The tokens of the `added_tokens_decoder` of tokenizer_config.json that tokenizer.json
-# lacks, added in the order of their ids as transformers' `TokenizersBackend.__init__` adds
-# them (Qwen3.5's audio tokens), which must then have the ids of the configuration.
-function add_config_tokens!(py, config_file)
-    isfile(config_file) || return nothing
-    decoder = get(Metalhead.JSON.parsefile(config_file), "added_tokens_decoder", nothing)
-    decoder === nothing && return nothing
-    absent = sort!([(parse(Int, id), t) for (id, t) in decoder
-                     if pyis(py.token_to_id(t["content"]), pybuiltins.None)]; by = first)
-    isempty(absent) && return nothing
-    AddedToken = pyimport("tokenizers").AddedToken
-    flags(t) = (; (Symbol(k) => Bool(t[k])
-                   for k in ("single_word", "lstrip", "rstrip", "normalized", "special")
-                   if haskey(t, k))...)
-    py.add_tokens(pylist([AddedToken(t["content"]; flags(t)...) for (_, t) in absent]))
-    for (id, t) in absent
-        added = pyconvert(Int, py.token_to_id(t["content"]))
-        added == id ||
-            error("$(t["content"]) of the `added_tokens_decoder` of $config_file has the id $id, but $added in its tokenizer.json")
-    end
-    return nothing
-end
+is_none(x) = pyis(x, pybuiltins.None)
 
-function Transformers.encode_ids(t::Tokenizer, text::AbstractString;
+function Metalhead.encode_ids(tok::Tokenizer, text::AbstractString;
         add_special_tokens::Bool = true)
-    return HuggingFaceTokenizers.encode(t, String(text); add_special_tokens).ids
+    encoding = tok.py_tokenizer.encode(String(text); add_special_tokens)
+    ids = pyconvert(Vector{Int}, encoding.ids)
+    # without the padding of a tokenizer.json that pads to a fixed length
+    return ids[pyconvert(Vector{Int}, encoding.attention_mask) .!= 0]
 end
 
-function Transformers.decode_ids(t::Tokenizer, ids::AbstractVector{<:Integer};
-        skip_special_tokens::Bool = false)
-    return HuggingFaceTokenizers.decode(t, collect(Int, ids); skip_special_tokens)
+function Metalhead.token_id(tok::Tokenizer, token::AbstractString)
+    id = tok.py_tokenizer.token_to_id(String(token))
+    return is_none(id) ? nothing : pyconvert(Int, id)
+end
+
+function Metalhead.pad_token_id(tok::Tokenizer)
+    padding = tok.py_tokenizer.padding
+    return is_none(padding) ? nothing : pyconvert(Int, padding["pad_id"])
 end
 
 end # module

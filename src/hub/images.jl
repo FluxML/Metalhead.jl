@@ -16,13 +16,8 @@ function image_array(x)
     throw(ArgumentError("an image must be an array of size (width, height, channels) of integers from 0 to 255 or of reals from 0 to 1, got a $(typeof(x))"))
 end
 
-"""
-    image_batch(images) -> Vector
-
-The images of `images`, one image or a vector of them (or an array of size
-`(width, height, channels, batch)`), each through
-[`image_array`](@ref Metalhead.image_array).
-"""
+# The images of `images`, one image or a vector of them (or an array of size
+# `(width, height, channels, batch)`), each through `image_array`.
 image_batch(images::AbstractVector) = [image_array(x) for x in images]
 function image_batch(images::AbstractArray{<:Real, 4})
     return [image_array(x) for x in eachslice(images; dims = 4)]

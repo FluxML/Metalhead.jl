@@ -49,27 +49,12 @@ function cache_main(cache, repo)
     return write(ref, SHA)
 end
 
-processor_files(repo) = fixture_files(joinpath("processors", replace(repo, "/" => "--")))
-
-# The tiny FLUX.2 pipeline with the files of the tokenizer of FLUX.2 [klein], which lack a
-# config.json
-function pipeline_tokenizer_files(dir)
-    index = JSON.parsefile(joinpath(FIXTURES, "flux2_klein_tiny", "model_index.json"))
-    index["tokenizer"] = ["transformers", "Qwen2TokenizerFast"]
-    write(joinpath(dir, "model_index.json"), JSON.json(index))
-    files = filter(p -> first(p) != "model_index.json", fixture_files("flux2_klein_tiny"))
-    flux = joinpath("processors", "black-forest-labs--FLUX.2-klein-4B", "tokenizer")
-    tokenizer = [joinpath("tokenizer", f) => p for (f, p) in fixture_files(flux)]
-    return [files; tokenizer; "model_index.json" => joinpath(dir, "model_index.json")]
-end
-
-# A tokenizer.json for the tokenizer of Qwen3, which strings don't need
-function qwen3_files(dir)
-    json = Dict("model" => Dict("type" => "BPE", "vocab" => Dict(), "merges" => []),
-        "added_tokens" => [], "padding" => nothing, "truncation" => nothing)
-    write(joinpath(dir, "tokenizer.json"), JSON.json(json))
-    return [processor_files("Qwen/Qwen3-0.6B");
-            "tokenizer.json" => joinpath(dir, "tokenizer.json")]
+# The files of a processor: a configuration, and a file that it reads later
+function processor_files(dir)
+    write(joinpath(dir, "tokenizer_config.json"), JSON.json(Dict("model_max_length" => 8)))
+    write(joinpath(dir, "tokenizer.json"), "{}")
+    files = ("tokenizer_config.json", "tokenizer.json")
+    return [file => joinpath(dir, file) for file in files]
 end
 
 function with_cache(f; offline)
@@ -78,12 +63,11 @@ function with_cache(f; offline)
         sharded = cache_repo(cache, "metalhead/sharded", sharded_files(mktempdir(dir)))
         pipeline = cache_repo(cache, "metalhead/pipeline",
             fixture_files("flux2_klein_tiny"))
-        cache_repo(cache, "metalhead/pipeline_tokenizer",
-            pipeline_tokenizer_files(mktempdir(dir)))
         # processors of branches
-        cache_repo(cache, "metalhead/qwen3", qwen3_files(mktempdir(dir)))
-        cache_repo(cache, "metalhead/sam3", processor_files("unsloth/sam3.1"))
-        foreach(repo -> cache_main(cache, repo), ["metalhead/qwen3", "metalhead/sam3"])
+        cache_repo(cache, "metalhead/processor", processor_files(mktempdir(dir)))
+        cache_repo(cache, "metalhead/sam3",
+            fixture_files(joinpath("processors", "unsloth--sam3.1")))
+        foreach(repo -> cache_main(cache, repo), ["metalhead/processor", "metalhead/sam3"])
         withenv("HF_HOME" => dir, "HF_HUB_CACHE" => cache, "HF_TOKEN" => nothing,
             "HF_HUB_OFFLINE" => offline ? "1" : nothing,
             "TRANSFORMERS_OFFLINE" => nothing) do
@@ -96,22 +80,22 @@ end
 # missing, as do the configurations of `hf_download_first`. A branch resolves to the commit
 # that the cache has for it: the files that the processor downloads later come from it,
 # without asking the Hub. Without network, a branch warns once, when its first file is read.
-function check_processors(; offline)
-    T = Metalhead.Transformers
-    pipe = @test_logs create_model("metalhead/pipeline_tokenizer"; revision = SHA)
-    @test pipe.tokenizer isa T.TokenizersBackend
-    @test pipe.tokenizer.tokenizer_class == "Qwen2Tokenizer"
+function check_pinned_files(; offline)
     unreachable = (:warn, r"Cannot reach the Hub, using the cached version")
-    load(repo) = offline ? (@test_logs create_processor(repo)) :
-                 (@test_logs unreachable create_processor(repo))
-    tok = load("metalhead/qwen3")
-    @test tok isa T.TokenizersBackend && tok.tokenizer_class == "Qwen2Tokenizer"
-    @test tok.tokenizer_file.source.revision == SHA
-    path = @test_logs map(_ -> Metalhead.local_path(tok.tokenizer_file), 1:20)
+    files = Metalhead.ProcessorFiles(Metalhead.model_source("metalhead/processor", nothing))
+    read(file) = offline ? (@test_logs Metalhead.read_json(files, file)) :
+                 (@test_logs unreachable Metalhead.read_json(files, file))
+    @test read("tokenizer_config.json")["model_max_length"] == 8
+    @test files.source.revision == SHA
+    @test (@test_logs Metalhead.read_json(files, "processor_config.json")) === nothing
+    later() = Metalhead.source_file_if_exists(files, "tokenizer.json")
+    path = @test_logs map(_ -> later(), 1:20)
     @test allequal(path) && endswith(only(unique(path)), joinpath(SHA, "tokenizer.json"))
-    @test tok([[1, 2], [3]]).input_ids == [2 4; 3 151644]  # padded with <|endoftext|>
-    sam = load("metalhead/sam3")
-    @test sam isa T.Sam3Processor && sam.tokenizer.tokenizer_file.source.revision == SHA
+    # a processor that combines others, whose files all come from the commit of the branch
+    sam = offline ? (@test_logs create_processor("metalhead/sam3")) :
+          (@test_logs unreachable create_processor("metalhead/sam3"))
+    @test sam isa Metalhead.Transformers.Sam3Processor
+    @test sam.image_processor.size == (; height = 1008, width = 1008)
     # the files that only the cache lacks aren't recorded as missing from the repositories
     @test !any(k -> startswith(k[1], "metalhead/"), Metalhead.MISSING_FILES)
 end
@@ -140,7 +124,7 @@ end
             "tried vae/config.json and vae/model_index.json"] source_config(
             hub("metalhead/absent"; subfolder = "vae"))
 
-        check_processors(; offline = true)
+        check_pinned_files(; offline = true)
 
         # a cached index whose shard is missing, or that doesn't parse, is an error
         rm(joinpath(sharded, SHARDS[2]))
@@ -161,7 +145,7 @@ end
             @test_throws ["has no configuration in the cache",
                 "tried config.json and model_index.json",
                 "the Hub can't be reached"] source_config(hub("metalhead/absent"))
-            check_processors(; offline = false)
+            check_pinned_files(; offline = false)
         end
     end
 end

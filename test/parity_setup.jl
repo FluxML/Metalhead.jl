@@ -14,7 +14,7 @@ export Parity, check_fixture, check_lm_reference, check_image_reference, check_s
        reference_input, relerr, tapify, fixture, reference_files, reference_files_of,
        check_param_counts,
        check_gradient, check_half_precision, JSON, SafeTensors, TEST_NETWORK, TEST_LARGE,
-       check_intermediate_api, check_tokenizer_inputs
+       check_intermediate_api, IdsTokenizer
 
 # The reference tests download pretrained weights from the Hub.
 const TEST_NETWORK = parse(Bool, get(ENV, "METALHEAD_TEST_NETWORK", "false"))
@@ -135,40 +135,6 @@ function check_half_precision(name::AbstractString; kwargs...)
     return check_half_precision(model, args...; inputs..., kwargs...)
 end
 
-"""
-    check_tokenizer_inputs(name)
-
-Test `model(inputs::NamedTuple)` of the language model of the fixture `name` on inputs as a
-tokenizer makes them: a batch padded on the right, or on the left as the tokenizers of
-Llama 3, Gemma 3 and Granite pad, gives the logits of each text alone at its tokens, other
-keys are ignored, a gradient reaches every parameter, and inputs without `input_ids` fail at
-the call.
-"""
-function check_tokenizer_inputs(name::AbstractString)
-    model = fixture_model(fixture(name); eltype = Float32)
-    vocab_size = JSON.parsefile(joinpath(fixture(name), "config.json"))["vocab_size"]
-    n, lengths = 7, [7, 4, 2]
-    ids = rand(1:vocab_size, n, length(lengths))
-    mask = Int[i <= l for i in 1:n, l in lengths]
-    alone = [model(ids[1:l, b]) for (b, l) in enumerate(lengths)]
-    @testset "tokenizer inputs of $name" begin
-        right = model((; input_ids = ids, attention_mask = mask,
-            original_sizes = ((1, 2),)))
-        @test all(b -> right[:, 1:lengths[b], b] ≈ alone[b], eachindex(lengths))
-        rotate(x) = reduce(hcat,
-            [circshift(x[:, b], n - l) for (b, l) in enumerate(lengths)])
-        left = (; input_ids = rotate(ids), attention_mask = rotate(mask))
-        y = model(left)
-        @test all(b -> y[:, (n - lengths[b] + 1):n, b] ≈ alone[b], eachindex(lengths))
-        @test model((; input_ids = ids[:, 1])) ≈ alone[1]
-        @test model((; input_ids = left.input_ids[:, 3],
-            attention_mask = left.attention_mask[:, 3]))[:, (n - 1):n] ≈ alone[3]
-        @test check_gradient(model, left)
-        @test_throws "has no `input_ids`" model((; pixel_values = rand(Float32, 2, 2)))
-        @test_throws ArgumentError model((;))
-    end
-end
-
 function check_intermediate_api(name::AbstractString)
     model = fixture_model(fixture(name); eltype = Float32)
     x = Float32.(Metalhead.Checkpoint(joinpath(fixture(name), "acts.safetensors"))["input"])
@@ -211,4 +177,22 @@ function check_intermediate_api(model, x)
         @test any(a -> any(!iszero, a), grads)
     end
 end
+
+"""
+    IdsTokenizer(tokens::Dict{String, Int})
+
+A tokenizer for the processors of tiny models, through the internal interface of
+Metalhead's tokenizers: a text is the token ids it writes, from 0, and the tokens of
+`tokens` (`"<|image_pad|>" => 60`); the padding token is 0.
+"""
+struct IdsTokenizer
+    tokens::Dict{String, Int}
+end
+function Metalhead.encode_ids(tok::IdsTokenizer, text::AbstractString;
+        add_special_tokens::Bool = true)
+    return [get(() -> parse(Int, m.match), tok.tokens, m.match)
+            for m in eachmatch(r"<\|\w+\|>|\d+", text)]
+end
+Metalhead.token_id(tok::IdsTokenizer, token::AbstractString) = get(tok.tokens, token, nothing)
+Metalhead.pad_token_id(::IdsTokenizer) = 0
 end

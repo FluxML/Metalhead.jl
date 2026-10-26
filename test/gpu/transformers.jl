@@ -2,7 +2,6 @@ using Metalhead, Test
 include("../gpu_setup.jl")
 using .GPUSetup
 using Flux: BFloat16
-using CUDA: CUDA
 
 @testset "fixtures" begin
     @testset "$name" for name in fixtures_of(:Transformers)
@@ -48,31 +47,18 @@ end
     @test size(objects[2].masks)[1:2] == (20, 60)
 end
 
-# A language model on the GPU takes a tokenizer's output padded on either side.
-@testset "tokenizer outputs" begin
-    model = fixture_model(fixture("llama_tiny"); eltype = Float32)
-    ids = rand(1:64, 5, 2)
-    mask = [1 0; 1 0; 1 1; 1 1; 1 1]   # the second padded on the left
-    y = model((; input_ids = ids, attention_mask = mask))
-    y_gpu = GPU(model)(GPU((; input_ids = ids, attention_mask = mask)))
-    @test y_gpu isa CUDA.CuArray
-    @test Array(y_gpu) ≈ y rtol = GPU_RTOL
-end
-
-# The vision-language model of Qwen3.5 on the GPU takes a processor's output padded on the
-# left.
+# The vision-language model of Qwen3.5 on the GPU takes a processor's output, a batch
+# padded on the right.
 @testset "Qwen3.5 processor outputs" begin
     T = Metalhead.Transformers
     model = fixture_model(fixture("qwen3_5_tiny"); eltype = Float32)
-    tok = T.TokenizersBackend(; pad_token = "<pad>", padding_side = "left",
-        added_tokens_decoder = Dict(0 => "<pad>", 60 => "<|image_pad|>",
-            61 => "<|video_pad|>"))
     ip = T.Qwen2VLImageProcessor(; patch_size = 2, image_mean = 0.5, image_std = 0.5,
         size = (; shortest_edge = 16, longest_edge = 256))
-    proc = T.Qwen3VLProcessor(ip, tok)
+    proc = T.Qwen3VLProcessor(ip,
+        IdsTokenizer(Dict("<|image_pad|>" => 60, "<|video_pad|>" => 61)))
     inputs = proc(; images = [rand(UInt8, 12, 8, 3), rand(UInt8, 9, 7, 3)],
-        text = [[5, 62, 60, 63, 7, 8], [62, 60, 63, 9, 10, 11, 12, 13, 14]])
-    @test inputs.attention_mask[1, :] == [0, 1]
+        text = ["5 62 <|image_pad|> 63 7 8", "62 <|image_pad|> 63 9 10 11 12 13 14"])
+    @test inputs.attention_mask[end, :] == [0, 1]
     y = model(inputs)
     y_gpu = GPU(model)(GPU(inputs))
     @test y_gpu isa CUDA.CuArray

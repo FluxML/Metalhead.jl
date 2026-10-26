@@ -22,20 +22,34 @@ resample_supported() = join(("$r ($(RESAMPLE_FILTERS[r]))" for r in RESAMPLE_POR
 function check_resample(resample)
     resample in RESAMPLE_PORTED && return nothing
     name = get(RESAMPLE_FILTERS, resample, "unknown")
-    return error("`resample = $(repr(resample))` ($name) is not supported (supported: $(resample_supported()))")
+    throw(ArgumentError("`resample = $(repr(resample))` ($name) is not supported (supported: $(resample_supported()))"))
 end
 
-# The `processor_fields` of the image processors: the forms that transformers takes
-# (`resample = :bilinear`) in the types of the fields.
-function image_processor_fields(::Type{T}, args) where {T}
-    return map((name, v) -> field_setting(T, name, v), fieldnames(T), args)
+# The features of transformers' image processors that no image processor of Metalhead
+# ports, as settings whose only supported value is `false` (`None` in Python, the default
+# of the classes that don't have them).
+const UNPORTED_IMAGE_FEATURES = (:do_center_crop, :do_pad)
+
+# The `standardize_settings` of the image processors: the forms that transformers takes
+# (`resample = :bilinear`, an integer `size`, one `image_mean` for every channel) in the
+# types of the fields, and the settings that aren't ported rejected.
+function standardize_image_settings(::Type{T}, s::NamedTuple) where {T}
+    s = NamedTuple{keys(s)}(map((name, v) -> field_setting(T, name, v), keys(s), values(s)))
+    for name in UNPORTED_IMAGE_FEATURES
+        haskey(s, name) && s[name] &&
+            throw(ArgumentError("`$name = true` is not supported by $(nameof(T)) (supported: false)"))
+    end
+    check_resample(s.resample)
+    check_channel_stats(s)
+    return s
 end
 
-# `size` as the image processor of type `T` takes it; checked by `check_processor`.
+# `size` as the image processor of type `T` takes it; checked by its `standardize_settings`.
 size_setting(T, v) = v
 
 function field_setting(T, name, v)
     name === :size && return size_setting(T, v)
+    name in UNPORTED_IMAGE_FEATURES && v === nothing && return false
     name === :resample && v isa Union{Symbol, AbstractString} && return resample_number(v)
     name in (:image_mean, :image_std) && return stats_setting(name, v)
     F = fieldtype(T, name)
@@ -63,12 +77,12 @@ function stats_setting(name, v)
 end
 
 # With `do_convert_rgb`, images have 3 channels, so that other statistics fail at loading.
-function check_channel_stats(ip)
-    ip.do_convert_rgb || return nothing
+function check_channel_stats(s)
+    s.do_convert_rgb || return nothing
     for name in (:image_mean, :image_std)
-        v = getfield(ip, name)
+        v = getfield(s, name)
         v isa Real || length(v) == 3 ||
-            error("`$name` has one value per RGB channel, or one for all, got $(repr(v))")
+            throw(ArgumentError("`$name` has one value per RGB channel, or one for all, got $(repr(v))"))
     end
     return nothing
 end
@@ -131,7 +145,7 @@ end
 function size_hw(size)
     size isa NamedTuple && issetequal(keys(size), (:height, :width)) &&
         all(v -> v isa Real && isinteger(v) && v > 0, values(size)) ||
-        error("`size` must have `height` and `width` only, as positive integers, got $(repr(size))")
+        throw(ArgumentError("`size` must have `height` and `width` only, as positive integers, got $(repr(size))"))
     return Int(size.height), Int(size.width)
 end
 
