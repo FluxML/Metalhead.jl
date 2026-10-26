@@ -61,9 +61,8 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
   (`Qwen3_5ForConditionalGeneration`), validated against `Qwen/Qwen3.5-0.8B` on text and on
   an image (#340). Its decoder alternates gated attention with gated delta rule (linear
   attention) layers and has a multimodal rotary embedding; it is also ported alone
-  (`Qwen3_5ForCausalLM`), as is its vision encoder (`Qwen3_5VisionModel`).
-  `Metalhead.Transformers.qwen3_5_image_inputs` preprocesses images as the checkpoints'
-  processor does. Videos are not supported.
+  (`Qwen3_5ForCausalLM`), as is its vision encoder (`Qwen3_5VisionModel`). It takes the
+  output of its processor (#348). Videos are not supported.
 - SAM 3, the detector of the Segment Anything Model 3 (`Sam3Model`), which finds and segments
   the objects of an image that a text prompt or box prompts describe, validated against
   `jetjodh/sam3`, an ungated copy of the weights of `facebook/sam3`, and SAM 3.1
@@ -93,6 +92,9 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
   - `Metalhead.Timm.EvalTransform`, timm's eval transform, for every timm checkpoint, with
     `use_test_size`. It resizes with a port of Pillow's 8-bit filters, matches timm bit for
     bit on 8-bit images, and returns an array.
+  - `Metalhead.Transformers.Qwen3VLProcessor` and its `Qwen2VLImageProcessor`, for Qwen3.5,
+    with the tokenizer of the repository for its text. It expands each image placeholder of
+    a prompt into the image's tokens.
   - `Metalhead.Transformers.Sam3Processor` and its `Sam3ImageProcessor`, for SAM 3, with box
     prompts, and the tokenizer of the repository (HuggingFaceTokenizers' `Tokenizer`) for its
     text. `post_process_instance_segmentation`, `post_process_object_detection` and
@@ -108,8 +110,8 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
   constructors check its settings with `Metalhead.standardize_settings` (see "Porting
   internals" in the API reference). Processors other than timm's return NamedTuples with
   the keys of transformers, in Julia's layout, with token indices from 1, which the models
-  take as they are (`model(inputs::NamedTuple)`: SAM 3). They match transformers bit for
-  bit on 8-bit images.
+  take as they are (`model(inputs::NamedTuple)`: Qwen3.5 and SAM 3). They match
+  transformers bit for bit on 8-bit images.
 - Mixed precision under `eltype = Float16` or `Flux.BFloat16` (or `f16`/`bf16`, #332): the
   RMSNorms of the language models and timm's `LayerNorm2d` keep their parameters in
   `Float32`, as Flux's `BatchNorm`, `GroupNorm` and `LayerNorm` do, and normalise in

@@ -199,6 +199,43 @@ end
     @test_throws "image_grid_thw" model(ids; pixel_values)
 end
 
+@testset "processor inputs" begin
+    # the output of a Qwen3VLProcessor, as it is, with the image tokens of the tiny model
+    # (its own tests are in test/processors/qwen3_vl.jl)
+    T = Metalhead.Transformers
+    model = fixture_model(fixture("qwen3_5_tiny"); eltype = Float32)
+    tok = IdsTokenizer(Dict("<|image_pad|>" => 60, "<|video_pad|>" => 61))
+    ip = T.Qwen2VLImageProcessor(; patch_size = 2, image_mean = (0.5, 0.5, 0.5),
+        image_std = (0.5, 0.5, 0.5), size = (; shortest_edge = 16, longest_edge = 256))
+    proc = T.Qwen3VLProcessor(ip, tok)
+    images = [rand(UInt8, 12, 8, 3), rand(UInt8, 9, 7, 3)]
+    prompt = "5 62 <|image_pad|> 63 7 8"  # <|vision_start|><|image_pad|><|vision_end|>
+    one = proc(; images = images[1], text = prompt)
+    @test count(==(61), one.input_ids) == 6  # (8 ÷ 2) × (12 ÷ 2) ÷ 2²
+    logits = model(one)
+    @test size(logits) == (64, length(one.input_ids))  # logits[:, end] for the next token
+    @test logits ≈ model(one.input_ids; one.pixel_values, one.image_grid_thw)
+    @test model.model(one) ≈ forward_features(model, one.input_ids; one.pixel_values,
+        one.image_grid_thw)
+    # a batch, padded on the right: each prompt as alone
+    other = "62 <|image_pad|> 63 9 10 11 12 13 14"
+    batch = proc(; images, text = [prompt, other])
+    n = length(one.input_ids)
+    @test size(batch.input_ids) == (n + 1, 2)
+    @test batch.attention_mask == [ones(Int, n) ones(Int, n); 0 1]
+    y = model(batch)
+    @test y[:, 1:n, 1] ≈ logits
+    @test y[:, :, 2] ≈ model(proc(; images = images[2], text = other))
+    @test model.model(batch)[:, 1:n, 1] ≈ model.model(one)
+    text = proc(; text = ["1 2 3", "4 5 6 7 8"])  # ids from 0
+    @test model(text)[:, 1:3, 1] ≈ model([2, 3, 4])
+    @test model(text)[:, :, 2] ≈ model([5, 6, 7, 8, 9])
+    # text alone, and inputs of another model
+    @test model((; input_ids = [1, 2, 3])) ≈ model([1, 2, 3])
+    @test_throws "has no `input_ids`" model((; one.pixel_values, one.image_grid_thw))
+    @test_throws "has no `input_ids`" model.model((; one.pixel_values))
+end
+
 TEST_NETWORK && @testset "references" begin
     for file in reference_files_of("Qwen3_5ForConditionalGeneration")
         for r in (check_lm_reference(file), check_image_reference(file))

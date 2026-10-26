@@ -113,18 +113,19 @@ without `use_test_size`, must be those that timm resolves, and the logits of
 
 For transformers, `porting/dump_processor.py` calls the processor that
 `AutoProcessor.from_pretrained(repo)` loads, on small images, prompts and boxes: 18 cases
-for SAM 3 (`unsloth/sam3.1` and `jetjodh/sam3`), which cover batches, grey and RGBA images,
-upscaling and downscaling, box prompts, `do_resize`, `do_rescale` and `do_normalize` off,
-and overridden settings. Every output must be transformers', with the same keys. For
+for SAM 3 (`unsloth/sam3.1` and `jetjodh/sam3`) and 19 for Qwen3.5 (`Qwen/Qwen3.5-0.8B`),
+which cover batches, grey and RGBA images, upscaling and downscaling, box prompts,
+`do_resize`, `do_rescale` and `do_normalize` off, overridden settings, and Qwen2-VL's legacy
+`min_pixels` and `max_pixels`. Every output must be transformers', with the same keys. For
 8-bit images, `pixel_values` are equal **bit for bit**: the resize ports the fixed-point
 antialiased resize of `uint8` tensors that torchvision, transformers' default backend, runs
 on x86 CPUs with AVX2. For images of reals, which take a floating-point path, they match to
-a relative error of **1e-6**. Token ids, attention masks, boxes and labels are equal. The
-offline tests stand in for the tokenizer with one that gives the ids of transformers'
-tokenizer; with `METALHEAD_TEST_NETWORK=true`, they also tokenize the strings with
-HuggingFaceTokenizers.jl and the repository's `tokenizer.json`. SAM 3's post-processing is
-checked on random outputs of the model: the same scores and boxes, to floating-point
-precision, and the same masks.
+a relative error of **1e-6**. Token ids, attention masks, boxes, labels and image grids are
+equal. The offline tests stand in for the tokenizer with one that gives the ids of
+transformers' tokenizer; with `METALHEAD_TEST_NETWORK=true`, they also tokenize the strings
+with HuggingFaceTokenizers.jl and the repository's `tokenizer.json`. SAM 3's
+post-processing is checked on random outputs of the model: the same scores and boxes, to
+floating-point precision, and the same masks.
 
 Configuration files are read strictly, an unknown key with a warning, and the tests load
 those of the fixtures without one. Pixels are compared after decoding: a JPEG decoded by

@@ -47,3 +47,21 @@ end
         threshold = 0.0, target_sizes = inputs.original_sizes)
     @test size(objects[2].masks)[1:2] == (20, 60)
 end
+
+# The vision-language model of Qwen3.5 on the GPU takes a processor's output, a batch
+# padded on the right.
+@testset "Qwen3.5 processor outputs" begin
+    T = Metalhead.Transformers
+    model = fixture_model(fixture("qwen3_5_tiny"); eltype = Float32)
+    ip = T.Qwen2VLImageProcessor(; patch_size = 2, image_mean = 0.5, image_std = 0.5,
+        size = (; shortest_edge = 16, longest_edge = 256))
+    proc = T.Qwen3VLProcessor(ip,
+        IdsTokenizer(Dict("<|image_pad|>" => 60, "<|video_pad|>" => 61)))
+    inputs = proc(; images = [rand(UInt8, 12, 8, 3), rand(UInt8, 9, 7, 3)],
+        text = ["5 62 <|image_pad|> 63 7 8", "62 <|image_pad|> 63 9 10 11 12 13 14"])
+    @test inputs.attention_mask[end, :] == [0, 1]
+    y = model(inputs)
+    y_gpu = GPU(model)(GPU(inputs))
+    @test y_gpu isa CUDA.CuArray
+    @test Array(y_gpu) ≈ y rtol = GPU_RTOL
+end

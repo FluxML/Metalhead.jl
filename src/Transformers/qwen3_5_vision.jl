@@ -201,6 +201,20 @@ function (m::Qwen3_5VisionModel)(pixel_values::AbstractMatrix,
     return (; last_hidden_state = x, pooler_output = m.merger(x))
 end
 
+"""
+    (model::Qwen3_5VisionModel)(inputs::NamedTuple)
+
+The model on the output of a [`Qwen2VLImageProcessor`](@ref
+Metalhead.Transformers.Qwen2VLImageProcessor) (or of a [`Qwen3VLProcessor`](@ref
+Metalhead.Transformers.Qwen3VLProcessor) with images): its `pixel_values` and
+`image_grid_thw`; other keys are ignored.
+"""
+function (m::Qwen3_5VisionModel)(inputs::NamedTuple)
+    check_inputs(m, inputs, (:pixel_values, :image_grid_thw);
+        hint = "pass `images` to the processor")
+    return m(inputs.pixel_values, inputs.image_grid_thw)
+end
+
 # The `rope_theta` of the axial rotary embedding, from `rope_parameters` or the older
 # `rope_theta` and `rope_scaling` keys of config.json; the config makes a "default"
 # `rope_type` "axial", the only one transformers supports.
@@ -223,8 +237,9 @@ same names and defaults. `deepstack_visual_indexes`, which config.json may carry
 empty, as transformers' Qwen3.5 has no deepstack mergers; the rotary embedding is the axial
 one (`rope_type = "axial"`, or `"default"`).
 
-The model takes `(pixel_values, grid_thw)`, as made by [`qwen3_5_image_inputs`](@ref
-Metalhead.Transformers.qwen3_5_image_inputs), and returns the NamedTuple
+The model takes `(pixel_values, grid_thw)`, as the image processor of a checkpoint
+([`Qwen2VLImageProcessor`](@ref Metalhead.Transformers.Qwen2VLImageProcessor)) makes them,
+whose output it also takes as it is (`model(ip(images))`), and returns the NamedTuple
 `(; last_hidden_state, pooler_output)`:
 
   - `pixel_values`, of size

@@ -14,7 +14,7 @@ export Parity, check_fixture, check_lm_reference, check_image_reference, check_s
        reference_input, relerr, tapify, fixture, reference_files, reference_files_of,
        check_param_counts,
        check_gradient, check_half_precision, JSON, SafeTensors, TEST_NETWORK, TEST_LARGE,
-       check_intermediate_api
+       check_intermediate_api, IdsTokenizer
 
 # The reference tests download pretrained weights from the Hub.
 const TEST_NETWORK = parse(Bool, get(ENV, "METALHEAD_TEST_NETWORK", "false"))
@@ -177,4 +177,22 @@ function check_intermediate_api(model, x)
         @test any(a -> any(!iszero, a), grads)
     end
 end
+
+"""
+    IdsTokenizer(tokens::Dict{String, Int})
+
+A tokenizer for the processors of tiny models, through the internal interface of
+Metalhead's tokenizers: a text is the token ids it writes, from 0, and the tokens of
+`tokens` (`"<|image_pad|>" => 60`); the padding token is 0.
+"""
+struct IdsTokenizer
+    tokens::Dict{String, Int}
+end
+function Metalhead.encode_ids(tok::IdsTokenizer, text::AbstractString;
+        add_special_tokens::Bool = true)
+    return [get(() -> parse(Int, m.match), tok.tokens, m.match)
+            for m in eachmatch(r"<\|\w+\|>|\d+", text)]
+end
+Metalhead.token_id(tok::IdsTokenizer, token::AbstractString) = get(tok.tokens, token, nothing)
+Metalhead.pad_token_id(::IdsTokenizer) = 0
 end

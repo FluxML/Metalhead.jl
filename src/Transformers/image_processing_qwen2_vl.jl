@@ -1,15 +1,12 @@
 # Ported from transformers.models.qwen2_vl.image_processing_qwen2_vl (transformers 5.20,
-# Apache-2.0, The Hugging Face Team): `Qwen2VLImageProcessor`, which Qwen3.5 checkpoints
-# name `Qwen2VLImageProcessorFast`, for images (not videos). Validated against
-# test/references/qwen2_vl_image_processor.safetensors.
+# Apache-2.0, The Qwen team, Alibaba Group and The Hugging Face Team):
+# `Qwen2VLImageProcessor` with its torchvision backend, which Qwen3.5 checkpoints name
+# `Qwen2VLImageProcessorFast`, for images (not videos). Validated against
+# test/references/processors/qwen3_vl.safetensors.
 
-"""
-    smart_resize(height, width; factor = 28, min_pixels = 56 * 56, max_pixels = 14 * 14 * 4 * 1280)
-
-transformers' `smart_resize`: the size `(height, width)` that an image is resized to, with
-sides divisible by `factor`, an area between `min_pixels` and `max_pixels`, and the aspect
-ratio of the image as nearly as possible.
-"""
+# transformers' `smart_resize`: the size `(height, width)` that an image is resized to, with
+# sides divisible by `factor`, an area between `min_pixels` and `max_pixels`, and the aspect
+# ratio of the image as nearly as possible.
 function smart_resize(height::Integer, width::Integer; factor::Integer = 28,
         min_pixels::Integer = 56 * 56, max_pixels::Integer = 14 * 14 * 4 * 1280)
     ratio = max(height, width) / min(height, width)
@@ -41,61 +38,119 @@ function patchify(x, patch_size, temporal_patch_size, merge_size)
 end
 
 """
-    qwen3_5_image_inputs(images; patch_size = 16, temporal_patch_size = 2, merge_size = 2,
-                         min_pixels = 65536, max_pixels = 16777216,
-                         image_mean = (0.5, 0.5, 0.5), image_std = (0.5, 0.5, 0.5))
-        -> (pixel_values, grid_thw)
+    Qwen2VLImageProcessor(; do_resize = true, resample = 3,
+                          size = (; shortest_edge = 3136, longest_edge = 1003520),
+                          do_rescale = true, rescale_factor = 1 / 255, do_normalize = true,
+                          image_mean = (0.48145466, 0.4578275, 0.40821073),
+                          image_std = (0.26862954, 0.26130258, 0.27577711),
+                          do_convert_rgb = true, patch_size = 14, temporal_patch_size = 2,
+                          merge_size = 2)
 
-The inputs of a Qwen3.5 vision encoder ([`qwen3_5_vision_model`](@ref
-Metalhead.Transformers.qwen3_5_vision_model)) for `images`, as transformers' image
-processor of Qwen3.5 (`Qwen2VLImageProcessorFast`) makes them. The defaults are those of the
-`preprocessor_config.json` of the Qwen3.5 checkpoints (`min_pixels` and `max_pixels` are its
-`size["shortest_edge"]` and `size["longest_edge"]`).
+transformers' image processor of Qwen2-VL, with the defaults of its Python class; the image
+processor of a [`Qwen3VLProcessor`](@ref Metalhead.Transformers.Qwen3VLProcessor), with the
+settings of a repository such as `"Qwen/Qwen3.5-0.8B"` (patches of 16 pixels, mean and
+standard deviation 0.5). The keys `min_pixels` and `max_pixels` of Qwen2-VL's
+configurations, or of [`create_processor`](@ref Metalhead.create_processor), set
+`size.shortest_edge` and `size.longest_edge`, as in transformers. Called on one image or a
+vector of images, it returns the inputs of the vision encoder of Qwen3.5
+([`qwen3_5_vision_model`](@ref Metalhead.Transformers.qwen3_5_vision_model)), which takes
+them as they are (`model(ip(images))`), as a NamedTuple in Julia's layout (PyTorch's
+dimensions reversed):
 
-`images` is one image or a vector of images. An image is an array of size
-`(width, height, channels)` (torch's `(channels, height, width)` reversed) of integers from
-0 to 255 (an 8-bit image, as `UInt8`) or of real numbers from 0 to 1. For an Images.jl
-image `img`, that is `permutedims(channelview(img), (3, 2, 1))`. Each image is
+| Key              | Size               | Contents                                                                    |
+|:---------------- |:------------------ |:--------------------------------------------------------------------------- |
+| `pixel_values`   | `(D, num_patches)` | the patches of the images, resized and normalised, `Float32`                |
+| `image_grid_thw` | `(3, num_images)`  | the numbers of patches `(1, height ÷ patch_size, width ÷ patch_size)` of each image |
 
- 1. resized with antialiased bicubic interpolation to the [`smart_resize`](@ref
-    Metalhead.Transformers.smart_resize) of its size with `factor = patch_size * merge_size`
-    (an 8-bit image as torchvision resizes it on the CPU, in fixed-point arithmetic),
- 2. scaled to `[0, 1]` (8-bit images only) and normalized with `image_mean` and `image_std`,
- 3. cut into patches of `patch_size × patch_size` pixels, each repeated
-    `temporal_patch_size` times (an image is a video of one frame).
+where `D = 3 * temporal_patch_size * patch_size^2` (1536 for Qwen3.5). The columns of
+`pixel_values` (the rows of transformers') are the patches of the images one
+after the other, each image ordered by windows of `merge_size × merge_size` patches,
+row-major over the windows and within each window. A patch is flattened as an array of size
+`(patch_size, patch_size, temporal_patch_size, 3)` (width first), its pixels repeated
+`temporal_patch_size` times: an image is a video of one frame.
 
-Returns `pixel_values`, a `Float32` matrix of size
-`(patch_size^2 * temporal_patch_size * channels, num_patches)` whose columns are the patches
-of the images one after the other, each image ordered by windows of `merge_size` by
-`merge_size` patches, and `grid_thw`, an integer matrix of size `(3, num_images)` whose
-columns are the numbers of patches `(1, height ÷ patch_size, width ÷ patch_size)` of the
-images.
+An image is an array of size `(width, height, channels)` (torch's
+`(channels, height, width)` reversed) of integers from 0 to 255 (an 8-bit image, as `UInt8`)
+or of reals from 0 to 1. Each image is
 
-An 8-bit image gives the same `pixel_values` as transformers, and an image of real numbers
-the same to Float32 precision.
+ 1. converted to RGB with `do_convert_rgb`: a grey image (a matrix, or one channel, or two
+    with alpha) has its grey repeated, and the alpha of RGBA is dropped, as PIL does;
+ 2. resized with `do_resize`, with PIL's filter `resample`, 2 (bilinear) or 3 (bicubic),
+    antialiased as torchvision resizes it, to the size whose sides are multiples of
+    `patch_size * merge_size`, with an area from `size.shortest_edge` to `size.longest_edge`
+    pixels, that keeps the aspect ratio of the image best (transformers' `smart_resize`).
+    Without `do_resize`, the sides of an image must be multiples of
+    `patch_size * merge_size`;
+ 3. multiplied by `rescale_factor` with `do_rescale`, and normalized with `image_mean` and
+    `image_std` with `do_normalize`. An image of reals from 0 to 1 is taken as an 8-bit
+    image already rescaled: `do_rescale` leaves it as it is, and without it the values are
+    multiplied by 255;
+ 4. cut into patches of `patch_size × patch_size` pixels.
+
+An 8-bit image gives the same `pixel_values` as transformers, and an image of reals the
+same to Float32 precision. The settings are checked as the processor is made, and also
+take the forms that transformers takes: `resample` as the name of PIL's filter (`:bicubic`);
+`image_mean` and `image_std` as one value for all channels.
 """
-function qwen3_5_image_inputs(images; patch_size::Integer = 16,
-        temporal_patch_size::Integer = 2, merge_size::Integer = 2,
-        min_pixels::Integer = 65536, max_pixels::Integer = 16777216,
-        image_mean = (0.5, 0.5, 0.5), image_std = (0.5, 0.5, 0.5))
-    images isa AbstractArray{<:Real, 3} && return qwen3_5_image_inputs([images];
-        patch_size, temporal_patch_size, merge_size, min_pixels, max_pixels, image_mean,
-        image_std)
-    patches = map(images) do image
-        ndims(image) == 3 ||
-            error("an image must be an array of size (width, height, channels), got $(size(image))")
-        width, height, channels = size(image)
-        channels == length(image_mean) == length(image_std) ||
-            error("an image has $channels channels, `image_mean` and `image_std` $(length(image_mean)) and $(length(image_std))")
-        h, w = smart_resize(height, width; factor = patch_size * merge_size, min_pixels,
-            max_pixels)
-        # transformers folds the rescaling of 8-bit images into the mean and the std
-        scale = eltype(image) <: Integer ? 255.0f0 : 1.0f0
-        mean = reshape(Float32.(collect(image_mean)) .* scale, 1, 1, :)
-        std = reshape(Float32.(collect(image_std)) .* scale, 1, 1, :)
-        x = (resize_image(image, (w, h), 3) .- mean) ./ std
-        grid = [1, h ÷ patch_size, w ÷ patch_size]
-        return patchify(x, patch_size, temporal_patch_size, merge_size), grid
+@processor struct Qwen2VLImageProcessor <: AbstractImageProcessor
+    do_resize::Bool = true
+    resample::Int = 3
+    size::Any = (; shortest_edge = 56 * 56, longest_edge = 28 * 28 * 1280)
+    do_rescale::Bool = true
+    rescale_factor::Float64 = 1 / 255
+    do_normalize::Bool = true
+    image_mean::Any = (0.48145466, 0.4578275, 0.40821073)
+    image_std::Any = (0.26862954, 0.26130258, 0.27577711)
+    do_convert_rgb::Bool = true
+    patch_size::Int = 14
+    temporal_patch_size::Int = 2
+    merge_size::Int = 2
+    provenance::NamedTuple = (;)
+end
+
+register_processor!("Qwen2VLImageProcessor", Qwen2VLImageProcessor)
+
+function standardize_settings(T::Type{Qwen2VLImageProcessor}, settings::NamedTuple)
+    s = standardize_image_settings(T, settings)
+    pixel_bounds(s.size)
+    for k in (:patch_size, :temporal_patch_size, :merge_size)
+        s[k] > 0 || throw(ArgumentError("`$k` must be positive, got $(s[k])"))
     end
-    return reduce(hcat, first.(patches)), reduce(hcat, last.(patches))
+    return s
+end
+
+function ignored_keys(::Type{Qwen2VLImageProcessor})
+    unread = "not read by Qwen2VLImageProcessor"
+    return (; IMAGES_KWARGS_IGNORED..., do_center_crop = unread, crop_size = unread,
+        do_pad = unread, pad_size = unread, image_seq_length = unread)
+end
+function legacy_keys(::Type{Qwen2VLImageProcessor})
+    return (; min_pixels = (:size, :shortest_edge), max_pixels = (:size, :longest_edge))
+end
+
+function pixel_bounds(size)
+    size isa NamedTuple && issetequal(keys(size), (:shortest_edge, :longest_edge)) &&
+        all(v -> v isa Real && isinteger(v) && v > 0, values(size)) ||
+        throw(ArgumentError("`size` must have positive `shortest_edge` and `longest_edge` only, as integers, got $(repr(size))"))
+    return Int(size.shortest_edge), Int(size.longest_edge)
+end
+
+function qwen2_vl_patches(ip::Qwen2VLImageProcessor, image)
+    factor = ip.patch_size * ip.merge_size
+    width, height = size(image, 1), size(image, 2)
+    ip.do_resize || width % factor == 0 && height % factor == 0 ||
+        error("without `do_resize`, the sides of an image must be multiples of `patch_size * merge_size` ($factor), got $width × $height")
+    min_pixels, max_pixels = pixel_bounds(ip.size)
+    x = prepare_image(ip, image,
+        (h, w) -> smart_resize(h, w; factor, min_pixels, max_pixels))
+    grid = [1, size(x, 2) ÷ ip.patch_size, size(x, 1) ÷ ip.patch_size]
+    return patchify(x, ip.patch_size, ip.temporal_patch_size, ip.merge_size), grid
+end
+
+function (ip::Qwen2VLImageProcessor)(images)
+    images = image_batch(images)
+    isempty(images) && error("no images to process")
+    processed = [qwen2_vl_patches(ip, image) for image in images]
+    return (; pixel_values = reduce(hcat, first.(processed)),
+        image_grid_thw = stack(last.(processed)))
 end

@@ -481,7 +481,7 @@ first. The workflow is the one above, with these differences.
   `NNlib.scaled_dot_product_attention` with `q_segments`. transformers rotates the queries
   and keys and weights the interpolated position embeddings in float32: `exact_float64`
   patches both, and the port computes them in at least `Float32`. The image processor
-  (`image_processing_qwen2_vl.jl`) is checked against `uv run dump_image_processor.py`.
+  (`image_processing_qwen2_vl.jl`) is checked against `uv run dump_processor.py`.
 - **Vision-language models** (`Qwen3_5ForConditionalGeneration`). config.json nests
   `text_config` and `vision_config`, which arrive as NamedTuples: build each part with the
   keys its builder declares (`config_args`). The image features replace the image tokens by
@@ -517,7 +517,9 @@ first. The workflow is the one above, with these differences.
 A model that takes images, text or boxes gets the processor of its checkpoint, which
 `create_processor(repo)` (`src/hub/processors.jl`) loads as transformers' `AutoProcessor`
 does. `src/Transformers/processing_sam3.jl` and `image_processing_sam3.jl` are the reference
-ports.
+ports; `processing_qwen3_vl.jl` expands the image placeholders of a prompt (in strings before
+tokenizing, as transformers does), and `image_processing_qwen2_vl.jl` maps legacy keys
+(`min_pixels`) to nested settings.
 
 - **Classes.** One immutable struct per upstream class, defined with `Metalhead.@processor`
   (`Base.@kwdef` whose constructors standardize the settings and check the components): its
