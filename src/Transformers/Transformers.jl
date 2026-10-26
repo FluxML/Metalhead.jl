@@ -18,9 +18,14 @@ using ConcreteStructs: @concrete
 using ChainRulesCore: ChainRulesCore
 using MLUtils: topk
 using ..Metalhead: ArchSpec, AbstractConfigFormat, register!, declared_args
-using ..Timm: dropout_or_identity, attention_fdrop, feature_take_indices, stage_outputs
+using ..Metalhead: AbstractProcessor, AbstractImageProcessor, register_processor!,
+                   image_batch, convert_to_rgb, is_8bit, RESAMPLE_FILTERS, check_inputs,
+                   @processor, tokenizer_of, encode_ids, pad_token_id, pad_ids
+using ..Timm: dropout_or_identity, attention_fdrop, feature_take_indices, stage_outputs,
+              pil_resize
 import ..Metalhead: layer_params, architecture_of, model_args
 import ..Metalhead: forward_features, forward_head, forward_intermediates
+import ..Metalhead: ignored_keys, standardize_settings
 
 include("config.jl")
 include("layers.jl")
@@ -32,9 +37,11 @@ include("granite.jl")
 include("granitemoe.jl")
 include("qwen3_5.jl")
 include("qwen3_5_vision.jl")
+include("image_processing_backends.jl")
 include("image_processing_qwen2_vl.jl")
 include("clip.jl")
 include("sam3.jl")
 include("image_processing_sam3.jl")
+include("processing_sam3.jl")
 
 end # module

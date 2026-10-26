@@ -70,10 +70,7 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
   (`unsloth/sam3.1`, #343). Its ViT attends within windows with a 2D rotary embedding, and its
   CLIP text encoder, geometry encoder of boxes, DETR encoder and decoder and mask decoder
   are ported. The checkpoints of SAM 3 load as `Sam3VideoModel`, whose detector only is
-  ported, not its tracker. `Metalhead.Transformers.sam3_image_inputs`,
-  `sam3_box_inputs` and `sam3_text_inputs` make its inputs as transformers' processor does,
-  and `post_process_instance_segmentation`, `post_process_object_detection` and
-  `post_process_semantic_segmentation` read its outputs.
+  ported, not its tracker.
 - Flux ports of [diffusers](https://github.com/huggingface/diffusers) models and pipelines, in
   `Metalhead.Diffusers`: text-to-image generation with FLUX.2 [klein] (`Flux2KleinPipeline`,
   with `Flux2Transformer2DModel`, `AutoencoderKLFlux2` and `FlowMatchEulerDiscreteScheduler`),
@@ -87,23 +84,32 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
   with the tokenizer and chat template of a pipeline, so that pipelines take prompts as
   strings (#332).
 - Processors (#348): `create_processor` loads the processor of a checkpoint, which turns raw
-  inputs (images, text) into the inputs of the model, and its outputs back into results, as
-  the checkpoint's configuration and its Python library do. It takes the names that
-  `create_model` takes, at the same revisions, reads the files of a branch at the commit of
-  the first it finds (offline or without network, those of the cache), and returns the most
-  complete processor that the repository describes, as transformers' `AutoProcessor` does:
+  inputs (images, text, boxes) into the inputs of the model, and its outputs back into
+  results, as the checkpoint's configuration and its Python library do. It takes the names
+  that `create_model` takes, at the same revisions, reads the files of a branch at the commit
+  of the first it finds (offline or without network, those of the cache), and returns the
+  most complete processor that the repository describes, as transformers' `AutoProcessor`
+  does:
   - `Metalhead.Timm.EvalTransform`, timm's eval transform, for every timm checkpoint, with
     `use_test_size`. It resizes with a port of Pillow's 8-bit filters, matches timm bit for
     bit on 8-bit images, and returns an array.
+  - `Metalhead.Transformers.Sam3Processor` and its `Sam3ImageProcessor`, for SAM 3, with box
+    prompts, and the tokenizer of the repository (HuggingFaceTokenizers' `Tokenizer`) for its
+    text. `post_process_instance_segmentation`, `post_process_object_detection` and
+    `post_process_semantic_segmentation` take the processor and the outputs of the model.
 
   Settings are read from the repository's files over the defaults of the Python class,
   strictly: a setting that the port doesn't implement is an error, and an unknown key a
-  warning. Keyword arguments override them, also in natural forms (an integer `input_size`,
-  one `mean` for every channel, a Symbol `interpolation`), and `show` prints where each
-  comes from. The processor classes are ported along with their models, and a class that
-  isn't ported is an error. A class is a struct defined with `Metalhead.@processor` and
-  registered with `Metalhead.register_processor!`, whose constructors check its settings
-  with `Metalhead.standardize_settings` (see "Porting internals" in the API reference).
+  warning. Keyword arguments override them, also in natural forms (an integer `input_size`
+  or `size`, one `mean` for every channel, a Symbol `interpolation` or `resample`), and
+  `show` prints where each comes from. The processor classes are ported along with their
+  models, and a class that isn't ported is an error. A class is a struct defined with
+  `Metalhead.@processor` and registered with `Metalhead.register_processor!`, whose
+  constructors check its settings with `Metalhead.standardize_settings` (see "Porting
+  internals" in the API reference). Processors other than timm's return NamedTuples with
+  the keys of transformers, in Julia's layout, with token indices from 1, which the models
+  take as they are (`model(inputs::NamedTuple)`: SAM 3). They match transformers bit for
+  bit on 8-bit images.
 - Mixed precision under `eltype = Float16` or `Flux.BFloat16` (or `f16`/`bf16`, #332): the
   RMSNorms of the language models and timm's `LayerNorm2d` keep their parameters in
   `Float32`, as Flux's `BatchNorm`, `GroupNorm` and `LayerNorm` do, and normalise in

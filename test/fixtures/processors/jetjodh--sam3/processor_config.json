@@ -1,0 +1,80 @@
+{
+  "image_processor": {
+    "crop_size": null,
+    "data_format": "channels_first",
+    "device": null,
+    "disable_grouping": null,
+    "do_center_crop": null,
+    "do_convert_rgb": true,
+    "do_normalize": true,
+    "do_pad": null,
+    "do_rescale": true,
+    "do_resize": true,
+    "image_mean": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "image_processor_type": "Sam3ImageProcessorFast",
+    "image_seq_length": null,
+    "image_std": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "input_data_format": null,
+    "mask_size": {
+      "height": 288,
+      "width": 288
+    },
+    "pad_size": null,
+    "processor_class": "Sam3VideoProcessor",
+    "resample": 2,
+    "rescale_factor": 0.00392156862745098,
+    "return_tensors": null,
+    "size": {
+      "height": 1008,
+      "width": 1008
+    }
+  },
+  "processor_class": "Sam3VideoProcessor",
+  "target_size": 1008,
+  "video_processor": {
+    "crop_size": null,
+    "data_format": "channels_first",
+    "default_to_square": true,
+    "device": null,
+    "do_center_crop": null,
+    "do_convert_rgb": true,
+    "do_normalize": true,
+    "do_pad": null,
+    "do_rescale": true,
+    "do_resize": true,
+    "do_sample_frames": null,
+    "fps": null,
+    "image_mean": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "image_std": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "input_data_format": null,
+    "num_frames": null,
+    "pad_size": null,
+    "processor_class": "Sam3VideoProcessor",
+    "resample": 2,
+    "rescale_factor": 0.00392156862745098,
+    "return_metadata": false,
+    "return_tensors": null,
+    "size": {
+      "height": 1008,
+      "width": 1008
+    },
+    "video_metadata": null,
+    "video_processor_type": "Sam2VideoVideoProcessor"
+  }
+}

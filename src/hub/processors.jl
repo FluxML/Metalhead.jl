@@ -81,7 +81,7 @@ repository; a component that isn't a `C` is an error. The component `tokenizer`,
 `Any`, is the tokenizer of the repository: HuggingFaceTokenizers.jl's `Tokenizer` of its
 tokenizer.json, or `nothing` without HuggingFaceTokenizers or without the file. With
 components, `T(components...; kwargs...)` also makes it from them, e.g.
-`T(image_processor, tokenizer; kwargs...)`.
+`Sam3Processor(image_processor, tokenizer; point_pad_value = -10)`.
 """
 macro processor(args...)
     def = last(args)
@@ -539,10 +539,11 @@ instantiate_processor(::AbstractConfigFormat, files, config; kwargs...) = nothin
 """
     create_processor(name; revision = nothing, subfolder = "", kwargs...)
 
-The processor of a checkpoint: it turns raw inputs (images, text) into the inputs of the
-model, and the model's outputs back into results (text), as the checkpoint's configuration
-and its Python library do. [`create_model`](@ref) makes the forward pass match PyTorch; the
-processor makes the whole path from raw input to result match.
+The processor of a checkpoint: it turns raw inputs (images, text, boxes) into the inputs of
+the model, and the model's outputs back into results (boxes, masks, text), as the
+checkpoint's configuration and its Python library do. [`create_model`](@ref) makes the
+forward pass match PyTorch; the processor makes the whole path from raw input to result
+match.
 
 `name` is a Hub repository, a local directory or a bare architecture, as for
 [`create_model`](@ref), and validated repositories default to the commit they were validated
@@ -556,14 +557,26 @@ component has is an error.
 
 Returns the most complete processor the repository describes, as transformers'
 `AutoProcessor` does: the class that its files or its model type name, such as a processor
-that combines an image processor and a tokenizer; else its tokenizer; else its image
-processor, such as the [`Timm.EvalTransform`](@ref Metalhead.Timm.EvalTransform) of every
-timm checkpoint. Calling a processor returns what the model takes, a NamedTuple (an array
-for `Timm.EvalTransform`). Images are arrays of size `(width, height, channels)`, of
-integers from 0 to 255 or of reals from 0 to 1 (see
-[`image_array`](@ref Metalhead.image_array)). The processor classes are ported along with
-their models, and a class that isn't ported is an error. `show` prints each setting and
-where it comes from.
+that combines an image processor and a tokenizer (`Transformers.Sam3Processor`); else its
+tokenizer; else its image processor, such as the
+[`Timm.EvalTransform`](@ref Metalhead.Timm.EvalTransform) of every timm checkpoint.
+Calling a processor returns what the model takes, a NamedTuple (an array for
+`Timm.EvalTransform`):
+
+```julia
+using HuggingFaceTokenizers
+model = create_model("unsloth/sam3.1"; pretrained = true)
+proc = create_processor("unsloth/sam3.1")
+inputs = proc(; images = img, text = "a cat")
+outputs = model(inputs)
+Transformers.post_process_instance_segmentation(proc, outputs;
+    target_sizes = inputs.original_sizes)
+```
+
+Images are arrays of size `(width, height, channels)`, of integers from 0 to 255 or of reals
+from 0 to 1 (see [`image_array`](@ref Metalhead.image_array)). The processor classes are
+ported along with their models, and a class that isn't ported is an error. `show` prints
+each setting and where it comes from.
 
 Metalhead ports no tokenizer: the tokenizer of a repository is HuggingFaceTokenizers.jl's
 `Tokenizer` of its tokenizer.json, which needs `using HuggingFaceTokenizers` before

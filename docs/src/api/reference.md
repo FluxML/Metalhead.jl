@@ -24,6 +24,16 @@ of the Python library of its checkpoints, with its settings as fields.
 ```@docs
 create_processor
 Metalhead.Timm.EvalTransform
+Metalhead.Transformers.Sam3Processor
+Metalhead.Transformers.Sam3ImageProcessor
+```
+
+Post-processing takes the processor and the outputs of the model:
+
+```@docs
+Metalhead.Transformers.post_process_object_detection
+Metalhead.Transformers.post_process_instance_segmentation
+Metalhead.Transformers.post_process_semantic_segmentation
 ```
 
 Image processors take images in one layout, to which an extension for another type of image
@@ -75,7 +85,10 @@ diffusers builders the arguments of the model's constructor.
 ```@autodocs
 Modules = [Metalhead.Timm, Metalhead.Transformers]
 Order = [:function]
-Filter = f -> !(f in (Metalhead.Timm.pretrained_cfg, Metalhead.Timm.pil_resize))
+Filter = f -> !(f in (Metalhead.Timm.pretrained_cfg, Metalhead.Timm.pil_resize,
+    Metalhead.Transformers.post_process_object_detection,
+    Metalhead.Transformers.post_process_instance_segmentation,
+    Metalhead.Transformers.post_process_semantic_segmentation))
 ```
 
 ```@docs

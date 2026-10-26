@@ -65,7 +65,9 @@ function with_cache(f; offline)
             fixture_files("flux2_klein_tiny"))
         # processors of branches
         cache_repo(cache, "metalhead/processor", processor_files(mktempdir(dir)))
-        cache_main(cache, "metalhead/processor")
+        cache_repo(cache, "metalhead/sam3",
+            fixture_files(joinpath("processors", "unsloth--sam3.1")))
+        foreach(repo -> cache_main(cache, repo), ["metalhead/processor", "metalhead/sam3"])
         withenv("HF_HOME" => dir, "HF_HUB_CACHE" => cache, "HF_TOKEN" => nothing,
             "HF_HUB_OFFLINE" => offline ? "1" : nothing,
             "TRANSFORMERS_OFFLINE" => nothing) do
@@ -89,6 +91,11 @@ function check_pinned_files(; offline)
     later() = Metalhead.source_file_if_exists(files, "tokenizer.json")
     path = @test_logs map(_ -> later(), 1:20)
     @test allequal(path) && endswith(only(unique(path)), joinpath(SHA, "tokenizer.json"))
+    # a processor that combines others, whose files all come from the commit of the branch
+    sam = offline ? (@test_logs create_processor("metalhead/sam3")) :
+          (@test_logs unreachable create_processor("metalhead/sam3"))
+    @test sam isa Metalhead.Transformers.Sam3Processor
+    @test sam.image_processor.size == (; height = 1008, width = 1008)
     # the files that only the cache lacks aren't recorded as missing from the repositories
     @test !any(k -> startswith(k[1], "metalhead/"), Metalhead.MISSING_FILES)
 end

@@ -111,6 +111,21 @@ values, **bit for bit**, which takes a port of Pillow's 8-bit resampling: it mat
 without `use_test_size`, must be those that timm resolves, and the logits of
 `timm/convnext_tiny.fb_in1k` for its transformed image must match PyTorch's to 1e-4.
 
+For transformers, `porting/dump_processor.py` calls the processor that
+`AutoProcessor.from_pretrained(repo)` loads, on small images, prompts and boxes: 18 cases
+for SAM 3 (`unsloth/sam3.1` and `jetjodh/sam3`), which cover batches, grey and RGBA images,
+upscaling and downscaling, box prompts, `do_resize`, `do_rescale` and `do_normalize` off,
+and overridden settings. Every output must be transformers', with the same keys. For
+8-bit images, `pixel_values` are equal **bit for bit**: the resize ports the fixed-point
+antialiased resize of `uint8` tensors that torchvision, transformers' default backend, runs
+on x86 CPUs with AVX2. For images of reals, which take a floating-point path, they match to
+a relative error of **1e-6**. Token ids, attention masks, boxes and labels are equal. The
+offline tests stand in for the tokenizer with one that gives the ids of transformers'
+tokenizer; with `METALHEAD_TEST_NETWORK=true`, they also tokenize the strings with
+HuggingFaceTokenizers.jl and the repository's `tokenizer.json`. SAM 3's post-processing is
+checked on random outputs of the model: the same scores and boxes, to floating-point
+precision, and the same masks.
+
 Configuration files are read strictly, an unknown key with a warning, and the tests load
 those of the fixtures without one. Pixels are compared after decoding: a JPEG decoded by
 ImageIO can differ slightly from Pillow's decoding of the same file.

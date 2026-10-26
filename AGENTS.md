@@ -47,7 +47,9 @@ reasons.
 - `src/Transformers/`: one file per transformers model, and `config.jl`, its
   `AbstractConfigFormat`. Blocks that models share (RMSNorm, the rotary tables, the tied
   output head) go in `layers.jl`. Processors go next to their models, one file per upstream
-  class under transformers' file names. Tokenizers aren't ported.
+  class under transformers' file names (`image_processing_sam3.jl`, `processing_sam3.jl`);
+  `image_processing_backends.jl` has the operations of the torchvision backend that image
+  processors share. Tokenizers aren't ported.
 - `src/Diffusers/`: diffusers models (`transformer_flux2.jl`, `autoencoder_kl_flux2.jl`, the
   autoencoders' encoder and decoder in `vae.jl`), schedulers and pipelines. `config.jl` has two
   `AbstractConfigFormat`s: a model's `config.json` and a pipeline's `model_index.json`,
