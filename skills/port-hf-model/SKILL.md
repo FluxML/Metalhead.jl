@@ -481,7 +481,7 @@ first. The workflow is the one above, with these differences.
   `NNlib.scaled_dot_product_attention` with `q_segments`. transformers rotates the queries
   and keys and weights the interpolated position embeddings in float32: `exact_float64`
   patches both, and the port computes them in at least `Float32`. The image processor
-  (`image_processing_qwen2_vl.jl`) is checked against `uv run dump_image_processor.py`.
+  (`image_processing_qwen2_vl.jl`) is checked against `uv run dump_processor.py`.
 - **Vision-language models** (`Qwen3_5ForConditionalGeneration`). config.json nests
   `text_config` and `vision_config`, which arrive as NamedTuples: build each part with the
   keys its builder declares (`config_args`). The image features replace the image tokens by
@@ -516,7 +516,10 @@ first. The workflow is the one above, with these differences.
 A model that takes images, text or boxes gets the processor of its checkpoint, which
 `create_processor(repo)` (`src/hub/processors.jl`) loads as transformers' `AutoProcessor`
 does. `src/Transformers/processing_sam3.jl`, `image_processing_sam3.jl` and
-`tokenization_utils_tokenizers.jl` are the reference ports.
+`tokenization_utils_tokenizers.jl` are the reference ports; `processing_qwen3_vl.jl` expands
+the image placeholders of a prompt (in strings before tokenizing, as transformers does, and in
+token ids), and `image_processing_qwen2_vl.jl` maps legacy keys (`min_pixels`) to nested
+settings.
 
 - **Classes.** One immutable struct per upstream class, defined with `Metalhead.@processor`
   (`Base.@kwdef` whose constructors convert and check the settings): its fields are the
@@ -567,8 +570,8 @@ does. `src/Transformers/processing_sam3.jl`, `image_processing_sam3.jl` and
   which the files override (a `null` special token with `nothing`); another class warns.
   What a class changes beyond tokenizer.json is a setting or a small hook keyed by
   `tokenizer_class` (CLIP's decoding, `FIXED_POST_PROCESSOR`, `PREFIX_SPACE_CLASSES`).
-  Keywords of calls in tokenizer_config.json are the tokenizer's `init_kwargs`, which its
-  own calls ignore, as transformers' do.
+  Keywords of calls in tokenizer_config.json are the tokenizer's `init_kwargs`, the defaults
+  of the calls of a processor that combines it (`merged_text_kwargs`).
   `porting/dump_processor.py tokenizers` compares each class on strings where they can
   differ (case, accents, unicode normal forms, whitespace runs, special tokens in the text);
   add a new language model's repository to its `TOKENIZER_REPOS`, and its class to

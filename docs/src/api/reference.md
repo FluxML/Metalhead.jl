@@ -24,6 +24,8 @@ of transformers, or timm's eval transform, with its settings as fields.
 ```@docs
 create_processor
 Metalhead.Timm.EvalTransform
+Metalhead.Transformers.Qwen3VLProcessor
+Metalhead.Transformers.Qwen2VLImageProcessor
 Metalhead.Transformers.Sam3Processor
 Metalhead.Transformers.Sam3ImageProcessor
 Metalhead.Transformers.TokenizersBackend
@@ -56,6 +58,8 @@ Metalhead.Timm.pretrained_cfg
 
 ```@docs
 Metalhead.Transformers.CausalLM
+Metalhead.Transformers.Qwen3_5ForConditionalGeneration
+Metalhead.Transformers.Qwen3_5VisionModel
 Metalhead.Transformers.Sam3Model
 Metalhead.Transformers.Sam3VideoModel
 Metalhead.Transformers.Sam3VisionModel

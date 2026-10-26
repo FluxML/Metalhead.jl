@@ -8,7 +8,8 @@ include(joinpath(@__DIR__, "..", "processors_setup.jl"))
 
 # Written by `porting/dump_processor.py tokenizers`: `AutoTokenizer.from_pretrained(repo)`
 # of the validated language models, of the FLUX.2 [klein] pipeline, of Qwen3.5, of SAM 3
-# and of GPT-2, on TEXTS
+# and of GPT-2, on TEXTS; and Qwen3.5's `AutoProcessor` with keywords of calls in its
+# tokenizer_config.json
 const PROCESSORS = joinpath(pkgdir(Metalhead), "test", "fixtures", "processors")
 const FILE = joinpath(pkgdir(Metalhead), "test", "references", "processors",
     "tokenizers.safetensors")
@@ -17,6 +18,7 @@ const REF = Metalhead.Checkpoint(FILE)
 const TEXTS = JSON.parse(META["texts"])
 const INFO = Dict(key => JSON.parse(META[key]) for key in JSON.parse(META["keys"]))
 const KEYS = sort!(collect(keys(INFO)))
+const PROCESSOR_CASES = sort!([k for k in keys(META) if startswith(k, "Qwen3VLProcessor/")])
 
 ids(key, i; special = true) = REF["$key/$(special ? "ids" : "content_ids")/$i"]
 calls(key) = sort!([split(k, "/")[2] for k in keys(META)
@@ -174,13 +176,78 @@ end
     end
 end
 
+# The keywords of calls in tokenizer_config.json are the defaults of the calls of a
+# processor that combines the tokenizer (transformers' `_merge_kwargs`), not of the
+# tokenizer's own: Qwen3.5's files with those of each case
+function with_processor_case(f, name; tokenizer_json = false)
+    m = JSON.parse(META[name])
+    mktempdir() do dir
+        qwen = joinpath(PROCESSORS, "Qwen--Qwen3.5-0.8B")
+        foreach(file -> cp(joinpath(qwen, file), joinpath(dir, file)), readdir(qwen))
+        config = JSON.parsefile(joinpath(dir, "tokenizer_config.json"))
+        write(joinpath(dir, "tokenizer_config.json"), JSON.json(merge(config, m["init"])))
+        tokenizer_json && cp(Metalhead.hf_download("Qwen/Qwen3.5-0.8B", "tokenizer.json";
+                revision = INFO["Qwen--Qwen3.5-0.8B"]["revision"]),
+            joinpath(dir, "tokenizer.json"); follow_symlinks = true)
+        return f(dir, m)
+    end
+end
+
+function check_processor_case(name, proc)
+    m = JSON.parse(META[name])
+    @test proc isa T.Qwen3VLProcessor && m["cls"] == "Qwen3VLProcessor"
+    @test Dict(pairs(proc.tokenizer.init_kwargs)) ==
+          Dict(Symbol(k) => v for (k, v) in m["init"])
+    out = proc(; text = TEXTS[m["text"]], call_kwargs(m["call"])...)
+    @test out.input_ids == REF["$name/input_ids"] .+ 1
+    @test out.attention_mask == REF["$name/attention_mask"]
+    @test out.mm_token_type_ids == REF["$name/mm_token_type_ids"]
+    return out
+end
+
+@testset "processor call defaults" begin
+    key = "Qwen--Qwen3.5-0.8B"
+    @test length(PROCESSOR_CASES) == 4
+    for name in PROCESSOR_CASES
+        with_processor_case(name) do dir, m
+            proc = @test_logs create_processor(dir; tokenizer = ReferenceBackend(key))
+            @testset "$name" begin
+                check_processor_case(name, proc)
+            end
+            # the tokenizer alone ignores them
+            @test proc.tokenizer(TEXTS[3]).input_ids == ids(key, 3) .+ 1
+        end
+    end
+    with_processor_case("Qwen3VLProcessor/max_length") do dir, _
+        proc = create_processor(dir)
+        @test_throws "longer than `max_length = 5`" proc(; text = ids(key, 3))
+        @test proc(; text = ids(key, 3), max_length = nothing).input_ids == ids(key, 3) .+ 1
+        @test_throws "Qwen3VLProcessor has no keyword `stride`" proc(; text = [1], stride = 2)
+        @test_throws "`padding = 3`" create_processor(dir; init_kwargs = (; padding = 3))(;
+            text = [1])
+        @test_throws "`init_kwargs` has `foo`" create_processor(dir;
+            init_kwargs = (; foo = 1))
+        @test_throws "`pad_to_multiple_of = 8` in the `init_kwargs` of the tokenizer of Qwen3VLProcessor" create_processor(dir;
+            init_kwargs = (; pad_to_multiple_of = 8))
+        @test create_processor(dir; init_kwargs = (; stride = 2)) isa T.Qwen3VLProcessor
+    end
+end
+
 # Strings through HuggingFaceTokenizers.jl, which METALHEAD_TEST_NETWORK adds to the test
 # environment (runtests.jl), on each repository's own files at its validated revision
 const TEST_NETWORK = parse(Bool, get(ENV, "METALHEAD_TEST_NETWORK", "false"))
 if TEST_NETWORK
     @eval using HuggingFaceTokenizers: HuggingFaceTokenizers
-    # the tokenizer of a repository; that of Qwen3.5 alone, as its processor
-    # (Qwen3VLProcessor) isn't ported
+    @testset "processor call defaults with HuggingFaceTokenizers" begin
+        for name in PROCESSOR_CASES
+            with_processor_case(name; tokenizer_json = true) do dir, _
+                @testset "$name" begin
+                    check_processor_case(name, @test_logs create_processor(dir))
+                end
+            end
+        end
+    end
+    # the tokenizer of a repository; that of Qwen3.5 alone, without its Qwen3VLProcessor
     function repo_tokenizer(m; kwargs...)
         if m["repo"] == "Qwen/Qwen3.5-0.8B"
             source = Metalhead.model_source(m["repo"], m["revision"], m["subfolder"])

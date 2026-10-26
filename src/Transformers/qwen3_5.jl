@@ -701,6 +701,31 @@ function (m::Qwen3_5ForConditionalGeneration)(input_ids; kwargs...)
     return forward_head(m, forward_features(m, input_ids; kwargs...))
 end
 
+"""
+    (model::Qwen3_5ForConditionalGeneration)(inputs::NamedTuple)
+    (model::Qwen3_5Model)(inputs::NamedTuple)
+
+The model on the output of a [`Qwen3VLProcessor`](@ref
+Metalhead.Transformers.Qwen3VLProcessor): its `input_ids` and `attention_mask`, and
+`pixel_values` and `image_grid_thw` if it has images; other keys (`mm_token_type_ids`) are
+ignored. The `input_ids` of one text, a vector, give the logits (or hidden states) of size
+`(vocab_size, seq_len)`, so that `logits[:, end]` are those of the next token. A batch may
+be padded on either side, as for a [`CausalLM`](@ref Metalhead.Transformers.CausalLM): a
+batch padded on the left is moved to the right and its outputs back, so that each text
+gets the outputs it gets alone, as in transformers.
+"""
+(m::Qwen3_5ForConditionalGeneration)(inputs::NamedTuple) = qwen3_5_on_inputs(m, inputs)
+(m::Qwen3_5Model)(inputs::NamedTuple) = qwen3_5_on_inputs(m, inputs)
+
+function qwen3_5_on_inputs(m, inputs)
+    check_inputs(m, inputs, (:input_ids,);
+        hint = "pass `text` to the processor, with an image placeholder for each image")
+    input_ids, attention_mask, restore = right_padded(inputs.input_ids,
+        get(inputs, :attention_mask, nothing))
+    return restore(m(input_ids; pixel_values = get(inputs, :pixel_values, nothing),
+        image_grid_thw = get(inputs, :image_grid_thw, nothing), attention_mask))
+end
+
 function forward_head(m::Qwen3_5ForConditionalGeneration, x; pre_logits::Bool = false)
     return pre_logits ? x : m.lm_head(x)
 end
@@ -738,13 +763,17 @@ token embeddings with `tie_word_embeddings`. Videos and the multi-token predicti
 The model maps token indices of size `(seq_len, batch_size)`, or a vector, to logits of
 size `(vocab_size, seq_len, batch_size)`, as [`llama_for_causal_lm`](@ref
 Metalhead.Transformers.llama_for_causal_lm) does, and takes the keyword arguments
-`attention_mask` and, for images, `pixel_values` and `image_grid_thw`, as made by
-[`qwen3_5_image_inputs`](@ref Metalhead.Transformers.qwen3_5_image_inputs). The token
-indices then hold, for each image in order, a run of `prod(image_grid_thw[:, i]) ÷ 4`
-image tokens (`image_token_id + 1`, `<|image_pad|>`), between the tokens of
-`<|vision_start|>` and `<|vision_end|>`, as the chat template of the checkpoints writes
-them. The merged tokens of the image replace the image tokens, and the multimodal rotary
-embedding gives them the positions of their grid.
+`attention_mask` and, for images, `pixel_values` and `image_grid_thw`, as made by the
+image processor of a checkpoint ([`Qwen2VLImageProcessor`](@ref
+Metalhead.Transformers.Qwen2VLImageProcessor)). The token indices then hold, for each image
+in order, a run of `prod(image_grid_thw[:, i]) ÷ 4` image tokens (`image_token_id + 1`,
+`<|image_pad|>`), between the tokens of `<|vision_start|>` and `<|vision_end|>`, as the chat
+template of the checkpoints writes them. The merged tokens of the image replace the image
+tokens, and the multimodal rotary embedding gives them the positions of their grid. The
+processor of a checkpoint, a [`Qwen3VLProcessor`](@ref
+Metalhead.Transformers.Qwen3VLProcessor), makes all of these from images and a prompt with a
+placeholder for each image, and the model takes its output as it is:
+`model(proc(; images, text))`.
 """
 function qwen3_5_for_conditional_generation(; text_config = (;), vision_config = (;),
         image_token_id = 248_056, tie_word_embeddings = false)

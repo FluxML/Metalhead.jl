@@ -44,8 +44,8 @@ it, when the HuggingFaceTokenizers.jl extension loads `tokenizer_file`, or yours
 [`encode_ids`](@ref Metalhead.Transformers.encode_ids)). `add_bos_token` and
 `add_eos_token` are `nothing` for the special tokens of tokenizer.json, or set at creation
 (`create_processor(repo; add_bos_token = false)`) for those they ask for. `init_kwargs` are
-the keywords of calls that tokenizer_config.json sets, which the tokenizer's own calls
-ignore, as transformers' do.
+the keywords of calls that tokenizer_config.json sets, which processors that combine the
+tokenizer (`Qwen3VLProcessor`) take as the defaults of their calls, as transformers does.
 
     (tok::TokenizersBackend)(text; padding = nothing, truncation = nothing,
                              max_length = nothing, padding_side = nothing,
@@ -122,7 +122,8 @@ const BERT_KEY = "configures the normaliser of BERT's tokenizer classes, which M
                  "hasn't validated"
 const SENTENCEPIECE_KEY = "configures sentencepiece tokenizer classes (Llama 2, T5), " *
                           "which Metalhead hasn't validated"
-const CALL_KEY = "a keyword of its call: pass it to the call"
+const CALL_KEY = "a keyword of its call: pass it to the call, or to the calls of a " *
+                 "processor as the tokenizer's `init_kwargs`"
 
 function ignored_keys(::Type{TokenizersBackend})
     return (; chat_template = CHAT_KEY, use_default_system_prompt = CHAT_KEY,
@@ -526,6 +527,43 @@ function (tok::TokenizersBackend)(text; padding = nothing, truncation = nothing,
     end
     "attention_mask" in tok.model_input_names || return (; input_ids)
     return (; input_ids, attention_mask)
+end
+
+# The keywords of the tokenizer's call, and the values with which the other keywords of
+# `TEXT_KWARGS` change nothing in the call of a processor (`stride` and `return_tensors`
+# change nothing whatever their value: Metalhead returns no overflowing tokens, and arrays).
+const CALL_KEYWORDS = (:padding, :truncation, :max_length, :padding_side,
+    :add_special_tokens)
+const INERT_TEXT_KWARGS = (; is_split_into_words = false, pad_to_multiple_of = nothing,
+    return_token_type_ids = false, return_attention_mask = true,
+    return_overflowing_tokens = false, return_special_tokens_mask = false,
+    return_offsets_mapping = false, return_length = false,
+    return_mm_token_type_ids = true, return_text_replacement_offsets = false)
+
+# Throw if the `init_kwargs` of the tokenizer of the processor `P` set a keyword of its
+# calls that Metalhead doesn't implement.
+function check_init_kwargs(P, tok)
+    tok isa TokenizersBackend || return nothing
+    for (k, v) in pairs(tok.init_kwargs)
+        (k in CALL_KEYWORDS || k in (:stride, :return_tensors)) && continue
+        inert = get(INERT_TEXT_KWARGS, k, missing)
+        isequal(v, inert) ||
+            error("`$k = $(repr(v))` in the `init_kwargs` of the tokenizer of $(nameof(P)) (from tokenizer_config.json), a default of its calls, is not supported" *
+                  (inert === missing ? "" : " (supported: $(repr(inert)))"))
+    end
+    return nothing
+end
+
+# The keywords of the call of the tokenizer in that of a processor `P`, as transformers'
+# `_merge_kwargs` merges them: those of the call, `kwargs`, over the `init_kwargs` of the
+# tokenizer, over the defaults of the tokenizer's call.
+function merged_text_kwargs(P, tok::TokenizersBackend, kwargs)
+    for k in keys(kwargs)
+        k in CALL_KEYWORDS ||
+            throw(ArgumentError("$(nameof(P)) has no keyword `$k` (its keywords of text are $(join(CALL_KEYWORDS, ", ")))"))
+    end
+    init = (; (k => v for (k, v) in pairs(tok.init_kwargs) if k in CALL_KEYWORDS)...)
+    return merge(init, kwargs)
 end
 
 """

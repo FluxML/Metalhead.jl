@@ -62,9 +62,8 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
   (`Qwen3_5ForConditionalGeneration`), validated against `Qwen/Qwen3.5-0.8B` on text and on
   an image (#340). Its decoder alternates gated attention with gated delta rule (linear
   attention) layers and has a multimodal rotary embedding; it is also ported alone
-  (`Qwen3_5ForCausalLM`), as is its vision encoder (`Qwen3_5VisionModel`).
-  `Metalhead.Transformers.qwen3_5_image_inputs` preprocesses images as the checkpoints'
-  processor does. Videos are not supported.
+  (`Qwen3_5ForCausalLM`), as is its vision encoder (`Qwen3_5VisionModel`). It takes the
+  output of its processor, batches padded on either side (#348). Videos are not supported.
 - SAM 3, the detector of the Segment Anything Model 3 (`Sam3Model`), which finds and segments
   the objects of an image that a text prompt or box prompts describe, validated against
   `jetjodh/sam3`, an ungated copy of the weights of `facebook/sam3`, and SAM 3.1
@@ -92,6 +91,10 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
   does:
   - `Metalhead.Timm.EvalTransform`, timm's eval transform, for every timm checkpoint, with
     `use_test_size`. It resizes with a port of Pillow's 8-bit filters, and returns an array.
+  - `Metalhead.Transformers.Qwen3VLProcessor` and its `Qwen2VLImageProcessor`, for Qwen3.5.
+    It expands each image placeholder of a prompt into the image's tokens, and takes the
+    keywords of the tokenizer (`padding`, `truncation`, `max_length`, `padding_side` and
+    `add_special_tokens`), with the defaults of `tokenizer_config.json`.
   - `Metalhead.Transformers.Sam3Processor` and its `Sam3ImageProcessor`, for SAM 3, with box
     prompts. `post_process_instance_segmentation`, `post_process_object_detection` and
     `post_process_semantic_segmentation` take the processor and the outputs of the model.
@@ -110,7 +113,7 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
   `show` prints where each comes from.
   Processors return NamedTuples with the keys of transformers, in Julia's layout, with token
   indices from 1, which the models take as they are (`model(inputs::NamedTuple)`: the
-  language models and SAM 3). They match timm and transformers bit for bit on 8-bit
+  language models, Qwen3.5 and SAM 3). They match timm and transformers bit for bit on 8-bit
   images, and the tokenizers match transformers' on strings. Strings need a tokenizer
   backend, such as HuggingFaceTokenizers.jl through its extension; token ids don't.
 - Mixed precision under `eltype = Float16` or `Flux.BFloat16` (or `f16`/`bf16`, #332): the

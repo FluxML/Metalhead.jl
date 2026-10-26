@@ -143,6 +143,7 @@ from raw input to result match. The output of a processor is what the model take
 | Checkpoints | `create_processor` returns | Called as |
 |:--|:--|:--|
 | timm | `Timm.EvalTransform`, timm's eval transform | `transform(images)` |
+| Qwen3.5 | `Transformers.Qwen3VLProcessor` | `proc(; images, text)` |
 | SAM 3 | `Transformers.Sam3Processor` | `proc(; images, text, input_boxes)` |
 | language models | `Transformers.TokenizersBackend`, the tokenizer | `tok(texts)` |
 
@@ -262,28 +263,38 @@ Llama 3, Gemma 3 and Granite), which the model takes either way.
 
 ### Vision-language models
 
-Qwen3.5 answers prompts about images. `qwen3_5_image_inputs` resizes and cuts an image into
-the patches the model takes, and the prompt holds one image token for each 2 × 2 patches:
+Qwen3.5 answers prompts about images. Its processor resizes each image to sides that are
+multiples of 32 pixels, cuts it into the patches of 16 × 16 pixels that the model takes, and
+replaces the image placeholder `<|image_pad|>` of the prompt with one image token for each
+2 × 2 patches. It doesn't apply the chat template: the prompt is written as the template
+writes it.
 
 ```julia
-using HuggingFaceTokenizers
-using Metalhead.Transformers: qwen3_5_image_inputs
+using FileIO, ImageCore, HuggingFaceTokenizers
+using Metalhead.Transformers: decode
 
 model = create_model("Qwen/Qwen3.5-0.8B"; pretrained = true)
-tokenizer = from_pretrained(Tokenizer, "Qwen/Qwen3.5-0.8B")
+proc = create_processor("Qwen/Qwen3.5-0.8B")
 
-image = rand(Float32, 640, 480, 3)    # width × height × channels, in [0, 1]
-pixel_values, image_grid_thw = qwen3_5_image_inputs(image)
-n = prod(image_grid_thw) ÷ 4                              # the number of image tokens
-prompt = "<|im_start|>user\n<|vision_start|>" * "<|image_pad|>"^n *
-         "<|vision_end|>Describe this image.<|im_end|>\n<|im_start|>assistant\n" *
-         "<think>\n\n</think>\n\n"
-ids = encode(tokenizer, prompt).ids .+ 1
-for _ in 1:20                                             # greedy decoding
-    push!(ids, argmax(model(ids; pixel_values, image_grid_thw)[:, end]))
+prompt = "<|im_start|>user\n<|vision_start|><|image_pad|><|vision_end|>" *
+         "Describe this image.<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n"
+image = permutedims(rawview(channelview(load("dog.jpg"))), (3, 2, 1))
+inputs = proc(; images = image, text = prompt)           # 396 tokens for 36 × 44 patches
+logits = model(inputs)                                   # vocabulary × sequence length
+decode(proc, [argmax(logits[:, end])])                   # "This"
+
+(; input_ids, pixel_values, image_grid_thw) = inputs
+for _ in 1:20                                            # greedy decoding
+    push!(input_ids, argmax(model(input_ids; pixel_values, image_grid_thw)[:, end]))
 end
-decode(tokenizer, ids[(end - 19):end] .- 1)
+decode(proc, input_ids[(end - 19):end])
+# "This image features a medium-to-large dog standing in profile on a grassy field. The
+#  dog has"
 ```
+
+A vector of prompts makes a batch, which the model takes padded on either side. The
+processor takes the keywords of the tokenizer, `padding`, `truncation`, `max_length`,
+`padding_side` and `add_special_tokens`, with the defaults of `tokenizer_config.json`.
 
 ### Segmenting objects
 
