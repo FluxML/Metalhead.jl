@@ -574,9 +574,10 @@ Transformers.post_process_instance_segmentation(proc, outputs;
 ```
 
 Images are arrays of size `(width, height, channels)`, of integers from 0 to 255 or of reals
-from 0 to 1 (see [`image_array`](@ref Metalhead.image_array)). The processor classes are
-ported along with their models, and a class that isn't ported is an error. `show` prints
-each setting and where it comes from.
+from 0 to 1, or, with ImageCore loaded, matrices of colorants (see
+[`image_array`](@ref Metalhead.image_array)). The processor classes are ported along with
+their models, and a class that isn't ported is an error. `show` prints each setting and
+where it comes from.
 
 Metalhead ports no tokenizer: the tokenizer of a repository is HuggingFaceTokenizers.jl's
 `Tokenizer` of its tokenizer.json, which needs `using HuggingFaceTokenizers` before

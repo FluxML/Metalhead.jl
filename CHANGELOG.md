@@ -115,6 +115,8 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
   the keys of transformers, in Julia's layout, with token indices from 1, which the models
   take as they are (`model(inputs::NamedTuple)`: Qwen3.5 and SAM 3). They match
   transformers bit for bit on 8-bit images.
+- An extension for ImageCore: processors take matrices of colorants, such as the images that
+  `FileIO.load` returns (#348).
 - Mixed precision under `eltype = Float16` or `Flux.BFloat16` (or `f16`/`bf16`, #332): the
   RMSNorms of the language models and timm's `LayerNorm2d` keep their parameters in
   `Float32`, as Flux's `BatchNorm`, `GroupNorm` and `LayerNorm` do, and normalise in
@@ -133,8 +135,8 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
 ### Changed
 
 - New dependencies: HuggingFaceApi, SafeTensors, JSON and ConcreteStructs, and the weak
-  dependency HuggingFaceTokenizers. Flux 0.16.14, NNlib 0.9.54 and MLUtils 0.4.9 are now the
-  minimum versions (#335, #337, #341).
+  dependencies HuggingFaceTokenizers and ImageCore. Flux 0.16.14, NNlib 0.9.54 and MLUtils
+  0.4.9 are now the minimum versions (#335, #337, #341).
 - Downloads share the cache of Python's `huggingface_hub` (`~/.cache/huggingface/hub`), and
   its `HF_TOKEN`, `HF_HUB_CACHE` and `HF_HUB_OFFLINE` environment variables.
 

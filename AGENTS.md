@@ -58,7 +58,7 @@ reasons.
   loads through the extension.
 - `ext/`: package extensions. HuggingFaceTokenizers.jl's `Tokenizer` is the tokenizer of a
   checkpoint: its extension loads it from `tokenizer.json` and implements the interface of
-  `src/hub/tokenizers.jl`; CUDA.
+  `src/hub/tokenizers.jl`; ImageCore lets processors take images of colorants; CUDA.
 - `src/legacy/`: the hand-written models of Metalhead 0.9 (`ResNet(50)`, `Metalhead.Layers`,
   `pretrain = true`). Deprecated, untested, and removed in 0.11: don't extend them.
 - `test/`: run with ParallelTestRunner. Each file is a `@testset` in its own module. Shared

@@ -86,10 +86,8 @@ model = create_model("timm/convnext_tiny.fb_in1k"; pretrained = true)
 # and the preprocessing of the checkpoint: timm's eval transform, with its settings
 transform = create_processor("timm/convnext_tiny.fb_in1k")
 
-img = load("dog.jpg")                                      # height × width matrix of colours
-image = permutedims(rawview(channelview(img)), (3, 2, 1))  # width × height × channels, UInt8
-x = transform(image)   # 224 × 224 × 3 × 1: width × height × channels × batch
-logits = model(x)      # 1000 × 1
+x = transform(load("dog.jpg"))   # 224 × 224 × 3 × 1: width × height × channels × batch
+logits = model(x)                # 1000 × 1
 ```
 
 ### Creating a model
@@ -151,8 +149,8 @@ Julia's layout, with token indices that start at 1, and SAM 3's turns the output
 model back into results: `post_process_instance_segmentation(proc, outputs)` for masks. A
 diffusers pipeline has no processor: it prepares its inputs itself, with its tokenizer
 `pipe.tokenizer`. Images are arrays of size width × height × channels, of `UInt8` from 0 to
-255 or of reals from 0 to 1. The matrix of colours `img` that `FileIO.load` returns becomes
-one with ImageCore: `permutedims(rawview(channelview(img)), (3, 2, 1))`.
+255 or of reals from 0 to 1. With ImageCore loaded (Images.jl loads it), processors also
+take the matrices of colours that `FileIO.load` returns.
 
 Metalhead ports no tokenizer. The tokenizer of a repository is a `Tokenizer` of
 [HuggingFaceTokenizers.jl](https://github.com/MurrellGroup/HuggingFaceTokenizers.jl), which
@@ -275,8 +273,7 @@ proc = create_processor("Qwen/Qwen3.5-0.8B")
 
 prompt = "<|im_start|>user\n<|vision_start|><|image_pad|><|vision_end|>" *
          "Describe this image.<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n"
-image = permutedims(rawview(channelview(load("dog.jpg"))), (3, 2, 1))
-inputs = proc(; images = image, text = prompt)           # 396 tokens for 36 × 44 patches
+inputs = proc(; images = load("dog.jpg"), text = prompt)  # 396 tokens for 36 × 44 patches
 logits = model(inputs)                                   # vocabulary × sequence length
 decode(proc.tokenizer, [argmax(logits[:, end]) - 1])    # "This"
 
@@ -306,8 +303,7 @@ using Metalhead.Transformers: post_process_instance_segmentation
 model = create_model("unsloth/sam3.1"; pretrained = true)   # SAM 3.1; SAM 3: "jetjodh/sam3"
 proc = create_processor("unsloth/sam3.1")
 
-image = permutedims(rawview(channelview(load("dog.jpg"))), (3, 2, 1))
-inputs = proc(; images = image, text = "a dog")
+inputs = proc(; images = load("dog.jpg"), text = "a dog")
 objects = only(post_process_instance_segmentation(proc, model(inputs); threshold = 0.5,
     target_sizes = inputs.original_sizes))
 objects.scores, objects.boxes, objects.masks
