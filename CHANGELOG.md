@@ -93,7 +93,9 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
   strictly: a setting that the port doesn't implement is an error, and an unknown key a
   warning. Keyword arguments override them, and `show` prints where each comes from. The
   processor classes are ported along with their models, and a class that isn't ported is
-  an error.
+  an error. A class is a struct defined with `Metalhead.@processor` and registered with
+  `Metalhead.register_processor!`, whose constructors check its settings with
+  `Metalhead.standardize_settings` (see "Porting internals" in the API reference).
 - Mixed precision under `eltype = Float16` or `Flux.BFloat16` (or `f16`/`bf16`, #332): the
   RMSNorms of the language models and timm's `LayerNorm2d` keep their parameters in
   `Float32`, as Flux's `BatchNorm`, `GroupNorm` and `LayerNorm` do, and normalise in

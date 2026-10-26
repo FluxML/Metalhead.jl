@@ -518,34 +518,37 @@ A model that takes images or text gets the processor of its checkpoint, which
 does.
 
 - **Classes.** One immutable struct per upstream class, defined with `Metalhead.@processor`
-  (`Base.@kwdef` whose constructors convert and check the settings): its fields are the
-  attributes of the Python class with that class's defaults (not a checkpoint's), and a last
-  field `provenance::NamedTuple = (;)` for `show`. Image processors subtype
-  `Metalhead.AbstractImageProcessor`, others `Metalhead.AbstractProcessor`. Register the
-  class name that configurations give with `register_processor!("ClassName", T; aliases,
-  model_types)`; the suffixes `Fast` and `Pil` are dropped. A processor that combines others
-  is `@processor (image_processor, tokenizer) struct ...`, which adds `T(image_processor,
-  tokenizer; kwargs...)`, and declares `processor_components(::Type{T}) = (; image_processor
-  = ..., tokenizer = ...)`, components defaulting to `nothing`; the generic `load_processor`
-  loads them and routes each override to the component with a setting of its name. A
-  tokenizer has a `load_processor` of its own.
-- **Constructors.** Two hooks, methods on the class like those below, documented in
-  `src/hub/processors.jl`. `processor_fields(T, args)` converts the arguments of the
-  constructor to the types of the fields, taking the forms that read naturally (an integer
-  for a size, one value for every channel), with an `ArgumentError` that names the forms
-  for others. `check_processor(p)` errors on values the port
-  doesn't implement, naming the supported ones; that of a processor with components calls
-  `Metalhead.check_components(p)`. Every constructor runs both, so a processor built by hand
-  fails as early as a loaded one.
-- **Strict settings.** Declare `ignored_keys(T)` (`key = "reason"`), `restricted_keys(T)`
-  (`key = allowed values`) for options that aren't ported, and `legacy_keys(T)`
-  (`old = path`). Other keys warn once, so test that each validated repository's files load
-  with `@test_logs` and no warning.
+  (`Base.@kwdef` whose constructors standardize the settings and check the components): its
+  fields are the attributes of the Python class with that class's defaults (not a
+  checkpoint's), and a last field `provenance::NamedTuple = (;)` for `show`. Image
+  processors subtype `Metalhead.AbstractImageProcessor`, others
+  `Metalhead.AbstractProcessor`. Register the class name that configurations give with
+  `register_processor!("ClassName", T; aliases, model_types)`; the suffixes `Fast` and `Pil`
+  are dropped. A processor that
+  combines others names them, `@processor (image_processor, video_processor) struct ...`,
+  which adds `T(image_processor, video_processor; kwargs...)`: each is a field
+  `Union{Nothing, C} = nothing`, which `create_processor` loads as a processor of class `C`
+  from the same repository, routing each override to the component that has a setting of
+  its name. A class that is neither an image processor nor a combination loads with an
+  internal method `Metalhead.load_processor(::Type{T}, files; kwargs...)` of its own.
+- **Settings.** `standardize_settings(T, settings)`, documented in `src/hub/processors.jl`,
+  takes the settings as a NamedTuple and returns them as the fields store them: it converts
+  the forms that the Python library also takes (an integer for a size, one value for every
+  channel), and throws an `ArgumentError` that names the supported values for others. A
+  feature that isn't ported is still a setting, as upstream has it
+  (`do_center_crop::Bool = false`), whose unsupported values `standardize_settings` rejects.
+  Name the setting in backticks in the message: the error of a loaded processor then names
+  the file that set it. Every constructor calls it, so a processor built by hand fails as
+  early as a loaded one.
+- **Strict settings.** Declare `ignored_keys(T)` (`key = "reason"`) for the keys that the
+  class knows but doesn't read, and `legacy_keys(T)` (`old = path`) for former names. Other
+  keys warn once, so test that each validated repository's files load with `@test_logs` and
+  no warning.
 - **Other libraries.** A config.json that carries the preprocessing (timm's
   `pretrained_cfg`) gets a method `instantiate_processor(::Format, files, config; kwargs...)`
-  that builds the processor with `processor_from_entries(T, json_entries(dict, file);
-  kwargs...)`, which reads strictly and applies the overrides. Without one,
-  `create_processor` finds the class as `AutoProcessor` does.
+  that builds the processor with the internal `processor_from_entries(T,
+  json_entries(dict, file); kwargs...)`, which reads strictly and applies the overrides.
+  Without one, `create_processor` finds the class as `AutoProcessor` does.
 - **Calling.** The output is a NamedTuple with transformers' keys in Julia layout, 1-based
   token indices.
 - **Outputs.** The docstring of each class has a Returns table, whose header begins with

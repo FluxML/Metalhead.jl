@@ -78,7 +78,7 @@ end
 # missing, as do the configurations of `hf_download_first`. A branch resolves to the commit
 # that the cache has for it: the files that the processor downloads later come from it,
 # without asking the Hub. Without network, a branch warns once, when its first file is read.
-function check_processors(; offline)
+function check_pinned_files(; offline)
     unreachable = (:warn, r"Cannot reach the Hub, using the cached version")
     files = Metalhead.ProcessorFiles(Metalhead.model_source("metalhead/processor", nothing))
     read(file) = offline ? (@test_logs Metalhead.read_json(files, file)) :
@@ -86,8 +86,8 @@ function check_processors(; offline)
     @test read("tokenizer_config.json")["model_max_length"] == 8
     @test files.source.revision == SHA
     @test (@test_logs Metalhead.read_json(files, "processor_config.json")) === nothing
-    file = Metalhead.SourceFile(files.source, "tokenizer.json")
-    path = @test_logs map(_ -> Metalhead.local_path(file), 1:20)
+    later() = Metalhead.source_file_if_exists(files, "tokenizer.json")
+    path = @test_logs map(_ -> later(), 1:20)
     @test allequal(path) && endswith(only(unique(path)), joinpath(SHA, "tokenizer.json"))
     # the files that only the cache lacks aren't recorded as missing from the repositories
     @test !any(k -> startswith(k[1], "metalhead/"), Metalhead.MISSING_FILES)
@@ -117,7 +117,7 @@ end
             "tried vae/config.json and vae/model_index.json"] source_config(
             hub("metalhead/absent"; subfolder = "vae"))
 
-        check_processors(; offline = true)
+        check_pinned_files(; offline = true)
 
         # a cached index whose shard is missing, or that doesn't parse, is an error
         rm(joinpath(sharded, SHARDS[2]))
@@ -138,7 +138,7 @@ end
             @test_throws ["has no configuration in the cache",
                 "tried config.json and model_index.json",
                 "the Hub can't be reached"] source_config(hub("metalhead/absent"))
-            check_processors(; offline = false)
+            check_pinned_files(; offline = false)
         end
     end
 end
