@@ -54,10 +54,9 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
   The rotary embeddings may be scaled as in Llama 3.1 and later (`rope_type = "llama3"`) or
   linearly (`"linear"`) (#336). `create_model` loads them from their Hub repository, and
   takes the fields of `config.json` as keyword arguments. They take token indices starting
-  at 1, or the output of their tokenizer (`model(tok(texts))`, #348), and return logits;
-  there is no key-value cache yet. Batches take the tokenizer's `attention_mask`, padded on
-  the right, or on either side in the output of the tokenizer, and `forward_intermediates`
-  returns the hidden states of the decoder layers.
+  at 1 and return logits; there is no key-value cache yet. Batches padded on the right take
+  the tokenizer's `attention_mask`, and `forward_intermediates` returns the hidden states of
+  the decoder layers.
 - Qwen3.5, the vision-language model of the Qwen3.5 checkpoints
   (`Qwen3_5ForConditionalGeneration`), validated against `Qwen/Qwen3.5-0.8B` on text and on
   an image (#340). Its decoder alternates gated attention with gated delta rule (linear
@@ -78,11 +77,12 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
   validated against `black-forest-labs/FLUX.2-klein-4B` (#332). `create_model` builds a pipeline from
   the `model_index.json` of a repository, or one of its components with `subfolder`
   (`"org/name/vae"` also names one).
-- An extension for HuggingFaceTokenizers.jl (`ext/`): with it loaded, tokenizers encode and
-  decode strings, so that processors take text as strings (#348), and
-  `Metalhead.Diffusers.tokenize` tokenizes prompts with the tokenizer and chat template of a
-  pipeline, so that pipelines take prompts as strings (#332). Another tokenizer plugs in
-  with methods of `Metalhead.Transformers.encode_ids` and `decode_ids`.
+- An extension for HuggingFaceTokenizers.jl (`ext/`): with it loaded, `create_processor`
+  returns the tokenizer of a language model, HuggingFaceTokenizers' `Tokenizer` of the
+  repository's `tokenizer.json` with the padding token of its `tokenizer_config.json`
+  (Metalhead ports no tokenizer, #348), and `Metalhead.Diffusers.tokenize` tokenizes prompts
+  with the tokenizer and chat template of a pipeline, so that pipelines take prompts as
+  strings (#332).
 - Processors (#348): `create_processor` loads the processor of a checkpoint, which turns raw
   inputs (images, text, boxes) into the inputs of the model, and its outputs back into
   results, as the checkpoint's configuration and its Python library do. It takes the names
@@ -91,28 +91,25 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
   most complete processor that the repository describes, as transformers' `AutoProcessor`
   does:
   - `Metalhead.Timm.EvalTransform`, timm's eval transform, for every timm checkpoint, with
-    `use_test_size`. It resizes with a port of Pillow's 8-bit filters, and returns an array.
+    `use_test_size`. It resizes with a port of Pillow's 8-bit filters, matches timm bit for
+    bit on 8-bit images, and returns an array.
   - `Metalhead.Transformers.Sam3Processor` and its `Sam3ImageProcessor`, for SAM 3, with box
-    prompts. `post_process_instance_segmentation`, `post_process_object_detection` and
+    prompts, and the tokenizer of the repository (HuggingFaceTokenizers' `Tokenizer`) for its
+    text. `post_process_instance_segmentation`, `post_process_object_detection` and
     `post_process_semantic_segmentation` take the processor and the outputs of the model.
-  - `Metalhead.Transformers.TokenizersBackend`, the tokenizer of a `tokenizer.json`, with
-    the special tokens, padding and truncation of `tokenizer_config.json` over the defaults
-    of the tokenizer class that `AutoTokenizer` builds (a class that Metalhead hasn't
-    validated warns): the processor of every validated language model, and the tokenizer of
-    the other processors. It returns token indices from 1, padded on the side of the
-    tokenizer, and `Metalhead.Transformers.decode` turns them back into text, with
-    `skip_special_tokens` without the special tokens, named ones included.
 
   Settings are read from the repository's files over the defaults of the Python class,
   strictly: a setting that the port doesn't implement is an error, and an unknown key a
-  warning. Keyword arguments override them, also in natural forms (an integer
-  `input_size`, one `mean` for every channel, a Symbol `interpolation` or `resample`), and
-  `show` prints where each comes from.
-  Processors return NamedTuples with the keys of transformers, in Julia's layout, with token
-  indices from 1, which the models take as they are (`model(inputs::NamedTuple)`: the
-  language models and SAM 3). They match timm and transformers bit for bit on 8-bit
-  images, and the tokenizers match transformers' on strings. Strings need a tokenizer
-  backend, such as HuggingFaceTokenizers.jl through its extension; token ids don't.
+  warning. Keyword arguments override them, also in natural forms (an integer `input_size`
+  or `size`, one `mean` for every channel, a Symbol `interpolation` or `resample`), and
+  `show` prints where each comes from. The processor classes are ported along with their
+  models, and a class that isn't ported is an error. A class is a struct defined with
+  `Metalhead.@processor` and registered with `Metalhead.register_processor!`, whose
+  constructors check its settings with `Metalhead.standardize_settings` (see "Porting
+  internals" in the API reference). Processors other than timm's return NamedTuples with
+  the keys of transformers, in Julia's layout, with token indices from 1, which the models
+  take as they are (`model(inputs::NamedTuple)`: SAM 3). They match transformers bit for
+  bit on 8-bit images.
 - Mixed precision under `eltype = Float16` or `Flux.BFloat16` (or `f16`/`bf16`, #332): the
   RMSNorms of the language models and timm's `LayerNorm2d` keep their parameters in
   `Float32`, as Flux's `BatchNorm`, `GroupNorm` and `LayerNorm` do, and normalise in
