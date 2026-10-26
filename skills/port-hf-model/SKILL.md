@@ -521,14 +521,14 @@ does.
   (`Base.@kwdef` whose constructors convert and check the settings): its fields are the
   attributes of the Python class with that class's defaults (not a checkpoint's), and a last
   field `provenance::NamedTuple = (;)` for `show`. Image processors subtype
-  `Metalhead.ImageProcessor`, others `Metalhead.Processor`. Register the class name that
-  configurations give with `register_processor!("ClassName", T; aliases, model_types)`;
-  the suffixes `Fast` and `Pil` are dropped. A processor that combines others
-  is `@processor (image_processor, tokenizer) struct ...`, which adds
-  `T(image_processor, tokenizer; kwargs...)`, and declares `processor_components(::Type{T}) =
-  (; image_processor = ..., tokenizer = ...)`, components defaulting to
-  `nothing`; the generic `load_processor` loads them and routes each override to the
-  component with a setting of its name. A tokenizer has a `load_processor` of its own.
+  `Metalhead.AbstractImageProcessor`, others `Metalhead.AbstractProcessor`. Register the
+  class name that configurations give with `register_processor!("ClassName", T; aliases,
+  model_types)`; the suffixes `Fast` and `Pil` are dropped. A processor that combines others
+  is `@processor (image_processor, tokenizer) struct ...`, which adds `T(image_processor,
+  tokenizer; kwargs...)`, and declares `processor_components(::Type{T}) = (; image_processor
+  = ..., tokenizer = ...)`, components defaulting to `nothing`; the generic `load_processor`
+  loads them and routes each override to the component with a setting of its name. A
+  tokenizer has a `load_processor` of its own.
 - **Constructors.** Two hooks, methods on the class like those below, documented in
   `src/hub/processors.jl`. `processor_fields(T, args)` converts the arguments of the
   constructor to the types of the fields, taking the forms that read naturally (an integer

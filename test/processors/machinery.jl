@@ -3,7 +3,7 @@
 # that combines them, loaded from configuration files in temporary directories.
 using Metalhead, Test
 using JSON: JSON
-using Metalhead: Processor, ImageProcessor, @processor, ProcessorFiles,
+using Metalhead: AbstractProcessor, AbstractImageProcessor, @processor, ProcessorFiles,
                  processor_from_entries, json_entries, read_json, register_processor!,
                  check_inputs
 import Metalhead: processor_components, ignored_keys, restricted_keys, legacy_keys,
@@ -22,7 +22,7 @@ An image processor of the tests. Called on one image or a vector of them, it ret
 | `pixel_values` | `(W, H, 3, batch)` | the images, rescaled, `Float32`                    |
 | `pixel_mask`   | `(W, H, batch)`    | 1 for the pixels of the images; only with `do_pad` |
 """
-@processor struct MetalheadTestImageProcessor <: ImageProcessor
+@processor struct MetalheadTestImageProcessor <: AbstractImageProcessor
     do_resize::Bool = true
     size::NamedTuple = (; height = 4, width = 4)
     filter::String = "bilinear"
@@ -73,7 +73,7 @@ A tokenizer of the tests, of token ids only. Called on a vector of them, it retu
 | `input_ids`      | `(seq_len, batch)` | the ids plus 1, padded with `pad_token_id` |
 | `attention_mask` | `(seq_len, batch)` | 1 for the tokens, 0 for the padding        |
 """
-@processor struct MetalheadTestTokenizer <: Processor
+@processor struct MetalheadTestTokenizer <: AbstractProcessor
     model_max_length::Int = 8
     padding_side::String = "right"
     pad_token::Union{Nothing, String} = "<pad>"
@@ -126,7 +126,7 @@ A processor of the tests that combines a `MetalheadTestImageProcessor` and a
 | `input_ids`      | `(seq_len, batch)` | the token indices of `text`; with `text` |
 | `attention_mask` | `(seq_len, batch)` | 0 for the padding; with `text`           |
 """
-@processor (image_processor, tokenizer) struct MetalheadTestProcessor <: Processor
+@processor (image_processor, tokenizer) struct MetalheadTestProcessor <: AbstractProcessor
     image_processor::Any = nothing
     tokenizer::Any = nothing
     padding_side::String = "right"
