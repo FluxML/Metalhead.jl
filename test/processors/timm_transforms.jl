@@ -151,9 +151,9 @@ end
     t = EvalTransform(; input_size = (3, 16, 16), crop_pct = 0.95, interpolation = "box")
     @test t(images) == REF["transform/box"]
     # checked as it is made
-    @test_throws "crop_mode = \"border\" is not supported" EvalTransform(;
+    @test_throws "`crop_mode = \"border\"` is not supported" EvalTransform(;
         crop_mode = "border")
-    @test_throws "interpolation = \"random\" is not supported" EvalTransform(;
+    @test_throws "`interpolation = \"random\"` is not supported" EvalTransform(;
         interpolation = "random")
     @test_throws "is not supported" EvalTransform(; settings(t)..., crop_mode = "border",
         t.provenance)
@@ -209,7 +209,7 @@ end
     @test_throws message create_processor(CONVNEXT; crop_pc = 1.0)
     message = "`num_classes` is not used by EvalTransform: describes the classifier"
     @test_throws message create_processor(CONVNEXT; num_classes = 10)
-    message = "crop_mode = \"border\" is not supported (supported: \"center\", \"squash\")"
+    message = "`crop_mode = \"border\"` is not supported (supported: \"center\", \"squash\")"
     @test_throws message create_processor(CONVNEXT; crop_mode = "border")
 
     # use_test_size: test_input_size and test_crop_pct, where the configuration has them
@@ -242,6 +242,8 @@ end
         ("mean", [0.5, 0.5], "one value per RGB channel"))
         with_config(timm_config(Dict(key => value))) do dir
             @test_throws message create_processor(dir)
+            # and the file that sets it
+            @test_throws "`$key` is set in config.json" create_processor(dir)
         end
     end
     # false values in Python are the defaults, from the class

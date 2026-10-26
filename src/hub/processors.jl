@@ -8,8 +8,8 @@
 """
     AbstractProcessor
 
-A processor: an image processor, a tokenizer, or a processor that combines them, as
-[`create_processor`](@ref) returns them. Each is a plain immutable struct whose fields are
+A processor, as [`create_processor`](@ref) returns it: an image processor, or a processor
+that combines processors and a tokenizer. Each is a plain immutable struct whose fields are
 the attributes of the Python class (its settings, and the processors it combines), with a
 keyword constructor whose defaults are those of the Python class, and a `provenance` field
 that records where each setting comes from, for `show`.
@@ -34,18 +34,6 @@ end
 Origin(source, value) = Origin(source, value, nothing)
 
 """
-    processor_components(T) -> NamedTuple
-
-The components of the processor class `T`, as `name = type`: the fields that hold the
-processors it combines, loaded from the same repository, e.g.
-`(; image_processor = Sam3ImageProcessor, tokenizer = TokenizersBackend)`. Empty (the
-default) for an image processor or a tokenizer. A component is loaded by
-[`load_processor`](@ref Metalhead.load_processor) of its type, and the fields of `T` that
-aren't components (nor `provenance`) are its settings.
-"""
-processor_components(::Type) = (;)
-
-"""
     ignored_keys(T) -> NamedTuple
 
 The keys of a configuration that the processor class `T` knows but doesn't read, as
@@ -54,15 +42,6 @@ Other keys that aren't settings of `T` warn once. An override of an ignored key 
 that gives the reason.
 """
 ignored_keys(::Type) = (;)
-
-"""
-    restricted_keys(T) -> NamedTuple
-
-The keys of features that the processor class `T` doesn't port, as `key = allowed values`,
-e.g. `(; do_center_crop = (false,))`: another value, in a file or an override, is an error.
-`null` in a file is missing, as for any key.
-"""
-restricted_keys(::Type) = (;)
 
 """
     legacy_keys(T) -> NamedTuple
@@ -76,51 +55,38 @@ setting, as transformers does.
 legacy_keys(::Type) = (;)
 
 """
-    processor_fields(T, args::Tuple) -> Tuple
+    standardize_settings(T, settings::NamedTuple) -> NamedTuple
 
-The values of the fields of a processor of class `T` from `args`, the arguments of its
-constructor in the order of the fields: the forms of a setting that the Python library also
-takes, or that read naturally, converted to the type of its field (an integer `size` to
-`(; height, width)`), and an `ArgumentError` naming the forms of a setting for another
-value, rather than `convert`'s `MethodError`. `args` as they are by default, which `new`
-converts to the types of the fields.
+The settings of a processor of class `T` as its constructor stores them, from `settings`,
+the values it is given for the fields that are neither components nor `provenance`: the
+forms of a setting that the Python library also takes, converted (an integer `size` to
+`(; height, width)`), and an `ArgumentError` for any other value, or for one that the port
+doesn't implement (`do_center_crop = true`), naming the supported values. An error whose
+message names a setting in backticks, as Metalhead's errors do, also names the file that
+set it when the processor is loaded. The default returns `settings` as they are, which the
+constructor converts to the types of the fields.
 """
-processor_fields(::Type, args::Tuple) = args
-
-"""
-    check_processor(p)
-
-Throw if a setting of the processor `p` has a value that its port doesn't implement, naming
-the supported values, or if a component isn't of its class (see
-[`processor_components`](@ref Metalhead.processor_components)). The constructors of the
-processor classes call it, so that a processor built by hand fails early too, and so does
-`create_processor`.
-"""
-check_processor(p) = check_components(p)
-
-function check_components(p)
-    for (name, T) in pairs(processor_components(typeof(p)))
-        c = getfield(p, name)
-        c === nothing || c isa T ||
-            error("the `$name` of $(nameof(typeof(p))) is a $(nameof(T)) (or `nothing`), got a $(typeof(c))")
-    end
-    return nothing
-end
+standardize_settings(::Type, settings::NamedTuple) = settings
 
 """
     @processor struct T <: AbstractProcessor ... end
     @processor (components...,) struct T <: AbstractProcessor ... end
 
 `Base.@kwdef` for a processor class, whose constructors make the processor from
-[`processor_fields`](@ref Metalhead.processor_fields) of their arguments, and then run
-[`check_processor`](@ref Metalhead.check_processor) on it. With the names of its
+[`standardize_settings`](@ref Metalhead.standardize_settings) of its settings, so that a
+processor made by hand fails as early as a loaded one. `components` names the fields that
+hold the processors it combines, each of type `Union{Nothing, C}` with the default
+`nothing`, which [`create_processor`](@ref) loads as a processor of class `C` from the same
+repository; a component that isn't a `C` is an error. The component `tokenizer`, of type
+`Any`, is the tokenizer of the repository: HuggingFaceTokenizers.jl's `Tokenizer` of its
+tokenizer.json, or `nothing` without HuggingFaceTokenizers or without the file. With
 components, `T(components...; kwargs...)` also makes it from them, e.g.
 `Sam3Processor(image_processor, tokenizer; point_pad_value = -10)`.
 """
 macro processor(args...)
     def = last(args)
-    components = length(args) == 2 ? first(args).args : ()
     Meta.isexpr(def, :struct) || error("@processor takes a struct definition")
+    components = length(args) == 2 ? Tuple(first(args).args) : ()
     name = Meta.isexpr(def.args[2], :<:) ? def.args[2].args[1] : def.args[2]
     fields = Symbol[]
     for line in def.args[3].args
@@ -128,12 +94,17 @@ macro processor(args...)
         field = Meta.isexpr(field, :(::)) ? field.args[1] : field
         field isa Symbol && push!(fields, field)
     end
+    issubset(components, fields) || error("@processor: a component isn't a field of $name")
+    settings = [f for f in fields if f ∉ components && f !== :provenance]
+    s = gensym("settings")
+    values = [f in components ? :($check_component($name, $(QuoteNode(f)), $f)) :
+              f === :provenance ? f : :($s.$f) for f in fields]
     push!(def.args[3].args, :(function $name($(fields...))
-        p = new($processor_fields($name, ($(fields...),))...)
-        $check_processor(p)
-        return p
+        $s = $standardize_settings($name, (; $(settings...)))
+        return new($(values...))
     end))
-    out = Expr(:block, :(Base.@kwdef $def))
+    out = Expr(:block, :(Base.@kwdef $def),
+        :($(GlobalRef(@__MODULE__, :component_names))(::Type{$name}) = $components))
     if !isempty(components)
         call = Expr(:call, name, Expr(:parameters, components..., :(kwargs...)))
         push!(out.args, :($name($(components...); kwargs...) = $call))
@@ -141,27 +112,37 @@ macro processor(args...)
     return esc(out)
 end
 
+# The names of the components of a class, as `@processor` gives them.
+component_names(::Type) = ()
+
+# The components of a class as `name = class`: the `C` of each field `Union{Nothing, C}`.
+function component_classes(::Type{T}) where {T}
+    names = component_names(T)
+    return NamedTuple{names}(map(k -> Base.nonnothingtype(fieldtype(T, k)), names))
+end
+
+function check_component(::Type{T}, name, c) where {T}
+    F = fieldtype(T, name)
+    c isa F && return c
+    throw(ArgumentError("the `$name` of $(nameof(T)) is a $(nameof(Base.nonnothingtype(F))) (or `nothing`), got a $(typeof(c))"))
+end
+
 # The settings of a class, as `name = default`: the fields of its default instance that
 # aren't components.
 setting_names(::Type{T}) where {T} = Tuple(k for k in fieldnames(T)
-                                           if k !== :provenance &&
-                                              !haskey(processor_components(T), k))
+                                           if k !== :provenance && k ∉ component_names(T))
 default_settings(::Type{T}) where {T <: AbstractProcessor} = settings(T())
 settings(p) = NamedTuple{setting_names(typeof(p))}(map(k -> getfield(p, k),
     setting_names(typeof(p))))
 function components(p)
-    names = keys(processor_components(typeof(p)))
+    names = component_names(typeof(p))
     return NamedTuple{names}(map(k -> getfield(p, k), names))
 end
 provenance(p) = hasfield(typeof(p), :provenance) ? getfield(p, :provenance) : (;)
 
-"""
-    merge_nested(base, override)
-
-`override` merged into `base`: entry by entry, recursively, where both are NamedTuples, so
-that `merge_nested((; a = 1, b = (; c = 2, d = 3)), (; b = (; d = 4)))` is
-`(; a = 1, b = (; c = 2, d = 4))`; else `override`.
-"""
+# `override` merged into `base`: entry by entry, recursively, where both are NamedTuples, so
+# that `merge_nested((; a = 1, b = (; c = 2, d = 3)), (; b = (; d = 4)))` is
+# `(; a = 1, b = (; c = 2, d = 4))`; else `override`.
 function merge_nested(base::NamedTuple, override::NamedTuple)
     merged = map(k -> k => merge_nested(get(base, k, nothing), override[k]), keys(override))
     return merge(base, (; merged...))
@@ -199,15 +180,8 @@ function warn_unknown(T, key, file)
     return nothing
 end
 
-function check_restricted(T, key, value, where)
-    allowed = restricted_keys(T)[key]
-    any(isequal(value), allowed) && return nothing
-    return error("`$key = $(repr(value))`$where is not supported by $(nameof(T)) (supported: $(join(repr.(allowed), ", ")))")
-end
-
 # The names that an override of a setting of `T` may take, components excluded.
-own_override_names(T) = (keys(default_settings(T))..., keys(legacy_keys(T))...,
-    keys(restricted_keys(T))...)
+own_override_names(T) = (keys(default_settings(T))..., keys(legacy_keys(T))...)
 
 function edit_distance(a::AbstractString, b::AbstractString)
     a, b = collect(a), collect(b)
@@ -241,21 +215,23 @@ function ignored_reason(key, classes)
     return nothing
 end
 
-"""
-    processor_from_entries(T, entries; components = (;), kwargs...) -> T
+# The error `e` of a constructor, with the files that set the settings its message names.
+function with_sources(e, origins)
+    e isa Union{ArgumentError, ErrorException} || return e
+    named = ["`$k` is set in $(o.source)" for (k, o) in origins
+             if o.source != "override" &&
+                (occursin("`$k`", e.msg) || occursin("`$k = ", e.msg))]
+    isempty(named) && return e
+    return typeof(e)(string(e.msg, "; ", join(sort!(named), "; ")))
+end
 
-The processor of class `T` with the settings of `entries`, `(key, value, file)` triples in
-the order the files are read (a later entry replaces an earlier one), over the defaults of
-the class, and then with the overrides `kwargs` merged into them with
-[`merge_nested`](@ref Metalhead.merge_nested). Values are Julia values (see `jsonvalue`);
-`nothing` is missing, and `Some(nothing)` sets `nothing` (a `null` special token of a
-tokenizer, which replaces the default of its class). `components` are passed to the
-constructor as they are.
-
-The keys of `entries` are checked strictly: a legacy key sets the setting at its path, a
-restricted key must have an allowed value, an ignored or a service key is skipped, and any
-other key warns once. An override that isn't a setting is an error.
-"""
+# The processor of class `T` with the settings of `entries`, `(key, value, file)` triples in
+# the order the files are read (a later entry replaces an earlier one), over the defaults of
+# the class, and then with the overrides `kwargs` merged into them by `merge_nested`. Values
+# are Julia values (see `jsonvalue`), and `nothing` is missing. `components` go to the
+# constructor as they are. Keys are read strictly: a legacy key sets the setting at its path,
+# an ignored or a service key is skipped, and any other key warns once; an override that
+# isn't a setting is an error.
 function processor_from_entries(::Type{T}, entries; components::NamedTuple = (;),
         kwargs...) where {T}
     defaults = default_settings(T)
@@ -264,15 +240,12 @@ function processor_from_entries(::Type{T}, entries; components::NamedTuple = (;)
     legacy = Tuple{Symbol, Any, String}[]
     for (k, v, file) in entries
         v === nothing && continue
-        v isa Some && (v = something(v))
         key = Symbol(k)
         if haskey(defaults, key)
             values[key] = v
             origins[key] = Origin(file, v)
         elseif haskey(legacy_keys(T), key)
             push!(legacy, (key, v, file))
-        elseif haskey(restricted_keys(T), key)
-            check_restricted(T, key, v, " in $file")
         elseif !haskey(ignored_keys(T), key) && !haskey(SERVICE_KEYS, key)
             warn_unknown(T, key, file)
         end
@@ -294,10 +267,6 @@ function processor_from_entries(::Type{T}, entries; components::NamedTuple = (;)
             key, v = first(path), nested_at(Base.tail(path), v)
         end
         if !haskey(defaults, key)
-            if haskey(restricted_keys(T), key)
-                check_restricted(T, key, v, "")
-                continue
-            end
             reason = ignored_reason(key, (T,))
             reason === nothing || error(reason)
             error("$(nameof(T)) has no setting `$key`$(close_match(key, (T,)))")
@@ -306,31 +275,29 @@ function processor_from_entries(::Type{T}, entries; components::NamedTuple = (;)
         values[key] = merge_nested(get(values, key, defaults[key]), v)
         origins[key] = Origin("override", values[key], replaced)
     end
-    p = T(; components..., (k => values[k] for k in keys(defaults) if haskey(values, k))...)
+    p = try
+        T(; components..., values...)
+    catch e
+        e isa Union{ArgumentError, ErrorException} || rethrow()
+        throw(with_sources(e, origins))
+    end
     # the values as the constructor stored them, converted to the types of its fields
     stored = settings(p)
     prov = map(keys(defaults)) do k
         o = get(origins, k, Origin("class default", nothing))
         return k => Origin(o.source, stored[k], o.replaced)
     end
-    p = T(; components..., stored..., provenance = (; prov...))
-    check_processor(p)
-    return p
+    return T(; components..., stored..., provenance = (; prov...))
 end
 
 # A dictionary of a JSON file as entries of `processor_from_entries`, in Julia values.
 json_entries(dict, file) = [(String(k), jsonvalue(v), file) for (k, v) in dict]
 
-"""
-    ProcessorFiles(source)
-
-The files of a processor's source (a repository at a revision, or a directory, see
-`ModelSource`), each JSON file read once with `read_json(files, name)` (`nothing` if the
-source doesn't have it). A branch or a tag is pinned to its commit when the first file is
-found, as transformers' `resolve_revision` pins it: the files of one processor come from
-one commit, and the files it downloads later (tokenizer.json) are then found in the cache
-without asking the Hub.
-"""
+# The files of a processor's source (a repository at a revision, or a directory, see
+# `ModelSource`), each JSON file read once with `read_json(files, name)` (`nothing` if the
+# source doesn't have it). A branch or a tag is pinned to its commit when the first file is
+# found, as transformers' `resolve_revision` pins it: the files of one processor come from
+# one commit, and those it reads later are then found in the cache without asking the Hub.
 mutable struct ProcessorFiles
     source::ModelSource
     const json::Dict{String, Any}
@@ -396,44 +363,10 @@ function source_file_if_exists(s::ModelSource, file)
     end
 end
 
-"""
-    SourceFile(source, file)
-
-A file of a source, downloaded when [`local_path`](@ref Metalhead.local_path) first needs
-it: the `tokenizer.json` of a tokenizer, which only strings need.
-"""
-struct SourceFile
-    source::ModelSource
-    file::String
-end
-
-"""
-    local_path(file) -> String
-
-The local path of a `SourceFile`, downloading it, or of a path.
-"""
-local_path(path::AbstractString) = path
-function local_path(f::SourceFile)
-    s = f.source
-    if s.dir !== nothing
-        path = source_file_if_exists(s, f.file)
-        path === nothing && error("$(source_name(s)) has no $(f.file)")
-        return path
-    end
-    file = join_path(s.subfolder, f.file)
-    return last(hf_download_first(s.repo, [file], f.file; revision = s.revision))
-end
-
-# The local path of a `SourceFile`, or `nothing` if its source lacks it or it isn't in the
-# cache, offline or without network.
-local_path_if_exists(f::SourceFile) = source_file_if_exists(f.source, f.file)
-local_path_if_exists(path::AbstractString) = isfile(path) ? path : nothing
-
 function source_name(s::ModelSource)
     s.dir === nothing || return joinpath(s.dir, s.subfolder)
     return string(join_path(s.repo, s.subfolder), "@", s.revision)
 end
-Base.show(io::IO, f::SourceFile) = print(io, join_path(source_name(f.source), f.file))
 
 # The processor classes, by the names of the Python classes that configurations name.
 const PROCESSOR_CLASSES = Dict{String, Type}()
@@ -472,10 +405,10 @@ function processor_type(name, where)
     return error("the processor class `$name` ($where) has not been ported to Metalhead (ported: $ported)")
 end
 
-# The class of a source's processor, and where it is named, as AutoProcessor finds it: the
-# `processor_class` of processor_config.json, preprocessor_config.json (or
-# video_preprocessor_config.json without it), tokenizer_config.json or config.json, the
-# processor of the model type, else a tokenizer, else an image processor.
+# The class of a source's processor, as AutoProcessor finds it: the `processor_class` of
+# processor_config.json, preprocessor_config.json (or video_preprocessor_config.json
+# without it), tokenizer_config.json or config.json, the processor of the model type, else
+# a tokenizer, else the image processor of `image_processor_type`.
 function auto_processor_class(files::ProcessorFiles, config)
     candidates = ["processor_config.json",
         has_file(files, "preprocessor_config.json") ? "preprocessor_config.json" :
@@ -494,9 +427,8 @@ function auto_processor_class(files::ProcessorFiles, config)
             return processor_type(PROCESSOR_MODEL_TYPES[model_type],
                 "the processor of the model type `$model_type`")
     end
-    if has_file(files, "tokenizer_config.json") || has_file(files, "tokenizer.json")
-        return processor_type("TokenizersBackend", "a tokenizer")
-    end
+    (has_file(files, "tokenizer_config.json") || has_file(files, "tokenizer.json")) &&
+        return AutoTokenizer
     found = image_processor_config(files)
     if found !== nothing
         dict, file = found
@@ -518,16 +450,12 @@ function image_processor_config(files::ProcessorFiles)
     return dict === nothing ? nothing : (dict, "preprocessor_config.json")
 end
 
-"""
-    load_processor(T, files::ProcessorFiles; kwargs...) -> T
-
-The processor of class `T` from the files of a repository, with the overrides `kwargs`.
-An image processor reads the `image_processor` of processor_config.json, else
-preprocessor_config.json. A processor with [`processor_components`](@ref
-Metalhead.processor_components) loads each component with its own method, routing each
-override to the one component that has a setting of that name, and reads its own settings
-from processor_config.json. A tokenizer has a method of its own.
-"""
+# The processor of class `T` from the files of a repository, with the overrides `kwargs`.
+# An image processor reads the `image_processor` of processor_config.json, else
+# preprocessor_config.json. A processor with components loads each as a processor of its
+# class, routing each override to the one component that has a setting of that name, and
+# its tokenizer with `load_tokenizer`, and reads its own settings from
+# processor_config.json. Other classes have their own method.
 function load_processor(::Type{T}, files::ProcessorFiles;
         kwargs...) where {T <: AbstractImageProcessor}
     found = image_processor_config(files)
@@ -542,11 +470,12 @@ end
 
 function load_processor(::Type{T}, files::ProcessorFiles;
         kwargs...) where {T <: AbstractProcessor}
-    parts = processor_components(T)
+    parts = component_classes(T)
     isempty(parts) && error("$(nameof(T)) has no `load_processor` method")
     routed = route_overrides(T, NamedTuple(kwargs))
-    loaded = map(keys(parts)) do name
-        return name => load_processor(parts[name], files; routed[name]...)
+    loaded = map(keys(parts)) do k
+        k === :tokenizer && return k => load_tokenizer(files)
+        return k => load_processor(parts[k], files; routed[k]...)
     end
     dict = something(read_json(files, "processor_config.json"), Dict{String, Any}())
     entries = [(String(k), jsonvalue(v), "processor_config.json")
@@ -554,12 +483,15 @@ function load_processor(::Type{T}, files::ProcessorFiles;
     return processor_from_entries(T, entries; components = (; loaded...), routed.self...)
 end
 
+# The components of `T` that have settings: all but the tokenizer.
+setting_components(T) = Base.structdiff(component_classes(T), NamedTuple{(:tokenizer,)})
+
 # The overrides of each component of `T` (and of `T` itself, `self`): each to the one that
 # has a setting of its name.
 function route_overrides(::Type{T}, kwargs::NamedTuple) where {T}
-    parts = processor_components(T)
+    parts = setting_components(T)
     accepts(C, key) = key in own_override_names(C) ||
-                      any(S -> accepts(S, key), values(processor_components(C)))
+                      any(S -> accepts(S, key), setting_components(C))
     routed = Dict(name => Pair{Symbol, Any}[] for name in (:self, keys(parts)...))
     for (key, v) in pairs(kwargs)
         owners = [name for name in keys(parts) if accepts(parts[name], key)]
@@ -590,16 +522,17 @@ function check_inputs(model, inputs::NamedTuple, required; hint::AbstractString 
     names(ks) = join(("`$k`" for k in ks), ", ", " and ")
     return throw(ArgumentError("$(nameof(typeof(model))) needs the inputs $(names(required)), but `inputs` has no $(names(absent)) (it has $(isempty(inputs) ? "no keys" : names(keys(inputs))))$(isempty(hint) ? "" : "; $hint")"))
 end
+ChainRulesCore.@non_differentiable check_inputs(::Any...)
 
 """
-    instantiate_processor(format::AbstractConfigFormat, files::ProcessorFiles, config;
-                          kwargs...)
+    instantiate_processor(format::AbstractConfigFormat, files, config; kwargs...)
         -> Union{Nothing, AbstractProcessor}
 
 The processor of a repository whose config.json, parsed as `config`, is in `format` and
 carries the preprocessing of its checkpoint (timm's `pretrained_cfg`), with the overrides
 `kwargs`; or `nothing` (the default) for [`create_processor`](@ref) to find the processor
-files of the repository as transformers' `AutoProcessor` does.
+files of the repository as transformers' `AutoProcessor` does. `files` reads the other
+files of the repository.
 """
 instantiate_processor(::AbstractConfigFormat, files, config; kwargs...) = nothing
 
@@ -623,13 +556,16 @@ setting; each goes to the one component that has a setting of that name, and a n
 component has is an error.
 
 Returns the most complete processor the repository describes, as transformers'
-`AutoProcessor` does: a processor that combines an image processor and a tokenizer, such as
-`Transformers.Sam3Processor`; else an image processor, such as the
-[`Timm.EvalTransform`](@ref Metalhead.Timm.EvalTransform) of every timm checkpoint; else a
-tokenizer, `Transformers.TokenizersBackend`. Calling it returns what the model takes, a
-NamedTuple (an array for `Timm.EvalTransform`):
+`AutoProcessor` does: the class that its files or its model type name, such as a processor
+that combines an image processor and a tokenizer (`Transformers.Sam3Processor`); else its
+tokenizer; else its image processor, such as the
+[`Timm.EvalTransform`](@ref Metalhead.Timm.EvalTransform) of every timm checkpoint.
+Calling a processor returns what the model takes, a NamedTuple (an array for
+`Timm.EvalTransform`):
 
 ```julia
+using HuggingFaceTokenizers
+model = create_model("unsloth/sam3.1"; pretrained = true)
 proc = create_processor("unsloth/sam3.1")
 inputs = proc(; images = img, text = "a cat")
 outputs = model(inputs)
@@ -639,9 +575,22 @@ Transformers.post_process_instance_segmentation(proc, outputs;
 
 Images are arrays of size `(width, height, channels)`, of integers from 0 to 255 or of reals
 from 0 to 1, or, with ImageCore loaded, matrices of colorants (see
-[`image_array`](@ref Metalhead.image_array)). Strings need a tokenizer backend
-(`using HuggingFaceTokenizers`); token ids, as a tokenizer gives them (from 0), don't.
-`show` prints each setting and where it comes from.
+[`image_array`](@ref Metalhead.image_array)). The processor classes are ported along with
+their models, and a class that isn't ported is an error. `show` prints each setting and
+where it comes from.
+
+Metalhead ports no tokenizer: the tokenizer of a repository is HuggingFaceTokenizers.jl's
+`Tokenizer` of its tokenizer.json, which needs `using HuggingFaceTokenizers` before
+`create_processor`, and whose token ids start at 0, the token indices of the models at 1:
+
+```julia
+using HuggingFaceTokenizers
+model = create_model("HuggingFaceTB/SmolLM2-135M"; pretrained = true)
+tok = create_processor("HuggingFaceTB/SmolLM2-135M")
+ids = encode(tok, "The capital of France is").ids .+ 1
+logits = model(ids)
+decode(tok, [argmax(logits[:, end]) - 1])   # " Paris"
+```
 """
 function create_processor(name::AbstractString;
         revision::Union{Nothing, AbstractString} = nothing, subfolder::AbstractString = "",
@@ -682,7 +631,7 @@ end
 
 function Base.show(io::IO, p::AbstractProcessor)
     print(io, nameof(typeof(p)), "(")
-    join(io, ("$k = $(repr(v; context = io))" for (k, v) in pairs(components(p))), ", ")
+    join(io, ("$k = $(component_repr(v, io))" for (k, v) in pairs(components(p))), ", ")
     isempty(components(p)) || isempty(settings(p)) || print(io, "; ")
     join(io, ("$k = $(setting_repr(k, v))" for (k, v) in pairs(settings(p))), ", ")
     return print(io, ")")
@@ -702,6 +651,12 @@ function show_settings(io, p, indent)
     end
     for (name, c) in pairs(components(p))
         print(io, "\n", indent, "  ", name, ": ")
-        c isa AbstractProcessor ? show_settings(io, c, indent * "  ") : show(io, c)
+        c isa AbstractProcessor ? show_settings(io, c, indent * "  ") :
+        print(io, component_repr(c, io))
     end
 end
+
+# A component that isn't a processor, the tokenizer, is shown by its type: the Python repr
+# of a `Tokenizer` holds its whole vocabulary.
+component_repr(c::Union{Nothing, AbstractProcessor}, io) = repr(c; context = io)
+component_repr(c, io) = string(nameof(typeof(c)))

@@ -8,7 +8,7 @@ using Flux: Flux, cpu, gpu_device
 
 export GPU, GPU_RTOL, BF16_RTOL, fixtures_of, is_pipeline, gpu_inputs, check_gpu_fixture,
        gpu_cpu_error, check_gradient, check_half_precision, check_pipeline_fixture, fixture,
-       fixture_model
+       fixture_model, IdsTokenizer
 
 CUDA.allowscalar(false)
 

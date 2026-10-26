@@ -1,7 +1,7 @@
 using Metalhead, Test
 include("../gpu_setup.jl")
 using .GPUSetup
-using Flux: Flux, BFloat16
+using Flux: BFloat16
 using CUDA: CuArray
 
 const D = Metalhead.Diffusers
@@ -21,16 +21,6 @@ end
             @test err <= GPU_RTOL
         end
     end
-end
-
-@testset "tokenizer" begin
-    # `gpu` and `bf16` leave the tokenizer of a pipeline on the CPU, as it is
-    p = create_model(fixture("flux2_klein_tiny"))
-    tok = Metalhead.Transformers.TokenizersBackend(; pad_token = "<pad>")
-    pipe = D.Flux2KleinPipeline(p.scheduler, p.vae, p.text_encoder, tok, p.transformer,
-        p.is_distilled)
-    @test GPU(pipe).tokenizer === tok
-    @test Flux.bf16(GPU(pipe)).tokenizer === tok
 end
 
 @testset "gradient" begin

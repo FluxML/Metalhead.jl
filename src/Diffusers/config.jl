@@ -40,8 +40,8 @@ const SCHEDULERS = Dict{String, Any}()
 
 # The components of a pipeline are built from their subfolders, with the same `pretrained`
 # and `eltype`; the builder of the pipeline takes them as keyword arguments, with the other
-# keys of model_index.json it declares. A tokenizer is a `TokenizersBackend` (see
-# `pipeline_tokenizer`).
+# keys of model_index.json it declares. A tokenizer is HuggingFaceTokenizers' `Tokenizer`
+# (see `pipeline_tokenizer`).
 function instantiate(format::DiffusersPipelineFormat, spec, source, config;
         pretrained::Bool, eltype, kwargs...)
     components = map(collect(filter(p -> is_component(last(p)), config))) do (name, (library, class))
@@ -66,16 +66,10 @@ function instantiate(format::DiffusersPipelineFormat, spec, source, config;
     return spec.build(; components..., args...)
 end
 
-# The tokenizer of a pipeline, loaded from its subfolder as `create_processor(repo;
-# subfolder = "tokenizer")` loads it, without tokenizer.json until a string needs it;
-# `nothing` for a subfolder without the files of a tokenizer, such as that of a local
-# pipeline saved without one.
-function pipeline_tokenizer(s::ModelSource)
-    files = ProcessorFiles(s)
-    has_file(files, "tokenizer_config.json") || has_file(files, "tokenizer.json") ||
-        return nothing
-    return load_processor(TokenizersBackend, files)
-end
+# The tokenizer of a pipeline, from its subfolder, as `create_processor(repo; subfolder =
+# "tokenizer")` loads it: HuggingFaceTokenizers' `Tokenizer`, or `nothing` without
+# HuggingFaceTokenizers or without a tokenizer.json (a local pipeline saved without one).
+pipeline_tokenizer(s::ModelSource) = load_tokenizer(ProcessorFiles(s))
 
 # Diffusers components have no processor of their own: a pipeline preprocesses in its code.
 function instantiate_processor(::DiffusersFormat, files, config; kwargs...)

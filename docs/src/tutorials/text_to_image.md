@@ -52,7 +52,7 @@ A vector of prompts makes a batch of images.
 ## The steps of the pipeline
 
 The prompt is formatted with the chat template of the Qwen3 text encoder, tokenized by the
-pipeline's tokenizer, and padded to 512 tokens. The hidden states of three layers of the
+pipeline's tokenizer, and truncated and padded to 512 tokens. The hidden states of three layers of the
 text encoder are its embeddings:
 
 ```julia
@@ -68,9 +68,11 @@ indices of prompts tokenized otherwise, with their attention mask.
 The components are fields of the pipeline: `pipe.text_encoder` is a Qwen3 language model (see
 [Language models](@ref language_models)), `pipe.transformer` predicts the flow of the latents
 at each step, `pipe.vae` decodes the final latents into an image, and `pipe.scheduler` holds the
-noise levels of the steps. `pipe.tokenizer` is the tokenizer of the text encoder, a
-[`TokenizersBackend`](@ref Metalhead.Transformers.TokenizersBackend), which `gpu` and `bf16`
-leave as it is. A pipeline has no processor of its own: it prepares its inputs itself.
+noise levels of the steps. `pipe.tokenizer` is the tokenizer of the text encoder,
+HuggingFaceTokenizers.jl's `Tokenizer`, which `gpu` and `bf16` leave as it is; it loads with
+the pipeline when HuggingFaceTokenizers is loaded first, and is `nothing` otherwise, when
+the pipeline takes embeddings only. A pipeline has no processor of its own: it prepares its
+inputs itself.
 `create_processor(repo; subfolder = "tokenizer")` loads the tokenizer alone, and each other
 component loads on its own with `subfolder` too:
 

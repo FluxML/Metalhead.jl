@@ -110,8 +110,13 @@ end
 
 register_processor!("Qwen2VLImageProcessor", Qwen2VLImageProcessor)
 
-function processor_fields(T::Type{Qwen2VLImageProcessor}, args::Tuple)
-    return image_processor_fields(T, args)
+function standardize_settings(T::Type{Qwen2VLImageProcessor}, settings::NamedTuple)
+    s = standardize_image_settings(T, settings)
+    pixel_bounds(s.size)
+    for k in (:patch_size, :temporal_patch_size, :merge_size)
+        s[k] > 0 || throw(ArgumentError("`$k` must be positive, got $(s[k])"))
+    end
+    return s
 end
 
 function ignored_keys(::Type{Qwen2VLImageProcessor})
@@ -126,18 +131,8 @@ end
 function pixel_bounds(size)
     size isa NamedTuple && issetequal(keys(size), (:shortest_edge, :longest_edge)) &&
         all(v -> v isa Real && isinteger(v) && v > 0, values(size)) ||
-        error("`size` must have positive `shortest_edge` and `longest_edge` only, as integers, got $(repr(size))")
+        throw(ArgumentError("`size` must have positive `shortest_edge` and `longest_edge` only, as integers, got $(repr(size))"))
     return Int(size.shortest_edge), Int(size.longest_edge)
-end
-
-function check_processor(ip::Qwen2VLImageProcessor)
-    check_resample(ip.resample)
-    pixel_bounds(ip.size)
-    check_channel_stats(ip)
-    for k in (:patch_size, :temporal_patch_size, :merge_size)
-        getfield(ip, k) > 0 || error("`$k` must be positive, got $(getfield(ip, k))")
-    end
-    return nothing
 end
 
 function qwen2_vl_patches(ip::Qwen2VLImageProcessor, image)

@@ -129,11 +129,12 @@ Metalhead.Timm.pretrained_cfg) returns the `pretrained_cfg` as it is.
     provenance::NamedTuple = (;)
 end
 
-function processor_fields(::Type{EvalTransform}, args::Tuple)
-    input_size, interpolation, mean, std, crop_pct, crop_mode, provenance = args
-    return (timm_input_size(input_size), timm_name(:interpolation, interpolation),
-        timm_stats(:mean, mean), timm_stats(:std, std), timm_crop_pct(crop_pct),
-        timm_name(:crop_mode, something(crop_mode, "center")), provenance)
+function standardize_settings(::Type{EvalTransform}, s::NamedTuple)
+    interpolation = timm_name(:interpolation, s.interpolation, TIMM_INTERPOLATIONS)
+    crop_mode = timm_name(:crop_mode, something(s.crop_mode, "center"), TIMM_CROP_MODES)
+    return (; input_size = timm_input_size(s.input_size), interpolation,
+        mean = timm_stats(:mean, s.mean), std = timm_stats(:std, s.std),
+        crop_pct = timm_crop_pct(s.crop_pct), crop_mode)
 end
 
 function timm_input_size(x)
@@ -144,9 +145,12 @@ function timm_input_size(x)
     throw(ArgumentError("`input_size = $(repr(x))`: `input_size` is `(channels, height, width)`, `(height, width)` or an integer, the side of a square"))
 end
 
-timm_name(name, x::Union{AbstractString, Symbol}) = String(x)
-function timm_name(name, x)
-    throw(ArgumentError("`$name = $(repr(x))`: `$name` is a string or a symbol"))
+function timm_name(name, x, supported)
+    x isa Union{AbstractString, Symbol} ||
+        throw(ArgumentError("`$name = $(repr(x))`: `$name` is a string or a symbol"))
+    String(x) in supported && return String(x)
+    throw(ArgumentError("`$name = $(repr(String(x)))` is not supported (supported: \
+                         $(join(repr.(supported), ", ")))"))
 end
 
 # One value is repeated, as `resolve_data_config` repeats it and `Normalize` broadcasts it
@@ -162,16 +166,6 @@ function timm_crop_pct(x)
     (x === nothing || x isa Real && iszero(x)) && return DEFAULT_CROP_PCT
     x isa Real && !(x isa Bool) && x > 0 && return Float64(x)
     throw(ArgumentError("`crop_pct = $(repr(x))`: `crop_pct` is a positive number, the fraction of the resized image that the crop keeps"))
-end
-
-function check_processor(t::EvalTransform)
-    t.interpolation in TIMM_INTERPOLATIONS ||
-        throw(ArgumentError("interpolation = $(repr(t.interpolation)) is not supported \
-                             (supported: $(join(repr.(TIMM_INTERPOLATIONS), ", ")))"))
-    t.crop_mode in TIMM_CROP_MODES ||
-        throw(ArgumentError("crop_mode = $(repr(t.crop_mode)) is not supported (supported: \
-                             $(join(repr.(TIMM_CROP_MODES), ", ")))"))
-    return nothing
 end
 
 function (t::EvalTransform)(images)
