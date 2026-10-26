@@ -218,6 +218,9 @@ end
 end
 
 if TEST_NETWORK
+    # the tokenizer of the processor, which METALHEAD_TEST_NETWORK adds to the test
+    # environment (runtests.jl)
+    @eval using HuggingFaceTokenizers: HuggingFaceTokenizers
     @testset "references" begin
         # SAM 3's checkpoint (jetjodh/sam3) is 3.4 GB
         files = [reference_files_of("Sam3Model");
