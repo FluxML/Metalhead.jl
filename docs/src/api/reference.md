@@ -116,7 +116,7 @@ Metalhead.Diffusers
 Metalhead.Diffusers.timestep_embedding
 Metalhead.Diffusers.AdaLayerNormContinuous
 Metalhead.ArchSpec
-Metalhead.ConfigFormat
+Metalhead.AbstractConfigFormat
 Metalhead.architecture_of
 Metalhead.model_args
 Metalhead.skip_prefix

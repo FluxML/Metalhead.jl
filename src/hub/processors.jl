@@ -592,7 +592,8 @@ function check_inputs(model, inputs::NamedTuple, required; hint::AbstractString 
 end
 
 """
-    instantiate_processor(format::ConfigFormat, files::ProcessorFiles, config; kwargs...)
+    instantiate_processor(format::AbstractConfigFormat, files::ProcessorFiles, config;
+                          kwargs...)
         -> Union{Nothing, AbstractProcessor}
 
 The processor of a repository whose config.json, parsed as `config`, is in `format` and
@@ -600,7 +601,7 @@ carries the preprocessing of its checkpoint (timm's `pretrained_cfg`), with the 
 `kwargs`; or `nothing` (the default) for [`create_processor`](@ref) to find the processor
 files of the repository as transformers' `AutoProcessor` does.
 """
-instantiate_processor(::ConfigFormat, files, config; kwargs...) = nothing
+instantiate_processor(::AbstractConfigFormat, files, config; kwargs...) = nothing
 
 """
     create_processor(name; revision = nothing, subfolder = "", kwargs...)

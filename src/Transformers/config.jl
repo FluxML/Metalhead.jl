@@ -1,7 +1,7 @@
 # The config.json of a transformers repository: its `model_type`, the class in `architectures`,
 # and the fields of the model's config class, at the top level, among generic keys (token ids,
 # generation settings, `transformers_version`, ...) that the models don't read.
-struct TransformersFormat <: ConfigFormat end
+struct TransformersFormat <: AbstractConfigFormat end
 const TRANSFORMERS = TransformersFormat()
 Base.show(io::IO, ::TransformersFormat) = print(io, "transformers")
 

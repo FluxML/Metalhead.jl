@@ -18,8 +18,8 @@ using Random: Random, AbstractRNG
 using ConcreteStructs: @concrete
 using ChainRulesCore: ChainRulesCore
 using JSON: JSON
-using ..Metalhead: ArchSpec, ConfigFormat, ModelSource, register!, declared_args, identify,
-                   lookup, source_config, source_file, subsource
+using ..Metalhead: ArchSpec, AbstractConfigFormat, ModelSource, register!, declared_args,
+                   identify, lookup, source_config, source_file, subsource
 using ..Transformers: RMSNorm, to_device_of
 import ..Metalhead: architecture_of, model_args, weights_name, instantiate,
                     forward_intermediates
