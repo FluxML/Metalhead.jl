@@ -70,9 +70,7 @@ end
         @test out.pixel_values == SAM3["$name/pixel_values"]
     end
     image = numbered("batch/image")[1]
-    ids = numbered("batch/text_ids")[1:1]
-    @test proc(; images = colorants(image), text = ids) ==
-          proc(; images = image, text = ids)
+    @test proc(; images = colorants(image)) == proc(; images = image)
     floats = RGB{Float32}.(colorants(image))
     @test ip(floats) == ip(Float32.(reinterpret(N0f8, image)))
 end
