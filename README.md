@@ -39,6 +39,7 @@ safetensors weights by name, and is
   - [Model structure](#model-structure)
   - [Language models](#language-models)
   - [Vision-language models](#vision-language-models)
+  - [Segmenting objects](#segmenting-objects)
   - [Text-to-image generation](#text-to-image-generation)
 - [Validated against PyTorch](#validated-against-pytorch)
 - [Scope](#scope)

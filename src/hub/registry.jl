@@ -1,12 +1,12 @@
 """
-    ConfigFormat
+    AbstractConfigFormat
 
 How the `config.json` of a model repository names an architecture and its arguments: timm's
 (`architecture`, `model_args`, `pretrained_cfg`), a future library's `architectures`, ... A
 ported library defines a subtype and registers its architectures with it. Only
 [`architecture_of`](@ref) is required; the other methods have defaults.
 """
-abstract type ConfigFormat end
+abstract type AbstractConfigFormat end
 
 """
     architecture_of(format, config) -> Union{Nothing, String}
@@ -14,7 +14,7 @@ abstract type ConfigFormat end
 The name of the architecture described by the parsed `config.json`, or `nothing` if the
 configuration isn't in this `format`.
 """
-architecture_of(::ConfigFormat, config) = nothing
+architecture_of(::AbstractConfigFormat, config) = nothing
 
 """
     model_args(format, spec, config, kwargs::NamedTuple) -> NamedTuple
@@ -22,7 +22,7 @@ architecture_of(::ConfigFormat, config) = nothing
 The keyword arguments for `spec.build`: the defaults of the architecture, overridden by the
 configuration and then by the user's `kwargs`.
 """
-model_args(::ConfigFormat, spec, config, kwargs) = merge(spec.defaults, kwargs)
+model_args(::AbstractConfigFormat, spec, config, kwargs) = merge(spec.defaults, kwargs)
 
 # The entries of `config` that `build` declares as keyword arguments, as a NamedTuple: the
 # arguments of a configuration that also holds keys its library doesn't pass to the model.
@@ -38,7 +38,7 @@ The prefix of the checkpoint keys that don't load into a model built with `args`
 its initial values (e.g. the classifier after changing `num_classes`). Throws if the
 checkpoint can't be loaded into such a model at all.
 """
-skip_prefix(::ConfigFormat, config, args) = nothing
+skip_prefix(::AbstractConfigFormat, config, args) = nothing
 
 """
     weights_name(format) -> String
@@ -46,7 +46,7 @@ skip_prefix(::ConfigFormat, config, args) = nothing
 The name of the safetensors weights of a model in `format`: `"model"` for `model.safetensors`
 or its shards (the default).
 """
-weights_name(::ConfigFormat) = "model"
+weights_name(::AbstractConfigFormat) = "model"
 
 """
     instantiate(format, spec, source, config; pretrained, eltype, kwargs...)
@@ -55,7 +55,7 @@ Build the model `spec` of the parsed `config`, from [`model_args`](@ref), in the
 `eltype`, and with `pretrained = true` load its weights from `source`. A format whose
 configuration describes several models (a diffusers pipeline) builds them here.
 """
-function instantiate(format::ConfigFormat, spec, source, config; pretrained::Bool,
+function instantiate(format::AbstractConfigFormat, spec, source, config; pretrained::Bool,
         eltype, kwargs...)
     args = model_args(format, spec, config, NamedTuple(kwargs))
     model = ELTYPE_CONVERTERS[eltype](spec.build(; args...))
@@ -79,7 +79,7 @@ model doesn't use. `family` is the original library's family identifier, used to
 architectures in [`list_models`](@ref) and the documentation.
 """
 struct ArchSpec
-    format::ConfigFormat
+    format::AbstractConfigFormat
     name::String
     family::String
     build::Any
@@ -88,7 +88,7 @@ struct ArchSpec
     ignore::Vector{Regex}
 end
 
-function ArchSpec(format::ConfigFormat, name::AbstractString, build;
+function ArchSpec(format::AbstractConfigFormat, name::AbstractString, build;
         family::AbstractString = "other", defaults::NamedTuple = (;),
         references = Pair{String, String}[], ignore = Regex[])
     return ArchSpec(
@@ -113,13 +113,19 @@ function lookup(name::AbstractString)
     end
 end
 
-# The format of a parsed config.json and the architecture it describes.
-function identify(config)
-    formats = unique(s.format for s in values(REGISTRY))
-    for format in formats
+# The format of a parsed config.json and the architecture it describes, or `nothing`.
+function find_format(config)
+    for format in unique(s.format for s in values(REGISTRY))
         architecture = architecture_of(format, config)
         architecture === nothing || return format, architecture
     end
+    return nothing
+end
+
+function identify(config)
+    found = find_format(config)
+    found === nothing || return found
+    formats = unique(s.format for s in values(REGISTRY))
     return error("config.json is not in the format of a ported library " *
                  "($(join(formats, ", ")))")
 end

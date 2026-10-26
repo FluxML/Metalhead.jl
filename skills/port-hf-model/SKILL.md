@@ -408,7 +408,7 @@ first. The workflow is the one above, with these differences.
   `head_dim`). Declare those too, or `model_args` drops them. The config's validators
   (`validate_architecture`) say what to reject: `LlamaConfig` requires `hidden_size`
   divisible by `num_attention_heads` even with an explicit `head_dim`; Qwen3's doesn't.
-- **Registry.** Register the class name with the transformers `ConfigFormat`
+- **Registry.** Register the class name with the transformers `AbstractConfigFormat`
   (`src/Transformers/config.jl`) and its model line as the family, which can span several
   transformers modules (`granite` holds Granite, GraniteMoe, GraniteMoeShared and
   GraniteMoeHybrid), e.g.
@@ -510,6 +510,52 @@ first. The workflow is the one above, with these differences.
   own head, which may scale (Granite) or softcap them. Prefer the smallest checkpoint of
   the architecture. Tokenizers are not part of Metalhead; HuggingFaceTokenizers.jl loads
   them for end-to-end checks outside the test suite.
+
+## Processors
+
+A model that takes images or text gets the processor of its checkpoint, which
+`create_processor(repo)` (`src/hub/processors.jl`) loads as transformers' `AutoProcessor`
+does.
+
+- **Classes.** One immutable struct per upstream class, defined with `Metalhead.@processor`
+  (`Base.@kwdef` whose constructors standardize the settings and check the components): its
+  fields are the attributes of the Python class with that class's defaults (not a
+  checkpoint's), and a last field `provenance::NamedTuple = (;)` for `show`. Image
+  processors subtype `Metalhead.AbstractImageProcessor`, others
+  `Metalhead.AbstractProcessor`. Register the class name that configurations give with
+  `register_processor!("ClassName", T; aliases, model_types)`; the suffixes `Fast` and `Pil`
+  are dropped. A processor that
+  combines others names them, `@processor (image_processor, video_processor) struct ...`,
+  which adds `T(image_processor, video_processor; kwargs...)`: each is a field
+  `Union{Nothing, C} = nothing`, which `create_processor` loads as a processor of class `C`
+  from the same repository, routing each override to the component that has a setting of
+  its name. A class that is neither an image processor nor a combination loads with an
+  internal method `Metalhead.load_processor(::Type{T}, files; kwargs...)` of its own.
+- **Settings.** `standardize_settings(T, settings)`, documented in `src/hub/processors.jl`,
+  takes the settings as a NamedTuple and returns them as the fields store them: it converts
+  the forms that the Python library also takes (an integer for a size, one value for every
+  channel), and throws an `ArgumentError` that names the supported values for others. A
+  feature that isn't ported is still a setting, as upstream has it
+  (`do_center_crop::Bool = false`), whose unsupported values `standardize_settings` rejects.
+  Name the setting in backticks in the message: the error of a loaded processor then names
+  the file that set it. Every constructor calls it, so a processor built by hand fails as
+  early as a loaded one.
+- **Strict settings.** Declare `ignored_keys(T)` (`key = "reason"`) for the keys that the
+  class knows but doesn't read, and `legacy_keys(T)` (`old = path`) for former names. Other
+  keys warn once, so test that each validated repository's files load with `@test_logs` and
+  no warning.
+- **Other libraries.** A config.json that carries the preprocessing (timm's
+  `pretrained_cfg`) gets a method `instantiate_processor(::Format, files, config; kwargs...)`
+  that builds the processor with the internal `processor_from_entries(T,
+  json_entries(dict, file); kwargs...)`, which reads strictly and applies the overrides.
+  Without one, `create_processor` finds the class as `AutoProcessor` does.
+- **Calling.** The output is a NamedTuple with transformers' keys in Julia layout, 1-based
+  token indices.
+- **Outputs.** The docstring of each class has a Returns table, whose header begins with
+  "Key", with a row per key of its output; `check_documented_keys(T, outputs)`
+  (`test/processors_setup.jl`) tests the outputs on the fixtures against it. The model takes
+  them through a method `model(inputs::NamedTuple)`, which calls `check_inputs(model,
+  inputs, required; hint)` on the keys it can't do without.
 
 ## diffusers models and pipelines
 

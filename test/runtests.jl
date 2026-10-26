@@ -18,7 +18,8 @@ using ParallelTestRunner
 # family as `models/resnet`; a `!` prefix excludes, e.g. `!hub`.
 # METALHEAD_TEST_NETWORK=true also runs the tests that download pretrained weights.
 testsuite = find_tests(@__DIR__)
-foreach(helper -> delete!(testsuite, helper), ["parity", "parity_setup", "gpu_setup"])
+foreach(helper -> delete!(testsuite, helper), ["parity", "parity_setup", "gpu_setup",
+    "processors_setup"])
 TEST_GPU || filter!(((name, _),) -> !startswith(name, "gpu/"), testsuite)
 
 runtests(Metalhead, ARGS; testsuite)

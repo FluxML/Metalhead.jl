@@ -42,18 +42,55 @@ end
 
 hub(repo; subfolder = "") = ModelSource(repo, nothing, SHA, subfolder)
 
+# The branch `main` of `repo` at commit SHA in the cache.
+function cache_main(cache, repo)
+    ref = joinpath(cache, "models--" * replace(repo, "/" => "--"), "refs", "main")
+    mkpath(dirname(ref))
+    return write(ref, SHA)
+end
+
+# The files of a processor: a configuration, and a file that it reads later
+function processor_files(dir)
+    write(joinpath(dir, "tokenizer_config.json"), JSON.json(Dict("model_max_length" => 8)))
+    write(joinpath(dir, "tokenizer.json"), "{}")
+    files = ("tokenizer_config.json", "tokenizer.json")
+    return [file => joinpath(dir, file) for file in files]
+end
+
 function with_cache(f; offline)
     mktempdir() do dir
         cache = joinpath(dir, "hub")
         sharded = cache_repo(cache, "metalhead/sharded", sharded_files(mktempdir(dir)))
         pipeline = cache_repo(cache, "metalhead/pipeline",
             fixture_files("flux2_klein_tiny"))
+        # processors of branches
+        cache_repo(cache, "metalhead/processor", processor_files(mktempdir(dir)))
+        cache_main(cache, "metalhead/processor")
         withenv("HF_HOME" => dir, "HF_HUB_CACHE" => cache, "HF_TOKEN" => nothing,
             "HF_HUB_OFFLINE" => offline ? "1" : nothing,
             "TRANSFORMERS_OFFLINE" => nothing) do
             return f(sharded, pipeline)
         end
     end
+end
+
+# Offline, or without network, the files of a processor that the cache lacks count as
+# missing, as do the configurations of `hf_download_first`. A branch resolves to the commit
+# that the cache has for it: the files that the processor downloads later come from it,
+# without asking the Hub. Without network, a branch warns once, when its first file is read.
+function check_pinned_files(; offline)
+    unreachable = (:warn, r"Cannot reach the Hub, using the cached version")
+    files = Metalhead.ProcessorFiles(Metalhead.model_source("metalhead/processor", nothing))
+    read(file) = offline ? (@test_logs Metalhead.read_json(files, file)) :
+                 (@test_logs unreachable Metalhead.read_json(files, file))
+    @test read("tokenizer_config.json")["model_max_length"] == 8
+    @test files.source.revision == SHA
+    @test (@test_logs Metalhead.read_json(files, "processor_config.json")) === nothing
+    later() = Metalhead.source_file_if_exists(files, "tokenizer.json")
+    path = @test_logs map(_ -> later(), 1:20)
+    @test allequal(path) && endswith(only(unique(path)), joinpath(SHA, "tokenizer.json"))
+    # the files that only the cache lacks aren't recorded as missing from the repositories
+    @test !any(k -> startswith(k[1], "metalhead/"), Metalhead.MISSING_FILES)
 end
 
 @testset "offline" begin
@@ -80,6 +117,8 @@ end
             "tried vae/config.json and vae/model_index.json"] source_config(
             hub("metalhead/absent"; subfolder = "vae"))
 
+        check_pinned_files(; offline = true)
+
         # a cached index whose shard is missing, or that doesn't parse, is an error
         rm(joinpath(sharded, SHARDS[2]))
         @test_throws "Cannot find metalhead/sharded/$(SHARDS[2])" source_weights(
@@ -99,6 +138,7 @@ end
             @test_throws ["has no configuration in the cache",
                 "tried config.json and model_index.json",
                 "the Hub can't be reached"] source_config(hub("metalhead/absent"))
+            check_pinned_files(; offline = false)
         end
     end
 end
