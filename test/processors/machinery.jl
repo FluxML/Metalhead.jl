@@ -196,8 +196,8 @@ end
 struct MetalheadTestModel end
 
 # A library whose config.json carries the preprocessing, and one whose config.json doesn't
-struct MetalheadTestFormat <: Metalhead.ConfigFormat end
-struct MetalheadTestPlainFormat <: Metalhead.ConfigFormat end
+struct MetalheadTestFormat <: Metalhead.AbstractConfigFormat end
+struct MetalheadTestPlainFormat <: Metalhead.AbstractConfigFormat end
 function architecture_of(::MetalheadTestFormat, config)
     return get(config, "metalhead_test_architecture", nothing)
 end
