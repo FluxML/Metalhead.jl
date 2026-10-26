@@ -19,10 +19,11 @@ feature_info
 
 [`create_processor`](@ref) loads the processor of a checkpoint, which turns raw inputs into
 the inputs of its model and its outputs back into results. Each processor type ports a class
-of transformers, with its settings as fields.
+of transformers, or timm's eval transform, with its settings as fields.
 
 ```@docs
 create_processor
+Metalhead.Timm.EvalTransform
 Metalhead.Transformers.TokenizersBackend
 ```
 
@@ -83,8 +84,9 @@ diffusers builders the arguments of the model's constructor.
 ```@autodocs
 Modules = [Metalhead.Timm, Metalhead.Transformers]
 Order = [:function]
-Filter = f -> !(f in (Metalhead.Timm.pretrained_cfg, Metalhead.Transformers.decode,
-    Metalhead.Transformers.encode_ids, Metalhead.Transformers.decode_ids))
+Filter = f -> !(f in (Metalhead.Timm.pretrained_cfg, Metalhead.Timm.pil_resize,
+    Metalhead.Transformers.decode, Metalhead.Transformers.encode_ids,
+    Metalhead.Transformers.decode_ids))
 ```
 
 ```@docs
@@ -130,6 +132,9 @@ Metalhead.merge_nested
 Metalhead.ProcessorFiles
 Metalhead.SourceFile
 Metalhead.local_path
+Metalhead.image_array
+Metalhead.image_batch
+Metalhead.Timm.pil_resize
 Metalhead.Checkpoint
 Metalhead.load_state!
 Metalhead.torch_params

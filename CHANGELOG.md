@@ -87,12 +87,14 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
   pipeline, so that pipelines take prompts as strings (#332). Another tokenizer plugs in
   with methods of `Metalhead.Transformers.encode_ids` and `decode_ids`.
 - Processors (#348): `create_processor` loads the processor of a checkpoint, which turns raw
-  inputs (text) into the inputs of the model, and its outputs back into
+  inputs (images, text) into the inputs of the model, and its outputs back into
   results, as the checkpoint's configuration and its Python library do. It takes the names
   that `create_model` takes, at the same revisions, reads the files of a branch at the commit
   of the first it finds (offline or without network, those of the cache), and returns the
   most complete processor that the repository describes, as transformers' `AutoProcessor`
   does:
+  - `Metalhead.Timm.EvalTransform`, timm's eval transform, for every timm checkpoint, with
+    `use_test_size`. It resizes with a port of Pillow's 8-bit filters, and returns an array.
   - `Metalhead.Transformers.TokenizersBackend`, the tokenizer of a `tokenizer.json`, with
     the special tokens, padding and truncation of `tokenizer_config.json` over the defaults
     of the tokenizer class that `AutoTokenizer` builds (a class that Metalhead hasn't
@@ -103,11 +105,14 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
 
   Settings are read from the repository's files over the defaults of the Python class,
   strictly: a setting that the port doesn't implement is an error, and an unknown key a
-  warning. Keyword arguments override them, and `show` prints where each comes from.
+  warning. Keyword arguments override them, also in natural forms (an integer
+  `input_size`, one `mean` for every channel, a Symbol `interpolation`), and
+  `show` prints where each comes from.
   Processors return NamedTuples with the keys of transformers, in Julia's layout, with token
   indices from 1, which the models take as they are (`model(inputs::NamedTuple)`: the
-  language models). The tokenizers match transformers' on strings. Strings need a tokenizer
-  backend, such as HuggingFaceTokenizers.jl through its extension; token ids don't.
+  language models). They match timm bit for bit on 8-bit images, and the tokenizers match
+  transformers' on strings. Strings need a tokenizer backend, such as
+  HuggingFaceTokenizers.jl through its extension; token ids don't.
 - Mixed precision under `eltype = Float16` or `Flux.BFloat16` (or `f16`/`bf16`, #332): the
   RMSNorms of the language models and timm's `LayerNorm2d` keep their parameters in
   `Float32`, as Flux's `BatchNorm`, `GroupNorm` and `LayerNorm` do, and normalise in

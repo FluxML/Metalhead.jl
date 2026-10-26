@@ -19,7 +19,8 @@ abstract type Processor end
 """
     ImageProcessor <: Processor
 
-A processor of images, called as `ip(images)` on one image or a vector of them.
+A processor of images, called as `ip(images)` on one image or a vector of them (see
+[`image_array`](@ref Metalhead.image_array)).
 """
 abstract type ImageProcessor <: Processor end
 
@@ -603,10 +604,10 @@ instantiate_processor(::ConfigFormat, files, config; kwargs...) = nothing
 """
     create_processor(name; revision = nothing, subfolder = "", kwargs...)
 
-The processor of a checkpoint: it turns raw inputs into the inputs of the model, and the
-model's outputs back into results, as the checkpoint's configuration and its Python library
-do. [`create_model`](@ref) makes the forward pass match PyTorch; the processor makes the
-whole path from raw input to result match.
+The processor of a checkpoint: it turns raw inputs (images, text) into the inputs of the
+model, and the model's outputs back into results (text), as the checkpoint's configuration
+and its Python library do. [`create_model`](@ref) makes the forward pass match PyTorch; the
+processor makes the whole path from raw input to result match.
 
 `name` is a Hub repository, a local directory or a bare architecture, as for
 [`create_model`](@ref), and validated repositories default to the commit they were validated
@@ -620,8 +621,9 @@ component has is an error.
 
 Returns the most complete processor the repository describes, as transformers'
 `AutoProcessor` does: a processor that combines an image processor and a tokenizer; else
-an image processor; else a tokenizer, `Transformers.TokenizersBackend`. Calling it returns
-what the model takes, a NamedTuple:
+an image processor, such as the [`Timm.EvalTransform`](@ref Metalhead.Timm.EvalTransform)
+of every timm checkpoint; else a tokenizer, `Transformers.TokenizersBackend`. Calling it
+returns what the model takes, a NamedTuple (an array for `Timm.EvalTransform`):
 
 ```julia
 tok = create_processor("HuggingFaceTB/SmolLM2-135M")
@@ -630,8 +632,11 @@ logits = model(inputs)
 Transformers.decode(tok, [argmax(logits[:, end])])
 ```
 
-Strings need a tokenizer backend (`using HuggingFaceTokenizers`); token ids, as a tokenizer
-gives them (from 0), don't. `show` prints each setting and where it comes from.
+Images are arrays of size `(width, height, channels)`, of integers from 0 to 255 or of reals
+from 0 to 1 (see [`image_array`](@ref Metalhead.image_array)). Strings need a tokenizer
+backend (`using HuggingFaceTokenizers`); token ids, as a tokenizer gives them (from 0),
+don't.
+`show` prints each setting and where it comes from.
 """
 function create_processor(name::AbstractString;
         revision::Union{Nothing, AbstractString} = nothing, subfolder::AbstractString = "",
@@ -649,7 +654,9 @@ function create_processor(name::AbstractString;
 end
 
 function setting_repr(key, value)
-    s = if value isa AbstractDict
+    s = if key === :resample && value isa Integer && haskey(RESAMPLE_FILTERS, value)
+        "$value ($(RESAMPLE_FILTERS[value]))"
+    elseif value isa AbstractDict
         "$(length(value)) entries"
     else
         repr(value; context = :compact => true)

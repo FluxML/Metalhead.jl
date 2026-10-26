@@ -531,9 +531,9 @@ does. `src/Transformers/tokenization_utils_tokenizers.jl` is the reference port.
   component with a setting of its name. A tokenizer has a `load_processor` of its own.
 - **Constructors.** Two hooks, methods on the class like those below, documented in
   `src/hub/processors.jl`. `processor_fields(T, args)` converts the arguments of the
-  constructor to the types of the fields, taking the forms that read naturally (an integer
-  for a size, one value for every channel), with an `ArgumentError` that names the forms
-  for others. `check_processor(p)` errors on values the port
+  constructor to the types of the fields, taking the natural forms (an integer
+  `input_size`, a scalar `mean`, a Symbol `interpolation`), with an `ArgumentError` that
+  names the forms for others. `check_processor(p)` errors on values the port
   doesn't implement, naming the supported ones; that of a processor with components calls
   `Metalhead.check_components(p)`. Every constructor runs both, so a processor built by hand
   fails as early as a loaded one.
@@ -544,10 +544,14 @@ does. `src/Transformers/tokenization_utils_tokenizers.jl` is the reference port.
 - **Other libraries.** A config.json that carries the preprocessing (timm's
   `pretrained_cfg`) gets a method `instantiate_processor(::Format, files, config; kwargs...)`
   that builds the processor with `processor_from_entries(T, json_entries(dict, file);
-  kwargs...)`, which reads strictly and applies the overrides. Without one,
-  `create_processor` finds the class as `AutoProcessor` does.
-- **Calling.** The output is a NamedTuple with transformers' keys in Julia layout, 1-based
-  token indices. Text is strings (for a tokenizer backend) or 0-based token ids. `decode`
+  kwargs...)`, which reads strictly and applies the overrides (timm's gives
+  `Timm.EvalTransform`, in `src/Timm/transforms.jl`, checked by
+  `porting/dump_timm_transform.py`). Without one, `create_processor` finds the class as
+  `AutoProcessor` does.
+- **Calling.** Images go through `image_batch` (and so `image_array`) and
+  `convert_to_rgb`, and are resized by `Timm.pil_resize`, Pillow's 8-bit resize, bit for
+  bit. The output is a NamedTuple with transformers' keys in Julia layout, 1-based token
+  indices. Text is strings (for a tokenizer backend) or 0-based token ids. `decode`
   dispatches on the processor.
 - **Outputs.** The docstring of each class has a Returns table, whose header begins with
   "Key", with a row per key of its output; `check_documented_keys(T, outputs)`

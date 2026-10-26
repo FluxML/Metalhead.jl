@@ -93,6 +93,19 @@ the raw input to the inputs of the model, with the configuration files of real r
 The references are in `test/references/`. The tests need no Python, and only the checks
 marked below as such need network access.
 
+For timm, `porting/dump_timm_transform.py` stores the output of timm's
+`create_transform(**resolve_data_config({}, pretrained_cfg = cfg))` on PIL images, for 14
+configurations: the six interpolations of Pillow, the `"center"` and `"squash"` crop modes,
+non-square input sizes, a `crop_pct` above 1 (which pads), the ImageNet, Inception and CLIP
+statistics, and `use_test_size`. They run on seven small images (one grayscale, one RGBA),
+and the configuration of `timm/convnext_tiny.fb_in1k` also on an image of 500 × 375 pixels.
+[`Timm.EvalTransform`](@ref Metalhead.Timm.EvalTransform) must give the same `Float32`
+values, **bit for bit**, which takes a port of Pillow's 8-bit resampling: it matches
+`Image.resize` exactly for each of its six filters. With network access, the settings that
+`create_processor` resolves for each of the 56 timm checkpoints in the references, with and
+without `use_test_size`, must be those that timm resolves, and the logits of
+`timm/convnext_tiny.fb_in1k` for its transformed image must match PyTorch's to 1e-4.
+
 For tokenizers, `porting/dump_processor.py tokenizers` calls the tokenizer that
 `AutoTokenizer.from_pretrained(repo)` loads, for 13 tokenizers: those of the nine validated
 language models, of Qwen3.5, of SAM 3 and of the FLUX.2 [klein] pipeline, and GPT-2's, whose
@@ -108,7 +121,8 @@ that returns transformers' ids, and with `METALHEAD_TEST_NETWORK=true` through
 HuggingFaceTokenizers.jl and each repository's files.
 
 Configuration files are read strictly, an unknown key with a warning, and the tests load
-those of the fixtures without one.
+those of the fixtures without one. Pixels are compared after decoding: a JPEG decoded by
+ImageIO can differ slightly from Pillow's decoding of the same file.
 
 ## Parameter counts
 
@@ -142,5 +156,4 @@ Not checked:
 - Training-mode behaviour. Dropout and stochastic depth are random, and batch normalisation
   updates its statistics like Flux does.
 - The initialisation of randomly initialised models, which only roughly follows timm.
-- Image preprocessing. [`Metalhead.Timm.pretrained_cfg`](@ref) returns the settings a checkpoint
-  expects, but applying them is up to you.
+- Training augmentation, which processors don't do, and the decoding of image files.
