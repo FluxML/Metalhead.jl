@@ -508,74 +508,72 @@ first. The workflow is the one above, with these differences.
   tokenizer and stores the ids, the hidden states, the last-position logits and the greedy
   continuation (`check_lm_reference` in `test/parity.jl`); the logits come from the model's
   own head, which may scale (Granite) or softcap them. Prefer the smallest checkpoint of
-  the architecture. Its tokenizer is a `TokenizersBackend` (see "Processors"), checked
-  against transformers by `porting/dump_processor.py tokenizers`.
+  the architecture. Metalhead ports no tokenizer (see "Processors"); with
+  `METALHEAD_TEST_NETWORK`, `test/processors/tokenizers.jl` checks that the tokenizer of each
+  repository of its list gives the ids of its reference: add the new one.
 
 ## Processors
 
 A model that takes images or text gets the processor of its checkpoint, which
 `create_processor(repo)` (`src/hub/processors.jl`) loads as transformers' `AutoProcessor`
-does. `src/Transformers/tokenization_utils_tokenizers.jl` is the reference port.
+does.
 
 - **Classes.** One immutable struct per upstream class, defined with `Metalhead.@processor`
-  (`Base.@kwdef` whose constructors convert and check the settings): its fields are the
-  attributes of the Python class with that class's defaults (not a checkpoint's), and a last
-  field `provenance::NamedTuple = (;)` for `show`. Image processors subtype
-  `Metalhead.AbstractImageProcessor`, others `Metalhead.AbstractProcessor`. Register the
-  class name that configurations give with `register_processor!("ClassName", T; aliases,
-  model_types)`; the suffixes `Fast` and `Pil` are dropped. A processor that combines others
-  is `@processor (image_processor, tokenizer) struct ...`, which adds `T(image_processor,
-  tokenizer; kwargs...)`, and declares `processor_components(::Type{T}) = (; image_processor
-  = ..., tokenizer = TokenizersBackend)`, components defaulting to `nothing`; the generic
-  `load_processor` loads them and routes each override to the component with a setting of
-  its name. A tokenizer has a `load_processor` of its own.
-- **Constructors.** Two hooks, methods on the class like those below, documented in
-  `src/hub/processors.jl`. `processor_fields(T, args)` converts the arguments of the
-  constructor to the types of the fields, taking the natural forms (an integer
-  `input_size`, a scalar `mean`, a Symbol `interpolation`), with an `ArgumentError` that
-  names the forms for others. `check_processor(p)` errors on values the port
-  doesn't implement, naming the supported ones; that of a processor with components calls
-  `Metalhead.check_components(p)`. Every constructor runs both, so a processor built by hand
-  fails as early as a loaded one.
-- **Strict settings.** Declare `ignored_keys(T)` (`key = "reason"`), `restricted_keys(T)`
-  (`key = allowed values`) for options that aren't ported, and `legacy_keys(T)`
-  (`old = path`). Other keys warn once, so test that each validated repository's files load
-  with `@test_logs` and no warning.
+  (`Base.@kwdef` whose constructors standardize the settings and check the components): its
+  fields are the attributes of the Python class with that class's defaults (not a
+  checkpoint's), and a last field `provenance::NamedTuple = (;)` for `show`. Image
+  processors subtype `Metalhead.AbstractImageProcessor`, others
+  `Metalhead.AbstractProcessor`. Register the class name that configurations give with
+  `register_processor!("ClassName", T; aliases, model_types)`; the suffixes `Fast` and `Pil`
+  are dropped. A processor that combines others names them,
+  `@processor (image_processor, video_processor) struct ...`, which adds
+  `T(image_processor, video_processor; kwargs...)`: each is a field
+  `Union{Nothing, C} = nothing`, which `create_processor` loads as a processor of class `C`
+  from the same repository, routing each override to the component that has a setting of
+  its name. The component `tokenizer` is a field `tokenizer::Any = nothing` (see
+  "Tokenizers"), which takes no overrides. A class that is neither an image processor nor a
+  combination loads with an internal method
+  `Metalhead.load_processor(::Type{T}, files; kwargs...)` of its own.
+- **Settings.** `standardize_settings(T, settings)`, documented in `src/hub/processors.jl`,
+  takes the settings as a NamedTuple and returns them as the fields store them: it converts
+  the forms that the Python library also takes (an integer `input_size`, a scalar `mean`, a
+  Symbol `interpolation`), and throws an `ArgumentError` that names the supported values for
+  others. A feature that isn't ported is still a setting, as upstream has it
+  (`do_center_crop::Bool = false`), whose unsupported values `standardize_settings` rejects.
+  Name the setting in backticks in the message: the error of a loaded processor then names
+  the file that set it. Every constructor calls it, so a processor built by hand fails as
+  early as a loaded one.
+- **Strict settings.** Declare `ignored_keys(T)` (`key = "reason"`) for the keys that the
+  class knows but doesn't read, and `legacy_keys(T)` (`old = path`) for former names. Other
+  keys warn once, so test that each validated repository's files load with `@test_logs` and
+  no warning.
 - **Other libraries.** A config.json that carries the preprocessing (timm's
   `pretrained_cfg`) gets a method `instantiate_processor(::Format, files, config; kwargs...)`
-  that builds the processor with `processor_from_entries(T, json_entries(dict, file);
-  kwargs...)`, which reads strictly and applies the overrides (timm's gives
-  `Timm.EvalTransform`, in `src/Timm/transforms.jl`, checked by
+  that builds the processor with the internal `processor_from_entries(T,
+  json_entries(dict, file); kwargs...)`, which reads strictly and applies the overrides
+  (timm's gives `Timm.EvalTransform`, in `src/Timm/transforms.jl`, checked by
   `porting/dump_timm_transform.py`). Without one, `create_processor` finds the class as
   `AutoProcessor` does.
 - **Calling.** Images go through `image_batch` (and so `image_array`) and
   `convert_to_rgb`, and are resized by `Timm.pil_resize`, Pillow's 8-bit resize, bit for
   bit. The output is a NamedTuple with transformers' keys in Julia layout, 1-based token
-  indices. Text is strings (for a tokenizer backend) or 0-based token ids. `decode`
-  dispatches on the processor.
+  indices.
 - **Outputs.** The docstring of each class has a Returns table, whose header begins with
   "Key", with a row per key of its output; `check_documented_keys(T, outputs)`
   (`test/processors_setup.jl`) tests the outputs on the fixtures against it. The model takes
   them through a method `model(inputs::NamedTuple)`, which calls `check_inputs(model,
   inputs, required; hint)` on the keys it can't do without.
-- **Tokenizers.** `TokenizersBackend` stands for every tokenizer class of transformers.
-  `tokenizer_class` (`tokenization_auto.jl`) finds the class that `AutoTokenizer` builds, and
-  `TOKENIZER_CLASSES`, next to it, has the `__init__` defaults of the validated classes,
-  which the files override (a `null` special token with `nothing`); another class warns.
-  What a class changes beyond tokenizer.json is a setting or a small hook keyed by
-  `tokenizer_class` (CLIP's decoding, `FIXED_POST_PROCESSOR`, `PREFIX_SPACE_CLASSES`).
-  Keywords of calls in tokenizer_config.json are the tokenizer's `init_kwargs`, which its
-  own calls ignore, as transformers' do.
-  `porting/dump_processor.py tokenizers` compares each class on strings where they can
-  differ (case, accents, unicode normal forms, whitespace runs, special tokens in the text);
-  add a new language model's repository to its `TOKENIZER_REPOS`, and its class to
-  `TOKENIZER_CLASSES`. Language models take the tokenizer's output through the generic
-  `(m::CausalLM)(inputs::NamedTuple)`, padded on either side.
-- **Fixtures.** `porting/dump_processor.py` calls `AutoProcessor.from_pretrained(repo)(...)`,
-  never the components, copies the repository's small JSON files (not tokenizer.json) to
-  `test/fixtures/processors/<org>--<repo>/`, and writes the outputs and each prompt's token
-  ids to `test/references/processors/`, so that `test/processors/` runs offline; strings
-  are checked with HuggingFaceTokenizers.jl under `METALHEAD_TEST_NETWORK`.
+- **Tokenizers.** Not ported: the tokenizer of a checkpoint is HuggingFaceTokenizers.jl's
+  `Tokenizer` of its `tokenizer.json`, which the extension loads (`load_tokenizer(files)`),
+  with the `pad_token` of `tokenizer_config.json` as its padding token. A processor's
+  `tokenizer` is `nothing` without the extension or without a `tokenizer.json`: its images
+  still work, and its text calls `tokenizer_of(p)`, whose error says why. Processors use the
+  tokenizer only through the internal interface of `src/hub/tokenizers.jl`:
+  `encode_ids(tok, text; add_special_tokens)`, `token_id(tok, token)` and
+  `pad_token_id(tok)`, ids from 0, and `pad_ids(ids, pad_id; max_length)`, which pads a
+  batch on the right into 1-based `input_ids` and an `attention_mask`. In offline tests, a
+  type with methods of these functions that returns the ids of the references stands in for
+  the tokenizer; `METALHEAD_TEST_NETWORK` checks the real one.
 
 ## diffusers models and pipelines
 

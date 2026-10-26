@@ -21,10 +21,10 @@ architecture and the Hub checkpoints validated for it.
 
 `create_model` downloads a repository's configuration and weights and returns an ordinary
 Flux model, ready for inference or fine-tuning, on the CPU or a GPU. `create_processor`
-loads the processor of the same repository, which turns images and text into the inputs
-of the model, and its outputs back into results. The models run in Julia, without
-PyTorch. Each port mirrors the module tree of the PyTorch original, loads its safetensors
-weights by name, and is
+loads the processor of the same repository, which prepares the inputs of the model, such
+as the eval transform of a timm checkpoint or the tokenizer of a language model. The models
+run in Julia, without PyTorch. Each port mirrors the module tree of the PyTorch original,
+loads its safetensors weights by name, and is
 [checked numerically against PyTorch](https://fluxml.ai/Metalhead.jl/dev/validation/), and
 so is each processor.
 
@@ -131,30 +131,28 @@ statistics. Call `Flux.trainmode!(model)` before training.
 ### Processors
 
 A checkpoint expects its inputs prepared in a particular way, with settings stored in its
-repository: the image size, crop and normalisation, the special tokens of its tokenizer.
-`create_processor` reads them, from the same repository and revision as `create_model`, and
-returns the processor of the checkpoint, which applies them as its Python library does. It
-reads the files of a branch at one commit, that of the first file it finds, and offline or
-without network those of the cache.
-`create_model` makes the forward pass match PyTorch; `create_processor` makes the whole path
-from raw input to result match. The output of a processor is what the model takes,
-`model(proc(...))`:
+repository: the image size, crop and normalisation, the tokenizer. `create_processor` reads
+them, from the same repository and revision as `create_model`, and returns the processor of
+the checkpoint, which applies them as its Python library does. It reads the files of a
+branch at one commit, that of the first file it finds, and offline or without network those
+of the cache. `create_model` makes the forward pass match PyTorch; `create_processor` makes
+the whole path from raw input to result match.
 
 | Checkpoints | `create_processor` returns | Called as |
 |:--|:--|:--|
 | timm | `Timm.EvalTransform`, timm's eval transform | `transform(images)` |
-| language models | `Transformers.TokenizersBackend`, the tokenizer | `tok(texts)` |
+| language models | the tokenizer, HuggingFaceTokenizers' `Tokenizer` | `encode(tok, text)` |
 
-timm's transform returns an array of size width × height × channels × batch. The tokenizer
-returns a NamedTuple with the keys of transformers (`input_ids`, `attention_mask`), in
-Julia's layout, with token indices that start at 1. Turning outputs back into results takes
-the processor too: `Transformers.decode(proc, indices)` for text.
+timm's transform returns an array of size width × height × channels × batch, which the model
+takes. Images are arrays of size width × height × channels, of `UInt8` from 0 to 255 or of
+reals from 0 to 1. The matrix of colours `img` that `FileIO.load` returns becomes one with
+ImageCore: `permutedims(rawview(channelview(img)), (3, 2, 1))`.
 
-- Images are arrays of size width × height × channels, of `UInt8` from 0 to 255 or of reals
-  from 0 to 1. The matrix of colours `img` that `FileIO.load` returns becomes one with
-  ImageCore: `permutedims(rawview(channelview(img)), (3, 2, 1))`.
-- Text as strings needs a tokenizer backend: `using HuggingFaceTokenizers`. Token ids, as a
-  tokenizer gives them (from 0), need none.
+Metalhead ports no tokenizer. The tokenizer of a repository is a `Tokenizer` of
+[HuggingFaceTokenizers.jl](https://github.com/MurrellGroup/HuggingFaceTokenizers.jl), which
+runs Hugging Face's tokenizers library on the repository's `tokenizer.json`, with the padding
+token of its `tokenizer_config.json`. `create_processor` loads it after
+`using HuggingFaceTokenizers`.
 
 The settings are read strictly: one that the port doesn't implement is an error, and an
 unknown key in a file a warning. `show` prints each setting and where it comes from, and
@@ -237,26 +235,22 @@ as usual, and models move to a GPU with Flux's `gpu_device()`.
 
 Language models take token indices, which start at 1, and return logits, of size
 vocabulary × sequence length (× batch). Their processor is the tokenizer of the repository,
-which returns the token indices and the attention mask of texts, with the special tokens and
-padding of the repository's `tokenizer_config.json`, over the defaults of the tokenizer class
-that transformers' `AutoTokenizer` builds.
-[HuggingFaceTokenizers.jl](https://github.com/MurrellGroup/HuggingFaceTokenizers.jl)
-tokenizes the strings.
+HuggingFaceTokenizers.jl's, whose token ids start at 0:
 
 ```julia
 using HuggingFaceTokenizers
-using Metalhead.Transformers: decode
 
 model = create_model("HuggingFaceTB/SmolLM2-135M"; pretrained = true)
 tok = create_processor("HuggingFaceTB/SmolLM2-135M")
 
-inputs = tok("The capital of France is the city of")   # (; input_ids, attention_mask)
-logits = model(inputs)                                  # vocabulary × sequence length
-decode(tok, [argmax(logits[:, end])])                   # " Paris"
+ids = encode(tok, "The capital of France is the city of").ids .+ 1   # ids start at 0
+logits = model(ids)                                      # vocabulary × sequence length
+decode(tok, [argmax(logits[:, end]) - 1])                # " Paris"
 ```
 
-A vector of texts makes a batch, padded on the side of the tokenizer (on the left for
-Llama 3, Gemma 3 and Granite), which the model takes either way.
+Texts of different lengths make a batch padded on the right, with an `attention_mask` that
+is 0 for the padding: `model(ids; attention_mask)` (see the
+[language models guide](https://fluxml.ai/Metalhead.jl/dev/tutorials/language_models/)).
 
 ### Vision-language models
 

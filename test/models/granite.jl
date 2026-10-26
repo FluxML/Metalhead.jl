@@ -32,10 +32,6 @@ end
     end
 end
 
-# the output of a tokenizer, padded on either side
-foreach(check_tokenizer_inputs,
-    ["granite_tiny", "granitemoe_tiny", "granitemoeshared_tiny", "granitemoehybrid_tiny"])
-
 @testset "experts" begin
     # each token goes through its experts, weighted; expert 4 gets no token
     hidden, intermediate, num_experts, n = 5, 3, 4, 6
