@@ -1,0 +1,33 @@
+{
+  "image_processor": {
+    "data_format": "channels_first",
+    "do_convert_rgb": true,
+    "do_normalize": true,
+    "do_rescale": true,
+    "do_resize": true,
+    "image_mean": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "image_processor_type": "Sam3ImageProcessor",
+    "image_std": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "mask_size": {
+      "height": 288,
+      "width": 288
+    },
+    "resample": 2,
+    "rescale_factor": 0.00392156862745098,
+    "size": {
+      "height": 1008,
+      "width": 1008
+    }
+  },
+  "point_pad_value": -10,
+  "processor_class": "Sam3Processor",
+  "target_size": 1008
+}

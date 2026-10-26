@@ -24,13 +24,18 @@ of transformers, or timm's eval transform, with its settings as fields.
 ```@docs
 create_processor
 Metalhead.Timm.EvalTransform
+Metalhead.Transformers.Sam3Processor
+Metalhead.Transformers.Sam3ImageProcessor
 Metalhead.Transformers.TokenizersBackend
 ```
 
-Decoding takes the processor and the token indices of the model's outputs:
+Post-processing and decoding take the processor and the outputs of the model:
 
 ```@docs
 Metalhead.Transformers.decode
+Metalhead.Transformers.post_process_object_detection
+Metalhead.Transformers.post_process_instance_segmentation
+Metalhead.Transformers.post_process_semantic_segmentation
 ```
 
 A tokenizer other than HuggingFaceTokenizers.jl's encodes and decodes the strings of a
@@ -85,6 +90,9 @@ diffusers builders the arguments of the model's constructor.
 Modules = [Metalhead.Timm, Metalhead.Transformers]
 Order = [:function]
 Filter = f -> !(f in (Metalhead.Timm.pretrained_cfg, Metalhead.Timm.pil_resize,
+    Metalhead.Transformers.post_process_object_detection,
+    Metalhead.Transformers.post_process_instance_segmentation,
+    Metalhead.Transformers.post_process_semantic_segmentation,
     Metalhead.Transformers.decode, Metalhead.Transformers.encode_ids,
     Metalhead.Transformers.decode_ids))
 ```

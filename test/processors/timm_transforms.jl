@@ -227,6 +227,9 @@ end
         @test t.input_size == (3, 20, 20) && t.crop_pct == 0.95
         @test create_processor(dir).input_size == (3, 16, 16)
     end
+    sam3 = joinpath(PROCESSORS, "unsloth--sam3.1")
+    message = "no component of Sam3Processor has a setting `use_test_size`"
+    @test_throws message create_processor(sam3; use_test_size = true)
 
     # strict
     with_config(timm_config(Dict("input_size" => [3, 16, 16], "timm_test_key" => 1))) do dir

@@ -21,8 +21,8 @@ architecture and the Hub checkpoints validated for it.
 
 `create_model` downloads a repository's configuration and weights and returns an ordinary
 Flux model, ready for inference or fine-tuning, on the CPU or a GPU. `create_processor`
-loads the processor of the same repository, which turns images and text into the inputs
-of the model, and its outputs back into results. The models run in Julia, without
+loads the processor of the same repository, which turns images, text and boxes into the
+inputs of the model, and its outputs back into results. The models run in Julia, without
 PyTorch. Each port mirrors the module tree of the PyTorch original, loads its safetensors
 weights by name, and is
 [checked numerically against PyTorch](https://fluxml.ai/Metalhead.jl/dev/validation/), and
@@ -143,12 +143,14 @@ from raw input to result match. The output of a processor is what the model take
 | Checkpoints | `create_processor` returns | Called as |
 |:--|:--|:--|
 | timm | `Timm.EvalTransform`, timm's eval transform | `transform(images)` |
+| SAM 3 | `Transformers.Sam3Processor` | `proc(; images, text, input_boxes)` |
 | language models | `Transformers.TokenizersBackend`, the tokenizer | `tok(texts)` |
 
-timm's transform returns an array of size width × height × channels × batch. The tokenizer
-returns a NamedTuple with the keys of transformers (`input_ids`, `attention_mask`), in
+timm's transform returns an array of size width × height × channels × batch. The others
+return a NamedTuple with the keys of transformers (`input_ids`, `pixel_values`, ...), in
 Julia's layout, with token indices that start at 1. Turning outputs back into results takes
-the processor too: `Transformers.decode(proc, indices)` for text.
+the processor too: `Transformers.decode(proc, indices)` for text, and SAM 3's
+`post_process_instance_segmentation(proc, outputs)` for masks.
 
 - Images are arrays of size width × height × channels, of `UInt8` from 0 to 255 or of reals
   from 0 to 1. The matrix of colours `img` that `FileIO.load` returns becomes one with
@@ -286,25 +288,28 @@ decode(tokenizer, ids[(end - 19):end] .- 1)
 ### Segmenting objects
 
 SAM 3 finds and segments the objects of an image that a text prompt names, or that box
-prompts show. `sam3_image_inputs` resizes images to the model's 1008 × 1008 pixels, and the
-post-processing keeps the objects found, with their boxes and masks at the size of the image:
+prompts show. Its processor resizes the images to the model's 1008 × 1008 pixels and pads
+the prompts to 32 tokens, and its post-processing keeps the objects found, with their boxes
+and masks at the size of the image:
 
 ```julia
-using HuggingFaceTokenizers
-using Metalhead.Transformers: sam3_image_inputs, sam3_text_inputs,
-                              post_process_instance_segmentation
+using FileIO, ImageCore, HuggingFaceTokenizers
+using Metalhead.Transformers: post_process_instance_segmentation
 
 model = create_model("unsloth/sam3.1"; pretrained = true)   # SAM 3.1; SAM 3: "jetjodh/sam3"
-tokenizer = from_pretrained(Tokenizer, "unsloth/sam3.1")
+proc = create_processor("unsloth/sam3.1")
 
-image = rand(Float32, 640, 480, 3)    # width × height × channels, in [0, 1]
-pixel_values, original_sizes = sam3_image_inputs(image)
-input_ids, attention_mask = sam3_text_inputs([encode(tokenizer, "a cat").ids])
-outputs = model(pixel_values, input_ids; attention_mask)
-objects = only(post_process_instance_segmentation(model, outputs; threshold = 0.5,
-    target_sizes = original_sizes))
-objects.scores, objects.boxes, objects.masks             # n, 4 × n and 640 × 480 × n
+image = permutedims(rawview(channelview(load("dog.jpg"))), (3, 2, 1))
+inputs = proc(; images = image, text = "a dog")
+objects = only(post_process_instance_segmentation(proc, model(inputs); threshold = 0.5,
+    target_sizes = inputs.original_sizes))
+objects.scores, objects.boxes, objects.masks
+# [0.94], 4 × 1 boxes (x1, y1, x2, y2) and 700 × 577 × 1 masks, for a photo of 700 × 577
 ```
+
+A box prompt is `(x1, y1, x2, y2)` in the pixels of its image, a vector of them per image:
+`proc(; images, input_boxes = [[(56, 38, 647, 550)]])`. Without HuggingFaceTokenizers, pass
+the token ids of the prompts: `text = [49406, 320, 1929, 49407]` is "a dog".
 
 Both repositories are ungated; `jetjodh/sam3` holds the same weights as Meta's gated
 `facebook/sam3`. Only the detector of SAM 3's video model is ported, not the tracker of

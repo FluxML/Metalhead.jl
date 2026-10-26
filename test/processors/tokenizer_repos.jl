@@ -1,7 +1,6 @@
 using Metalhead, Test
 using JSON: JSON
 using SafeTensors: SafeTensors
-using Metalhead: ProcessorFiles
 using Metalhead.Transformers: TokenizersBackend, decode
 const T = Metalhead.Transformers
 
@@ -112,13 +111,6 @@ end
     for key in KEYS
         with_fixture(key) do dir, subfolder
             function make(; kwargs...)
-                # SAM 3's alone, as its tokenizer_config.json names its processor,
-                # Sam3VideoProcessor, which isn't ported
-                if key == "unsloth--sam3.1"
-                    files = ProcessorFiles(Metalhead.model_source(dir, nothing, subfolder))
-                    return Metalhead.load_processor(TokenizersBackend, files;
-                        tokenizer = ReferenceBackend(key), kwargs...)
-                end
                 p = create_processor(dir; subfolder, tokenizer = ReferenceBackend(key),
                     kwargs...)
                 return tokenizer_of(p)
@@ -187,10 +179,10 @@ end
 const TEST_NETWORK = parse(Bool, get(ENV, "METALHEAD_TEST_NETWORK", "false"))
 if TEST_NETWORK
     @eval using HuggingFaceTokenizers: HuggingFaceTokenizers
-    # the tokenizer of a repository; those of Qwen3.5 and SAM 3 alone, as their processors
-    # (Qwen3VLProcessor, Sam3Processor) aren't ported
+    # the tokenizer of a repository; that of Qwen3.5 alone, as its processor
+    # (Qwen3VLProcessor) isn't ported
     function repo_tokenizer(m; kwargs...)
-        if m["repo"] in ("Qwen/Qwen3.5-0.8B", "unsloth/sam3.1")
+        if m["repo"] == "Qwen/Qwen3.5-0.8B"
             source = Metalhead.model_source(m["repo"], m["revision"], m["subfolder"])
             return Metalhead.load_processor(TokenizersBackend,
                 Metalhead.ProcessorFiles(source); kwargs...)

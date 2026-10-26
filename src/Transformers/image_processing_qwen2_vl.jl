@@ -28,23 +28,6 @@ function smart_resize(height::Integer, width::Integer; factor::Integer = 28,
     return h_bar, w_bar
 end
 
-# The image `(width, height, channels)` resized to `(w, h)` as torchvision does on the CPU:
-# antialiased bicubic (or `upsample = NNlib.upsample_bilinear`) interpolation in Float32. An
-# 8-bit image is resized as PIL does, along its width and then along its height, rounded and
-# clamped to 0:255 after each pass.
-function resize_image(image, w, h; upsample = NNlib.upsample_bicubic)
-    x = Float32.(image)
-    resize(x, wh) = dropdims(
-        upsample(reshape(x, size(x)..., 1); size = wh, antialias = true,
-            align_corners = false);
-        dims = 4)
-    eltype(image) <: Integer || return size(x)[1:2] == (w, h) ? x : resize(x, (w, h))
-    quantize(y) = round.(clamp.(y, 0, 255))
-    size(x, 1) == w || (x = quantize(resize(x, (w, size(x, 2)))))
-    size(x, 2) == h || (x = quantize(resize(x, (w, h))))
-    return x
-end
-
 # transformers' `patchify` of one normalized image `(width, height, channels)`: the patches
 # merge window by merge window, each repeated `temporal_patch_size` times, as a matrix
 # `(patch_size^2 * temporal_patch_size * channels, num_patches)`.
@@ -76,8 +59,7 @@ image `img`, that is `permutedims(channelview(img), (3, 2, 1))`. Each image is
 
  1. resized with antialiased bicubic interpolation to the [`smart_resize`](@ref
     Metalhead.Transformers.smart_resize) of its size with `factor = patch_size * merge_size`
-    (an 8-bit image along its width and then its height, rounded back to integers after
-    each, as torchvision does on the CPU and PIL),
+    (an 8-bit image as torchvision resizes it on the CPU, in fixed-point arithmetic),
  2. scaled to `[0, 1]` (8-bit images only) and normalized with `image_mean` and `image_std`,
  3. cut into patches of `patch_size × patch_size` pixels, each repeated
     `temporal_patch_size` times (an image is a video of one frame).
@@ -89,10 +71,8 @@ of the images one after the other, each image ordered by windows of `merge_size`
 columns are the numbers of patches `(1, height ÷ patch_size, width ÷ patch_size)` of the
 images.
 
-An 8-bit image whose size needs no resizing gives the same `pixel_values` as transformers,
-and an image of real numbers the same to Float32 precision. A resized 8-bit image may differ
-by one level of 255 in about 1% of its values, as torchvision computes its weights in
-fixed-point arithmetic.
+An 8-bit image gives the same `pixel_values` as transformers, and an image of real numbers
+the same to Float32 precision.
 """
 function qwen3_5_image_inputs(images; patch_size::Integer = 16,
         temporal_patch_size::Integer = 2, merge_size::Integer = 2,
@@ -113,7 +93,7 @@ function qwen3_5_image_inputs(images; patch_size::Integer = 16,
         scale = eltype(image) <: Integer ? 255.0f0 : 1.0f0
         mean = reshape(Float32.(collect(image_mean)) .* scale, 1, 1, :)
         std = reshape(Float32.(collect(image_std)) .* scale, 1, 1, :)
-        x = (resize_image(image, w, h) .- mean) ./ std
+        x = (resize_image(image, (w, h), 3) .- mean) ./ std
         grid = [1, h ÷ patch_size, w ÷ patch_size]
         return patchify(x, patch_size, temporal_patch_size, merge_size), grid
     end

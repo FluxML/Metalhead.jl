@@ -71,10 +71,7 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
   (`unsloth/sam3.1`, #343). Its ViT attends within windows with a 2D rotary embedding, and its
   CLIP text encoder, geometry encoder of boxes, DETR encoder and decoder and mask decoder
   are ported. The checkpoints of SAM 3 load as `Sam3VideoModel`, whose detector only is
-  ported, not its tracker. `Metalhead.Transformers.sam3_image_inputs`,
-  `sam3_box_inputs` and `sam3_text_inputs` make its inputs as transformers' processor does,
-  and `post_process_instance_segmentation`, `post_process_object_detection` and
-  `post_process_semantic_segmentation` read its outputs.
+  ported, not its tracker.
 - Flux ports of [diffusers](https://github.com/huggingface/diffusers) models and pipelines, in
   `Metalhead.Diffusers`: text-to-image generation with FLUX.2 [klein] (`Flux2KleinPipeline`,
   with `Flux2Transformer2DModel`, `AutoencoderKLFlux2` and `FlowMatchEulerDiscreteScheduler`),
@@ -87,7 +84,7 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
   pipeline, so that pipelines take prompts as strings (#332). Another tokenizer plugs in
   with methods of `Metalhead.Transformers.encode_ids` and `decode_ids`.
 - Processors (#348): `create_processor` loads the processor of a checkpoint, which turns raw
-  inputs (images, text) into the inputs of the model, and its outputs back into
+  inputs (images, text, boxes) into the inputs of the model, and its outputs back into
   results, as the checkpoint's configuration and its Python library do. It takes the names
   that `create_model` takes, at the same revisions, reads the files of a branch at the commit
   of the first it finds (offline or without network, those of the cache), and returns the
@@ -95,24 +92,27 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
   does:
   - `Metalhead.Timm.EvalTransform`, timm's eval transform, for every timm checkpoint, with
     `use_test_size`. It resizes with a port of Pillow's 8-bit filters, and returns an array.
+  - `Metalhead.Transformers.Sam3Processor` and its `Sam3ImageProcessor`, for SAM 3, with box
+    prompts. `post_process_instance_segmentation`, `post_process_object_detection` and
+    `post_process_semantic_segmentation` take the processor and the outputs of the model.
   - `Metalhead.Transformers.TokenizersBackend`, the tokenizer of a `tokenizer.json`, with
     the special tokens, padding and truncation of `tokenizer_config.json` over the defaults
     of the tokenizer class that `AutoTokenizer` builds (a class that Metalhead hasn't
-    validated warns): the processor of every validated language model. It returns token
-    indices from 1, padded on the side of the tokenizer, and `Metalhead.Transformers.decode`
-    turns them back into text, with `skip_special_tokens` without the special tokens, named
-    ones included.
+    validated warns): the processor of every validated language model, and the tokenizer of
+    the other processors. It returns token indices from 1, padded on the side of the
+    tokenizer, and `Metalhead.Transformers.decode` turns them back into text, with
+    `skip_special_tokens` without the special tokens, named ones included.
 
   Settings are read from the repository's files over the defaults of the Python class,
   strictly: a setting that the port doesn't implement is an error, and an unknown key a
   warning. Keyword arguments override them, also in natural forms (an integer
-  `input_size`, one `mean` for every channel, a Symbol `interpolation`), and
+  `input_size`, one `mean` for every channel, a Symbol `interpolation` or `resample`), and
   `show` prints where each comes from.
   Processors return NamedTuples with the keys of transformers, in Julia's layout, with token
   indices from 1, which the models take as they are (`model(inputs::NamedTuple)`: the
-  language models). They match timm bit for bit on 8-bit images, and the tokenizers match
-  transformers' on strings. Strings need a tokenizer backend, such as
-  HuggingFaceTokenizers.jl through its extension; token ids don't.
+  language models and SAM 3). They match timm and transformers bit for bit on 8-bit
+  images, and the tokenizers match transformers' on strings. Strings need a tokenizer
+  backend, such as HuggingFaceTokenizers.jl through its extension; token ids don't.
 - Mixed precision under `eltype = Float16` or `Flux.BFloat16` (or `f16`/`bf16`, #332): the
   RMSNorms of the language models and timm's `LayerNorm2d` keep their parameters in
   `Float32`, as Flux's `BatchNorm`, `GroupNorm` and `LayerNorm` do, and normalise in

@@ -46,13 +46,6 @@ function T.decode_ids(::IdsBackend, ids::AbstractVector{<:Integer};
     return join([string.(ids); skip_special_tokens ? ["skip"] : String[]], " ")
 end
 
-# SAM 3's tokenizer alone: its tokenizer_config.json names its processor,
-# Sam3VideoProcessor, which isn't ported
-function sam3_tokenizer(source = SAM3; kwargs...)
-    files = Metalhead.ProcessorFiles(Metalhead.model_source(source, nothing))
-    return Metalhead.load_processor(TokenizersBackend, files; kwargs...)
-end
-
 function with_tokenizer_files(f, files)
     mktempdir() do dir
         for (name, content) in files
@@ -63,7 +56,7 @@ function with_tokenizer_files(f, files)
 end
 
 @testset "token ids" begin
-    tok = sam3_tokenizer()
+    tok = create_processor(SAM3).tokenizer
     out = tok(ids(1))
     @test out == (; input_ids = ids(1) .+ 1, attention_mask = ones(Int, 4))
     for name in ("longest", "max_length", "left")
@@ -86,7 +79,8 @@ end
 end
 
 @testset "a backend" begin
-    tok = sam3_tokenizer(; tokenizer = ReferenceBackend())
+    proc = create_processor(SAM3; tokenizer = ReferenceBackend())
+    tok = proc.tokenizer
     @test tok.tokenizer isa ReferenceBackend
     for name in CALLS
         m = JSON.parse(META["tokenizer/$name"])
@@ -102,11 +96,16 @@ end
     left = TokenizersBackend(; Metalhead.settings(tok)..., truncation_side = "left")
     @test left(long; max_length = 6).input_ids == [49406; ids(3)[(end - 4):end]] .+ 1
     @test_throws "special tokens" tok(long; max_length = 1)
+    # the processor encodes its prompts with the backend
+    sam = proc(; text = TEXTS[1:2])
+    @test sam.input_ids == [ids(1) .+ 1; fill(49408, 28);; ids(2) .+ 1;
+                            fill(49408, 32 - length(ids(2)))]
     decoded = JSON.parse(META["tokenizer/decode"])
     for skip in (false, true)
         @test decode(tok, ids(2) .+ 1; skip_special_tokens = skip) ==
               decoded[python_bool(skip)]["text"]
     end
+    @test decode(proc, ids(2) .+ 1) == decoded["False"]["text"]
     @test decode(tok, [ids(2) ids(2)] .+ 1) == fill(decoded["False"]["text"], 2)
 end
 
@@ -235,6 +234,8 @@ end
     @test_throws "`model_input_names = [\"input_ids\", \"token_type_ids\"]` is not supported" TokenizersBackend(;
         model_input_names = ["input_ids", "token_type_ids"])
     @test_throws "`init_kwargs` has `foo`" TokenizersBackend(; init_kwargs = (; foo = 1))
+    @test_throws "the `tokenizer` of Sam3Processor is a TokenizersBackend" T.Sam3Processor(nothing,
+        T.Sam3ImageProcessor())
 
     # what transformers reads of tokenizer.json in ways that Metalhead doesn't port
     mktempdir() do dir
@@ -278,6 +279,7 @@ end
     @test decode(tok, [1 2; 3 4]) == ["0 2", "1 3"]
     @test_throws "token indices are integers" decode(tok, [1.0])
     @test_throws "decode takes token indices" decode(tok, "text")
+    @test_throws "Sam3Processor has no tokenizer" decode(T.Sam3Processor(), [1])
 end
 
 # Strings through HuggingFaceTokenizers.jl, which METALHEAD_TEST_NETWORK adds to the test
@@ -286,7 +288,8 @@ const TEST_NETWORK = parse(Bool, get(ENV, "METALHEAD_TEST_NETWORK", "false"))
 if TEST_NETWORK
     @eval using HuggingFaceTokenizers: HuggingFaceTokenizers
     @testset "HuggingFaceTokenizers" begin
-        tok = sam3_tokenizer("unsloth/sam3.1")
+        proc = create_processor("unsloth/sam3.1")
+        tok = proc.tokenizer
         @test tok.tokenizer === nothing
         for (i, text) in enumerate(TEXTS)
             @test tok(text).input_ids == ids(i) .+ 1

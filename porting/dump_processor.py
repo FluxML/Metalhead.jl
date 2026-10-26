@@ -2,13 +2,19 @@
 
     uv run dump_processor.py [sam3] [tokenizers]    # all by default
 
-sam3: the CLIP tokenizer of SAM 3 as `AutoTokenizer.from_pretrained(repo)` loads it, for
-src/Transformers/tokenization_utils_tokenizers.jl. Writes
+sam3: the processor of SAM 3 as `AutoProcessor.from_pretrained(repo)` loads it, called on tiny
+images, prompts and boxes (`proc(images=..., text=..., input_boxes=...)`), for
+src/Transformers/processing_sam3.jl. Writes
 
-- test/fixtures/processors/unsloth--sam3.1/: the small JSON files of its tokenizer (not
-  tokenizer.json), from which the Julia tests load it offline;
-- test/references/processors/sam3.safetensors: "tokenizer/..." cases, which call the
-  tokenizer (padding, truncation, decoding).
+- test/fixtures/processors/<org>--<repo>/: the small JSON files of unsloth/sam3.1 and
+  jetjodh/sam3 (not tokenizer.json), from which the Julia tests load the processor offline;
+- test/references/processors/sam3.safetensors: for each case `<name>`, its images
+  "<name>/image/<i>" (channels, height, width; or height, width for a grey image), the
+  processor's outputs "<name>/<key>", and the token ids of each prompt "<name>/text_ids/<i>",
+  which the tests pass in place of the strings without a tokenizer backend. The metadata hold
+  each case's settings (`create`, the keyword arguments of `from_pretrained`), prompts and boxes.
+  "tokenizer/..." cases call the tokenizer alone (padding, truncation, decoding), and "post/..."
+  the post-processing of random model outputs.
 
 tokenizers: the tokenizers of the validated language models, of the FLUX.2 [klein] pipeline,
 of Qwen3.5, of SAM 3 and of GPT-2, as `AutoTokenizer.from_pretrained(repo)` loads them, for
@@ -18,16 +24,20 @@ import json
 import pathlib
 import shutil
 import sys
+import types
 
 import numpy as np
 import torch
 from huggingface_hub import hf_hub_download
+from PIL import Image
 from safetensors.torch import save_file
-from transformers import AutoTokenizer
+from transformers import AutoProcessor, Sam3Processor
 
 from common import versions
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+CLIP = dict(image_mean=[0.48145466, 0.4578275, 0.40821073],
+            image_std=[0.26862954, 0.26130258, 0.27577711])
 
 
 def main():
@@ -46,16 +56,91 @@ def copy_config_files(repo, revision, files):
 
 
 SAM3_REPO, SAM3_REVISION = "unsloth/sam3.1", "cd3538905f98152ba184d2791fc5aa5d06e2ae45"
-SAM3_FILES = ["tokenizer_config.json", "special_tokens_map.json"]
+SAM3_VIDEO_REPO, SAM3_VIDEO_REVISION = "jetjodh/sam3", "1aa50ce07302cb375f85d8084b68a0fb378b8d85"
+SAM3_FILES = ["processor_config.json", "tokenizer_config.json", "special_tokens_map.json"]
 
 
 def sam3():
-    copy_config_files(SAM3_REPO, SAM3_REVISION, SAM3_FILES)
-    tokenizer = AutoTokenizer.from_pretrained(SAM3_REPO, revision=SAM3_REVISION)
+    for repo, revision in [(SAM3_REPO, SAM3_REVISION), (SAM3_VIDEO_REPO, SAM3_VIDEO_REVISION)]:
+        copy_config_files(repo, revision, SAM3_FILES)
+
+    gen = torch.Generator().manual_seed(0)
+
+    def uint8(*shape):
+        return torch.randint(0, 256, shape, generator=gen, dtype=torch.uint8)
+
+    small = dict(size={"height": 16, "width": 24})
     tensors = {}
     meta = {"repo": SAM3_REPO, "revision": SAM3_REVISION, **versions()}
+
+    def run(name, images, create=small, text=None, boxes=None, labels=None, modes=None,
+            repo=SAM3_REPO, revision=SAM3_REVISION, cls=AutoProcessor):
+        """`cls.from_pretrained(repo, **create)(images=..., text=..., input_boxes=...)`;
+        `modes` gives the PIL mode of each image ("L", "RGBA"), RGB by default."""
+        proc = cls.from_pretrained(repo, revision=revision, **create)
+        pil = [Image.fromarray(img.numpy() if img.ndim == 2 else img.permute(1, 2, 0).numpy(),
+                               mode=mode) if mode else img
+               for img, mode in zip(images, modes or [None] * len(images))]
+        kwargs = {k: v for k, v in dict(text=text, input_boxes=boxes,
+                                        input_boxes_labels=labels).items() if v is not None}
+        out = proc(images=pil, return_tensors="pt", **kwargs)
+        for i, image in enumerate(images):
+            tensors[f"{name}/image/{i + 1}"] = image.contiguous()
+        for key, value in out.items():
+            tensors[f"{name}/{key}"] = torch.as_tensor(value).contiguous()
+        prompts = text if isinstance(text, list) else [text]
+        if text is None and boxes is not None:
+            prompts = ["visual"]
+        for i, prompt in enumerate(prompts):
+            if prompt is None and boxes is not None:
+                prompt = "visual"
+            if prompt is not None:
+                ids = proc.tokenizer(prompt)["input_ids"]
+                tensors[f"{name}/text_ids/{i + 1}"] = torch.tensor(ids)
+        meta[name] = json.dumps(dict(create=create, text=text, boxes=boxes, labels=labels,
+                                     modes=modes, repo=repo, revision=revision,
+                                     cls=type(proc).__name__))
+        return proc
+
+    proc = run("exact", [uint8(3, 16, 24)], text="a cat")  # no resizing
+    run("upscale", [uint8(3, 9, 13)], text="a cat")
+    run("downscale", [uint8(3, 50, 70)], create=dict(small, **CLIP), text=["a dog"])
+    # images of reals in [0, 1], which Metalhead takes as already rescaled
+    run("float", [torch.rand(3, 9, 13, generator=gen)], create=dict(small, do_rescale=False),
+        text="a cat")
+    run("batch", [uint8(3, 9, 13), uint8(3, 16, 24), uint8(3, 30, 8)],
+        text=["a cat", "two dogs on a sofa", "a red car"],
+        boxes=[[[1, 2, 5, 7]], [[0, 0, 20, 10], [3.5, 4, 12, 15.25]], [[2, 3, 6, 25]]],
+        labels=[[1], [0, 1], [1]])
+    run("boxes_only", [uint8(3, 9, 13)], boxes=[[[1, 2, 5, 7], [0, 0, 13, 9]]])
+    run("boxes_none", [uint8(3, 9, 13), uint8(3, 9, 13)], text=["a cat", None],
+        boxes=[None, [[1, 2, 5, 7]]])
+    run("bicubic", [uint8(3, 9, 13)], create=dict(small, resample=3), text="a cat")
+    run("no_resize", [uint8(3, 9, 13), uint8(3, 9, 13)], create=dict(do_resize=False),
+        text=["a cat", "a dog"])
+    run("no_rescale", [uint8(3, 9, 13)], create=dict(small, do_rescale=False), text="a cat")
+    run("no_normalize", [uint8(3, 9, 13)], create=dict(small, do_normalize=False),
+        text="a cat")
+    run("neither", [uint8(3, 9, 13)], create=dict(small, do_rescale=False, do_normalize=False),
+        text="a cat")
+    # the 8-bit scale of an image of reals: Metalhead multiplies it by 255 without do_rescale
+    x = torch.rand(3, 9, 13, generator=gen)
+    run("float_no_rescale", [x * 255], create=dict(small, do_rescale=False), text="a cat")
+    tensors["float_no_rescale/image/1"] = x
+    run("grey", [uint8(9, 13)], text="a cat", modes=["L"])  # converted to RGB
+    run("rgba", [uint8(4, 9, 13)], text="a cat", modes=["RGBA"])  # alpha dropped
     long = "a photo of " + " and ".join(["a small red cat"] * 8)
-    sam3_tokenizer(tokenizer, tensors, meta, long)
+    run("long", [uint8(3, 9, 13)], text=long)  # more than 32 tokens: not truncated
+
+    # jetjodh/sam3 names Sam3VideoProcessor, which takes no prompts: its images, and the
+    # whole processor as Sam3Processor loads it
+    run("video_processor", [uint8(3, 9, 13)], repo=SAM3_VIDEO_REPO,
+        revision=SAM3_VIDEO_REVISION)
+    run("video_sam3", [uint8(3, 9, 13)], text="a cat", boxes=[[[1, 2, 5, 7]]],
+        repo=SAM3_VIDEO_REPO, revision=SAM3_VIDEO_REVISION, cls=Sam3Processor)
+
+    sam3_tokenizer(proc.tokenizer, tensors, meta, long)
+    sam3_post_processing(proc, tensors, meta)
 
     out = ROOT / "test" / "references" / "processors" / "sam3.safetensors"
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -95,6 +180,43 @@ def sam3_tokenizer(tokenizer, tensors, meta, long):
                                raw=raw.decode(ids, skip_special_tokens=skip))
                for skip in (False, True)}
     meta["tokenizer/decode"] = json.dumps(dict(ids=2, **decoded))
+
+
+def sam3_post_processing(proc, tensors, meta):
+    """The post-processing of random outputs of SAM 3, of 2 images and 5 queries, as
+    "post/outputs/<key>" and the results of each image "post/<method>/<i>/<key>"."""
+    gen = torch.Generator().manual_seed(1)
+    b, q, h, w = 2, 5, 8, 6
+    boxes = torch.rand(b, q, 4, generator=gen)
+    boxes = torch.cat([boxes[..., :2].minimum(boxes[..., 2:]), boxes[..., :2].maximum(boxes[..., 2:])],
+                      dim=-1)
+    outputs = types.SimpleNamespace(
+        pred_logits=torch.randn(b, q, generator=gen) * 2,
+        pred_boxes=boxes,
+        presence_logits=torch.tensor([[2.0], [0.5]]),
+        pred_masks=torch.randn(b, q, h, w, generator=gen) * 3,
+        semantic_seg=torch.randn(b, 1, h, w, generator=gen) * 3)
+    for key, value in vars(outputs).items():
+        tensors[f"post/outputs/{key}"] = value.contiguous()
+    sizes = [(12, 16), (9, 7)]
+    results = {
+        "detection": proc.post_process_object_detection(outputs, threshold=0.3,
+                                                        target_sizes=sizes),
+        "detection_normalized": proc.post_process_object_detection(outputs, threshold=0.3),
+        "instance": proc.post_process_instance_segmentation(
+            outputs, threshold=0.3, mask_threshold=0.5, target_sizes=sizes),
+        "instance_normalized": proc.post_process_instance_segmentation(outputs, threshold=0.3),
+        "semantic": proc.post_process_semantic_segmentation(
+            outputs, target_sizes=sizes, threshold=0.5, return_segmentation_scores=True),
+        "semantic_normalized": proc.post_process_semantic_segmentation(
+            outputs, threshold=0.5, return_segmentation_scores=True),
+    }
+    for name, per_image in results.items():
+        for i, result in enumerate(per_image):
+            for key, value in result.items():
+                tensors[f"post/{name}/{i + 1}/{key}"] = value.contiguous()
+    meta["post"] = json.dumps(dict(target_sizes=sizes, threshold=0.3, mask_threshold=0.5,
+                                   semantic_threshold=0.5))
 
 
 # (repo, revision, subfolder) of each tokenizer: those of the language models that Metalhead

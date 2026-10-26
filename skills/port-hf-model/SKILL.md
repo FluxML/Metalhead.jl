@@ -513,17 +513,18 @@ first. The workflow is the one above, with these differences.
 
 ## Processors
 
-A model that takes images or text gets the processor of its checkpoint, which
+A model that takes images, text or boxes gets the processor of its checkpoint, which
 `create_processor(repo)` (`src/hub/processors.jl`) loads as transformers' `AutoProcessor`
-does. `src/Transformers/tokenization_utils_tokenizers.jl` is the reference port.
+does. `src/Transformers/processing_sam3.jl`, `image_processing_sam3.jl` and
+`tokenization_utils_tokenizers.jl` are the reference ports.
 
 - **Classes.** One immutable struct per upstream class, defined with `Metalhead.@processor`
   (`Base.@kwdef` whose constructors convert and check the settings): its fields are the
   attributes of the Python class with that class's defaults (not a checkpoint's), and a last
   field `provenance::NamedTuple = (;)` for `show`. Image processors subtype
   `Metalhead.ImageProcessor`, others `Metalhead.Processor`. Register the class name that
-  configurations give with `register_processor!("ClassName", T; aliases, model_types)`;
-  the suffixes `Fast` and `Pil` are dropped. A processor that combines others
+  configurations give with `register_processor!("Sam3Processor", Sam3Processor; aliases,
+  model_types)`; the suffixes `Fast` and `Pil` are dropped. A processor that combines others
   is `@processor (image_processor, tokenizer) struct ...`, which adds
   `T(image_processor, tokenizer; kwargs...)`, and declares `processor_components(::Type{T}) =
   (; image_processor = ..., tokenizer = TokenizersBackend)`, components defaulting to
@@ -531,16 +532,18 @@ does. `src/Transformers/tokenization_utils_tokenizers.jl` is the reference port.
   component with a setting of its name. A tokenizer has a `load_processor` of its own.
 - **Constructors.** Two hooks, methods on the class like those below, documented in
   `src/hub/processors.jl`. `processor_fields(T, args)` converts the arguments of the
-  constructor to the types of the fields, taking the natural forms (an integer
-  `input_size`, a scalar `mean`, a Symbol `interpolation`), with an `ArgumentError` that
-  names the forms for others. `check_processor(p)` errors on values the port
+  constructor to the types of the fields, taking the natural forms (an integer `size` or
+  `input_size`, a scalar `image_mean`, a Symbol `resample` or `interpolation`), with an
+  `ArgumentError` that names the forms for others; transformers' image processors share
+  `image_processor_fields` and `size_setting`. `check_processor(p)` errors on values the port
   doesn't implement, naming the supported ones; that of a processor with components calls
   `Metalhead.check_components(p)`. Every constructor runs both, so a processor built by hand
   fails as early as a loaded one.
-- **Strict settings.** Declare `ignored_keys(T)` (`key = "reason"`), `restricted_keys(T)`
-  (`key = allowed values`) for options that aren't ported, and `legacy_keys(T)`
-  (`old = path`). Other keys warn once, so test that each validated repository's files load
-  with `@test_logs` and no warning.
+- **Strict settings.** Declare `ignored_keys(T)` (`key = "reason"`; splat
+  `IMAGES_KWARGS_IGNORED` into an image processor's), `restricted_keys(T)` (`key = allowed
+  values`) for options that aren't ported, and `legacy_keys(T)` (`old = path`). Other keys
+  warn once, so test that each validated repository's files load with `@test_logs` and no
+  warning.
 - **Other libraries.** A config.json that carries the preprocessing (timm's
   `pretrained_cfg`) gets a method `instantiate_processor(::Format, files, config; kwargs...)`
   that builds the processor with `processor_from_entries(T, json_entries(dict, file);
@@ -548,11 +551,11 @@ does. `src/Transformers/tokenization_utils_tokenizers.jl` is the reference port.
   `Timm.EvalTransform`, in `src/Timm/transforms.jl`, checked by
   `porting/dump_timm_transform.py`). Without one, `create_processor` finds the class as
   `AutoProcessor` does.
-- **Calling.** Images go through `image_batch` (and so `image_array`) and
-  `convert_to_rgb`, and are resized by `Timm.pil_resize`, Pillow's 8-bit resize, bit for
-  bit. The output is a NamedTuple with transformers' keys in Julia layout, 1-based token
-  indices. Text is strings (for a tokenizer backend) or 0-based token ids. `decode`
-  dispatches on the processor.
+- **Calling.** Images go through `image_batch` (and so `image_array`), then
+  `convert_to_rgb`, `resize_image` (torchvision's uint8 resize, bit for bit, through
+  `Timm.pil_resize`) and `rescale_and_normalize`. The output is a NamedTuple with
+  transformers' keys in Julia layout, 1-based token indices. Text is strings (for a tokenizer
+  backend) or 0-based token ids. Post-processing and `decode` dispatch on the processor.
 - **Outputs.** The docstring of each class has a Returns table, whose header begins with
   "Key", with a row per key of its output; `check_documented_keys(T, outputs)`
   (`test/processors_setup.jl`) tests the outputs on the fixtures against it. The model takes

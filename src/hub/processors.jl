@@ -38,7 +38,7 @@ Origin(source, value) = Origin(source, value, nothing)
 
 The components of the processor class `T`, as `name = type`: the fields that hold the
 processors it combines, loaded from the same repository, e.g.
-`(; image_processor = ..., tokenizer = TokenizersBackend)`. Empty (the
+`(; image_processor = Sam3ImageProcessor, tokenizer = TokenizersBackend)`. Empty (the
 default) for an image processor or a tokenizer. A component is loaded by
 [`load_processor`](@ref Metalhead.load_processor) of its type, and the fields of `T` that
 aren't components (nor `provenance`) are its settings.
@@ -115,7 +115,7 @@ end
 [`processor_fields`](@ref Metalhead.processor_fields) of their arguments, and then run
 [`check_processor`](@ref Metalhead.check_processor) on it. With the names of its
 components, `T(components...; kwargs...)` also makes it from them, e.g.
-`T(image_processor, tokenizer; kwargs...)`.
+`Sam3Processor(image_processor, tokenizer; point_pad_value = -10)`.
 """
 macro processor(args...)
     def = last(args)
@@ -604,10 +604,11 @@ instantiate_processor(::ConfigFormat, files, config; kwargs...) = nothing
 """
     create_processor(name; revision = nothing, subfolder = "", kwargs...)
 
-The processor of a checkpoint: it turns raw inputs (images, text) into the inputs of the
-model, and the model's outputs back into results (text), as the checkpoint's configuration
-and its Python library do. [`create_model`](@ref) makes the forward pass match PyTorch; the
-processor makes the whole path from raw input to result match.
+The processor of a checkpoint: it turns raw inputs (images, text, boxes) into the inputs of
+the model, and the model's outputs back into results (boxes, masks, text), as the
+checkpoint's configuration and its Python library do. [`create_model`](@ref) makes the
+forward pass match PyTorch; the processor makes the whole path from raw input to result
+match.
 
 `name` is a Hub repository, a local directory or a bare architecture, as for
 [`create_model`](@ref), and validated repositories default to the commit they were validated
@@ -620,16 +621,18 @@ setting; each goes to the one component that has a setting of that name, and a n
 component has is an error.
 
 Returns the most complete processor the repository describes, as transformers'
-`AutoProcessor` does: a processor that combines an image processor and a tokenizer; else
-an image processor, such as the [`Timm.EvalTransform`](@ref Metalhead.Timm.EvalTransform)
-of every timm checkpoint; else a tokenizer, `Transformers.TokenizersBackend`. Calling it
-returns what the model takes, a NamedTuple (an array for `Timm.EvalTransform`):
+`AutoProcessor` does: a processor that combines an image processor and a tokenizer, such as
+`Transformers.Sam3Processor`; else an image processor, such as the
+[`Timm.EvalTransform`](@ref Metalhead.Timm.EvalTransform) of every timm checkpoint; else a
+tokenizer, `Transformers.TokenizersBackend`. Calling it returns what the model takes, a
+NamedTuple (an array for `Timm.EvalTransform`):
 
 ```julia
-tok = create_processor("HuggingFaceTB/SmolLM2-135M")
-inputs = tok("The capital of France is")
-logits = model(inputs)
-Transformers.decode(tok, [argmax(logits[:, end])])
+proc = create_processor("unsloth/sam3.1")
+inputs = proc(; images = img, text = "a cat")
+outputs = model(inputs)
+Transformers.post_process_instance_segmentation(proc, outputs;
+    target_sizes = inputs.original_sizes)
 ```
 
 Images are arrays of size `(width, height, channels)`, of integers from 0 to 255 or of reals

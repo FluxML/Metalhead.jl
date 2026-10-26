@@ -906,6 +906,22 @@ function (m::Sam3Model)(pixel_values, input_ids; attention_mask = nothing,
         presence_logits = decoder.presence_logits[:, :, end], masks.semantic_seg)
 end
 
+"""
+    (model::Sam3Model)(inputs::NamedTuple)
+
+The model on the output of a [`Sam3Processor`](@ref Metalhead.Transformers.Sam3Processor):
+its `pixel_values`, `input_ids`, `attention_mask`, and `input_boxes` and
+`input_boxes_labels` if it has them; other keys (`original_sizes`) are ignored.
+"""
+function (m::Sam3Model)(inputs::NamedTuple)
+    check_inputs(m, inputs, (:pixel_values, :input_ids);
+        hint = "pass `images`, and `text` or `input_boxes`, to the processor")
+    return m(inputs.pixel_values, inputs.input_ids;
+        attention_mask = get(inputs, :attention_mask, nothing),
+        input_boxes = get(inputs, :input_boxes, nothing),
+        input_boxes_labels = get(inputs, :input_boxes_labels, nothing))
+end
+
 # Builders
 
 sam3_act(name) = act_fn(name; table = SAM3_ACT2FN)
@@ -1142,9 +1158,9 @@ through a geometry encoder.
 The model maps images and text prompts, and optionally box prompts, to the masks, boxes and
 scores of the objects they describe: see [`Sam3Model`](@ref
 Metalhead.Transformers.Sam3Model) for its inputs and outputs,
-[`sam3_image_inputs`](@ref Metalhead.Transformers.sam3_image_inputs) to make its images,
-and [`post_process_instance_segmentation`](@ref
-Metalhead.Transformers.post_process_instance_segmentation) to read its outputs.
+and [`Sam3Processor`](@ref Metalhead.Transformers.Sam3Processor), which
+[`create_processor`](@ref Metalhead.create_processor) loads, for its inputs and to read its
+outputs.
 """
 function sam3_model(; vision_config = nothing, text_config = nothing,
         geometry_encoder_config = nothing, detr_encoder_config = nothing,

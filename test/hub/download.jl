@@ -68,7 +68,8 @@ function with_cache(f; offline)
             fixture_files("flux2_klein_tiny"))
         # processors of branches
         cache_repo(cache, "metalhead/qwen3", qwen3_files(mktempdir(dir)))
-        cache_main(cache, "metalhead/qwen3")
+        cache_repo(cache, "metalhead/sam3", processor_files("unsloth/sam3.1"))
+        foreach(repo -> cache_main(cache, repo), ["metalhead/qwen3", "metalhead/sam3"])
         withenv("HF_HOME" => dir, "HF_HUB_CACHE" => cache, "HF_TOKEN" => nothing,
             "HF_HUB_OFFLINE" => offline ? "1" : nothing,
             "TRANSFORMERS_OFFLINE" => nothing) do
@@ -92,6 +93,8 @@ function check_processors(; offline)
     path = @test_logs map(_ -> Metalhead.local_path(tok.tokenizer_file), 1:20)
     @test allequal(path) && endswith(only(unique(path)), joinpath(SHA, "tokenizer.json"))
     @test tok([[1, 2], [3]]).input_ids == [2 4; 3 151644]  # padded with <|endoftext|>
+    sam = load("metalhead/sam3")
+    @test sam isa T.Sam3Processor && sam.tokenizer.tokenizer_file.source.revision == SHA
     # the files that only the cache lacks aren't recorded as missing from the repositories
     @test !any(k -> startswith(k[1], "metalhead/"), Metalhead.MISSING_FILES)
 end

@@ -19,14 +19,15 @@ using ChainRulesCore: ChainRulesCore
 using MLUtils: topk
 using JSON: JSON
 using ..Metalhead: Metalhead, ArchSpec, ConfigFormat, register!, declared_args
-using ..Metalhead: Processor, ProcessorFiles, SourceFile, register_processor!,
-                   processor_from_entries, read_json, has_file, jsonvalue, check_inputs,
-                   @processor
-using ..Timm: dropout_or_identity, attention_fdrop, feature_take_indices, stage_outputs
+using ..Metalhead: Processor, ImageProcessor, ProcessorFiles, SourceFile, register_processor!,
+                   processor_from_entries, read_json, has_file, jsonvalue, image_batch,
+                   convert_to_rgb, is_8bit, RESAMPLE_FILTERS, check_inputs, @processor
+using ..Timm: dropout_or_identity, attention_fdrop, feature_take_indices, stage_outputs,
+              pil_resize
 import ..Metalhead: layer_params, architecture_of, model_args
 import ..Metalhead: forward_features, forward_head, forward_intermediates
 import ..Metalhead: load_processor, processor_components, ignored_keys, restricted_keys,
-                    legacy_keys, check_processor
+                    legacy_keys, check_processor, processor_fields
 
 include("config.jl")
 include("layers.jl")
@@ -40,9 +41,11 @@ include("qwen3_5.jl")
 include("qwen3_5_vision.jl")
 include("tokenization_auto.jl")
 include("tokenization_utils_tokenizers.jl")
+include("image_processing_backends.jl")
 include("image_processing_qwen2_vl.jl")
 include("clip.jl")
 include("sam3.jl")
 include("image_processing_sam3.jl")
+include("processing_sam3.jl")
 
 end # module
