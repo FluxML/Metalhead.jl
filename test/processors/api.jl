@@ -104,7 +104,7 @@ end
 
 # A library whose config.json carries the preprocessing supplies its processor through
 # `instantiate_processor`, as timm's `pretrained_cfg` does
-struct TestFormat <: Metalhead.ConfigFormat end
+struct TestFormat <: Metalhead.AbstractConfigFormat end
 Metalhead.architecture_of(::TestFormat, config) = get(config, "test_architecture", nothing)
 function Metalhead.instantiate_processor(::TestFormat, files, config; kwargs...)
     entries = Metalhead.json_entries(config["preprocessing"], "config.json")

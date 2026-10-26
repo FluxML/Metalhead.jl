@@ -1,13 +1,13 @@
 # The config.json of a diffusers model: the class in `_class_name` and the arguments of its
 # constructor, among keys of diffusers' own (`_diffusers_version`, `_name_or_path`) that the
 # models don't read. Its weights are `diffusion_pytorch_model.safetensors`.
-struct DiffusersFormat <: ConfigFormat end
+struct DiffusersFormat <: AbstractConfigFormat end
 const DIFFUSERS = DiffusersFormat()
 Base.show(io::IO, ::DiffusersFormat) = print(io, "diffusers")
 
 # The model_index.json of a diffusers pipeline: its class in `_class_name`, and each component
 # as `name => [library, class]`, saved in the subfolder `name` (`[null, null]` if absent).
-struct DiffusersPipelineFormat <: ConfigFormat end
+struct DiffusersPipelineFormat <: AbstractConfigFormat end
 const DIFFUSERS_PIPELINE = DiffusersPipelineFormat()
 Base.show(io::IO, ::DiffusersPipelineFormat) = print(io, "diffusers pipeline")
 

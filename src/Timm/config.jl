@@ -1,6 +1,6 @@
 # The config.json of a timm repository: `architecture`, `model_args`, `num_classes` and a
 # `pretrained_cfg`, which holds the preprocessing and the name of the classifier.
-struct TimmFormat <: ConfigFormat end
+struct TimmFormat <: AbstractConfigFormat end
 const TIMM = TimmFormat()
 Base.show(io::IO, ::TimmFormat) = print(io, "timm")
 

@@ -30,29 +30,29 @@ reasons.
 ## Layout
 
 - `src/hub/`: Hub downloads, safetensors checkpoints, the strict weight loader
-  (`loadweights.jl`), the architecture registry (`ArchSpec`, `ConfigFormat`, `register!`),
-  the public API (`api.jl`), and `processors.jl`: `create_processor`, the registry of
-  processor classes (`register_processor!`), AutoProcessor's lookup and the strict reading
-  of settings. `images.jl` has the image layout that every processor takes (`image_array`).
-  Nothing there is specific to one library.
+  (`loadweights.jl`), the architecture registry (`ArchSpec`, `AbstractConfigFormat`,
+  `register!`), the public API (`api.jl`), and `processors.jl`: `create_processor`, the
+  registry of processor classes (`register_processor!`), AutoProcessor's lookup and the
+  strict reading of settings. `images.jl` has the image layout that every processor takes
+  (`image_array`). Nothing there is specific to one library.
 - `src/Timm/`: one file per timm family. Ports of `timm.layers` classes go in `layers.jl`.
-  `config.jl` is timm's `ConfigFormat`, the template for any other library: it says how a
-  `config.json` names an architecture and its arguments. A library gets its own `src/<Name>/`
-  module, and its architecture names must not clash with those already registered.
-  `transforms.jl` is timm's eval transform (`EvalTransform`, the processor of every timm
-  checkpoint), and `pil.jl` a port of Pillow's 8-bit resize.
-- `src/Transformers/`: one file per transformers model, and `config.jl`, its `ConfigFormat`.
-  Blocks that models share (RMSNorm, the rotary tables, the tied output head) go in
-  `layers.jl`. Processors go next to their models, one file per upstream class under
-  transformers' file names (`image_processing_sam3.jl`, `processing_sam3.jl`,
+  `config.jl` is timm's `AbstractConfigFormat`, the template for any other library: it says
+  how a `config.json` names an architecture and its arguments. A library gets its own
+  `src/<Name>/` module, and its architecture names must not clash with those already
+  registered. `transforms.jl` is timm's eval transform (`EvalTransform`, the processor of
+  every timm checkpoint), and `pil.jl` a port of Pillow's 8-bit resize.
+- `src/Transformers/`: one file per transformers model, and `config.jl`, its
+  `AbstractConfigFormat`. Blocks that models share (RMSNorm, the rotary tables, the tied
+  output head) go in `layers.jl`. Processors go next to their models, one file per upstream
+  class under transformers' file names (`image_processing_sam3.jl`, `processing_sam3.jl`,
   `tokenization_utils_tokenizers.jl` for `TokenizersBackend`, `tokenization_auto.jl` for the
   tokenizer class that `AutoTokenizer` builds and its defaults);
   `image_processing_backends.jl` has the operations of the torchvision backend that image
   processors share.
 - `src/Diffusers/`: diffusers models (`transformer_flux2.jl`, `autoencoder_kl_flux2.jl`, the
   autoencoders' encoder and decoder in `vae.jl`), schedulers and pipelines. `config.jl` has two
-  `ConfigFormat`s: a model's `config.json` and a pipeline's `model_index.json`, whose components
-  load from subfolders of the repository. The tokenizer of a pipeline is a
+  `AbstractConfigFormat`s: a model's `config.json` and a pipeline's `model_index.json`,
+  whose components load from subfolders of the repository. The tokenizer of a pipeline is a
   `TokenizersBackend`, from its `tokenizer/` subfolder.
 - `ext/`: package extensions. HuggingFaceTokenizers.jl is the backend that encodes and
   decodes the strings of a `TokenizersBackend`; ImageCore lets processors take images of

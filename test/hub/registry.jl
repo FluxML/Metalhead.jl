@@ -1,6 +1,6 @@
 using Metalhead, Test
 using Flux
-using Metalhead: ConfigFormat, ArchSpec, REGISTRY, register!, lookup, identify,
+using Metalhead: AbstractConfigFormat, ArchSpec, REGISTRY, register!, lookup, identify,
                  model_source, model_args, skip_prefix
 using Metalhead.Timm: TIMM
 
@@ -101,7 +101,7 @@ end
 end
 
 # A second library only has to say how its config.json names an architecture.
-struct ToyFormat <: ConfigFormat end
+struct ToyFormat <: AbstractConfigFormat end
 Metalhead.architecture_of(::ToyFormat, config) = get(config, "kind", nothing)
 toy(; width = 2) = Dense(width => width)
 

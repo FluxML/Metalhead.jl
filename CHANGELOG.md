@@ -25,8 +25,8 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
   - `list_models`, `forward_features`, `forward_head` and `Metalhead.Timm.pretrained_cfg`,
     which returns the preprocessing settings of a checkpoint.
   - Architecture names are unique across libraries. A library registers its architectures with
-    a `Metalhead.ConfigFormat`, which says how its `config.json` names an architecture; timm's
-    is in `src/Timm/config.jl`.
+    a `Metalhead.AbstractConfigFormat`, which says how its `config.json` names an
+    architecture; timm's is in `src/Timm/config.jl`.
   - `forward_intermediates` and `feature_info`, for the multi-scale features of segmentation
     and depth heads (ResNet and its variants, ConvNeXt, ViT, the MLP mixers, DenseNet, VGG,
     Inception v3/v4, Inception-ResNet-v2, aligned Xception, and the EfficientNet and MobileNet
