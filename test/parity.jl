@@ -7,6 +7,7 @@ using Metalhead: Checkpoint, join_key, layer_params
 
 export Tap, tapify, check_fixture, fixture_model, fixture_inputs, shrink_channels,
        check_lm_reference, check_image_reference, check_sam3_reference, check_pipeline_fixture,
+       reference_model,
        check_diffusers_reference,
        reference_input, relerr
 
@@ -152,17 +153,64 @@ function fixture_model(dir; eltype = Float64)
 end
 
 """
-    check_lm_reference(file) -> NamedTuple
+    reference_model(file)
+
+The model of the reference `file` of a language model, written by porting/dump_reference.py:
+that of its repository at its commit. A reference of the first layers of a checkpoint
+(`num_hidden_layers` in its metadata, from `dump_reference.py --layers`) gets the model of
+`config.json` with those layers only, whose weights load strictly. The weights of each other
+layer must then have the keys and shapes of the first of those layers of the same type in
+`layer_types`, so that the whole checkpoint would load too.
+"""
+function reference_model(file)
+    meta = SafeTensors.deserialize(file).metadata
+    repo, revision = meta["repo"], meta["revision"]
+    haskey(meta, "num_hidden_layers") ||
+        return create_model(repo; pretrained = true, revision)
+    k = parse(Int, meta["num_hidden_layers"])
+    source = Metalhead.model_source(repo, revision, "")
+    config = Metalhead.source_config(source)
+    nested = haskey(config, "text_config")
+    text = nested ? config["text_config"] : config
+    n = text["num_hidden_layers"]
+    types = get(text, "layer_types", nothing)
+    first_layers = Dict{String, Any}("num_hidden_layers" => k)
+    types === nothing || (first_layers["layer_types"] = types[1:k])
+    kwargs = nested ? (; text_config = Metalhead.nt(merge(text, first_layers))) :
+             Metalhead.nt(first_layers)
+    model = create_model(repo; pretrained = false, revision, kwargs...)
+    ckpt = Checkpoint(Metalhead.source_weights(source))
+    prefix = last(Metalhead.Transformers.decoder(model)) * ".layers."
+    function shapes(i)
+        layer = "$prefix$i."
+        return Dict(chopprefix(key, layer) => Metalhead.torch_shape(ckpt, key)
+        for key in keys(ckpt) if startswith(key, layer))
+    end
+    for i in k:(n - 1)
+        j = types === nothing ? 0 : findfirst(==(types[i + 1]), types) - 1
+        j < k || error("layer $i is a $(types[i + 1]) layer, unlike the first $k")
+        shapes(i) == shapes(j) ||
+            error("the weights of layer $i differ in keys or shapes from those of layer $j")
+    end
+    other_layers = Regex("^" * replace(prefix, "." => "\\.") * "(" * join(k:(n - 1), "|") *
+                         ")\\.")
+    spec = Metalhead.lookup(only(config["architectures"]))
+    Metalhead.load_state!(model, ckpt;
+        ignore = [Metalhead.DEFAULT_IGNORE; spec.ignore; other_layers])
+    return model
+end
+
+"""
+    check_lm_reference(file; model = reference_model(file)) -> NamedTuple
 
 Compare a causal language model with the reference outputs of its real checkpoint, written by
 porting/dump_reference.py: the relative errors of the hidden states and of the logits of the
 last position, and whether greedy decoding reproduces transformers' continuation of the first
 prompt.
 """
-function check_lm_reference(file)
+function check_lm_reference(file; model = reference_model(file))
     meta = SafeTensors.deserialize(file).metadata
     ref = Checkpoint(file)
-    model = create_model(meta["repo"]; pretrained = true, revision = meta["revision"])
     ids = ref["input_ids"] .+ 1
     hidden = forward_features(model, ids)
     logits = forward_head(model, hidden[:, end, :])
@@ -173,7 +221,7 @@ function check_lm_reference(file)
 end
 
 """
-    check_image_reference(file) -> NamedTuple
+    check_image_reference(file; model = reference_model(file)) -> NamedTuple
 
 Compare a vision-language model with the reference outputs of its real checkpoint on a
 prompt about an image ("image/..." keys, written by porting/dump_reference.py): the relative
@@ -181,10 +229,9 @@ errors of the hidden states and of the logits of the last position, and whether 
 decoding reproduces transformers' continuation, from the same `pixel_values` and
 `image_grid_thw`.
 """
-function check_image_reference(file)
+function check_image_reference(file; model = reference_model(file))
     meta = SafeTensors.deserialize(file).metadata
     ref = Checkpoint(file)
-    model = create_model(meta["repo"]; pretrained = true, revision = meta["revision"])
     ids = ref["image/input_ids"] .+ 1
     images = (; pixel_values = Float32.(ref["image/pixel_values"]),
         image_grid_thw = ref["image/image_grid_thw"])

@@ -20,6 +20,7 @@ uv run dump.py specs/qwen3_5_vision_tiny.json    # a vision encoder: random patc
 uv run dump_processor.py                         # processors (SAM 3, Qwen3.5), through AutoProcessor
 uv run dump.py specs/qwen3_5_tiny.json           # a vision-language model ("images")
 uv run dump_reference.py Qwen/Qwen3.5-0.8B       # with a vision_config: also an image prompt
+uv run dump_reference.py Qwen/Qwen3.8-27B --layers 8   # too large: its first 8 layers
 uv run dump.py specs/transformer_flux2_tiny.json specs/flux2_klein_tiny.json   # diffusers model, pipeline
 uv run dump_reference.py black-forest-labs/FLUX.2-klein-4B/vae   # a component in a subfolder
 uv run dump_reference.py black-forest-labs/FLUX.2-klein-4B       # a pipeline, end to end
