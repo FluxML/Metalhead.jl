@@ -7,6 +7,7 @@ dependencies = [
     "diffusers>=0.42",
     "numpy>=2",
     "safetensors>=0.4",
+    "sentence-transformers>=5",
     "timm>=1.0.20",
     "transformers>=4.50",
     "torch>=2.5",
