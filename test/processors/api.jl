@@ -83,7 +83,7 @@ end
     llama = Dict("architectures" => ["LlamaForCausalLM"], "model_type" => "llama")
     with_files(["config.json" => llama, "tokenizer_config.json" => tokenizer,
         "preprocessor_config.json" => image_processor]) do dir
-        @test_throws "a tokenizer, which has no settings to override (got `padding_side`)" create_processor(
+        @test_throws "TextProcessor has no setting `padding_side`" create_processor(
             dir; padding_side = "left")
         ext = Base.get_extension(Metalhead, :MetalheadHuggingFaceTokenizersExt)
         @test_throws (ext === nothing ?
