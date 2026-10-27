@@ -307,10 +307,12 @@ bidirectional self-attention and a feed-forward network.
 
 ```julia
 using Metalhead, HuggingFaceTokenizers
-model = create_model("sentence-transformers/all-MiniLM-L6-v2")
-proc = create_processor("sentence-transformers/all-MiniLM-L6-v2")
-hidden = model(proc(["A cat sits on the mat.", "Dogs bark."]))   # 384 × seq_len × 2
-pooled = forward_head(model, hidden)                              # 384 × 2
+model = create_model("cross-encoder/ms-marco-MiniLM-L6-v2")   # a BertForSequenceClassification
+proc = create_processor("cross-encoder/ms-marco-MiniLM-L6-v2")
+inputs = proc("how many people live in Berlin?"; text_pair = "Berlin has 3.5 million inhabitants.")
+hidden = model.bert(inputs)       # 384 × seq_len: the hidden states of its BertModel
+pooled = forward_head(model.bert, hidden)   # 384: the pooler output
+```
 ```
 """
 @concrete struct BertModel <: BertLikeModel

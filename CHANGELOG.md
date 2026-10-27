@@ -22,8 +22,9 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
   `forward_intermediates` returns the output of each layer. XLM-RoBERTa numbers its
   positions after the padding, ModernBERT alternates local attention in a window of 128
   tokens with global attention, with a rotary base for each. Pooling the hidden states into
-  one embedding per text is not part of them. `BAAI/bge-m3` has no safetensors weights and
-  doesn't load.
+  one embedding per text is not part of them, and the repositories of embedding models
+  (with a modules.json) load as sentence-transformers models. `BAAI/bge-m3` has no
+  safetensors weights and doesn't load.
 - `TextProcessor` returns the `token_type_ids` of the tokenizers that transformers gives
   them (BERT's), as its new setting `model_input_names` says, and encodes pairs of texts
   with `text_pair`, joined by the template of the tokenizer: the input of a reranker. Its

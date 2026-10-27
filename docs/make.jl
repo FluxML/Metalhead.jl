@@ -56,9 +56,11 @@ function write_model_list(path)
     title(family) = get(titles, family, family)
     st_types = join(("`$t`" for t in sort!(collect(keys(ST.AUTO_MODELS)))), ", ")
     notes = Dict(
-        "bert" => "`sentence-transformers/all-MiniLM-L6-v2` and `BAAI/bge-small-en-v1.5` " *
-                  "are `BertModel`s, whose pooler is not used by embedding models; " *
-                  "`add_pooling_layer = false` builds one for checkpoints without it.",
+        "bert" => "`create_model` builds the sentence-transformers model of " *
+                  "`sentence-transformers/all-MiniLM-L6-v2`, `BAAI/bge-small-en-v1.5` and " *
+                  "the other repositories with a modules.json, whose `BertModel` the " *
+                  "references validate. A `BertModel` checkpoint without pooler weights " *
+                  "needs `add_pooling_layer = false`.",
         "xlm_roberta" => "`BAAI/bge-m3` stores its weights in `pytorch_model.bin` only, which " *
                          "Metalhead doesn't read; `BAAI/bge-reranker-v2-m3` has the same " *
                          "architecture and is validated.",

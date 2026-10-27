@@ -13,16 +13,17 @@ passages, or of a masked language model.
 ```julia
 using Metalhead, HuggingFaceTokenizers
 
-model = create_model("BAAI/bge-small-en-v1.5")
-proc = create_processor("BAAI/bge-small-en-v1.5")
-hidden = model(proc(["A cat sits on the mat.", "Dogs bark."]))   # 384 × seq_len × 2
-embeddings = hidden[:, 1, :]                    # BGE embeds a text by the features of [CLS]
+model = create_model("answerdotai/ModernBERT-base")   # a ModernBertForMaskedLM
+proc = create_processor("answerdotai/ModernBERT-base")
+inputs = proc(["The capital of France is [MASK].", "Dogs bark."])
+hidden = forward_features(model, inputs)    # 768 × seq_len × 2: its ModernBertModel's output
+logits = model(inputs)                      # 50368 × seq_len × 2
 
 reranker = create_model("BAAI/bge-reranker-base")
 proc = create_processor("BAAI/bge-reranker-base")
 inputs = proc(["what is a panda?", "what is a panda?"];
     text_pair = ["The giant panda is a bear native to China.", "Paris is the capital of France."])
-reranker(inputs)                                # 1 × 2 scores, the first higher
+reranker(inputs)                            # 1 × 2 scores, the first higher
 ```
 
 The models take `input_ids` and the `attention_mask` that excludes the padding of a batch
@@ -30,7 +31,12 @@ The models take `input_ids` and the `attention_mask` that excludes the padding o
 these repositories return the keys of transformers' tokenizers: `token_type_ids` too for
 BERT's, and with `text_pair` the two texts of a cross-encoder joined by the tokenizer's
 template. Pooling the hidden states into one embedding per text, as sentence-transformers
-does, is not part of these models.
+does, is not part of these models. The repositories of embedding models (`all-MiniLM-L6-v2`,
+`bge-small-en-v1.5`, `multilingual-e5-base`, `gte-modernbert-base`, ...) have a modules.json:
+[`create_model`](@ref) builds the sentence-transformers model over them (see
+[Sentence transformers](sentence_transformers.md)), and `create_processor` has no processor
+for it. Their `BertModel`, `XLMRobertaModel` or `ModernBertModel` is the one that the
+`config.json` names, which the references of these repositories validate.
 
 ## Models
 
