@@ -1,0 +1,29 @@
+{
+  "add_cross_attention": false,
+  "architectures": [
+    "BertModel"
+  ],
+  "attention_probs_dropout_prob": 0.1,
+  "bos_token_id": null,
+  "classifier_dropout": null,
+  "dtype": "float32",
+  "eos_token_id": null,
+  "hidden_act": "gelu_new",
+  "hidden_dropout_prob": 0.2,
+  "hidden_size": 24,
+  "initializer_range": 0.02,
+  "intermediate_size": 40,
+  "is_decoder": false,
+  "layer_norm_eps": 1e-05,
+  "max_position_embeddings": 12,
+  "model_type": "bert",
+  "num_attention_heads": 3,
+  "num_hidden_layers": 3,
+  "pad_token_id": 5,
+  "tie_word_embeddings": true,
+  "transformers_version": "5.20.2",
+  "type_vocab_size": 3,
+  "use_cache": true,
+  "vocab_size": 64,
+  "add_pooling_layer": false
+}
