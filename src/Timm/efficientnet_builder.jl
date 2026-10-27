@@ -330,11 +330,13 @@ function efficientnet_init_weights!(model)
     for m in Flux.modules(model)
         if m isa Conv
             fan_out = prod(size(m.weight)[1:2]) * size(m.weight, 4) ÷ m.groups
-            m.weight .= randn(Float32, size(m.weight)) .* sqrt(2.0f0 / fan_out)
+            init_parameter!(m.weight, (ds...) -> randn(Float32, ds...) .*
+                                                 sqrt(2.0f0 / fan_out))
             m.bias isa AbstractArray && fill!(m.bias, 0)
         elseif m isa Dense
             init_range = 1.0f0 / sqrt(Float32(size(m.weight, 1)))
-            m.weight .= (2 .* rand(Float32, size(m.weight)) .- 1) .* init_range
+            init_parameter!(m.weight, (ds...) -> (2 .* rand(Float32, ds...) .- 1) .*
+                                                 init_range)
             m.bias isa AbstractArray && fill!(m.bias, 0)
         end
     end
@@ -342,8 +344,8 @@ function efficientnet_init_weights!(model)
     for m in Flux.modules(model)
         m isa CondConvResidual || continue
         init_range = 1.0f0 / sqrt(Float32(sum(size(m.routing_fn.weight))))
-        m.routing_fn.weight .= (2 .* rand(Float32, size(m.routing_fn.weight)) .- 1) .*
-                               init_range
+        init_parameter!(m.routing_fn.weight,
+            (ds...) -> (2 .* rand(Float32, ds...) .- 1) .* init_range)
     end
     return model
 end

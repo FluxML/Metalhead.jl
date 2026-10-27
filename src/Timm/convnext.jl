@@ -15,12 +15,12 @@ Flux.@layer ConvNeXtBlock
 function ConvNeXtBlock(
         dim; kernel_size = 7, mlp_ratio = 4, conv_mlp = false, ls_init_value = 1e-6,
         drop_path_rate = 0.0)
-    conv_dw = Conv((kernel_size, kernel_size), dim => dim;
+    conv_dw = init_layer(Conv, (kernel_size, kernel_size), dim => dim;
         pad = get_padding(kernel_size), groups = dim,
         init = TRUNC_NORMAL)
-    norm = conv_mlp ? LayerNorm2d(dim) : LayerNorm(dim; eps = 1e-6)
+    norm = conv_mlp ? LayerNorm2d(dim) : init_layer(LayerNorm, dim; eps = 1e-6)
     mlp = Mlp(dim, floor(Int, mlp_ratio * dim); use_conv = conv_mlp)
-    gamma = fill(Float32(ls_init_value), dim)
+    gamma = init_array(d -> fill(Float32(ls_init_value), d), dim)
     return ConvNeXtBlock(conv_dw, norm, mlp, gamma, identity,
         something(drop_path(drop_path_rate), identity), conv_mlp)
 end
@@ -52,7 +52,8 @@ function convnext_stage(
     downsample = identity
     if in_chs != out_chs || stride > 1
         ks = stride > 1 ? 2 : 1
-        downsample = Chain(LayerNorm2d(in_chs), Conv((ks, ks), in_chs => out_chs; stride, init = TRUNC_NORMAL))
+        downsample = Chain(LayerNorm2d(in_chs),
+            init_layer(Conv, (ks, ks), in_chs => out_chs; stride, init = TRUNC_NORMAL))
     end
     rates = something(drop_path_rates, zeros(depth))
     blocks = [ConvNeXtBlock(
@@ -98,7 +99,8 @@ function convnext(;
     kernel_sizes = kernel_sizes isa Integer ? ntuple(_ -> kernel_sizes, 4) :
                    Tuple(kernel_sizes)
     stem = Chain(
-        Conv((patch_size, patch_size), in_chans => dims[1]; stride = patch_size, init = TRUNC_NORMAL),
+        init_layer(Conv, (patch_size, patch_size), in_chans => dims[1];
+            stride = patch_size, init = TRUNC_NORMAL),
         LayerNorm2d(dims[1]))
     dp_rates = collect(range(0, drop_path_rate; length = sum(depths)))
     offsets = cumsum([0; collect(depths[1:3])])

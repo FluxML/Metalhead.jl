@@ -2,7 +2,9 @@
 # (transformers 5.20, Apache-2.0, The Hugging Face Team).
 
 # transformers' `_init_weights` of nn.Linear and nn.Embedding
-normal_init(std) = (dims...) -> Float32(std) .* randn(Float32, dims...)
+function normal_init(std)
+    return (dims...) -> init_array((ds...) -> Float32(std) .* randn(Float32, ds...), dims...)
+end
 
 const ACT2FN = Dict("silu" => swish, "gelu_pytorch_tanh" => gelu_tanh)
 
@@ -27,7 +29,9 @@ Flux.@layer RMSNorm
 Flux.f16(m::RMSNorm, cx) = f32(m, cx)
 Flux.bf16(m::RMSNorm, cx) = f32(m, cx)
 
-RMSNorm(dim::Integer; eps) = RMSNorm(ones(Float32, dim), Float64(eps))
+function RMSNorm(dim::Integer; eps)
+    return RMSNorm(init_array(Flux.ones32, dim; norm = true), Float64(eps))
+end
 
 (m::RMSNorm)(x) = NNlib.rmsnorm(m.weight, x; eps = m.variance_epsilon)
 

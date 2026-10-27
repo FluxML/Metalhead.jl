@@ -4,6 +4,14 @@ All notable changes to Metalhead.jl are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Releases before 0.9.6 are described
 in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
 
+## [Unreleased]
+
+### Fixed
+
+- Pretrained models allocate their weights directly in the requested `eltype`, without
+  random initialization or a temporary Float32 model. Mixed precision normalization and
+  random initialization of replacement classifiers are preserved (#366).
+
 ## [0.10.0]
 
 Breaking: Flux 0.16.14, NNlib 0.9.54 and MLUtils 0.4.9 are now the minimum versions, and the

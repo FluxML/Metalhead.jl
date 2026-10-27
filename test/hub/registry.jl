@@ -123,6 +123,14 @@ toy(; width = 2) = Dense(width => width)
             @test_throws "has no safetensors weights" create_model(dir)
             @test size(create_model(dir; pretrained = false).weight) == (3, 3)
             @test size(create_model(dir; pretrained = false, width = 4).weight) == (4, 4)
+            # Third-party builders keep the original build-and-convert contract.
+            Metalhead.SafeTensors.serialize(joinpath(dir, "model.safetensors"),
+                Dict("weight" => ones(Float32, 3, 3), "bias" => zeros(Float32, 3)))
+            for T in (Float16, Flux.BFloat16, Float32, Float64)
+                model = create_model(dir; eltype = T)
+                @test eltype(model.weight) == T
+                @test model.weight == ones(T, 3, 3)
+            end
             write(joinpath(dir, "config.json"), """{"kind": "missing"}""")
             @test_throws "not been ported" create_model(dir; pretrained = false)
         end

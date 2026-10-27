@@ -35,7 +35,9 @@ Flux.@layer Gemma3RMSNorm
 Flux.f16(m::Gemma3RMSNorm, cx) = f32(m, cx)
 Flux.bf16(m::Gemma3RMSNorm, cx) = f32(m, cx)
 
-Gemma3RMSNorm(dim::Integer; eps) = Gemma3RMSNorm(zeros(Float32, dim), Float64(eps))
+function Gemma3RMSNorm(dim::Integer; eps)
+    return Gemma3RMSNorm(init_array(Flux.zeros32, dim; norm = true), Float64(eps))
+end
 
 (m::Gemma3RMSNorm)(x) = NNlib.rmsnorm(1 .+ m.weight, x; eps = m.eps)
 
@@ -152,7 +154,7 @@ function gemma3_for_causal_lm(; vocab_size = 262_208, hidden_size = 2304,
         rope_scaling, max_position_embeddings)
     act = act_fn(hidden_activation; key = "hidden_activation")
     init = normal_init(initializer_range)
-    dense(in_out, bias) = Dense(in_out; bias, init)
+    dense(in_out, bias) = init_layer(Dense, in_out; bias, init)
     norm(dim) = Gemma3RMSNorm(dim; eps = rms_norm_eps)
     function decoder_layer(layer_type)
         window = layer_type == :sliding_attention ? sliding_window : nothing

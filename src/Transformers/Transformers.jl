@@ -19,13 +19,14 @@ using ChainRulesCore: ChainRulesCore
 using Functors: Functors
 using MLUtils: topk
 using ..Metalhead: ArchSpec, AbstractConfigFormat, register!, declared_args
+using ..Metalhead: init_layer, init_array
 using ..Metalhead: AbstractProcessor, AbstractImageProcessor, register_processor!,
                    image_batch, convert_to_rgb, is_8bit, RESAMPLE_FILTERS, check_inputs,
                    @processor, tokenizer_of, encode_ids, token_id, pad_token_id,
                    pad_ids, text_list
 using ..Timm: dropout_or_identity, attention_fdrop, feature_take_indices, stage_outputs,
               pil_resize
-import ..Metalhead: layer_params, architecture_of, model_args
+import ..Metalhead: layer_params, architecture_of, model_args, direct_weight_init
 import ..Metalhead: forward_features, forward_head, forward_intermediates, feature_info
 import ..Metalhead: post_process_object_detection, post_process_instance_segmentation,
                     post_process_semantic_segmentation

@@ -3,6 +3,7 @@
 struct TimmFormat <: AbstractConfigFormat end
 const TIMM = TimmFormat()
 Base.show(io::IO, ::TimmFormat) = print(io, "timm")
+direct_weight_init(::TimmFormat) = true
 
 architecture_of(::TimmFormat, config) = get(config, "architecture", nothing)
 

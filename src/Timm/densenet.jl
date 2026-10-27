@@ -13,11 +13,12 @@ Flux.@layer DenseLayer
 
 function DenseLayer(num_input_features, growth_rate, bn_size; drop_rate = 0.0)
     return DenseLayer(
-        BatchNorm(num_input_features, relu),
-        Conv((1, 1), num_input_features => bn_size * growth_rate; bias = false,
+        init_layer(BatchNorm, num_input_features, relu),
+        init_layer(Conv, (1, 1), num_input_features => bn_size * growth_rate; bias = false,
             init = Flux.kaiming_normal),
-        BatchNorm(bn_size * growth_rate, relu),
-        Conv((3, 3), bn_size * growth_rate => growth_rate; pad = 1, bias = false,
+        init_layer(BatchNorm, bn_size * growth_rate, relu),
+        init_layer(
+            Conv, (3, 3), bn_size * growth_rate => growth_rate; pad = 1, bias = false,
             init = Flux.kaiming_normal),
         dropout_or_identity(drop_rate))
 end
@@ -39,8 +40,9 @@ end
 function dense_transition(num_input_features, num_output_features; aa_layer = false)
     pool = aa_layer ? BlurPool2d(num_output_features; stride = 2) :
            MeanPool((2, 2); stride = 2)
-    return Chain(; norm = BatchNorm(num_input_features, relu),
-        conv = Conv((1, 1), num_input_features => num_output_features; bias = false,
+    return Chain(; norm = init_layer(BatchNorm, num_input_features, relu),
+        conv = init_layer(
+            Conv, (1, 1), num_input_features => num_output_features; bias = false,
             init = Flux.kaiming_normal),
         pool)
 end
@@ -80,8 +82,9 @@ function densenet(;
                 Chain(MaxPool((3, 3); stride = 1, pad = 1),
         BlurPool2d(num_init_features; stride = 2)) :
                 MaxPool((3, 3); stride = 2, pad = 1)
-    stem_norm(c) = BatchNorm(c, relu)
-    stem_conv(args...; kwargs...) = Conv(args...; bias = false, init = Flux.kaiming_normal,
+    stem_norm(c) = init_layer(BatchNorm, c, relu)
+    stem_conv(args...; kwargs...) = init_layer(
+        Conv, args...; bias = false, init = Flux.kaiming_normal,
         kwargs...)
     if deep_stem
         stem_chs_1 = stem_chs_2 = growth_rate

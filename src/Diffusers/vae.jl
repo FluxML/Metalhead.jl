@@ -17,11 +17,12 @@ end
 Flux.@layer ResnetBlock2D
 
 function resnet_block_2d(in_channels, out_channels; groups, eps, act_fn, dropout = 0.0)
-    shortcut = in_channels == out_channels ? nothing : Conv((1, 1), in_channels => out_channels)
-    return ResnetBlock2D(GroupNorm(in_channels, groups; eps = Float32(eps)),
-        Conv((3, 3), in_channels => out_channels; pad = 1),
-        GroupNorm(out_channels, groups; eps = Float32(eps)), Dropout(dropout),
-        Conv((3, 3), out_channels => out_channels; pad = 1), get_activation(act_fn), shortcut)
+    shortcut = in_channels == out_channels ? nothing :
+               init_layer(Conv, (1, 1), in_channels => out_channels)
+    return ResnetBlock2D(init_layer(GroupNorm, in_channels, groups; eps = Float32(eps)),
+        init_layer(Conv, (3, 3), in_channels => out_channels; pad = 1),
+        init_layer(GroupNorm, out_channels, groups; eps = Float32(eps)), Dropout(dropout),
+        init_layer(Conv, (3, 3), out_channels => out_channels; pad = 1), get_activation(act_fn), shortcut)
 end
 
 function (m::ResnetBlock2D)(x)
@@ -61,8 +62,9 @@ end
 Flux.@layer Attention
 
 function vae_attention(channels; groups, eps)
-    return Attention(1, GroupNorm(channels, groups; eps = Float32(eps)),
-        Dense(channels => channels), Dense(channels => channels), Dense(channels => channels),
+    return Attention(1, init_layer(GroupNorm, channels, groups; eps = Float32(eps)),
+        init_layer(Dense, channels => channels), init_layer(Dense, channels => channels), init_layer(
+            Dense, channels => channels),
         linear_dropout(channels => channels, 0.0))
 end
 
@@ -108,7 +110,8 @@ function down_encoder_block_2d(in_channels, out_channels; num_layers, add_downsa
         eps, act_fn)
     resnets = [resnet_block_2d(i == 1 ? in_channels : out_channels, out_channels; groups, eps,
                    act_fn) for i in 1:num_layers]
-    down = Conv((3, 3), out_channels => out_channels; stride = 2, pad = (0, 1, 0, 1))
+    down = init_layer(
+        Conv, (3, 3), out_channels => out_channels; stride = 2, pad = (0, 1, 0, 1))
     return DownEncoderBlock2D(resnets, add_downsample ? [Downsample2D(down)] : nothing)
 end
 
@@ -133,7 +136,7 @@ function up_decoder_block_2d(in_channels, out_channels; num_layers, add_upsample
         act_fn)
     resnets = [resnet_block_2d(i == 1 ? in_channels : out_channels, out_channels; groups, eps,
                    act_fn) for i in 1:num_layers]
-    up = Conv((3, 3), out_channels => out_channels; pad = 1)
+    up = init_layer(Conv, (3, 3), out_channels => out_channels; pad = 1)
     return UpDecoderBlock2D(resnets, add_upsample ? [Upsample2D(up)] : nothing)
 end
 
@@ -175,10 +178,11 @@ function vae_encoder(; in_channels, out_channels, down_block_types, block_out_ch
                        num_layers = layers_per_block, add_downsample = i < n, kw...)
                    for i in 1:n]
     channels = block_out_channels[end]
-    return Encoder(Conv((3, 3), in_channels => block_out_channels[1]; pad = 1), down_blocks,
+    return Encoder(init_layer(Conv, (3, 3), in_channels => block_out_channels[1]; pad = 1),
+        down_blocks,
         unet_mid_block_2d(channels; kw..., add_attention = mid_block_add_attention),
-        GroupNorm(channels, norm_num_groups; eps = 1.0f-6), get_activation(act_fn),
-        Conv((3, 3), channels => (double_z ? 2 : 1) * out_channels; pad = 1))
+        init_layer(GroupNorm, channels, norm_num_groups; eps = 1.0f-6), get_activation(act_fn),
+        init_layer(Conv, (3, 3), channels => (double_z ? 2 : 1) * out_channels; pad = 1))
 end
 
 function (m::Encoder)(x)
@@ -211,10 +215,11 @@ function vae_decoder(; in_channels, out_channels, up_block_types, block_out_chan
     up_blocks = [up_decoder_block_2d(reversed[max(i - 1, 1)], reversed[i];
                      num_layers = layers_per_block + 1, add_upsample = i < n, kw...)
                  for i in 1:n]
-    return Decoder(Conv((3, 3), in_channels => reversed[1]; pad = 1), up_blocks,
+    return Decoder(
+        init_layer(Conv, (3, 3), in_channels => reversed[1]; pad = 1), up_blocks,
         unet_mid_block_2d(reversed[1]; kw..., add_attention = mid_block_add_attention),
-        GroupNorm(block_out_channels[1], norm_num_groups; eps = 1.0f-6), get_activation(act_fn),
-        Conv((3, 3), block_out_channels[1] => out_channels; pad = 1))
+        init_layer(GroupNorm, block_out_channels[1], norm_num_groups; eps = 1.0f-6), get_activation(act_fn),
+        init_layer(Conv, (3, 3), block_out_channels[1] => out_channels; pad = 1))
 end
 
 function (m::Decoder)(z)

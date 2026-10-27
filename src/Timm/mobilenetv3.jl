@@ -64,7 +64,7 @@ function mobilenetv3(; block_args, num_classes = 1000, in_chans = 3, stem_size =
         norm_head = identity
         act2 = act_layer
     end
-    classifier = num_classes > 0 ? Dense(num_features => num_classes) : identity
+    classifier = num_classes > 0 ? init_layer(Dense, num_features => num_classes) : identity
     model = MobileNetV3(conv_stem, bn1, blocks, select_adaptive_pool2d(; flatten = false),
         conv_head, norm_head, act2, Flux.flatten, dropout_or_identity(drop_rate),
         classifier,

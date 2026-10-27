@@ -282,10 +282,11 @@ function qwen3_5_vision_model(; depth = 27, hidden_size = 1152,
     theta = axial_rope_theta(; rope_theta, rope_scaling, rope_parameters)
     act = act_fn(hidden_act)
     init = normal_init(initializer_range)
-    dense(in_out) = Dense(in_out; init)
-    norm(d) = LayerNorm(d; eps = 1e-6)
+    dense(in_out) = init_layer(Dense, in_out; init)
+    norm(d) = init_layer(LayerNorm, d; eps = 1e-6)
     kernel = (patch_size, patch_size, temporal_patch_size)
-    patch_embed = Qwen3_5VisionPatchEmbed(Conv(kernel, in_channels => hidden_size;
+    patch_embed = Qwen3_5VisionPatchEmbed(init_layer(
+        Conv, kernel, in_channels => hidden_size;
         stride = kernel, init))
     block() = Qwen3_5VisionBlock(norm(hidden_size), norm(hidden_size),
         Qwen3_5VisionAttention(num_heads, dense(hidden_size => 3hidden_size),
@@ -296,7 +297,7 @@ function qwen3_5_vision_model(; depth = 27, hidden_size = 1152,
     merger = Qwen3_5VisionPatchMerger(norm(hidden_size), dense(merged => merged), gelu_erf,
         dense(merged => out_hidden_size))
     return Qwen3_5VisionModel(patch_embed,
-        Embedding(num_position_embeddings => hidden_size; init),
+        init_layer(Embedding, num_position_embeddings => hidden_size; init),
         Qwen3_5VisionRotaryEmbedding(dim, theta), [block() for _ in 1:depth], merger,
         spatial_merge_size)
 end

@@ -58,8 +58,9 @@ Flux.@layer TimestepEmbedding
 (m::TimestepEmbedding)(x) = m.linear_2(m.act(m.linear_1(x)))
 
 function timestep_embedding_layer(in_channels, time_embed_dim; act_fn = "silu", bias = true)
-    return TimestepEmbedding(Dense(in_channels => time_embed_dim; bias), get_activation(act_fn),
-        Dense(time_embed_dim => time_embed_dim; bias))
+    return TimestepEmbedding(
+        init_layer(Dense, in_channels => time_embed_dim; bias), get_activation(act_fn),
+        init_layer(Dense, time_embed_dim => time_embed_dim; bias))
 end
 
 """
@@ -79,8 +80,8 @@ Flux.@layer AdaLayerNormContinuous
 function AdaLayerNormContinuous(embedding_dim::Integer, conditioning_embedding_dim::Integer;
         elementwise_affine::Bool = true, eps = 1e-5, bias::Bool = true)
     return AdaLayerNormContinuous(swish,
-        Dense(conditioning_embedding_dim => 2embedding_dim; bias),
-        LayerNorm(embedding_dim; affine = elementwise_affine, eps))
+        init_layer(Dense, conditioning_embedding_dim => 2embedding_dim; bias),
+        init_layer(LayerNorm, embedding_dim; affine = elementwise_affine, eps))
 end
 
 function (m::AdaLayerNormContinuous)(x, conditioning_embedding)
@@ -92,7 +93,9 @@ function (m::AdaLayerNormContinuous)(x, conditioning_embedding)
 end
 
 # A torch `nn.Linear` followed by an `nn.Dropout`, held in an `nn.ModuleList` (`to_out`).
-linear_dropout(in_out, dropout; bias = true) = Chain(Dense(in_out; bias), Dropout(dropout))
+function linear_dropout(in_out, dropout; bias = true)
+    return Chain(init_layer(Dense, in_out; bias), Dropout(dropout))
+end
 
 # torch clips float16 hidden states to its finite range after some residual additions.
 clip_float16(x) = eltype(x) == Float16 ? clamp.(x, -65504, 65504) : x

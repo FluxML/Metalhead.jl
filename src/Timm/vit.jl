@@ -133,7 +133,7 @@ function feature_info(m::VisionTransformer)
 end
 
 # timm's init_weights_vit_timm for nn.Linear
-vit_dense(in_out; bias = true) = Dense(in_out; bias, init = TRUNC_NORMAL)
+vit_dense(in_out; bias = true) = init_layer(Dense, in_out; bias, init = TRUNC_NORMAL)
 
 const VIT_ACTIVATIONS = Dict{Any, Any}(nothing => gelu_erf, "gelu" => gelu_erf,
     "gelu_tanh" => gelu_tanh, "quick_gelu" => quick_gelu)
@@ -148,8 +148,9 @@ function vit_block(dim, num_heads; mlp_ratio, qkv_bias, proj_bias, init_values, 
         vit_dense(dim => dim; bias = proj_bias), dropout_or_identity(proj_drop))
     mlp = Mlp(dim, hidden; act_layer, bias = proj_bias, drop = proj_drop)
     ls() = init_values === nothing ? identity : layer_scale(dim, init_values)
-    return ViTBlock(LayerNorm(dim; eps = norm_eps), attn, ls(), token_drop_path(drop_path),
-        LayerNorm(dim; eps = norm_eps), mlp, ls(), token_drop_path(drop_path))
+    return ViTBlock(
+        init_layer(LayerNorm, dim; eps = norm_eps), attn, ls(), token_drop_path(drop_path),
+        init_layer(LayerNorm, dim; eps = norm_eps), mlp, ls(), token_drop_path(drop_path))
 end
 
 """
@@ -199,7 +200,8 @@ function vit(; img_size = 224, patch_size = 16, in_chans = 3,
     grid_size = (ih ÷ ph, iw ÷ pw)
     num_patches = prod(grid_size)
     patch_embed = PatchEmbed(
-        Conv((pw, ph), in_chans => embed_dim; stride = (pw, ph), bias = !pre_norm);
+        init_layer(
+            Conv, (pw, ph), in_chans => embed_dim; stride = (pw, ph), bias = !pre_norm);
         flatten = !dynamic_img_size)
     embed_len = no_embed_class ? num_patches : num_patches + num_prefix_tokens
     drop_path_rates = depth == 1 ? [0.0] : range(0, drop_path_rate; length = depth)
@@ -207,15 +209,18 @@ function vit(; img_size = 224, patch_size = 16, in_chans = 3,
                         init_values, proj_drop = proj_drop_rate, attn_drop = attn_drop_rate,
                         drop_path = dpr, norm_eps, act_layer = act)
                     for dpr in drop_path_rates])
-    norm() = LayerNorm(embed_dim; eps = norm_eps)
+    norm() = init_layer(LayerNorm, embed_dim; eps = norm_eps)
     attn_pool = global_pool == "map" ?
                 attention_pool_latent(embed_dim; num_heads, mlp_ratio, norm_eps,
         act_layer = act) : nothing
     head = num_classes > 0 ? vit_dense(embed_dim => num_classes) : identity
     return VisionTransformer(
-        class_token ? 1.0f-6 .* randn(Float32, embed_dim, 1, 1) : nothing,
-        reg_tokens > 0 ? 1.0f-6 .* randn(Float32, embed_dim, reg_tokens, 1) : nothing,
-        pos_embed == "learn" ? Flux.truncated_normal(; std = 0.02)(embed_dim, embed_len, 1) :
+        class_token ?
+        init_array((ds...) -> 1.0f-6 .* randn(Float32, ds...), embed_dim, 1, 1) : nothing,
+        reg_tokens > 0 ?
+        init_array((ds...) -> 1.0f-6 .* randn(Float32, ds...), embed_dim, reg_tokens, 1) :
+        nothing,
+        pos_embed == "learn" ? init_array(TRUNC_NORMAL, embed_dim, embed_len, 1) :
         nothing,
         patch_embed, dropout_or_identity(pos_drop_rate), identity,
         pre_norm ? norm() : identity, blocks,

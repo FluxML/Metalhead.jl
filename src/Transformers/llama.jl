@@ -227,7 +227,7 @@ function llama_like(attention; vocab_size, hidden_size, intermediate_size,
         num_hidden_layers, hidden_act, initializer_range, rms_norm_eps, tie_word_embeddings,
         rope_parameters, head_dim, mlp_bias = false)
     init = normal_init(initializer_range)
-    dense(in_out, bias) = Dense(in_out; bias, init)
+    dense(in_out, bias) = init_layer(Dense, in_out; bias, init)
     norm() = RMSNorm(hidden_size; eps = rms_norm_eps)
     function decoder_layer()
         mlp = LlamaMLP(dense(hidden_size => intermediate_size, mlp_bias),
@@ -235,7 +235,7 @@ function llama_like(attention; vocab_size, hidden_size, intermediate_size,
             dense(intermediate_size => hidden_size, mlp_bias), act_fn(hidden_act))
         return LlamaDecoderLayer(attention(dense), mlp, norm(), norm())
     end
-    embed_tokens = Embedding(vocab_size => hidden_size; init)
+    embed_tokens = init_layer(Embedding, vocab_size => hidden_size; init)
     model = LlamaModel(
         embed_tokens, [decoder_layer() for _ in 1:num_hidden_layers], norm(),
         RotaryEmbedding(head_dim, rope_parameters))

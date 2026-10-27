@@ -3,6 +3,7 @@
 # generation settings, `transformers_version`, ...) that the models don't read.
 struct TransformersFormat <: AbstractConfigFormat end
 const TRANSFORMERS = TransformersFormat()
+direct_weight_init(::TransformersFormat) = true
 Base.show(io::IO, ::TransformersFormat) = print(io, "transformers")
 
 function architecture_of(::TransformersFormat, config)

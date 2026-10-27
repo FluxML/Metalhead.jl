@@ -24,10 +24,10 @@ function BasicBlock(inplanes, planes; stride = 1, downsample = nothing, cardinal
     first_planes = planes ÷ reduce_first
     outplanes = planes * BASIC_EXPANSION
     return BasicBlock(
-        Conv((3, 3), inplanes => first_planes; stride, pad = 1, bias = false),
-        BatchNorm(first_planes), act_layer,
-        Conv((3, 3), first_planes => outplanes; pad = 1, bias = false),
-        BatchNorm(outplanes), create_attn(attn_layer, outplanes), act_layer, downsample,
+        init_layer(Conv, (3, 3), inplanes => first_planes; stride, pad = 1, bias = false),
+        init_layer(BatchNorm, first_planes), act_layer,
+        init_layer(Conv, (3, 3), first_planes => outplanes; pad = 1, bias = false),
+        init_layer(BatchNorm, outplanes), create_attn(attn_layer, outplanes), act_layer, downsample,
         drop_path(drop_path_rate))
 end
 
@@ -65,12 +65,12 @@ function Bottleneck(inplanes, planes; stride = 1, downsample = nothing, cardinal
     width = floor(Int, planes * (base_width / 64)) * cardinality
     first_planes = width ÷ reduce_first
     outplanes = planes * BOTTLENECK_EXPANSION
-    return Bottleneck(Conv((1, 1), inplanes => first_planes; bias = false),
-        BatchNorm(first_planes), act_layer,
-        Conv((3, 3), first_planes => width; stride,
+    return Bottleneck(init_layer(Conv, (1, 1), inplanes => first_planes; bias = false),
+        init_layer(BatchNorm, first_planes), act_layer,
+        init_layer(Conv, (3, 3), first_planes => width; stride,
             pad = 1, groups = cardinality, bias = false),
-        BatchNorm(width), act_layer,
-        Conv((1, 1), width => outplanes; bias = false), BatchNorm(outplanes),
+        init_layer(BatchNorm, width), act_layer,
+        init_layer(Conv, (1, 1), width => outplanes; bias = false), init_layer(BatchNorm, outplanes),
         create_attn(attn_layer, outplanes), act_layer, downsample,
         drop_path(drop_path_rate))
 end
@@ -106,15 +106,16 @@ function downsample_conv(in_channels, out_channels, kernel_size; stride = 1)
     kernel_size = stride == 1 ? 1 : kernel_size
     p = get_padding(kernel_size, stride)
     return Chain(
-        Conv((kernel_size, kernel_size), in_channels => out_channels;
+        init_layer(Conv, (kernel_size, kernel_size), in_channels => out_channels;
             stride, pad = p, bias = false),
-        BatchNorm(out_channels))
+        init_layer(BatchNorm, out_channels))
 end
 
 function downsample_avg(in_channels, out_channels; stride = 1)
     pool = stride == 1 ? identity :
            x -> meanpool(x, (2, 2); stride, ceil_mode = true, count_include_pad = false)
-    return Chain(pool, Conv((1, 1), in_channels => out_channels; bias = false), BatchNorm(out_channels))
+    return Chain(pool, init_layer(Conv, (1, 1), in_channels => out_channels; bias = false),
+        init_layer(BatchNorm, out_channels))
 end
 
 function make_blocks(
@@ -192,21 +193,24 @@ function resnet(; block, layers, num_classes = 1000, in_chans = 3, output_stride
     if deep_stem
         c1, c2 = occursin("tiered", stem_type) ? (3 * (stem_width ÷ 4), stem_width) :
                  (stem_width, stem_width)
-        conv1 = Chain(Conv((3, 3), in_chans => c1; stride = 2, pad = 1, bias = false),
-            BatchNorm(c1), relu,
-            Conv((3, 3), c1 => c2; pad = 1, bias = false), BatchNorm(c2), relu,
-            Conv((3, 3), c2 => inplanes; pad = 1, bias = false))
+        conv1 = Chain(
+            init_layer(Conv, (3, 3), in_chans => c1; stride = 2, pad = 1, bias = false),
+            init_layer(BatchNorm, c1), relu,
+            init_layer(Conv, (3, 3), c1 => c2; pad = 1, bias = false), init_layer(BatchNorm, c2), relu,
+            init_layer(Conv, (3, 3), c2 => inplanes; pad = 1, bias = false))
     else
-        conv1 = Conv((7, 7), in_chans => inplanes; stride = 2, pad = 3, bias = false)
+        conv1 = init_layer(
+            Conv, (7, 7), in_chans => inplanes; stride = 2, pad = 3, bias = false)
     end
     stages = make_blocks(
         block_fn, expansion, channels, layers, inplanes; cardinality, base_width,
         reduce_first = block_reduce_first, down_kernel_size, avg_down, drop_path_rate,
         block_args...)
     num_features = channels[end] * expansion
-    fc = num_classes > 0 ? Dense(num_features => num_classes) : identity
+    fc = num_classes > 0 ? init_layer(Dense, num_features => num_classes) : identity
     return ResNet(
-        conv1, BatchNorm(inplanes), relu, MaxPool((3, 3); stride = 2, pad = 1), stages...,
+        conv1, init_layer(BatchNorm, inplanes), relu,
+        MaxPool((3, 3); stride = 2, pad = 1), stages...,
         select_adaptive_pool2d(; flatten = true), drop_rate > 0 ? Dropout(drop_rate) :
                                                   identity, fc)
 end

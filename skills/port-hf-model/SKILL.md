@@ -152,6 +152,17 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
     children's parameters under `"0.weight"`, `"1.weight"`, ... (see `MixedConv2d`).
 - **Use Flux layers and NNlib functions.** Only add a helper to `src/Timm/layers.jl` when no
   combination of them matches the torch module. Prefer a function over a new layer type.
+  - Construct parameterized Flux layers through `init_layer`, e.g.
+    `init_layer(Dense, in => out; bias, init)` and
+    `init_layer(Conv, (3, 3), in => out; pad = 1)`. It returns the ordinary Flux layer;
+    pretrained construction allocates its weights directly in the requested precision,
+    without random initialization. Normalization constructors use it too.
+  - Allocate a custom parameter through `init_array(init, dims...)`, where `init(dims...)`
+    gives its normal Float32 initialization. Pass `norm = true` for a normalization
+    parameter that stays Float32 under `f16`/`bf16`. Wrap the whole initialization in the
+    function, so that pretrained construction skips its random draws and temporaries.
+    An initializer applied after layer construction uses `init_parameter!(array, init)`.
+    These helpers preserve random initialization with `pretrained = false`.
   - `nn.Conv2d` → `Conv`, `nn.Linear` → `Dense`, `nn.BatchNorm2d` → `BatchNorm`,
     `nn.LayerNorm` → `LayerNorm`, `nn.GroupNorm` → `GroupNorm`, `nn.Embedding` → `Embedding`,
     `nn.MaxPool2d` → `MaxPool`, `nn.Dropout` → `Dropout`, `nn.Identity` → `identity`.

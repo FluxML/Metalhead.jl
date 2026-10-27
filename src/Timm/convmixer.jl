@@ -43,13 +43,14 @@ function convmixer(; dim, depth, kernel_size = 9, patch_size = 7, in_chans = 3,
               "of ConvMixer, which has \"gelu\" and \"relu\"")
     act = CONVMIXER_ACTIVATIONS[act_layer]
     patch = reverse(to_2tuple(patch_size))
-    stem = Chain(Conv(patch, in_chans => dim; stride = patch), act, BatchNorm(dim))
+    stem = Chain(init_layer(Conv, patch, in_chans => dim; stride = patch), act, init_layer(BatchNorm, dim))
     blocks = [Chain(
                   ConvMixerResidual(Chain(
                       create_conv2d(dim, dim, kernel_size; padding = "same",
                           depthwise = true, bias = true),
-                      act, BatchNorm(dim))),
-                  Conv((1, 1), dim => dim), act, BatchNorm(dim)) for _ in 1:depth]
+                      act, init_layer(BatchNorm, dim))),
+                  init_layer(Conv, (1, 1), dim => dim), act, init_layer(BatchNorm, dim))
+              for _ in 1:depth]
     pooling, head_drop, head = create_classifier(dim, num_classes; pool_type = global_pool,
         drop_rate)
     return ConvMixer(stem, Chain(blocks), pooling, head_drop, head)

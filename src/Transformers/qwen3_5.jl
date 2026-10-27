@@ -33,8 +33,10 @@ function rotary_tables(m::Qwen3_5TextRotaryEmbedding, x, position_ids)
             error("`position_ids` must have size (3, $n, $b), got $(size(pos))")
         freqs = inv_freq((; rope_type = "default", m.rope_theta), m.rotary_dim)
         section = m.mrope_section
-        row(j) = j % 3 == 1 && j < 3 * section[2] ? 2 :
-                 j % 3 == 2 && j < 3 * section[3] ? 3 : 1
+        function row(j)
+            return j % 3 == 1 && j < 3 * section[2] ? 2 :
+                   j % 3 == 2 && j < 3 * section[3] ? 3 : 1
+        end
         angles = [freqs[j + 1] * pos[row(j), t, i]
                   for j in 0:(length(freqs) - 1), _ in 1:1, t in 1:n, i in 1:size(pos, 3)]
         T = eltype(x)
@@ -98,7 +100,7 @@ Flux.f16(m::Qwen3_5RMSNormGated, cx) = f32(m, cx)
 Flux.bf16(m::Qwen3_5RMSNormGated, cx) = f32(m, cx)
 
 function Qwen3_5RMSNormGated(dim::Integer; eps)
-    return Qwen3_5RMSNormGated(ones(Float32, dim), Float64(eps), swish)
+    return Qwen3_5RMSNormGated(init_array(Flux.ones32, dim; norm = true), Float64(eps), swish)
 end
 
 function (m::Qwen3_5RMSNormGated)(x, gate)
@@ -466,7 +468,7 @@ function qwen3_5_text_model(; vocab_size = 248_320, hidden_size = 4096,
         rope_scaling, partial_rotary_factor)
     act = act_fn(hidden_act)
     init = normal_init(initializer_range)
-    dense(in_out, bias = false) = Dense(in_out; bias, init)
+    dense(in_out, bias = false) = init_layer(Dense, in_out; bias, init)
     norm(dim) = Gemma3RMSNorm(dim; eps = rms_norm_eps)  # Qwen3_5RMSNorm
     function attention()
         return Qwen3_5Attention(head_dim,
@@ -481,12 +483,15 @@ function qwen3_5_text_model(; vocab_size = 248_320, hidden_size = 4096,
         value_dim = linear_value_head_dim * linear_num_value_heads
         conv_dim = 2 * key_dim + value_dim
         kernel = linear_conv_kernel_dim
-        conv1d = Conv((kernel,), conv_dim => conv_dim; groups = conv_dim,
+        conv1d = init_layer(Conv, (kernel,), conv_dim => conv_dim; groups = conv_dim,
             pad = (kernel - 1, 0), bias = false, init)
-        A = 0.01f0 .+ (16 - 0.01f0) .* rand(Float32, linear_num_value_heads)
+        A_log = init_array(linear_num_value_heads) do n
+            A = 0.01f0 .+ (16 - 0.01f0) .* rand(Float32, n)
+            return log.(A)
+        end
         return Qwen3_5GatedDeltaNet(linear_num_key_heads, linear_num_value_heads,
             linear_key_head_dim, linear_value_head_dim, conv1d, act,
-            ones(Float32, linear_num_value_heads), log.(A),
+            init_array(Flux.ones32, linear_num_value_heads), A_log,
             Qwen3_5RMSNormGated(linear_value_head_dim; eps = rms_norm_eps),
             dense(value_dim => hidden_size), dense(hidden_size => conv_dim),
             dense(hidden_size => value_dim), dense(hidden_size => linear_num_value_heads),
@@ -500,7 +505,7 @@ function qwen3_5_text_model(; vocab_size = 248_320, hidden_size = 4096,
         return Qwen3_5DecoderLayer(linear ? linear_attention() : nothing,
             linear ? nothing : attention(), mlp, norm(hidden_size), norm(hidden_size))
     end
-    return Qwen3_5TextModel(Embedding(vocab_size => hidden_size; init),
+    return Qwen3_5TextModel(init_layer(Embedding, vocab_size => hidden_size; init),
         [decoder_layer(t) for t in types], norm(hidden_size), rotary_emb)
 end
 
@@ -532,7 +537,7 @@ function qwen3_5_for_causal_lm(; vocab_size = 248_320, hidden_size = 4096,
         head_dim, linear_conv_kernel_dim, linear_key_head_dim, linear_value_head_dim,
         linear_num_key_heads, linear_num_value_heads, layer_types, full_attention_interval)
     lm_head = tie_word_embeddings ? TiedLMHead(model.embed_tokens.weight) :
-              Dense(hidden_size => vocab_size; bias = false,
+              init_layer(Dense, hidden_size => vocab_size; bias = false,
         init = normal_init(initializer_range))
     return Qwen3_5ForCausalLM(model, lm_head)
 end
@@ -777,7 +782,7 @@ function qwen3_5_for_conditional_generation(; text_config = (;), vision_config =
     visual = qwen3_5_vision_model(; config_args(qwen3_5_vision_model, vision_config)...)
     weight = language_model.embed_tokens.weight
     lm_head = tie_word_embeddings ? TiedLMHead(weight) :
-              Dense(size(weight, 1) => size(weight, 2); bias = false,
+              init_layer(Dense, size(weight, 1) => size(weight, 2); bias = false,
         init = normal_init(get(something(text_config, (;)), :initializer_range, 0.02)))
     return Qwen3_5ForConditionalGeneration(
         Qwen3_5Model(visual, language_model, image_token_id), lm_head)
