@@ -193,7 +193,7 @@ makedocs(; modules = [Metalhead],
         "Migrating from 0.9" => "migration.md",
         "API reference" => ["Overview" => "api/reference.md", "CLIP" => "api/clip.md",
             "BERT, XLM-RoBERTa and ModernBERT" => "api/bert.md",
-            "SigLIP and SigLIP 2" => "api/siglip.md",
+            "SAM 3" => "api/sam3.md", "SigLIP and SigLIP 2" => "api/siglip.md",
             "Sentence transformers" => "api/sentence_transformers.md"]
     ],
     warnonly = [:example_block, :missing_docs],
