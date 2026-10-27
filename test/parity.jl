@@ -262,8 +262,10 @@ end
 Compare a diffusers text-to-image pipeline written by porting/dump.py (a directory with a
 model_index.json) with diffusers': the relative errors of the prompt embeddings of its token ids
 (and of the negative prompt's, for classifier-free guidance), and of the denoised latents and
-the images that the pipeline makes from diffusers' embeddings and initial noise. `device`
-(e.g. `gpu_device()`) moves the pipeline and its inputs.
+the images that the pipeline makes from diffusers' embeddings and initial noise. With an
+"edit" in the spec, also those of the edit of its reference images (`edit_latents`,
+`edit_image`), and of the reference images that the pipeline prepares (`reference_images`).
+`device` (e.g. `gpu_device()`) moves the pipeline and its inputs.
 """
 function check_pipeline_fixture(dir; eltype = Float64, device = identity)
     file = joinpath(dir, "acts.safetensors")
@@ -282,12 +284,32 @@ function check_pipeline_fixture(dir; eltype = Float64, device = identity)
         negative_prompt_embeds = guided ? input("negative_prompt_embeds") : nothing)
     latents = cpu(pipe(input("prompt_embeds"); kwargs..., output_type = :latent))
     image = cpu(pipe(input("prompt_embeds"); kwargs...))
+    edit = haskey(spec, "edit") ? check_pipeline_edit(pipe, acts, spec, kwargs, input) :
+           (; edit_latents = 0.0, edit_image = 0.0, reference_images = 0.0)
     return (; prompt_embeds = relerr(encode(""), acts["prompt_embeds"]),
         negative_prompt_embeds = guided ?
                                  relerr(encode("negative_"), acts["negative_prompt_embeds"]) :
                                  0.0,
         latents = relerr(latents, acts["output_latents"]),
-        image = relerr(image, acts["output"]))
+        image = relerr(image, acts["output"]), edit...)
+end
+
+# The values in [-1, 1] of the 8-bit values of an image that a pipeline prepares.
+from_8bit(x) = 2 .* (Float32.(x) ./ 255) .- 1
+
+function check_pipeline_edit(pipe, acts, spec, kwargs, input)
+    edit = spec["edit"]
+    n = count(k -> startswith(k, "edit/image/"), keys(acts))
+    images = [acts["edit/image/$i"] for i in 1:n]
+    f = 2 * Metalhead.Diffusers.vae_scale_factor(pipe)
+    prepared = [relerr(Metalhead.Diffusers.reference_image(x, f),
+                    from_8bit(acts["edit/prepared/$i"])) for (i, x) in enumerate(images)]
+    hw = (; height = get(edit, "height", nothing), width = get(edit, "width", nothing))
+    kwargs = merge(kwargs, (; image = images, hw..., latents = input("edit/latents")))
+    latents = cpu(pipe(input("prompt_embeds"); kwargs..., output_type = :latent))
+    image = cpu(pipe(input("prompt_embeds"); kwargs...))
+    return (; edit_latents = relerr(latents, acts["edit/output_latents"]),
+        edit_image = relerr(image, acts["edit/output"]), reference_images = maximum(prepared))
 end
 
 """
@@ -296,7 +318,8 @@ end
 Compare a diffusers model or pipeline with the reference outputs of its real checkpoint,
 written by porting/dump_reference.py: the relative errors of the latents and images of an
 autoencoder, of the output of a transformer, or of the prompt embeddings, denoised latents and
-image of a pipeline, which starts from its own prompt embeddings.
+image of a pipeline, which starts from its own prompt embeddings (and the same of an edit of
+a reference image, `edit_...`, when the reference has one).
 """
 function check_diffusers_reference(file; eltype = Float32)
     meta = SafeTensors.deserialize(file).metadata
@@ -314,15 +337,25 @@ function check_diffusers_reference(file; eltype = Float32)
                   for x in (ref["inputs/$i"] for i in 1:5)]
         return (; repo = meta["repo"], output = relerr(model(inputs...), ref["output"]))
     end
-    embeds = D.encode_prompt(model, ref["input_ids"] .+ 1; attention_mask = ref["attention_mask"])
-    n = size(ref["prompt_embeds"], 2)
-    kwargs = (; height = parse(Int, meta["height"]), width = parse(Int, meta["width"]),
-        num_inference_steps = parse(Int, meta["num_inference_steps"]), guidance_scale = 1.0,
-        latents = eltype.(ref["latents"]))
-    latents = model(embeds; kwargs..., output_type = :latent)
-    image = model(embeds; kwargs...)
-    return (; repo = meta["repo"], prompt_embeds = relerr(embeds[:, 1:n, :], ref["prompt_embeds"]),
-        latents = relerr(latents, ref["output_latents"]), image = relerr(image, ref["output"]))
+    steps = parse(Int, meta["num_inference_steps"])
+    # the edit of a reference image takes its size
+    function generate(prefix; kwargs...)
+        embeds = D.encode_prompt(model, ref[prefix * "input_ids"] .+ 1;
+            attention_mask = ref[prefix * "attention_mask"])
+        n = size(ref[prefix * "prompt_embeds"], 2)
+        kwargs = (; kwargs..., num_inference_steps = steps, guidance_scale = 1.0,
+            latents = eltype.(ref[prefix * "latents"]))
+        latents = model(embeds; kwargs..., output_type = :latent)
+        image = model(embeds; kwargs...)
+        return (; prompt_embeds = relerr(embeds[:, 1:n, :], ref[prefix * "prompt_embeds"]),
+            latents = relerr(latents, ref[prefix * "output_latents"]),
+            image = relerr(image, ref[prefix * "output"]))
+    end
+    errs = generate(""; height = parse(Int, meta["height"]), width = parse(Int, meta["width"]))
+    haskey(ref, "edit/output") || return (; repo = meta["repo"], errs...)
+    edit = generate("edit/"; image = ref["edit/image"])
+    return (; repo = meta["repo"], errs..., edit_prompt_embeds = edit.prompt_embeds,
+        edit_latents = edit.latents, edit_image = edit.image)
 end
 
 function greedy_decode(model, ids, n; kwargs...)

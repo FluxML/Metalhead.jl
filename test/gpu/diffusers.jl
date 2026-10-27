@@ -46,5 +46,8 @@ end
         @test image isa CuArray{BFloat16}
         # deprecations, such as Base's of `disable_sigint` on Julia 1.14, aren't the pipeline's
         @test all(l -> l.group === :depwarn, logs)
+        edited = pipe(embeds; image = rand(UInt8, 64, 64, 3), height = 16, width = 20,
+            num_inference_steps = 1)
+        @test edited isa CuArray{BFloat16}
     end
 end
