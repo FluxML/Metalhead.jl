@@ -16,8 +16,8 @@ A vision encoder (Qwen3_5VisionModel) has "grid_thw" instead of "input_shape": t
 
 A spec with "library": "diffusers" describes a diffusers model, "architecture" (the class, e.g.
 "Flux2Transformer2DModel") with the arguments "config", saved with `save_pretrained`, and the
-sizes of its inputs (see `diffusers_inputs`). A "Flux2KleinPipeline" spec has "components"
-instead, and is run end to end (see `dump_flux2_klein`).
+sizes of its inputs (see `diffusers_inputs`). A "Flux2KleinPipeline" or "ZImagePipeline" spec
+has "components" instead, and is run end to end (see `dump_flux2_klein` and `dump_z_image`).
 
 Optional spec keys: "shrink": k divides every channel count by k (see `shrunk_channels` in
 common.py; the Julia side applies `shrink_channels` from config.json), and
@@ -32,6 +32,7 @@ computed in float64.
 import argparse
 import json
 import pathlib
+import shutil
 
 import torch
 from safetensors.torch import save_file
@@ -408,7 +409,37 @@ def diffusers_inputs(spec, model, gen):
         if cfg.guidance_embeds:
             inputs.append(1 + 4 * torch.rand(b, generator=gen, dtype=torch.float64))
         return inputs
+    if spec["architecture"] == "ZImageTransformer2DModel":
+        # the latents of the batch stacked, (batch, channels, frames, height, width), and a
+        # caption of each length, (length, cap_feat_dim)
+        cfg, lengths = model.config, sizes["cap_lengths"]
+        x = torch.randn(len(lengths), cfg.in_channels, sizes.get("frames", 1), sizes["height"],
+                        sizes["width"], generator=gen, dtype=torch.float64)
+        t = torch.rand(len(lengths), generator=gen, dtype=torch.float64)
+        caps = [torch.randn(n, cfg.cap_feat_dim, generator=gen, dtype=torch.float64)
+                for n in lengths]
+        return [x, t, caps]
     return [torch.randn(sizes["sample"], generator=gen, dtype=torch.float64)]
+
+
+def diffusers_output(spec, model, inputs):
+    """The output of a diffusers model on the inputs of `diffusers_inputs`. The Z-Image
+    transformer takes a list of latents, and returns one, which are stacked."""
+    if spec["architecture"] == "ZImageTransformer2DModel":
+        x, t, caps = inputs
+        return torch.stack(model(list(x.unbind(0)), t, caps).sample)
+    return model(*inputs).sample
+
+
+def stored_inputs(inputs):
+    """The positional inputs as "inputs/<i>", and a list as "inputs/<i>/<j>"."""
+    out = {}
+    for i, x in enumerate(inputs):
+        if isinstance(x, list):
+            out.update({f"inputs/{i + 1}/{j + 1}": y.contiguous() for j, y in enumerate(x)})
+        else:
+            out[f"inputs/{i + 1}"] = x.contiguous()
+    return out
 
 
 def tap_hooks(model, names, taps, order, tap_dtype):
@@ -434,10 +465,14 @@ def dump_diffusers(spec, out, args):
     ("inputs/<i>"), and the outputs of its modules (taps)."""
     if spec["architecture"] == "Flux2KleinPipeline":
         return dump_flux2_klein(spec, out, args)
+    if spec["architecture"] == "ZImagePipeline":
+        return dump_z_image(spec, out, args)
     seed = spec.get("seed", 0)
     torch.manual_seed(seed)
     model = build(spec).eval()
     rerandomize(model, seed)
+    if spec.get("weight_dtype") == "float16":  # halves the file; torch gets the rounded values
+        model.half()
     model.save_pretrained(out)  # config.json and diffusion_pytorch_model.safetensors
     model = model.double()
 
@@ -449,12 +484,11 @@ def dump_diffusers(spec, out, args):
     inputs = diffusers_inputs(spec, model, gen)
     with torch.no_grad(), exact_float64_diffusers():
         handles = tap_hooks(model, names, taps, order, tap_dtype)
-        output = model(*inputs).sample
+        output = diffusers_output(spec, model, inputs)
         for h in handles:
             h.remove()
 
-    acts = {"output": output.contiguous(), **taps,
-            **{f"inputs/{i + 1}": x.contiguous() for i, x in enumerate(inputs)}}
+    acts = {"output": output.contiguous(), **taps, **stored_inputs(inputs)}
     meta = {"spec": json.dumps(spec), "call_order": json.dumps(order),
             "num_params": str(sum(p.numel() for p in model.parameters())), **versions()}
     save_file(acts, out / "acts.safetensors", metadata=meta)
@@ -532,6 +566,103 @@ def dump_flux2_klein(spec, out, args):
                       guidance_scale=spec.get("guidance_scale", 4.0))
         denoised = pipe(latents=latents.clone(), output_type="latent", **kwargs).images
         image = pipe(latents=latents.clone(), output_type="pt", **kwargs).images
+    tensors.update({"latents": latents, "output_latents": denoised.contiguous(),
+                    "output": image.contiguous()})
+    meta = {"spec": json.dumps(spec), **versions()}
+    save_file({k: v.contiguous() for k, v in tensors.items()}, out / "acts.safetensors", metadata=meta)
+
+    size = sum(f.stat().st_size for f in out.rglob("*") if f.is_file())
+    print(f"{out}: pipeline, {size / 1e6:.2f} MB")
+    return size <= args.max_bytes or bool(args.out)
+
+
+def float64_z_image_call():
+    """`ZImagePipeline.__call__` for float64 latents: diffusers' code, with its float32 casts
+    (`.float()`, `torch.float32`) in float64 instead, which would otherwise limit the
+    fixture to float32 precision."""
+    import inspect
+    import textwrap
+    from diffusers.pipelines.z_image import pipeline_z_image
+    source = textwrap.dedent(inspect.getsource(pipeline_z_image.ZImagePipeline.__call__))
+    counts = (source.count(".float()"), source.count("torch.float32"))
+    assert counts == (4, 3), f"diffusers' ZImagePipeline.__call__ has changed: {counts}"
+    source = source.replace(".float()", ".double()").replace("torch.float32", "torch.float64")
+    namespace = dict(vars(pipeline_z_image))
+    exec(compile(source, pipeline_z_image.__file__, "exec"), namespace)
+    return namespace["__call__"]
+
+
+def dump_z_image(spec, out, args):
+    """Write the fixture of a ZImagePipeline of tiny components: the directory of the pipeline
+    (model_index.json and a subfolder for each component, without a tokenizer, with the text
+    encoder saved as a `Qwen3ForCausalLM`, as in Tongyi-MAI/Z-Image-Turbo), and the prompt
+    embeddings of random token ids (a list, "prompt_embeds/<i>"), the initial noise, the
+    denoised latents and the images of the pipeline, in float64 (see `float64_z_image_call`).
+
+    Spec keys: "components" ("vae", "transformer", "text_encoder" as a transformers spec of a
+    tied `Qwen3ForCausalLM`, "scheduler"), "lengths" and "seq_len" of the prompts
+    ("negative_lengths" for classifier-free guidance), "height", "width",
+    "num_inference_steps", "guidance_scale", "cfg_normalization", "cfg_truncation" and
+    "weight_dtype"."""
+    from diffusers import (AutoencoderKL, FlowMatchEulerDiscreteScheduler, ZImagePipeline,
+                           ZImageTransformer2DModel)
+    seed = spec.get("seed", 0)
+    torch.manual_seed(seed)
+    parts = spec["components"]
+    vae = AutoencoderKL.from_config(parts["vae"]).eval()
+    transformer = ZImageTransformer2DModel.from_config(parts["transformer"]).eval()
+    causal_lm = build_transformers(parts["text_encoder"]).eval()
+    for i, m in enumerate((vae, transformer, causal_lm)):
+        rerandomize(m, seed + i)
+    if spec.get("weight_dtype") == "float16":  # the diffusers models; torch gets the rounded values
+        vae.half()
+        transformer.half()
+    scheduler = FlowMatchEulerDiscreteScheduler.from_config(parts["scheduler"])
+    text_encoder = causal_lm.model  # the pipeline's `Qwen3Model`
+    pipe = ZImagePipeline(scheduler=scheduler, vae=vae, text_encoder=text_encoder,
+                          tokenizer=None, transformer=transformer)
+    pipe.save_pretrained(out)
+    shutil.rmtree(out / "text_encoder")
+    causal_lm.save_pretrained(out / "text_encoder")
+    (out / "text_encoder" / "generation_config.json").unlink(missing_ok=True)
+    for m in (vae, transformer, causal_lm):
+        m.double()
+    exact_float64(causal_lm)
+
+    gen = torch.Generator().manual_seed(seed + 1)
+    vocab = text_encoder.config.vocab_size
+
+    def embed(ids, mask):  # `_encode_prompt` after tokenization
+        hidden = text_encoder(input_ids=ids, attention_mask=mask.bool(),
+                              output_hidden_states=True).hidden_states[-2]
+        return [h[m.bool()] for h, m in zip(hidden, mask)]
+
+    tensors = {}
+    with torch.no_grad(), exact_float64_diffusers():
+        ids, mask = padded(gen, vocab, spec["lengths"], spec["seq_len"])
+        prompt_embeds = embed(ids, mask)
+        tensors.update({"input_ids": ids, "attention_mask": mask,
+                        **{f"prompt_embeds/{i + 1}": e for i, e in enumerate(prompt_embeds)}})
+        negative = None
+        if "negative_lengths" in spec:
+            neg_ids, neg_mask = padded(gen, vocab, spec["negative_lengths"], spec["seq_len"])
+            negative = embed(neg_ids, neg_mask)
+            tensors.update({"negative_input_ids": neg_ids, "negative_attention_mask": neg_mask,
+                            **{f"negative_prompt_embeds/{i + 1}": e
+                               for i, e in enumerate(negative)}})
+        f = pipe.vae_scale_factor * 2
+        shape = (ids.shape[0], transformer.config.in_channels, 2 * (spec["height"] // f),
+                 2 * (spec["width"] // f))
+        latents = torch.randn(shape, generator=gen, dtype=torch.float64)
+        kwargs = dict(prompt_embeds=prompt_embeds, negative_prompt_embeds=negative,
+                      height=spec["height"], width=spec["width"],
+                      num_inference_steps=spec["num_inference_steps"],
+                      guidance_scale=spec["guidance_scale"],
+                      cfg_normalization=spec.get("cfg_normalization", False),
+                      cfg_truncation=spec.get("cfg_truncation", 1.0))
+        call = float64_z_image_call()
+        denoised = call(pipe, latents=latents.clone(), output_type="latent", **kwargs).images
+        image = call(pipe, latents=latents.clone(), output_type="pt", **kwargs).images
     tensors.update({"latents": latents, "output_latents": denoised.contiguous(),
                     "output": image.contiguous()})
     meta = {"spec": json.dumps(spec), **versions()}
