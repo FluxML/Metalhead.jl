@@ -191,7 +191,7 @@ def rerandomize(model, seed=0):
                 continue
             elif name == "bias":
                 normal(t, 0.1)
-            elif t.ndim >= 2 and name == "weight":
+            elif t.ndim >= 2 and name in ("weight", "in_proj_weight"):  # nn.MultiheadAttention
                 normal(t, t[0].numel() ** -0.5)
             elif t.ndim == 3 and name.endswith("_proj"):  # stacked experts (num_experts, out, in)
                 normal(t, t.shape[-1] ** -0.5)
@@ -205,7 +205,7 @@ def rerandomize(model, seed=0):
 
 def exact_float64(model):
     """Compute the RMSNorms, rotary tables, routers and gated delta rules of a transformers
-    model in its own dtype.
+    model, and the resized position embeddings of SigLIP 2, in its own dtype.
 
     transformers computes them in float32 even in a float64 model, which would limit the
     fixtures to float32 precision. In a float32 model the results are unchanged but for the
@@ -235,6 +235,8 @@ def exact_float64(model):
             _exact_float64_sam3(sys.modules[type(m).__module__])
         elif name == "Sam3ViTLayer":
             m.position_ids = _exact_sam3_positions(m)
+        elif name == "Siglip2VisionEmbeddings":
+            m.resize_positional_embeddings = _exact_resize_positional_embeddings
         elif name.endswith("RotaryEmbedding"):
             if isinstance(m.rope_type, dict):  # a table for each layer type (Gemma 3)
                 m.exact_inv_freq = {t: _exact_inv_freq(m.config.rope_parameters[t],
@@ -443,6 +445,24 @@ def _exact_sam3_positions(layer):
                  * (config.window_size / grid[1]))
     assert torch.allclose(positions, layer.position_ids.double(), rtol=1e-6, atol=0)
     return positions
+
+
+def _exact_resize_positional_embeddings(positional_embeddings, spatial_shapes, max_length):
+    """`Siglip2VisionEmbeddings.resize_positional_embeddings` in the dtype of the embeddings:
+    transformers resizes them in float32 on the CPU."""
+    if positional_embeddings.dtype != torch.float64:
+        from transformers.models.siglip2.modeling_siglip2 import Siglip2VisionEmbeddings
+        return Siglip2VisionEmbeddings.resize_positional_embeddings(
+            positional_embeddings, spatial_shapes, max_length)
+    embed_dim = positional_embeddings.shape[-1]
+    grid = positional_embeddings.permute(2, 0, 1).unsqueeze(0)
+    resized = []
+    for height, width in spatial_shapes.tolist():
+        e = torch.nn.functional.interpolate(grid, size=(height, width), mode="bilinear",
+                                            align_corners=False, antialias=True)
+        e = e.reshape(embed_dim, height * width).transpose(0, 1)
+        resized.append(torch.cat([e, e[:1].expand(max_length - height * width, -1)]))
+    return torch.stack(resized)
 
 
 def _interpolation_axis_taps_weights_float64(index, size, side, mode, align_corners,

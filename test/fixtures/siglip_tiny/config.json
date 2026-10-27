@@ -1,0 +1,38 @@
+{
+  "architectures": [
+    "SiglipModel"
+  ],
+  "dtype": "float32",
+  "initializer_factor": 1.0,
+  "model_type": "siglip",
+  "text_config": {
+    "attention_dropout": 0.0,
+    "bos_token_id": 49406,
+    "eos_token_id": 49407,
+    "hidden_act": "gelu_pytorch_tanh",
+    "hidden_size": 16,
+    "intermediate_size": 24,
+    "layer_norm_eps": 1e-06,
+    "max_position_embeddings": 8,
+    "model_type": "siglip_text_model",
+    "num_attention_heads": 2,
+    "num_hidden_layers": 2,
+    "pad_token_id": 1,
+    "projection_size": 16,
+    "vocab_size": 64
+  },
+  "transformers_version": "5.21.0",
+  "vision_config": {
+    "attention_dropout": 0.0,
+    "hidden_act": "gelu_pytorch_tanh",
+    "hidden_size": 16,
+    "image_size": 16,
+    "intermediate_size": 24,
+    "layer_norm_eps": 1e-06,
+    "model_type": "siglip_vision_model",
+    "num_attention_heads": 2,
+    "num_channels": 3,
+    "num_hidden_layers": 2,
+    "patch_size": 4
+  }
+}

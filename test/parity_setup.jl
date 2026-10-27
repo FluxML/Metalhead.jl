@@ -9,7 +9,7 @@ using Test
 using ChainRulesCore: unthunk
 
 export Parity, check_fixture, check_lm_reference, check_image_reference, check_sam3_reference,
-       reference_model,
+       reference_model, check_siglip_reference,
        check_pipeline_fixture, check_diffusers_reference, fixture_model, fixture_inputs,
        shrink_channels,
        reference_input, relerr, tapify, fixture, reference_files, reference_files_of,
@@ -97,7 +97,8 @@ the layers with a conversion method of their own (the norms, such as
 `Flux.f16(::LayerNorm2d, cx)`) keep `Float32` arrays and every other floating-point array is
 `T`, the output has eltype `T`, no warning other than a deprecation is logged (such as
 Flux's eltype mismatch), and the relative error of the output against `model(x)` is at most
-`rtol`. A NamedTuple output is checked field by field. Logs what fails.
+`rtol`. A NamedTuple output is checked field by field, and so are its NamedTuple fields.
+Logs what fails.
 """
 function check_half_precision(model, x...; T = Float16, rtol = 1e-2, kwargs...)
     cast = Metalhead.ELTYPE_CONVERTERS[T]
@@ -118,7 +119,7 @@ function check_half_precision(model, x...; T = Float16, rtol = 1e-2, kwargs...)
     logs, y = Test.collect_test_logs(; min_level = Base.CoreLogging.Warn) do
         return half(map(a -> convert_floats(cast, a), x)...; kwargs...)
     end
-    outputs(y) = y isa NamedTuple ? values(y) : (y,)
+    outputs(y) = y isa NamedTuple ? Tuple(Iterators.flatten(map(outputs, values(y)))) : (y,)
     err = maximum(((a, b),) -> relerr(Float32.(a), b),
         zip(outputs(y), outputs(model(x...; kwargs...))))
     output = eltype.(outputs(y))

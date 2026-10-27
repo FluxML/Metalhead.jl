@@ -8,6 +8,21 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
 
 ### Added
 
+- SigLIP and SigLIP 2, Google's image-text dual encoders (`SiglipModel` and `Siglip2Model`),
+  for zero-shot classification and image-text retrieval, validated against
+  `google/siglip-base-patch16-224`, `google/siglip2-base-patch16-224` and
+  `google/siglip2-base-patch16-naflex`: their text and vision models, with the
+  attention-pooling head, and the normalized embeddings and the logits of the sigmoid
+  similarities (`logits_per_image`, `logits_per_text`) that they return.
+  `Metalhead.Transformers.get_text_features` and `get_image_features` encode texts or images
+  alone. The NaFlex checkpoints of SigLIP 2 (`Siglip2Model`) take images of any aspect ratio
+  as patches, and resize their position embeddings to the grid of each image; the others
+  are `SiglipModel`s. Their processors, `SiglipProcessor` and `Siglip2Processor`, with
+  `SiglipImageProcessor` and `Siglip2ImageProcessor`, pad the texts to 64 tokens, as the
+  models were trained, and the NaFlex processor lowercases them. A transformers
+  `config.json` without `architectures`, as those of the SigLIP 2 checkpoints of fixed
+  resolution, names its model by its `model_type`.
+- A tutorial on zero-shot classification and image-text retrieval with SigLIP and SigLIP 2.
 - Text-to-image generation with Z-Image (`ZImagePipeline`, with `ZImageTransformer2DModel`
   and `AutoencoderKL`, diffusers' autoencoder of Stable Diffusion and FLUX.1), validated
   against `Tongyi-MAI/Z-Image-Turbo`. Its sampling loop has diffusers' classifier-free

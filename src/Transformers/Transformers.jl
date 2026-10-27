@@ -49,5 +49,11 @@ include("clip.jl")
 include("sam3.jl")
 include("image_processing_sam3.jl")
 include("processing_sam3.jl")
+include("siglip.jl")
+include("siglip2.jl")
+include("image_processing_siglip.jl")
+include("image_processing_siglip2.jl")
+include("processing_siglip.jl")
+include("processing_siglip2.jl")
 
 end # module

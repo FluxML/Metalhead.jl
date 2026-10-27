@@ -11,6 +11,8 @@ dependencies = [
     "transformers>=4.50",
     "torch>=2.5",
     "torchvision",
+    "sentencepiece>=0.2",
+    "protobuf>=4",
 ]
 
 [tool.uv]

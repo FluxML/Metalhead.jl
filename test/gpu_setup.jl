@@ -63,7 +63,7 @@ function gpu_inputs(name)
     return map(to_gpu, args), map(to_gpu, kwargs)
 end
 
-outputs(y) = y isa NamedTuple ? values(y) : (y,)
+outputs(y) = y isa NamedTuple ? Tuple(Iterators.flatten(map(outputs, values(y)))) : (y,)
 
 """
     check_gpu_fixture(name) -> NamedTuple

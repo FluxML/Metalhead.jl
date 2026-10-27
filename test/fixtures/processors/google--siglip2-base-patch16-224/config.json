@@ -1,0 +1,12 @@
+{
+  "initializer_factor": 1.0,
+  "model_type": "siglip",
+  "text_config": {
+    "model_type": "siglip_text_model",
+    "vocab_size": 256000
+  },
+  "transformers_version": "4.49.0.dev0",
+  "vision_config": {
+    "model_type": "siglip_vision_model"
+  }
+}
