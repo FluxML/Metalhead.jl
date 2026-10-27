@@ -17,7 +17,7 @@ uv run dump_timm_transform.py                    # timm's eval transform (EvalTr
 uv run dump.py specs/llama_tiny.json             # a transformers spec ("library": "transformers")
 uv run dump_reference.py HuggingFaceTB/SmolLM2-135M   # a language model: tokenized prompts
 uv run dump.py specs/qwen3_5_vision_tiny.json    # a vision encoder: random patches of "grid_thw"
-uv run dump_processor.py                         # processors (SAM 3, Qwen3.5, SigLIP), through AutoProcessor
+uv run dump_processor.py                         # processors (SAM 3, Qwen3.5, SigLIP, CLIP), through AutoProcessor
 uv run dump.py specs/siglip2_tiny.json           # a dual encoder ("inputs": texts, images or patches)
 uv run dump_reference.py google/siglip2-base-patch16-naflex   # an image and texts, through the processor
 uv run dump.py specs/qwen3_5_tiny.json           # a vision-language model ("images")

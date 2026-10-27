@@ -23,6 +23,17 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
   `config.json` without `architectures`, as those of the SigLIP 2 checkpoints of fixed
   resolution, names its model by its `model_type`.
 - A tutorial on zero-shot classification and image-text retrieval with SigLIP and SigLIP 2.
+- CLIP, the dual encoder of images and texts (`CLIPModel`), for zero-shot classification and
+  image-text retrieval, validated against `openai/clip-vit-base-patch32`,
+  `openai/clip-vit-large-patch14` and `laion/CLIP-ViT-B-32-laion2B-s34B-b79K` (QuickGELU and
+  GELU), with its processor, `Metalhead.Transformers.CLIPProcessor`, whose
+  `CLIPImageProcessor` resizes the shorter side of an image and crops its center. The model
+  returns transformers' `logits_per_image`, `logits_per_text` and normalized embeddings, and
+  `get_text_features` and `get_image_features` the outputs of its encoders. The encoders load
+  alone too (`CLIPTextModel`, validated against the text encoder of Stable Diffusion 1.5,
+  `CLIPVisionModel`, and both `...WithProjection`), from checkpoints saved by transformers 4
+  or 5, and the vision encoder takes images of other sizes with
+  `interpolate_pos_encoding = true`.
 - Qwen3 MoE (`Qwen3MoeForCausalLM`, Qwen3-30B-A3B) and Qwen3.5 MoE
   (`Qwen3_5MoeForConditionalGeneration`, Qwen3.5-35B-A3B and Qwen3.6-35B-A3B, and the text
   model `Qwen3_5MoeForCausalLM`): Qwen3 and Qwen3.5 whose MLPs are sparse mixtures of experts,

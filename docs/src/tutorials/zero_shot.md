@@ -1,10 +1,12 @@
 # [Zero-shot classification](@id zero_shot)
 
-SigLIP and SigLIP 2, of Google, embed images and texts in the same space: an image and a text
-that describes it have similar embeddings. They classify an image among labels that you
-write, without training on them, and retrieve the images that a text describes, or the
-texts that describe an image. Metalhead ports their models, `SiglipModel` and
-`Siglip2Model`, and their processors, which prepare the images and the texts.
+CLIP, of OpenAI, and SigLIP and SigLIP 2, of Google, embed images and texts in the same
+space: an image and a text that describes it have similar embeddings. They classify an image
+among labels that you write, without training on them, and retrieve the images that a text
+describes, or the texts that describe an image. Metalhead ports their models, `CLIPModel`,
+`SiglipModel` and `Siglip2Model`, and their processors, which prepare the images and the
+texts. The code below uses SigLIP 2; [CLIP](@ref clip_zero_shot) differs in its processor and
+in its softmax.
 
 ## Set up
 
@@ -71,6 +73,39 @@ with the other punctuation. `google/siglip-so400m-patch14-224` has only `spiece.
 HuggingFaceTokenizers.jl cannot load its tokenizer; use a checkpoint with `tokenizer.json`
 for text processing.
 
+## [CLIP](@id clip_zero_shot)
+
+[`CLIPModel`](@ref Metalhead.Transformers.CLIPModel) and
+[`CLIPProcessor`](@ref Metalhead.Transformers.CLIPProcessor) are used in the same way, with
+the sentences and the image of above:
+
+```julia
+model = create_model("openai/clip-vit-base-patch32")
+proc = create_processor("openai/clip-vit-base-patch32")
+
+inputs = proc(; images = img, text = ["a photo of $l" for l in labels])
+size(inputs.pixel_values)      # (224, 224, 3, 1)
+size(inputs.input_ids)         # (8, 5): each text padded to the longest
+
+outputs = model(inputs)
+probs = softmax(outputs.logits_per_image; dims = 1)   # 5 × 1: one column per image
+# two cats 0.954, a dog 0.000, a remote control 0.019, a pink couch 0.027, a car 0.000
+```
+
+CLIP is trained with a softmax over the texts of a batch, unlike SigLIP's sigmoid: the
+`softmax` of `logits_per_image` over its texts (the first dimension) gives probabilities that
+sum to 1, and the logits are the cosine similarities times `exp(model.logit_scale[])`, 100.
+The processor resizes the shorter side of an image to 224 pixels and crops the center
+224 × 224, which cuts the sides of a landscape photograph, and pads the texts to the longest
+of the batch. A text is at most 77 tokens.
+
+The main branch of `openai/clip-vit-base-patch32` has no safetensors weights: `create_model`
+loads the pull request of Hugging Face's conversion bot that adds them. The encoders load
+alone from the repositories of checkpoints that only hold one, such as the text encoder of
+Stable Diffusion 1.5
+(`create_model("stable-diffusion-v1-5/stable-diffusion-v1-5/text_encoder")`, a
+[`CLIPTextModel`](@ref Metalhead.Transformers.CLIPTextModel)).
+
 ## Embeddings
 
 `outputs.image_embeds` and `outputs.text_embeds` are the embeddings of the images and the
@@ -92,7 +127,13 @@ text_embeds = mapslices(normalize, get_text_features(model, query).pooler_output
 similarities = vec(text_embeds' * image_embeds)   # one per image: sort to rank them
 ```
 
+[`get_image_features`](@ref Metalhead.Transformers.get_image_features) and
+[`get_text_features`](@ref Metalhead.Transformers.get_text_features) of a `CLIPModel` do the
+same, with the inputs of its processor.
+
 See [`Siglip2Model`](@ref Metalhead.Transformers.Siglip2Model),
 [`SiglipModel`](@ref Metalhead.Transformers.SiglipModel) and their processors,
 [`Siglip2Processor`](@ref Metalhead.Transformers.Siglip2Processor) and
-[`SiglipProcessor`](@ref Metalhead.Transformers.SiglipProcessor), for the inputs and outputs.
+[`SiglipProcessor`](@ref Metalhead.Transformers.SiglipProcessor), and
+[`CLIPModel`](@ref Metalhead.Transformers.CLIPModel) and
+[`CLIPProcessor`](@ref Metalhead.Transformers.CLIPProcessor), for the inputs and outputs.
