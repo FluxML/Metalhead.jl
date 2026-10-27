@@ -54,9 +54,12 @@ end
     architectures = [m[1] for r in replacements for m in eachmatch(r"\"(\w+)\"", r)]
     @test length(architectures) > 30
     @test setdiff(architectures, list_models()) == []
-    new = [:Metalhead, :create_model, :create_processor, :list_models, :forward_features,
-        :forward_head, :forward_intermediates, :feature_info,
-        :post_process_object_detection, :post_process_instance_segmentation,
-        :post_process_semantic_segmentation, :encode_query, :encode_document, :similarity]
-    @test setdiff(names(Metalhead), new, keys(Metalhead.LEGACY_REPLACEMENTS)) == []
+    # the exports defined in src/legacy/, each with a replacement (or `nothing`)
+    in_legacy(m) = occursin(joinpath("src", "legacy"), String(m.file))
+    legacy = filter(names(Metalhead)) do name
+        ms = methods(getfield(Metalhead, name))
+        return !isempty(ms) && all(in_legacy, ms)
+    end
+    @test :ResNet in legacy
+    @test setdiff(legacy, keys(Metalhead.LEGACY_REPLACEMENTS)) == []
 end
