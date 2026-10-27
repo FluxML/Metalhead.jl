@@ -3,10 +3,11 @@
 Metalhead also ports language models from
 [Hugging Face Transformers](https://github.com/huggingface/transformers), starting with the
 Llama, Qwen, Gemma 3 and Granite architectures (`LlamaForCausalLM`, `Qwen2ForCausalLM`,
-`Qwen3ForCausalLM`, `Qwen3_5ForCausalLM`, `Gemma3ForCausalLM`, `GraniteForCausalLM`,
-`GraniteMoeForCausalLM`, `GraniteMoeSharedForCausalLM` and `GraniteMoeHybridForCausalLM`),
-and the Qwen3.5 models that also read images, `Qwen3_5ForConditionalGeneration` (see
-[Vision-language models](@ref vision_language)). They load from the Hub like the timm
+`Qwen3ForCausalLM`, `Qwen3MoeForCausalLM`, `Qwen3_5ForCausalLM`, `Qwen3_5MoeForCausalLM`,
+`Gemma3ForCausalLM`, `GraniteForCausalLM`, `GraniteMoeForCausalLM`,
+`GraniteMoeSharedForCausalLM` and `GraniteMoeHybridForCausalLM`), and the Qwen3.5 models that
+also read images, `Qwen3_5ForConditionalGeneration` and `Qwen3_5MoeForConditionalGeneration`
+(see [Vision-language models](@ref vision_language)). They load from the Hub like the timm
 models:
 
 ```julia
@@ -135,8 +136,9 @@ and `granite-4.0-1b` are; the `-h-` models have them.
 
 transformers derives the Qwen2 and Qwen3 classes from Llama's, and their ports reuse the
 Llama structs: a Qwen2 or Qwen3 model is a `LlamaForCausalLM`, whose Qwen3 attention layers
-are `Qwen3Attention`s. Qwen3.5 has its own `Qwen3_5ForCausalLM`, whose layers have either a
-gated delta rule (`Qwen3_5GatedDeltaNet`) or attention. A Gemma 3 model is a `Gemma3ForCausalLM` whose decoder is a `LlamaModel` of
+are `Qwen3Attention`s, and so is a Qwen3 MoE model. Qwen3.5 has its own `Qwen3_5ForCausalLM`,
+whose layers have either a gated delta rule (`Qwen3_5GatedDeltaNet`) or attention, and which
+Qwen3.5 MoE reuses. A Gemma 3 model is a `Gemma3ForCausalLM` whose decoder is a `LlamaModel` of
 `Gemma3DecoderLayer`s, and the four Granite classes are `GraniteForCausalLM`s.
 
 ## Mixtures of experts
@@ -148,3 +150,12 @@ weights. Each projection of the experts is one `batched_mul` over the tokens gro
 expert, so the experts compute only for their own tokens, as in transformers. Grouping the
 tokens by expert copies the experts of each token to the CPU, once per layer on a GPU. The
 load-balancing loss of training is not implemented.
+
+Qwen3 MoE (`Qwen3MoeForCausalLM`, Qwen3-30B-A3B) and Qwen3.5 MoE (`Qwen3_5MoeForCausalLM` and
+`Qwen3_5MoeForConditionalGeneration`, Qwen3.6-35B-A3B) weight the experts of a token by the
+softmax of the router's logits over all the experts, renormalised over the chosen ones (in
+Qwen3 MoE only with `norm_topk_prob`). In Qwen3.5 MoE, every token also goes through a shared
+expert, weighted by a sigmoid gate. The checkpoints of Qwen3 MoE store one MLP per expert,
+which loads into the stacked weights of the experts; those of Qwen3.5 MoE store the stacked
+weights. Checkpoints that transformers 5 saves with `save_pretrained` have one MLP per expert
+in both: those of Qwen3.5 MoE don't load.

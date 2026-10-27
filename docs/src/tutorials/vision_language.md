@@ -1,7 +1,8 @@
 # [Vision-language models](@id vision_language)
 
 Qwen3.5, of Alibaba's Qwen team, reads images and text, and answers in text. Metalhead ports
-its models, `Qwen3_5ForConditionalGeneration`, with their vision encoder, and their
+its models, `Qwen3_5ForConditionalGeneration`, and those with a mixture of experts,
+`Qwen3_5MoeForConditionalGeneration` (Qwen3.6-35B-A3B), with their vision encoder, and their
 processor, [`Qwen3VLProcessor`](@ref Metalhead.Transformers.Qwen3VLProcessor), which turns
 images and prompts into the inputs of the model.
 

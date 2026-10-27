@@ -225,6 +225,8 @@ def exact_float64(model):
             m.forward = types.MethodType(_gated_delta_net_forward, m)
         elif name.startswith("GraniteMoe") and name.endswith("TopKRouter"):
             m.forward = types.MethodType(_granitemoe_router_forward, m)
+        elif name in ("Qwen3MoeTopKRouter", "Qwen3_5MoeTopKRouter"):
+            m.forward = types.MethodType(_softmax_topk_router_forward, m)
         elif name.endswith("VisionRotaryEmbedding"):  # Qwen3.5's 2D axial rotary embedding
             m.exact_inv_freq = _exact_axial_inv_freq(m)
             m.forward = types.MethodType(_axial_rotary_forward, m)
@@ -259,6 +261,17 @@ def _granitemoe_router_forward(self, hidden_states):
     router_logits = torch.nn.functional.linear(hidden_states, self.weight)
     top_k_logits, top_k_index = router_logits.topk(self.top_k, dim=-1)
     return top_k_index, torch.softmax(top_k_logits, dim=-1), router_logits
+
+
+def _softmax_topk_router_forward(self, hidden_states):
+    """The router of Qwen3 MoE and Qwen3.5 MoE, whose softmax transformers takes in float32;
+    Qwen3.5 MoE's always renormalises the top-k probabilities."""
+    hidden_states = hidden_states.reshape(-1, self.hidden_dim)
+    router_logits = torch.nn.functional.linear(hidden_states, self.weight)
+    top_value, top_index = torch.softmax(router_logits, dim=-1).topk(self.top_k, dim=-1)
+    if getattr(self, "norm_topk_prob", True):
+        top_value = top_value / top_value.sum(dim=-1, keepdim=True)
+    return router_logits, top_value, top_index
 
 
 def _zero_centred_rmsnorm_forward(self, x):

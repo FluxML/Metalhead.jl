@@ -140,6 +140,11 @@ end
         delete!(config, "processor_class")
         write(joinpath(dir, "preprocessor_config.json"), JSON.json(config))
         @test create_processor(dir) isa Qwen3VLProcessor
+        # and of Qwen3.5 MoE, whose repositories (Qwen3.6-35B-A3B) have these files
+        config = JSON.parsefile(joinpath(dir, "config.json"))
+        config["model_type"] = "qwen3_5_moe"
+        write(joinpath(dir, "config.json"), JSON.json(config))
+        @test create_processor(dir) isa Qwen3VLProcessor
     end
 end
 

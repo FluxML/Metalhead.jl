@@ -462,11 +462,15 @@ first. The workflow is the one above, with these differences.
   returns zeros there, and NNlib NaNs unless `sliding_window_q_lengths` gives it the
   matching `q_lengths`. Give a padded fixture such queries (Gemma 3's `lengths = [9, 7, 2]`
   with a window of 4).
-- **Mixtures of experts** (Granite MoE). transformers 5 stores the experts of a layer as
-  stacked 3D parameters (`experts.gate_up_proj`, `experts.down_proj`) and renames or merges
-  the checkpoint's keys when loading (`conversion_mapping.py`); `save_pretrained` writes the
-  checkpoint's keys back, so fixtures have them too. Mirror the checkpoint's keys: Granite's
-  `input_linear.weight` is a plain 3D array field, `(in, out, num_experts)` in Julia. Compute
+- **Mixtures of experts** (Granite MoE, Qwen3 MoE). transformers 5 stores the experts of a
+  layer as stacked 3D parameters (`experts.gate_up_proj`, `experts.down_proj`) and renames or
+  merges the checkpoint's keys when loading (`conversion_mapping.py`); `save_pretrained`
+  writes the keys of its mapping back, so fixtures have them too. Mirror the keys of the Hub
+  checkpoints (read a `model.safetensors.index.json`): Granite's `input_linear.weight` is a
+  plain 3D array field, `(in, out, num_experts)` in Julia. Qwen3 MoE's one MLP per expert
+  (`experts.0.gate_proj.weight`) loads into views of the stacked arrays (`layer_params` of
+  `Qwen3MoeExperts`). Qwen3.5 MoE's checkpoints are stacked, but `save_pretrained` writes
+  one MLP per expert: `dump.py` stacks them back (`STACKED_EXPERTS`). Compute
   the experts with `moe_experts` (`layers.jl`), and pick them with `MLUtils.topk`, which runs
   on the GPU too. Routers often compute in float32 (`.float()`, `softmax(dtype=torch.float)`):
   patch them in `exact_float64`, and in Julia compute the routing weights in
@@ -529,11 +533,13 @@ first. The workflow is the one above, with these differences.
   tokenizer and stores the ids, the hidden states, the last-position logits and the greedy
   continuation (`check_lm_reference` in `test/parity.jl`); the logits come from the model's
   own head, which may scale (Granite) or softcap them. Prefer the smallest checkpoint of
-  the architecture. A checkpoint that doesn't fit in memory in float32 (Qwen3.8-27B) gets
-  `--layers k`, the real weights of its first `k` decoder layers: `reference_model`
-  (`test/parity.jl`) builds the same layers from `config.json`, loads them strictly and
-  checks the keys and shapes of the other layers. Its test runs only with `TEST_LARGE`.
-  Metalhead ports no tokenizer (see "Processors"); with `METALHEAD_TEST_NETWORK`,
+  the architecture. A checkpoint too large to run whole in float32 (Qwen3-30B-A3B) gets
+  the reference of its first layers, `--layers 4 --selective-shards`, which downloads only
+  their shards, and which `reference_model(file)` (`test/parity.jl`) rebuilds. These record
+  `selective_shards = "true"` and validate the kept layers only. Partial references made
+  without `--selective-shards` (Qwen3.8-27B) download the full checkpoint and check keys and
+  shapes of omitted layers. Their tests run only with `TEST_LARGE`. Metalhead ports no
+  tokenizer (see "Processors"); with `METALHEAD_TEST_NETWORK`,
   `test/processors/tokenizers.jl` checks that the tokenizer of each repository of its list
   gives the ids of its reference: add the new one.
 

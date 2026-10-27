@@ -22,6 +22,8 @@ uv run dump.py specs/siglip2_tiny.json           # a dual encoder ("inputs": tex
 uv run dump_reference.py google/siglip2-base-patch16-naflex   # an image and texts, through the processor
 uv run dump.py specs/qwen3_5_tiny.json           # a vision-language model ("images")
 uv run dump_reference.py Qwen/Qwen3.5-0.8B       # with a vision_config: also an image prompt
+uv run dump_reference.py Qwen/Qwen3-30B-A3B --layers 4 --selective-shards   # first 4 layers only
+
 uv run dump_reference.py Qwen/Qwen3.8-27B --layers 8   # too large: its first 8 layers
 uv run dump.py specs/transformer_flux2_tiny.json specs/flux2_klein_tiny.json   # diffusers model, pipeline
 uv run dump_reference.py black-forest-labs/FLUX.2-klein-4B/vae   # a component in a subfolder

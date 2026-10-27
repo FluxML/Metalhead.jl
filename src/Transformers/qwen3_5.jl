@@ -461,6 +461,29 @@ function qwen3_5_text_model(; vocab_size = 248_320, hidden_size = 4096,
         linear_conv_kernel_dim = 4, linear_key_head_dim = 128, linear_value_head_dim = 128,
         linear_num_key_heads = 16, linear_num_value_heads = 32, layer_types = nothing,
         full_attention_interval = 4, output_gate_type = nothing)
+    function mlp(dense, act)
+        return LlamaMLP(dense(hidden_size => intermediate_size),
+            dense(hidden_size => intermediate_size),
+            dense(intermediate_size => hidden_size), act)
+    end
+    return qwen3_5_text_like(mlp; vocab_size, hidden_size, num_hidden_layers,
+        num_attention_heads, num_key_value_heads, hidden_act, initializer_range,
+        rms_norm_eps, rope_parameters, rope_theta, rope_scaling, partial_rotary_factor,
+        attention_bias, attention_dropout, head_dim, linear_conv_kernel_dim,
+        linear_key_head_dim, linear_value_head_dim, linear_num_key_heads,
+        linear_num_value_heads, layer_types, full_attention_interval, output_gate_type)
+end
+
+# A `Qwen3_5TextModel` whose layers have the MLP `mlp(dense, act)`, where
+# `dense(in => out, bias = false)` is a Linear layer initialised like transformers' and `act`
+# the activation of `hidden_act`.
+function qwen3_5_text_like(mlp; vocab_size, hidden_size, num_hidden_layers,
+        num_attention_heads, num_key_value_heads, hidden_act, initializer_range,
+        rms_norm_eps, rope_parameters, rope_theta, rope_scaling, partial_rotary_factor,
+        attention_bias, attention_dropout, head_dim, linear_conv_kernel_dim,
+        linear_key_head_dim, linear_value_head_dim, linear_num_key_heads,
+        linear_num_value_heads, layer_types, full_attention_interval,
+        output_gate_type = nothing)
     types = qwen3_5_layer_types(; num_hidden_layers, layer_types, full_attention_interval)
     check_output_gate_type(output_gate_type)
     head_dim, num_key_value_heads = attention_heads(; hidden_size, num_attention_heads,
@@ -502,11 +525,9 @@ function qwen3_5_text_model(; vocab_size = 248_320, hidden_size = 4096,
     end
     function decoder_layer(layer_type)
         linear = layer_type == "linear_attention"
-        mlp = LlamaMLP(dense(hidden_size => intermediate_size),
-            dense(hidden_size => intermediate_size),
-            dense(intermediate_size => hidden_size), act)
         return Qwen3_5DecoderLayer(linear ? linear_attention() : nothing,
-            linear ? nothing : attention(), mlp, norm(hidden_size), norm(hidden_size))
+            linear ? nothing : attention(), mlp(dense, act), norm(hidden_size),
+            norm(hidden_size))
     end
     return Qwen3_5TextModel(init_layer(Embedding, vocab_size => hidden_size; init),
         [decoder_layer(t) for t in types], norm(hidden_size), rotary_emb)
@@ -540,8 +561,14 @@ function qwen3_5_for_causal_lm(; vocab_size = 248_320, hidden_size = 4096,
         head_dim, linear_conv_kernel_dim, linear_key_head_dim, linear_value_head_dim,
         linear_num_key_heads, linear_num_value_heads, layer_types, full_attention_interval,
         output_gate_type)
-    lm_head = tie_word_embeddings ? TiedLMHead(model.embed_tokens.weight) :
-              init_layer(Dense, hidden_size => vocab_size; bias = false,
+    return qwen3_5_causal_lm(model; tie_word_embeddings, initializer_range)
+end
+
+# The causal LM of the text model `model`, with its output projection `lm_head`
+function qwen3_5_causal_lm(model; tie_word_embeddings, initializer_range)
+    weight = model.embed_tokens.weight
+    lm_head = tie_word_embeddings ? TiedLMHead(weight) :
+              init_layer(Dense, size(weight, 1) => size(weight, 2); bias = false,
         init = normal_init(initializer_range))
     return Qwen3_5ForCausalLM(model, lm_head)
 end
@@ -793,7 +820,14 @@ placeholder for each image, and the model takes its output as it is:
 """
 function qwen3_5_for_conditional_generation(; text_config = (;), vision_config = (;),
         image_token_id = 248_056, tie_word_embeddings = false)
-    language_model = qwen3_5_text_model(; config_args(qwen3_5_text_model, text_config)...)
+    return qwen3_5_vision_language(qwen3_5_text_model; text_config, vision_config,
+        image_token_id, tie_word_embeddings)
+end
+
+# The vision-language model of the text model of `text_config`, built by `text_model`.
+function qwen3_5_vision_language(text_model; text_config, vision_config, image_token_id,
+        tie_word_embeddings)
+    language_model = text_model(; config_args(text_model, text_config)...)
     visual = qwen3_5_vision_model(; config_args(qwen3_5_vision_model, vision_config)...)
     weight = language_model.embed_tokens.weight
     lm_head = tie_word_embeddings ? TiedLMHead(weight) :

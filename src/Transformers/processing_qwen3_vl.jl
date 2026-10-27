@@ -66,7 +66,7 @@ HuggingFaceTokenizers.decode(proc.tokenizer, [argmax(logits[:, end]) - 1])
     provenance::NamedTuple = (;)
 end
 
-register_processor!("Qwen3VLProcessor", Qwen3VLProcessor; model_types = ["qwen3_5"])
+register_processor!("Qwen3VLProcessor", Qwen3VLProcessor; model_types = ["qwen3_5", "qwen3_5_moe"])
 
 function ignored_keys(::Type{Qwen3VLProcessor})
     return (; chat_template = "the chat template, which Metalhead doesn't apply",

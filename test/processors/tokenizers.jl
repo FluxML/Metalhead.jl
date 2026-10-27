@@ -160,6 +160,7 @@ if TEST_NETWORK
     @testset "language models: $repo" for (repo, pad) in [
         "HuggingFaceTB/SmolLM2-135M" => nothing,
         "Qwen/Qwen3-0.6B" => "<|endoftext|>" => 151643,
+        "Qwen/Qwen3-30B-A3B" => "<|endoftext|>" => 151643,
         "unsloth/Llama-3.2-1B" => "<|finetune_right_pad_id|>" => 128004,
         "unsloth/gemma-3-270m" => "<pad>" => 0]
         proc = @test_logs create_processor(repo)
