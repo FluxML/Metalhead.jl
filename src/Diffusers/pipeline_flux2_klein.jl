@@ -77,13 +77,7 @@ the text encoder.
 function encode_prompt(p::Flux2KleinPipeline,
         prompt::Union{AbstractString, AbstractVector{<:AbstractString}};
         max_sequence_length::Integer = 512, text_encoder_out_layers = (9, 18, 27))
-    tok = resolve_tokenizer(p.tokenizer)
-    if tok === nothing
-        p.tokenizer isa DeferredTokenizer &&
-            error("the tokenizer of the pipeline needs HuggingFaceTokenizers.jl to encode prompts: run `using HuggingFaceTokenizers`, and call the pipeline again, which needn't be loaded again; or pass prompt embeddings, or the token indices of the prompts to `encode_prompt`")
-        error("the pipeline has no tokenizer to encode prompts, as its repository has no tokenizer/tokenizer.json: pass prompt embeddings, or the token indices of the prompts to `encode_prompt`")
-    end
-    inputs = qwen3_prompt_inputs(tok, prompt; max_sequence_length)
+    inputs = qwen3_prompt_inputs(prompt_tokenizer(p.tokenizer), prompt; max_sequence_length)
     return encode_prompt(p, inputs.input_ids; inputs.attention_mask,
         text_encoder_out_layers)
 end
