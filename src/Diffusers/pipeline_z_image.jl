@@ -29,7 +29,7 @@ The defaults of the pipeline are those of diffusers, for Z-Image: 50 steps with 
 `gpu(pipeline)` and `bf16(pipeline)` move and convert every component but the tokenizer.
 
 ```julia
-using Metalhead, HuggingFaceTokenizers
+using Metalhead, Flux, HuggingFaceTokenizers
 pipe = create_model("Tongyi-MAI/Z-Image-Turbo"; eltype = BFloat16)
 image = pipe("A cat holding a sign that says hello world"; num_inference_steps = 9,
              guidance_scale = 0)
