@@ -5,7 +5,7 @@ This folder is not part of the Julia package API, and the Julia tests never run 
 
 ```sh
 cd porting
-uv sync                                   # torch (CPU), timm, transformers, diffusers, safetensors
+uv sync                                   # the locked torch (CPU), timm, transformers, diffusers
 uv run inspect_model.py resnet18          # module tree and state_dict of a timm model
 uv run dump.py specs/resnet_basic.json specs/resnext.json     # tiny fixtures -> test/fixtures/<name>/
 julia --project=.. check.jl specs/resnet_basic.json specs/resnext.json   # parity reports, one session
@@ -45,5 +45,9 @@ Feature intermediates are always stored in float64, with timm's tap metadata, in
 of `tap_depth`. Models without `forward_intermediates` use hooks at their `feature_info`
 modules. The Julia harness checks these tensors at 1e-8 relative error and compares the tap
 table, selected indices and early stopping.
+
+`uv.lock` pins the upstream versions that the fixtures and references are dumped with (each
+file also records them in its metadata). Move them with `uv lock --upgrade-package <name>`, and
+re-dump what the new version changes.
 
 The workflow for porting a model is in `skills/port-hf-model/SKILL.md`.
