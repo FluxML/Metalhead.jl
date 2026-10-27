@@ -147,6 +147,7 @@ or without network those of the cache.
 | Checkpoints | `create_processor` returns | Called as |
 |:--|:--|:--|
 | timm | [`Timm.EvalTransform`](@ref Metalhead.Timm.EvalTransform), timm's eval transform | `transform(images)` |
+| CLIP | [`Transformers.CLIPProcessor`](@ref Metalhead.Transformers.CLIPProcessor) | `proc(; text, images)` |
 | Qwen3.5 | [`Transformers.Qwen3VLProcessor`](@ref Metalhead.Transformers.Qwen3VLProcessor) | `proc(; images, text)` |
 | SAM 3 | [`Transformers.Sam3Processor`](@ref Metalhead.Transformers.Sam3Processor) | `proc(; images, text, input_boxes)` |
 | language models | [`TextProcessor`](@ref Metalhead.TextProcessor), the tokenizer of the repository | `tok(text)` |
@@ -166,8 +167,8 @@ Julia. The tokenizer of a repository is a `Tokenizer` of
 calls Hugging Face's tokenizers library through Python on the repository's
 `tokenizer.json`, with the padding token of its `tokenizer_config.json`. `create_processor`
 loads it after `using HuggingFaceTokenizers`, as the `tokenizer` of a processor that takes
-text: the `TextProcessor` of a language model, or those of Qwen3.5 and SAM 3, which without
-it prepare images only. Its token ids start at 0, the token indices of the models at 1.
+text: the `TextProcessor` of a language model, or those of CLIP, Qwen3.5 and SAM 3, which
+without it prepare images only. Its token ids start at 0, the token indices of the models at 1.
 
 The settings are read strictly, for every processor: one that the port doesn't implement is
 an error, and an unknown key in a file a warning.

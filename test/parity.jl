@@ -7,7 +7,8 @@ using Metalhead: Checkpoint, join_key, layer_params
 
 export Tap, tapify, check_fixture, fixture_model, fixture_inputs, shrink_channels,
        check_lm_reference, check_image_reference, check_sam3_reference, check_pipeline_fixture,
-       reference_model, check_siglip_reference, check_diffusers_reference,
+       reference_model, check_siglip_reference, check_clip_reference,
+       check_diffusers_reference,
        reference_input, relerr
 
 relerr(a, b) = norm(a .- b) / max(norm(b), floatmin(Float64))
@@ -356,6 +357,55 @@ function check_siglip_reference(file)
             part(:vision_model_output, :pooler_output)),
         hidden = max(part(:text_model_output, :last_hidden_state),
             part(:vision_model_output, :last_hidden_state)))
+end
+
+"""
+    check_clip_reference(file) -> NamedTuple
+
+Compare a CLIP model with the reference outputs of its real checkpoint, written by
+porting/dump_reference.py, whose large arrays are strided (`strides`: of the pixels, and of
+the tokens and features of the hidden states). For a `CLIPModel`: the largest relative
+errors of its outputs (`outputs`: the logits and the normalised embeddings) and of those of
+`get_text_features` and `get_image_features` (`features`), on the stored `input_ids` and
+`attention_mask` and on the `pixel_values` that the image processor of the repository
+(`create_processor`) makes of the stored 8-bit images, which must be transformers'
+(`processor_same`), as must the `input_ids` and `attention_mask` that the processor makes of
+the texts with HuggingFaceTokenizers.jl loaded. For a `CLIPTextModel`: the errors of its
+`pooler_output` and `last_hidden_state`, on the stored token ids.
+"""
+function check_clip_reference(file)
+    meta = SafeTensors.deserialize(file).metadata
+    ref = Checkpoint(file)
+    T = Metalhead.Transformers
+    model = create_model(meta["repo"]; pretrained = true, revision = meta["revision"])
+    pixels, tokens, features = Metalhead.JSON.parse(meta["strides"])
+    hidden(x) = x[1:features:end, 1:tokens:end, :]
+    ids = ref["input_ids"] .+ 1
+    if meta["class"] == "CLIPTextModel"
+        y = model(ids)
+        return (; repo = meta["repo"],
+            pooler_output = relerr(y.pooler_output, ref["pooler_output"]),
+            last_hidden_state = relerr(hidden(y.last_hidden_state), ref["last_hidden_state"]))
+    end
+    proc = create_processor(meta["repo"]; revision = meta["revision"])
+    images = [ref["image/$i"] for i in 1:count(k -> occursin(r"^image/\d+$", k), keys(ref))]
+    pixel_values = proc.image_processor(images).pixel_values
+    processor_same = pixel_values[1:pixels:end, 1:pixels:end, :, :] == ref["pixel_values"]
+    attention_mask = ref["attention_mask"]
+    if proc.tokenizer !== nothing
+        inputs = proc(; text = Metalhead.JSON.parse(meta["texts"]))
+        processor_same &= inputs.input_ids == ids && inputs.attention_mask == attention_mask
+    end
+    y = model(ids, pixel_values; attention_mask)
+    text = T.get_text_features(model, ids; attention_mask)
+    image = T.get_image_features(model, pixel_values)
+    errs = [relerr(text.pooler_output, ref["text/pooler_output"]),
+        relerr(hidden(text.last_hidden_state), ref["text/last_hidden_state"]),
+        relerr(image.pooler_output, ref["image/pooler_output"]),
+        relerr(hidden(image.last_hidden_state), ref["image/last_hidden_state"])]
+    return (;
+        repo = meta["repo"], outputs = maximum(k -> relerr(y[k], ref[string(k)]), keys(y)),
+        features = maximum(errs), processor_same)
 end
 
 """

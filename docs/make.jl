@@ -28,6 +28,7 @@ end
 
 function write_model_list(path)
     titles = Dict(
+        "clip" => "CLIP",
         "convmixer" => "ConvMixer",
         "convnext" => "ConvNeXt",
         "densenet" => "DenseNet",
@@ -51,8 +52,12 @@ function write_model_list(path)
         "z_image" => "Z-Image")
     title(family) = get(titles, family, family)
     st_types = join(("`$t`" for t in sort!(collect(keys(ST.AUTO_MODELS)))), ", ")
-    notes = Dict("granite" => "Granite 4.0 models load without Mamba layers, so the hybrid " *
-                              "\"H\" models (`granite-4.0-h-*`) don't load.",
+    notes = Dict(
+        "clip" => "The main branch of `openai/clip-vit-base-patch32` has no safetensors " *
+                  "weights: its validated commit is the pull request of Hugging Face's " *
+                  "conversion bot that adds them, which `create_model` loads by default.",
+        "granite" => "Granite 4.0 models load without Mamba layers, so the hybrid " *
+                     "\"H\" models (`granite-4.0-h-*`) don't load.",
         "qwen" => "`Qwen3-30B-A3B` and `Qwen3.6-35B-A3B` were validated on their first 4 " *
                   "decoder layers, with their embeddings, head and, for Qwen3.6, vision " *
                   "encoder; `Qwen/Qwen3.8-27B` with its first 8 decoder layers " *
@@ -177,7 +182,7 @@ makedocs(; modules = [Metalhead],
             "Scope" => "scope.md",
             "Porting a model" => "contributing.md"],
         "Migrating from 0.9" => "migration.md",
-        "API reference" => ["Overview" => "api/reference.md",
+        "API reference" => ["Overview" => "api/reference.md", "CLIP" => "api/clip.md",
             "SigLIP and SigLIP 2" => "api/siglip.md",
             "Sentence transformers" => "api/sentence_transformers.md"]
     ],

@@ -63,7 +63,8 @@ Metalhead.Transformers.Sam3VideoModel
 Metalhead.Transformers.Sam3VisionModel
 ```
 
-The models and processors of SigLIP and SigLIP 2 have their own [API reference](siglip.md).
+The models and processors of CLIP, and of SigLIP and SigLIP 2, have their own API references:
+[CLIP](clip.md), and [SigLIP and SigLIP 2](siglip.md).
 
 ## diffusers
 
@@ -101,7 +102,10 @@ Modules = [Metalhead.Timm, Metalhead.Transformers]
 Order = [:function]
 Filter = f -> !(f in (Metalhead.Timm.pretrained_cfg, Metalhead.Timm.pil_resize,
     post_process_object_detection, post_process_instance_segmentation,
-    post_process_semantic_segmentation))
+    post_process_semantic_segmentation, Metalhead.Transformers.clip_model,
+    Metalhead.Transformers.clip_text_model, Metalhead.Transformers.clip_vision_model,
+    Metalhead.Transformers.clip_text_model_with_projection,
+    Metalhead.Transformers.clip_vision_model_with_projection))
 ```
 
 ```@docs
@@ -131,6 +135,7 @@ Metalhead.AbstractConfigFormat
 Metalhead.architecture_of
 Metalhead.model_args
 Metalhead.skip_prefix
+Metalhead.checkpoint_prefix
 Metalhead.weights_name
 Metalhead.instantiate
 Metalhead.AbstractProcessor

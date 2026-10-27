@@ -12,8 +12,8 @@ With "mrope_positions": true, it takes random `position_ids` of size (3, batch, 
 temporal, height and width positions of a multimodal rotary embedding (Qwen3.5).
 A vision encoder (Qwen3_5VisionModel) has "grid_thw" instead of "input_shape": the
 (t, h, w) grids of patches of its images (see `dump_transformers_vision`). A Sam3Model has
-"inputs", the sizes of its images and prompts (see `dump_sam3`), and so do SiglipModel and
-Siglip2Model (see `dump_siglip`).
+"inputs", the sizes of its images and prompts (see `dump_sam3`), and so do SiglipModel,
+Siglip2Model (see `dump_siglip`) and the CLIP models (see `dump_clip`).
 
 A spec with "library": "diffusers" describes a diffusers model, "architecture" (the class, e.g.
 "Flux2Transformer2DModel") with the arguments "config", saved with `save_pretrained`, and the
@@ -209,6 +209,8 @@ def dump_transformers(spec, out, args):
         return dump_sam3(spec, out, args)
     if spec["architecture"] in ("SiglipModel", "Siglip2Model"):
         return dump_siglip(spec, out, args)
+    if spec["architecture"].startswith("CLIP"):
+        return dump_clip(spec, out, args)
     seed = spec.get("seed", 0)
     torch.manual_seed(seed)
     model = build(spec).eval()
@@ -495,6 +497,89 @@ def dump_siglip(spec, out, args):
     for part in ("text_model_output", "vision_model_output"):
         for k in ("last_hidden_state", "pooler_output"):
             acts[f"output/{part}/{k}"] = getattr(getattr(outputs, part), k).contiguous()
+    meta = {"spec": json.dumps(spec), "call_order": json.dumps(order),
+            "num_params": str(sum(p.numel() for p in model.parameters())), **versions()}
+    save_file(acts, out / "acts.safetensors", metadata=meta)
+
+    size = sum(f.stat().st_size for f in out.iterdir())
+    print(f"{out}: {len(model.state_dict())} tensors, {len(taps)} taps, {size / 1e6:.2f} MB")
+    return size <= args.max_bytes or bool(args.out)
+
+
+CLIP_OUTPUTS = {"CLIPModel": ("logits_per_image", "logits_per_text", "text_embeds", "image_embeds"),
+                "CLIPTextModel": ("last_hidden_state", "pooler_output"),
+                "CLIPVisionModel": ("last_hidden_state", "pooler_output"),
+                "CLIPTextModelWithProjection": ("text_embeds", "last_hidden_state"),
+                "CLIPVisionModelWithProjection": ("image_embeds", "last_hidden_state")}
+
+
+def clip_token_ids(text, sizes, gen):
+    """Random token ids of `sizes["texts"]` sequences of `sizes["seq_len"]` tokens (or
+    `max_position_embeddings`), each ending with an end-of-text token, as a tokenizer writes
+    it, and padded on the right with it after `sizes["lengths"]` tokens, as CLIP's tokenizers
+    pad. The end-of-text token is `eos_token_id`, which no other token is, or with the
+    `eos_token_id = 2` of older configs, which pool at the largest id, the largest id of the
+    vocabulary, as in OpenAI's tokenizer."""
+    b = sizes["texts"]
+    n = sizes.get("seq_len", text.max_position_embeddings)
+    lengths = sizes.get("lengths", [n] * b)
+    eos = text.vocab_size - 1 if text.eos_token_id == 2 else text.eos_token_id
+    ids = torch.randint(text.vocab_size - 1, (b, n), generator=gen)
+    ids += (ids >= eos).long()  # no other end-of-text token
+    for i, length in enumerate(lengths):
+        ids[i, length - 1:] = eos
+    mask = torch.stack([torch.arange(n) < l for l in lengths]).long()
+    return ids, mask if "lengths" in sizes else None
+
+
+def dump_clip(spec, out, args):
+    """Write the fixture of a CLIP model (CLIPModel, CLIPTextModel, CLIPVisionModel or one of
+    them WithProjection), whose inputs `spec["inputs"]` sizes: "texts" sequences of random
+    token ids (see `clip_token_ids`; 1-based, as the Julia model takes them) and "images"
+    random images of the model's `image_size`, or of `[height, width]` "image_size" with
+    "interpolate_pos_encoding". The positional inputs are those of the torch forward, in its
+    order: "inputs/1" the token ids and "inputs/2" the images of a CLIPModel, "inputs/1" those
+    of an encoder; the keyword arguments are "kwargs/attention_mask" (with "lengths") and
+    "kwargs/interpolate_pos_encoding". The outputs are "output/<name>", the fields of
+    `CLIP_OUTPUTS`."""
+    seed = spec.get("seed", 0)
+    torch.manual_seed(seed)
+    model = build(spec).eval()
+    rerandomize(model, seed)
+    model.save_pretrained(out)
+    model = model.double()
+
+    tap_dtype = getattr(torch, args.tap_dtype or ("float32" if args.all_taps else "float16"))
+    taps, order = {}, []
+    names = {n for n, m in model.named_modules()
+             if n and any(True for _ in m.parameters())
+             and (args.all_taps or n.count(".") <= spec.get("tap_depth", 1))}
+    arch, cfg, sizes = spec["architecture"], model.config, spec["inputs"]
+    text = cfg.text_config if arch == "CLIPModel" else cfg
+    vision = cfg.vision_config if arch == "CLIPModel" else cfg
+    gen = torch.Generator().manual_seed(seed + 1)
+    inputs, kwargs = [], {}
+    if "Vision" not in arch:
+        input_ids, mask = clip_token_ids(text, sizes, gen)
+        inputs.append(input_ids)
+        if mask is not None:
+            kwargs["attention_mask"] = mask
+    if "Text" not in arch:
+        h, w = sizes.get("image_size", [vision.image_size] * 2)
+        inputs.append(torch.randn(sizes["images"], vision.num_channels, h, w, generator=gen,
+                                  dtype=torch.float64))
+        if sizes.get("interpolate_pos_encoding"):
+            kwargs["interpolate_pos_encoding"] = True
+    with torch.no_grad():
+        handles = tap_hooks(model, names, taps, order, tap_dtype)
+        outputs = model(*inputs, **kwargs)
+        for h in handles:
+            h.remove()
+
+    stored = [x + 1 if not x.is_floating_point() else x for x in inputs]
+    acts = {**{f"inputs/{i + 1}": x.contiguous() for i, x in enumerate(stored)}, **taps,
+            **{f"output/{k}": getattr(outputs, k).contiguous() for k in CLIP_OUTPUTS[arch]},
+            **{f"kwargs/{k}": torch.as_tensor(v).contiguous() for k, v in kwargs.items()}}
     meta = {"spec": json.dumps(spec), "call_order": json.dumps(order),
             "num_params": str(sum(p.numel() for p in model.parameters())), **versions()}
     save_file(acts, out / "acts.safetensors", metadata=meta)

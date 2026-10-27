@@ -519,9 +519,9 @@ first. The workflow is the one above, with these differences.
   ported part as its field (`detector_model`), whose other weights go in `ignore`. On the
   CPU, NNlib's `conv` allocates a workspace per thread, gigabytes for 3 × 3 convolutions of
   288 × 288 maps.
-- **Dual encoders** (SigLIP and SigLIP 2, `siglip.jl`, `siglip2.jl`). A spec has `"inputs"`,
-  the numbers of texts and images (or the patch grids of SigLIP 2's NaFlex images); the
-  outputs are a NamedTuple whose NamedTuple fields (`text_model_output`) `dump.py` stores as
+- **Dual encoders** (SigLIP and SigLIP 2, `siglip.jl`, `siglip2.jl`; CLIP, `clip.jl`). A spec
+  has `"inputs"`, the numbers of texts and images (or the patch grids of SigLIP 2's NaFlex
+  images); the outputs are a NamedTuple whose NamedTuple fields (`text_model_output`) `dump.py` stores as
   `output/<field>/<name>`. The fields of transformers' outputs keep its names, with the
   dimensions reversed: `logits_per_image` is `(num_texts, num_images)`. The models also take
   the outputs of their processors, and transformers' `get_text_features` and
@@ -529,6 +529,15 @@ first. The workflow is the one above, with these differences.
   fixed-resolution SigLIP 2 checkpoints) names its class by its `model_type`, which the port
   adds to `MODEL_TYPE_CLASSES` (`config.jl`). torch's CPU antialiased bilinear interpolation
   returns a constant column for outputs one pixel wide: don't build fixtures that hit it.
+  CLIP's `dump_clip` takes the positional inputs of the torch forward (token ids, then
+  images); the references go through the processor of the repository (`check_clip_reference`),
+  and each encoder is registered alone too, under the class names of its checkpoints.
+- **Keys that transformers renames.** transformers 5 renames the keys of some checkpoints as
+  it loads them (`conversion_mapping.py`), and `save_pretrained` doesn't always write them
+  back: `CLIPTextModel` and `CLIPVisionModel` checkpoints saved before transformers 5 nest
+  their weights under `text_model.` and `vision_model.` (`PrefixChange`), those saved by
+  transformers 5 don't. Mirror transformers 5's module tree, and load the other layout with a
+  method of `checkpoint_prefix(model, ckpt)` (`src/hub/registry.jl`; CLIP's in `clip.jl`).
 - **References.** `uv run dump_reference.py <org>/<repo>` tokenizes `PROMPTS` with the repo's
   tokenizer and stores the ids, the hidden states, the last-position logits and the greedy
   continuation (`check_lm_reference` in `test/parity.jl`); the logits come from the model's

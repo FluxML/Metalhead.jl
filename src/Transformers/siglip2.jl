@@ -230,14 +230,15 @@ function siglip2_vision_model(; hidden_size = 768, intermediate_size = 3072,
     check_vision_use_head(vision_use_head)
     patch_dim = num_channels * patch_size^2
     embeddings = Siglip2VisionEmbeddings(
-        Dense(patch_dim => hidden_size; init = fan_in_init(patch_dim)),
-        Embedding(num_patches => hidden_size; init = fan_in_init(hidden_size)))
+        init_layer(Dense, patch_dim => hidden_size; init = fan_in_init(patch_dim)),
+        init_layer(Embedding, num_patches => hidden_size;
+            init = fan_in_init(hidden_size)))
     encoder = siglip_encoder(; hidden_size, intermediate_size, num_hidden_layers,
         num_attention_heads, hidden_act, layer_norm_eps, attention_dropout)
     head = siglip_pooling_head(; hidden_size, intermediate_size, num_attention_heads,
         hidden_act, layer_norm_eps)
     return Siglip2VisionModel(embeddings, encoder,
-        LayerNorm(hidden_size; eps = Float32(layer_norm_eps)), head)
+        init_layer(LayerNorm, hidden_size; eps = Float32(layer_norm_eps)), head)
 end
 
 """
@@ -256,7 +257,8 @@ function siglip2_model(; text_config = nothing, vision_config = nothing,
         initializer_factor = 1.0)
     text_model, vision_model = siglip_towers(text_config, vision_config,
         siglip2_vision_model)
-    return Siglip2Model(text_model, vision_model, zeros(Float32, 1), zeros(Float32, 1))
+    return Siglip2Model(text_model, vision_model, init_array(Flux.zeros32, 1),
+        init_array(Flux.zeros32, 1))
 end
 
 register!(ArchSpec(TRANSFORMERS, "Siglip2Model", siglip2_model; family = "siglip",

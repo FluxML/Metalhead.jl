@@ -1,0 +1,45 @@
+{
+  "architectures": [
+    "CLIPModel"
+  ],
+  "dtype": "float32",
+  "initializer_factor": 1.0,
+  "logit_scale_init_value": 1.5,
+  "model_type": "clip",
+  "projection_dim": 12,
+  "text_config": {
+    "attention_dropout": 0.0,
+    "bos_token_id": 49406,
+    "eos_token_id": 40,
+    "hidden_act": "quick_gelu",
+    "hidden_size": 16,
+    "initializer_factor": 1.0,
+    "initializer_range": 0.02,
+    "intermediate_size": 24,
+    "layer_norm_eps": 1e-05,
+    "max_position_embeddings": 8,
+    "model_type": "clip_text_model",
+    "num_attention_heads": 2,
+    "num_hidden_layers": 2,
+    "pad_token_id": 1,
+    "projection_dim": 512,
+    "vocab_size": 64
+  },
+  "transformers_version": "5.20.2",
+  "vision_config": {
+    "attention_dropout": 0.0,
+    "hidden_act": "quick_gelu",
+    "hidden_size": 24,
+    "image_size": 16,
+    "initializer_factor": 1.0,
+    "initializer_range": 0.02,
+    "intermediate_size": 32,
+    "layer_norm_eps": 1e-05,
+    "model_type": "clip_vision_model",
+    "num_attention_heads": 2,
+    "num_channels": 3,
+    "num_hidden_layers": 2,
+    "patch_size": 4,
+    "projection_dim": 512
+  }
+}

@@ -125,6 +125,14 @@ tokenizer that `create_processor` loads gives the token ids of these references,
 FLUX.2 [klein] pipeline below, as transformers' tokenizers gave them, with the padding token
 of `tokenizer_config.json`.
 
+For CLIP, the input is four texts and two 8-bit images, a photograph and noise, which the
+repository's processor turns into the inputs of the model. The reference stores the logits,
+the normalised embeddings and the features of both encoders; the image processor of
+`create_processor` must give transformers' `pixel_values` bit for bit, and the model must
+match the outputs to 1e-4 on them (the checkpoints land near 1e-6). The text encoder of
+Stable Diffusion 1.5, a `CLIPTextModel` saved by transformers 4 under other keys, is checked
+on the token ids of its pipeline's tokenizer.
+
 For FLUX.2 [klein] 4B, the references are the latents and image of a few images through its
 autoencoder, the output of its transformer for random inputs, and an image of 256 × 256 pixels
 generated in 4 steps from a prompt and fixed noise, with the token ids and the prompt
@@ -164,9 +172,10 @@ without `use_test_size`, must be those that timm resolves, and the logits of
 
 For transformers, `porting/dump_processor.py` calls the processor that
 `AutoProcessor.from_pretrained(repo)` loads, on small images, prompts and boxes: 18 cases
-for SAM 3 (`unsloth/sam3.1` and `jetjodh/sam3`) and 19 for Qwen3.5 (`Qwen/Qwen3.5-0.8B`),
-which cover batches, grey and RGBA images, upscaling and downscaling, box prompts,
-`do_resize`, `do_rescale` and `do_normalize` off, overridden settings, and Qwen2-VL's legacy
+for SAM 3 (`unsloth/sam3.1` and `jetjodh/sam3`), 19 for Qwen3.5 (`Qwen/Qwen3.5-0.8B`) and 20
+for CLIP (`openai/clip-vit-base-patch32`), which cover batches, grey and RGBA images,
+upscaling and downscaling, box prompts, center crops (with their padding), `do_resize`,
+`do_rescale` and `do_normalize` off, overridden settings, and Qwen2-VL's legacy
 `min_pixels` and `max_pixels`. Every output must be transformers', with the same keys. For
 8-bit images, `pixel_values` are equal **bit for bit**: the resize ports the fixed-point
 antialiased resize of `uint8` tensors that torchvision, transformers' default backend, runs

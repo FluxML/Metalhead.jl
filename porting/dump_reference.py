@@ -24,6 +24,10 @@ says. Random inputs are stored rounded to float16, so that both sides use the sa
 A sentence-transformers model (`<org>/<repo>` with a modules.json) is run through its `encode`,
 `encode_query` and `encode_document` on `EMBEDDING_CALLS`, in float32: the embeddings, the inputs
 of the model and the similarities of the queries and the documents.
+
+A CLIP model (`CLIPModel`, or a `CLIPTextModel` such as the `text_encoder` subfolder of a
+Stable Diffusion pipeline) embeds `CLIP_TEXTS` and two images, through the repository's
+processor (see `dump_clip_reference`).
 """
 import argparse
 import contextlib
@@ -70,6 +74,10 @@ def dump_reference(repo, revision, batch, layers=None, selective_shards=False):
     repo, subfolder = "/".join(parts[:2]), "/".join(parts[2:])
     sha = HfApi().model_info(repo, revision=revision).sha
     if subfolder:
+        config = json.loads(pathlib.Path(hf_hub_download(
+            repo, f"{subfolder}/config.json", revision=sha)).read_text())
+        if config.get("model_type", "").startswith("clip"):  # a transformers component
+            return dump_clip_reference(repo, sha, config, subfolder)
         return dump_diffusers_reference(repo, subfolder, sha, batch)
     siblings = {f.rfilename for f in HfApi().model_info(repo, revision=sha).siblings}
     if "model_index.json" in siblings:
@@ -81,6 +89,8 @@ def dump_reference(repo, revision, batch, layers=None, selective_shards=False):
         return dump_sam3_reference(repo, sha)
     if config.get("model_type") in ("siglip", "siglip2"):
         return dump_siglip_reference(repo, sha)
+    if config.get("model_type", "").startswith("clip"):
+        return dump_clip_reference(repo, sha, config)
     if "model_type" in config:
         return dump_lm_reference(repo, sha, layers=layers, selective_shards=selective_shards)
     if layers is not None:
@@ -395,6 +405,85 @@ def dump_siglip_reference(repo, sha, size=(224, 168), stride=8):
     probs = outputs.logits_per_image.sigmoid()[0].tolist()
     print(f"{out}: {repo}@{sha}, {out.stat().st_size / 1e3:.1f} kB, probabilities "
           f"{[round(p, 4) for p in probs]}")
+
+
+CLIP_TEXTS = ["a photo of a cat", "a photo of a dog", "a photo of a car",
+              "two cats asleep on a pink couch, next to two remote controls"]
+
+
+def dump_clip_reference(repo, sha, config, subfolder="", size=(160, 120), strides=(8, 8, 4)):
+    """The outputs of a CLIP model in float32, of which large arrays are stored strided: every
+    `strides[0]`-th pixel of the images, every `strides[1]`-th token and `strides[2]`-th
+    feature of the hidden states.
+
+    A `CLIPModel` takes `CLIP_TEXTS` and two images, that of `IMAGE_URL`, resized to `size`
+    (w, h), and random noise of 48 × 64 pixels, stored as 8-bit images ("image/<i>",
+    channels × height × width), through the repository's processor (`input_ids`,
+    `attention_mask` and `pixel_values`, padded to the longest text). Stores the outputs of
+    the model, `logits_per_image`, `logits_per_text`, `text_embeds` and `image_embeds`, and
+    those of `get_text_features` and `get_image_features`: the projected and unnormalised
+    features ("text/pooler_output", "image/pooler_output") and the hidden states
+    ("text/last_hidden_state", "image/last_hidden_state").
+
+    A `CLIPTextModel`, such as the text encoder of a Stable Diffusion pipeline (a
+    `subfolder`), takes `CLIP_TEXTS` tokenized by the tokenizer of the pipeline (its
+    `tokenizer` subfolder) as the pipeline does, padded to `max_length` with no attention
+    mask, and stores its `pooler_output` and `last_hidden_state`."""
+    pixels, tokens, features = strides
+    import io
+    import urllib.request
+    from PIL import Image
+    import transformers
+    from transformers import AutoProcessor, CLIPTokenizer
+    arch = config["architectures"][0]
+    cls = getattr(transformers, arch)
+    kwargs = dict(subfolder=subfolder) if subfolder else {}
+    model = cls.from_pretrained(repo, revision=sha, dtype=torch.float32,
+                                attn_implementation="sdpa", **kwargs).eval()
+    name = f"{repo}/{subfolder}" if subfolder else repo
+    tensors, meta = {}, {"repo": name, "revision": sha, "class": arch,
+                         "texts": json.dumps(CLIP_TEXTS), "strides": json.dumps(strides),
+                         **versions()}
+
+    def hidden(x):
+        return x[:, ::tokens, ::features]
+
+    if arch == "CLIPTextModel":
+        tokenizer = CLIPTokenizer.from_pretrained(repo, revision=sha, subfolder="tokenizer")
+        ids = tokenizer(CLIP_TEXTS, padding="max_length", max_length=tokenizer.model_max_length,
+                        truncation=True, return_tensors="pt")["input_ids"]
+        with torch.no_grad():
+            out = model(input_ids=ids)
+        tensors.update({"input_ids": ids, "pooler_output": out.pooler_output,
+                        "last_hidden_state": hidden(out.last_hidden_state)})
+    else:
+        assert arch == "CLIPModel", arch
+        with urllib.request.urlopen(IMAGE_URL) as f:
+            photo = Image.open(io.BytesIO(f.read())).convert("RGB").resize(size, Image.BICUBIC)
+        gen = torch.Generator().manual_seed(0)
+        images = [torch.from_numpy(np.asarray(photo).copy()).permute(2, 0, 1),
+                  torch.randint(0, 256, (3, 64, 48), generator=gen, dtype=torch.uint8)]
+        processor = AutoProcessor.from_pretrained(repo, revision=sha)
+        inputs = processor(text=CLIP_TEXTS, images=images, padding=True, return_tensors="pt")
+        with torch.no_grad():
+            out = model(**inputs)
+            text = model.get_text_features(input_ids=inputs["input_ids"],
+                                           attention_mask=inputs["attention_mask"])
+            image = model.get_image_features(pixel_values=inputs["pixel_values"])
+        tensors.update({f"image/{i + 1}": x for i, x in enumerate(images)})
+        tensors.update({k: inputs[k] for k in ("input_ids", "attention_mask")})
+        tensors["pixel_values"] = inputs["pixel_values"][:, :, ::pixels, ::pixels]
+        tensors.update({k: getattr(out, k) for k in ("logits_per_image", "logits_per_text",
+                                                     "text_embeds", "image_embeds")})
+        tensors.update({"text/pooler_output": text.pooler_output,
+                        "text/last_hidden_state": hidden(text.last_hidden_state),
+                        "image/pooler_output": image.pooler_output,
+                        "image/last_hidden_state": hidden(image.last_hidden_state)})
+        probabilities = out.logits_per_image.softmax(dim=1)[0]
+        print(f"{name}: the probabilities of the texts for the photo {probabilities.tolist()}")
+    out_path = reference_path(name)
+    save_file({k: v.contiguous() for k, v in tensors.items()}, out_path, metadata=meta)
+    print(f"{out_path}: {name}@{sha}, {out_path.stat().st_size / 1e3:.1f} kB")
 
 
 def reference_path(name):

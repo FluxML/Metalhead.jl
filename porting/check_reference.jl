@@ -12,6 +12,18 @@ pass = true
 for file in ARGS
     meta = SafeTensors.deserialize(file).metadata
     ref = Metalhead.Checkpoint(file)
+    if startswith(get(meta, "class", ""), "CLIP")
+        r = check_clip_reference(file)
+        errs = [k => v for (k, v) in pairs(r) if v isa Float64]
+        ok = all(<=(1e-4) ∘ last, errs) && get(r, :processor_same, true)
+        global pass &= ok
+        println(rpad(meta["repo"], 50),
+            join(["$k $(round(v; sigdigits = 2))" for (k, v) in errs], "  "),
+            haskey(r, :processor_same) ?
+            "  processor " * (r.processor_same ? "same" : "DIFFERENT") : "",
+            ok ? "  ok" : "  FAIL")
+        continue
+    end
     if haskey(meta, "class")  # a diffusers model or pipeline
         r = check_diffusers_reference(file)
         errs = [k => v for (k, v) in pairs(r) if k != :repo]

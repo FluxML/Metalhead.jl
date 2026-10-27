@@ -1,0 +1,16 @@
+{
+  "library": "transformers",
+  "architecture": "CLIPVisionModelWithProjection",
+  "model_type": "clip_vision_model",
+  "config": {
+    "hidden_size": 12,
+    "intermediate_size": 16,
+    "projection_dim": 10,
+    "num_hidden_layers": 1,
+    "num_attention_heads": 3,
+    "image_size": 16,
+    "patch_size": 4
+  },
+  "inputs": {"images": 2, "image_size": [8, 32], "interpolate_pos_encoding": true},
+  "tap_depth": 3
+}
