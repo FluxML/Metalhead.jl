@@ -1,6 +1,6 @@
 """Write the fixtures and references of processors, through the full upstream path.
 
-    uv run dump_processor.py [sam3] [qwen3_vl] [siglip] [siglip2]    # all by default
+    uv run dump_processor.py [sam3] [qwen3_vl] [siglip] [siglip2] [clip]    # all by default
 
 sam3: the processor of SAM 3 as `AutoProcessor.from_pretrained(repo)` loads it, called on tiny
 images, prompts and boxes (`proc(images=..., text=..., input_boxes=...)`), for
@@ -28,6 +28,11 @@ siglip and siglip2: the processors of SigLIP (`SiglipProcessor`, of google/sigli
 and google/siglip2-base-patch16-224) and of the NaFlex checkpoints of SigLIP 2
 (`Siglip2Processor`, of google/siglip2-base-patch16-naflex), laid out as SAM 3's (see
 `siglip`), for src/Transformers/processing_siglip*.jl and image_processing_siglip*.jl.
+clip: the processor of CLIP (`CLIPProcessor`) as `AutoProcessor.from_pretrained(repo)` loads it
+from openai/clip-vit-base-patch32, called on tiny images and texts, for
+src/Transformers/processing_clip.jl and image_processing_clip.jl. Writes the small JSON files of
+the repository and test/references/processors/clip.safetensors, laid out as SAM 3's (see
+`clip`).
 """
 import json
 import pathlib
@@ -52,9 +57,10 @@ CLIP = dict(image_mean=[0.48145466, 0.4578275, 0.40821073],
 
 
 def main():
-    names = sys.argv[1:] or ["sam3", "qwen3_vl", "siglip", "siglip2"]
+    names = sys.argv[1:] or ["sam3", "qwen3_vl", "siglip", "siglip2", "clip"]
     for name in names:
-        {"qwen3_vl": qwen3_vl, "sam3": sam3, "siglip": siglip, "siglip2": siglip2}[name]()
+        {"qwen3_vl": qwen3_vl, "sam3": sam3, "siglip": siglip, "siglip2": siglip2,
+         "clip": clip}[name]()
 
 
 def copy_config_files(repo, revision, files):
@@ -544,6 +550,94 @@ def siglip2():
     tensors["image_sizes"] = torch.tensor(table)
 
     out = ROOT / "test" / "references" / "processors" / "siglip2.safetensors"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    save_file(tensors, out, metadata=meta)
+    print(f"{out}: {out.stat().st_size / 1e3:.1f} kB")
+
+
+# the commit of the pull request of Hugging Face's bot that adds model.safetensors to the
+# repository, whose main branch has pytorch_model.bin only (its processor files are main's)
+CLIP_REPO, CLIP_REVISION = "openai/clip-vit-base-patch32", "c237dc49a33fc61debc9276459120b7eac67e7ef"
+CLIP_FILES = ["preprocessor_config.json", "tokenizer_config.json", "special_tokens_map.json",
+              "config.json"]
+# small sizes, so that the references stay small
+CLIP_SMALL = dict(size=24, crop_size=20)
+
+
+def clip():
+    """test/references/processors/clip.safetensors: the outputs of the processor of
+    openai/clip-vit-base-patch32, `AutoProcessor.from_pretrained(repo, **create)(text=...,
+    images=..., padding=True)`, on tiny random images and texts, as SAM 3's: "<name>/image/<i>",
+    "<name>/<key>" and the token ids of each text, "<name>/text_ids/<i>". The metadata of a
+    case hold `create`, the texts and the PIL modes of the images. The "default" case keeps
+    the settings of the repository, and stores every `stride`-th pixel of its `pixel_values`
+    only."""
+    copy_config_files(CLIP_REPO, CLIP_REVISION, CLIP_FILES)
+    gen = torch.Generator().manual_seed(0)
+
+    def uint8(*shape):
+        return torch.randint(0, 256, shape, generator=gen, dtype=torch.uint8)
+
+    tensors = {}
+    meta = {"repo": CLIP_REPO, "revision": CLIP_REVISION, **versions()}
+
+    def run(name, images, text=None, create=CLIP_SMALL, modes=None, stride=None):
+        proc = AutoProcessor.from_pretrained(CLIP_REPO, revision=CLIP_REVISION, **create)
+        pil = [Image.fromarray(img.numpy() if img.ndim == 2 else img.permute(1, 2, 0).numpy(),
+                               mode=mode) if mode else img
+               for img, mode in zip(images, modes or [None] * len(images))]
+        out = proc(images=pil or None, text=text, padding=True, return_tensors="pt")
+        for i, image in enumerate(images):
+            tensors[f"{name}/image/{i + 1}"] = image.contiguous()
+        for key, value in out.items():
+            value = torch.as_tensor(value)
+            if key == "pixel_values" and stride:
+                value = value[:, :, ::stride, ::stride]
+            tensors[f"{name}/{key}"] = value.contiguous()
+        texts = [] if text is None else [text] if isinstance(text, str) else text
+        for i, t in enumerate(texts):
+            tensors[f"{name}/text_ids/{i + 1}"] = torch.tensor(proc.tokenizer(t)["input_ids"])
+        meta[name] = json.dumps(dict(create=create, text=text, modes=modes, stride=stride,
+                                     cls=type(proc).__name__,
+                                     image_cls=type(proc.image_processor).__name__))
+        return proc
+
+    run("exact", [uint8(3, 20, 20)], "a photo of a cat")  # neither resized nor cropped
+    run("landscape", [uint8(3, 30, 50)], "a photo of a cat")
+    # offsets of the crop of 10.5 and 1.5 pixels, rounded down
+    run("portrait", [uint8(3, 50, 30)], "a dog",
+        create=dict(size=25, crop_size={"height": 20, "width": 22}))
+    run("upscale", [uint8(3, 9, 13)], "a cat")
+    # a crop larger than the resized image, padded with zeros, 2 rows above and 3 below
+    run("pad", [uint8(3, 10, 30)], "a cat",
+        create=dict(size=16, crop_size={"height": 21, "width": 18}))
+    run("bilinear", [uint8(3, 30, 50)], "a cat", create=dict(CLIP_SMALL, resample=2))
+    run("height_width", [uint8(3, 30, 50)], "a cat",
+        create=dict(size={"height": 22, "width": 26}, do_center_crop=False))
+    run("default_to_square", [uint8(3, 30, 50)], "a cat",
+        create=dict(size=22, default_to_square=True, do_center_crop=False))
+    run("no_crop", [uint8(3, 30, 50)], "a cat", create=dict(size=24, do_center_crop=False))
+    run("no_resize", [uint8(3, 24, 30)], "a cat", create=dict(CLIP_SMALL, do_resize=False))
+    # images of reals in [0, 1], which Metalhead takes as already rescaled
+    run("float", [torch.rand(3, 30, 50, generator=gen)], "a cat",
+        create=dict(CLIP_SMALL, do_rescale=False))
+    # the 8-bit scale of an image of reals: Metalhead multiplies it by 255 without do_rescale
+    x = torch.rand(3, 30, 50, generator=gen)
+    run("float_no_rescale", [x * 255], "a cat", create=dict(CLIP_SMALL, do_rescale=False))
+    tensors["float_no_rescale/image/1"] = x
+    run("no_rescale", [uint8(3, 30, 50)], "a cat", create=dict(CLIP_SMALL, do_rescale=False))
+    run("no_normalize", [uint8(3, 30, 50)], "a cat",
+        create=dict(CLIP_SMALL, do_normalize=False))
+    run("grey", [uint8(30, 50)], "a cat", modes=["L"])  # converted to RGB
+    run("rgba", [uint8(4, 30, 50)], "a cat", modes=["RGBA"])  # alpha dropped
+    # texts padded on the right to the longest, with the padding token
+    run("batch", [uint8(3, 30, 50), uint8(3, 50, 30), uint8(3, 9, 13)],
+        ["a photo of a cat", "a dog", "two cats sleeping on a pink couch"])
+    run("text_only", [], ["a photo of a cat", "a dog"])
+    run("images_only", [uint8(3, 30, 50), uint8(3, 20, 20)])
+    run("default", [uint8(3, 60, 80)], "a photo of a cat", create={}, stride=8)
+
+    out = ROOT / "test" / "references" / "processors" / "clip.safetensors"
     out.parent.mkdir(parents=True, exist_ok=True)
     save_file(tensors, out, metadata=meta)
     print(f"{out}: {out.stat().st_size / 1e3:.1f} kB")

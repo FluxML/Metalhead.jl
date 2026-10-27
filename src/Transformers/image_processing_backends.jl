@@ -25,17 +25,18 @@ function check_resample(resample)
     throw(ArgumentError("`resample = $(repr(resample))` ($name) is not supported (supported: $(resample_supported()))"))
 end
 
-# The features of transformers' image processors that no image processor of Metalhead
-# ports, as settings whose only supported value is `false` (`None` in Python, the default
-# of the classes that don't have them).
+# The features of transformers' image processors that the image processor of type `T`
+# doesn't port, as settings whose only supported value is `false` (`None` in Python, the
+# default of the classes that don't have them).
 const UNPORTED_IMAGE_FEATURES = (:do_center_crop, :do_pad)
+unported_image_features(::Type) = UNPORTED_IMAGE_FEATURES
 
 # The `standardize_settings` of the image processors: the forms that transformers takes
 # (`resample = :bilinear`, an integer `size`, one `image_mean` for every channel) in the
 # types of the fields, and the settings that aren't ported rejected.
 function standardize_image_settings(::Type{T}, s::NamedTuple) where {T}
     s = NamedTuple{keys(s)}(map((name, v) -> field_setting(T, name, v), keys(s), values(s)))
-    for name in UNPORTED_IMAGE_FEATURES
+    for name in unported_image_features(T)
         haskey(s, name) && s[name] &&
             throw(ArgumentError("`$name = true` is not supported by $(nameof(T)) (supported: false)"))
     end
@@ -49,7 +50,7 @@ size_setting(T, v) = v
 
 function field_setting(T, name, v)
     name === :size && return size_setting(T, v)
-    name in UNPORTED_IMAGE_FEATURES && v === nothing && return false
+    name in unported_image_features(T) && v === nothing && return false
     name === :resample && v isa Union{Symbol, AbstractString} && return resample_number(v)
     name in (:image_mean, :image_std) && return stats_setting(name, v)
     F = fieldtype(T, name)
@@ -149,9 +150,35 @@ function size_hw(size)
     return Int(size.height), Int(size.width)
 end
 
+# transformers' `get_resize_output_image_size` of a `shortest_edge`: the `(height, width)`
+# whose shorter side is `shortest_edge`, the longer scaled alike, rounded down.
+function get_resize_output_image_size(height, width, shortest_edge)
+    short, long = minmax(height, width)
+    new_long = trunc(Int, shortest_edge * long / short)
+    return width <= height ? (new_long, shortest_edge) : (shortest_edge, new_long)
+end
+
+# The torchvision backend's `center_crop` of the image `x` (width, height, channels) to
+# `(height, width)`: padded with zeros where it is smaller, half the padding (rounded down)
+# before, and cropped from the offsets rounded down.
+function center_crop(x, (crop_height, crop_width))
+    width, height = size(x, 1), size(x, 2)
+    if crop_width > width || crop_height > height
+        left, top = max(crop_width - width, 0) ÷ 2, max(crop_height - height, 0) ÷ 2
+        padded = zeros(eltype(x), max(crop_width, width), max(crop_height, height),
+            size(x, 3))
+        padded[left .+ (1:width), top .+ (1:height), :] = x
+        x = padded
+        width, height = size(x, 1), size(x, 2)
+    end
+    top, left = (height - crop_height) ÷ 2, (width - crop_width) ÷ 2
+    return x[left .+ (1:crop_width), top .+ (1:crop_height), :]
+end
+
 # An image as the torchvision backend prepares it for the image processor `ip`, resized to
-# the `(height, width)` that `target_size(height, width)` gives.
-function prepare_image(ip, image, target_size)
+# the `(height, width)` that `target_size(height, width)` gives, and center-cropped to
+# `crop_size`, `(height, width)`, unless it is `nothing`.
+function prepare_image(ip, image, target_size; crop_size = nothing)
     x = ip.do_convert_rgb ? convert_to_rgb(image) : image
     eightbit = is_8bit(x)
     if ip.do_resize
@@ -160,6 +187,7 @@ function prepare_image(ip, image, target_size)
     else
         x = Float32.(x)
     end
+    crop_size === nothing || (x = center_crop(x, crop_size))
     return rescale_and_normalize(x, eightbit, ip.do_rescale, ip.rescale_factor,
         ip.do_normalize, ip.image_mean, ip.image_std)
 end
