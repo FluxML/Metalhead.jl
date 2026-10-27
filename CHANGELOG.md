@@ -90,7 +90,7 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
   pixels resized with Pillow's Lanczos filter, the sides cropped to multiples of 16), encodes
   it with the autoencoder and lets the transformer attend to its tokens; the image takes the
   size of the first reference by default. Validated against diffusers with tiny pipelines and
-  `black-forest-labs/FLUX.2-klein-4B`.
+  `black-forest-labs/FLUX.2-klein-4B` (#365).
 - An extension for HuggingFaceTokenizers.jl (`ext/`): with it loaded, `create_processor`
   returns the processor of a language model, a `Metalhead.TextProcessor`, which encodes
   texts into the 1-based token indices and the attention mask of the models, padded on the
