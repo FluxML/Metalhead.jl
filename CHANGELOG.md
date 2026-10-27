@@ -150,7 +150,7 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
   `encode_query`, `encode_document` and `similarity`, exported, compute and compare
   embeddings as sentence-transformers does, and `model(inputs)` takes the inputs of
   `Metalhead.SentenceTransformers.preprocess`. `create_processor` of such a repository is an
-  error, as the model prepares its inputs.
+  error, as the model prepares its inputs (#374).
 - An extension for HuggingFaceTokenizers.jl (`ext/`): with it loaded, `create_processor`
   returns the processor of a language model, a `Metalhead.TextProcessor`, which encodes
   texts into the 1-based token indices and the attention mask of the models, padded on the
