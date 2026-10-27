@@ -561,14 +561,20 @@ tokenizing, as transformers does), and `image_processing_qwen2_vl.jl` maps legac
 - **Calling.** Images go through `image_batch` (and so `image_array`), then
   `convert_to_rgb`, `resize_image` (torchvision's uint8 resize, bit for bit, through
   `Timm.pil_resize`) and `rescale_and_normalize`. The output is a NamedTuple with
-  transformers' keys in Julia layout, 1-based token indices. Text is strings, which the
-  processor encodes with its tokenizer (see "Tokenizers"). Post-processing dispatches on the
-  processor.
+  transformers' keys in Julia layout, 1-based token indices, and image sizes as
+  `(; height, width)` (`size_list` reads `target_sizes` in either form). Text is strings,
+  which the processor encodes with its tokenizer (see "Tokenizers"). Post-processing adds a
+  method for the processor to the generic functions of `src/hub/processors.jl`
+  (`post_process_instance_segmentation`, ...), which Metalhead exports; a new kind of
+  post-processing gets a generic function there too.
 - **Outputs.** The docstring of each class has a Returns table, whose header begins with
   "Key", with a row per key of its output; `check_documented_keys(T, outputs)`
   (`test/processors_setup.jl`) tests the outputs on the fixtures against it. The model takes
   them through a method `model(inputs::NamedTuple)`, which calls `check_inputs(model,
-  inputs, required; hint)` on the keys it can't do without.
+  inputs, required; hint)` on the keys it can't do without. A causal language model
+  (`<: CausalLM`) gets it, and the same for `forward_features` and `forward_intermediates`,
+  from `token_inputs`, with methods of `input_keys` (the keys of its keyword arguments) and
+  `input_hint` for its processor's other keys.
 - **Tokenizers.** Not ported: the tokenizer of a checkpoint is HuggingFaceTokenizers.jl's
   `Tokenizer` of its `tokenizer.json`, which the extension loads (`load_tokenizer(files)`),
   with the `pad_token` of `tokenizer_config.json` as its padding token. A processor's
@@ -577,7 +583,10 @@ tokenizing, as transformers does), and `image_processing_qwen2_vl.jl` maps legac
   tokenizer only through the internal interface of `src/hub/tokenizers.jl`:
   `encode_ids(tok, text; add_special_tokens)`, `token_id(tok, token)` and
   `pad_token_id(tok)`, ids from 0, and `pad_ids(ids, pad_id; max_length)`, which pads a
-  batch on the right into 1-based `input_ids` and an `attention_mask`. In offline tests, a
+  batch on the right into 1-based `input_ids` and an `attention_mask`. A repository whose
+  processor is its tokenizer (a language model's) gets a `Metalhead.TextProcessor`, which
+  does the same for texts, and HuggingFaceTokenizers' `decode` of a processor takes 1-based
+  token indices. In offline tests, a
   type with methods of these functions that returns the ids of the references stands in for
   the tokenizer; `METALHEAD_TEST_NETWORK` checks the real one.
 - **Fixtures.** `porting/dump_processor.py` calls `AutoProcessor.from_pretrained(repo)(...)`,
@@ -609,8 +618,9 @@ above, with these differences.
   suffix of `_class_name`). `instantiate` (`src/Diffusers/config.jl`) builds each component of
   `model_index.json` from its subfolder: a model from its `config.json`, a scheduler from
   `scheduler_config.json` through `SCHEDULERS` (class name => builder), a tokenizer as
-  HuggingFaceTokenizers' `Tokenizer` (`pipeline_tokenizer`, `load_tokenizer` of its
-  subfolder; `nothing` without the extension). The builder takes the components and the
+  HuggingFaceTokenizers' `Tokenizer` (`pipeline_tokenizer`, `load_tokenizer_or_defer` of its
+  subfolder: without the extension, a `DeferredTokenizer` of its tokenizer.json, which
+  `resolve_tokenizer` loads once the extension is). The builder takes the components and the
   other declared keys (`is_distilled`). Schedulers keep no state: port `set_timesteps` and
   `step` as functions of the noise levels. The pipeline's preprocessing is its own code (FLUX.2's
   `encode_prompt` formats, tokenizes and pads the prompts): diffusers components have no

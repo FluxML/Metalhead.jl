@@ -82,7 +82,7 @@ function model_source(name::AbstractString, revision, subfolder = "")
 end
 
 """
-    create_model(name; pretrained = false, revision = nothing, subfolder = "", eltype = Float32, kwargs...)
+    create_model(name; pretrained, revision = nothing, subfolder = "", eltype = Float32, kwargs...)
 
 Build a ported model.
 
@@ -90,10 +90,13 @@ Build a ported model.
 architecture (`"resnet50"`, `"LlamaForCausalLM"`; see [`list_models`](@ref)), or a local
 directory containing a `config.json` and `model.safetensors`.
 
-By default the weights are random and nothing is downloaded, except the `config.json` of a
-repository or directory. With `pretrained = true` they are loaded from the repository (for a
-bare architecture, from its default validated checkpoint). `revision` selects a branch, tag or
-commit of the repository; validated checkpoints default to the commit they were validated at.
+A repository or a directory names a checkpoint, whose weights are loaded: `pretrained`
+defaults to `true` for them. A bare architecture names the architecture alone, whose
+weights are random and for which nothing is downloaded: `pretrained` defaults to `false`,
+and `pretrained = true` loads the weights of its default validated checkpoint.
+`pretrained = false` builds the architecture of a repository or directory with random
+weights, downloading only its `config.json`. `revision` selects a branch, tag or commit of
+the repository; validated checkpoints default to the commit they were validated at.
 The remaining keyword arguments are the original library's model arguments, e.g. timm's
 `num_classes`, or the fields of a transformers model's `config.json`, e.g. `num_hidden_layers`.
 Changing `num_classes` of a pretrained model re-initialises its classifier.
@@ -104,10 +107,12 @@ components are in subfolders: `create_model` builds the whole pipeline, and with
 
 The model is returned in test mode; call `Flux.trainmode!` before training.
 """
-function create_model(name::AbstractString; pretrained::Bool = false,
+function create_model(name::AbstractString; pretrained::Union{Nothing, Bool} = nothing,
         revision::Union{Nothing, AbstractString} = nothing, subfolder::AbstractString = "",
         eltype::Type{<:AbstractFloat} = Float32, kwargs...)
-    if !pretrained && !isdir(name) && !occursin('/', name)
+    bare = !isdir(name) && !occursin('/', name)
+    pretrained = something(pretrained, !bare)
+    if !pretrained && bare
         isempty(subfolder) || error("`subfolder` needs a Hub repository or a directory")
         spec = bare_spec(name)
         model = spec.build(; merge(spec.defaults, values(kwargs))...)
@@ -126,7 +131,7 @@ end
 Run `model` up to its last feature map, before pooling and classification (timm's `forward_features`).
 
 This and [`forward_head`](@ref), [`forward_intermediates`](@ref) and [`feature_info`](@ref) are
-the interface of image backbones and classifiers; language models have all but `feature_info`.
+the interface of image backbones and classifiers, and of language models.
 """
 function forward_features end
 
@@ -165,6 +170,7 @@ function forward_intermediates end
 
 The intermediates of [`forward_intermediates`](@ref), as timm's `model.feature_info`: for each,
 its number of channels `num_chs`, its `reduction` (stride) relative to the input, and the
-PyTorch name `module_name` of the module that outputs it (timm's `module`).
+PyTorch name `module_name` of the module that outputs it (timm's `module`). For a language
+model, those of its decoder layers: `hidden_size` channels, a reduction of 1.
 """
 function feature_info end

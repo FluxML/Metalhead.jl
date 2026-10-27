@@ -10,20 +10,21 @@ four ways:
 
 | Argument | Example | Meaning |
 |:--|:--|:--|
-| Hub repository | `"timm/resnet50.a1_in1k"` | the architecture and weights of that repository |
-| architecture | `"resnet50"` | the bare architecture; with `pretrained = true`, its default checkpoint |
-| local directory | `"path/to/dir"` | a `config.json` and `model.safetensors` laid out like a Hub repository |
+| Hub repository | `"timm/resnet50.a1_in1k"` | the checkpoint of that repository: its architecture and weights |
+| architecture | `"resnet50"` | the bare architecture, with random weights; with `pretrained = true`, its default checkpoint |
+| local directory | `"path/to/dir"` | a checkpoint, a `config.json` and `model.safetensors` laid out like a Hub repository |
 | component of a pipeline | `"black-forest-labs/FLUX.2-klein-4B/vae"` | the model in that subfolder of a diffusers repository |
 
 ```julia
 using Metalhead
 
-model = create_model("resnet50")                                 # random weights, no download
-model = create_model("timm/resnet50.a1_in1k")                   # that repository's architecture, random weights
-model = create_model("timm/resnet50.a1_in1k"; pretrained = true) # weights from the Hub
+model = create_model("timm/resnet50.a1_in1k")                     # weights from the Hub
+model = create_model("resnet50")                                  # random weights, no download
+model = create_model("timm/resnet50.a1_in1k"; pretrained = false) # that repository's architecture, random weights
 ```
 
-Weights are random unless `pretrained = true`. Then Metalhead downloads and caches the
+A repository or a directory names a checkpoint, whose weights `create_model` loads; a bare
+architecture has random weights unless `pretrained = true`. Metalhead downloads and caches the
 repository's `config.json` and safetensors weights (sharded checkpoints too). The cache is shared with Python's
 `huggingface_hub` (`~/.cache/huggingface/hub`, or `HF_HUB_CACHE`), and so are `HF_TOKEN` for
 private or gated repositories and `HF_HUB_OFFLINE` to use only cached files.
@@ -33,7 +34,7 @@ were validated at, other repositories from their `main` branch; `revision` picks
 tag or commit:
 
 ```julia
-model = create_model("timm/resnet50.a1_in1k"; pretrained = true, revision = "main")
+model = create_model("timm/resnet50.a1_in1k"; revision = "main")
 ```
 
 The other keyword arguments are the original library's model arguments, such as timm's
@@ -84,7 +85,7 @@ checkpoint, which applies them. For a timm checkpoint, it is timm's eval transfo
 using Metalhead, Flux, FileIO, ImageCore
 
 repo = "timm/convnext_tiny.fb_in1k"
-model = create_model(repo; pretrained = true)
+model = create_model(repo)
 transform = create_processor(repo)
 
 img = load(download("https://upload.wikimedia.org/wikipedia/commons/2/26/YellowLabradorLooking_new.jpg"))
@@ -148,25 +149,25 @@ or without network those of the cache.
 | timm | [`Timm.EvalTransform`](@ref Metalhead.Timm.EvalTransform), timm's eval transform | `transform(images)` |
 | Qwen3.5 | [`Transformers.Qwen3VLProcessor`](@ref Metalhead.Transformers.Qwen3VLProcessor) | `proc(; images, text)` |
 | SAM 3 | [`Transformers.Sam3Processor`](@ref Metalhead.Transformers.Sam3Processor) | `proc(; images, text, input_boxes)` |
-| language models | the tokenizer, HuggingFaceTokenizers' `Tokenizer` | `encode(tok, text)` |
+| language models | [`TextProcessor`](@ref Metalhead.TextProcessor), the tokenizer of the repository | `tok(text)` |
 
-timm's transform returns an array of size width × height × channels × batch. The processors
-of Qwen3.5 and SAM 3 return a NamedTuple with the keys of transformers (`input_ids`,
-`pixel_values`, ...), in Julia's layout, with token indices that start at 1, which the model
-takes as it is: `model(inputs)`. A tokenizer returns the encoding of
-HuggingFaceTokenizers.jl, whose ids start at 0: add 1 to get the indices of the model (see
-[Language models](@ref language_models)). SAM 3's processor also turns the outputs of the model back into results
-(see [Segmenting objects](@ref segmentation)). A diffusers pipeline has no processor: it
+timm's transform returns an array of size width × height × channels × batch. The other
+processors return a NamedTuple with the keys of transformers (`input_ids`, `pixel_values`,
+...), in Julia's layout, with token indices that start at 1, which the model takes as it is:
+`model(inputs)`. The processors that take text also decode token indices, with
+HuggingFaceTokenizers' `decode(proc, indices)` (see [Language models](@ref language_models)).
+SAM 3's processor also turns the outputs of the model back into results (see
+[Segmenting objects](@ref segmentation)). A diffusers pipeline has no processor: it
 prepares its inputs itself, with its tokenizer `pipe.tokenizer`.
 
 Metalhead ports no tokenizer, the only part of the path from input to result that isn't
 Julia. The tokenizer of a repository is a `Tokenizer` of
 [HuggingFaceTokenizers.jl](https://github.com/MurrellGroup/HuggingFaceTokenizers.jl), which
 calls Hugging Face's tokenizers library through Python on the repository's
-`tokenizer.json`, with the padding token of its `tokenizer_config.json`. `create_processor` loads it after
-`using HuggingFaceTokenizers`, alone for a language model, or as the `tokenizer` of a
-processor that takes text, such as those of Qwen3.5 and SAM 3. Without it, these processors
-prepare images only.
+`tokenizer.json`, with the padding token of its `tokenizer_config.json`. `create_processor`
+loads it after `using HuggingFaceTokenizers`, as the `tokenizer` of a processor that takes
+text: the `TextProcessor` of a language model, or those of Qwen3.5 and SAM 3, which without
+it prepare images only. Its token ids start at 0, the token indices of the models at 1.
 
 The settings are read strictly, for every processor: one that the port doesn't implement is
 an error, and an unknown key in a file a warning.
@@ -181,6 +182,9 @@ features = forward_features(model, x)                       # e.g. 7 × 7 × 768
 pooled = forward_head(model, features; pre_logits = true)   # 768 × 2
 logits = forward_head(model, features)                      # 1000 × 2
 ```
+
+Language models have the same interface, with their hidden states as features (see
+[Language models](@ref language_models)).
 
 ## Multi-scale features
 
@@ -227,7 +231,7 @@ Pass a new `num_classes` to load the pretrained weights with a freshly initialis
 ```julia
 using Flux
 
-model = create_model("timm/convnext_tiny.fb_in1k"; pretrained = true, num_classes = 10)
+model = create_model("timm/convnext_tiny.fb_in1k"; num_classes = 10)
 Flux.trainmode!(model)
 
 loss(m, x, y) = Flux.logitcrossentropy(m(x), y)
@@ -263,6 +267,6 @@ the model and its inputs to the device. See the
 using Flux, Metalhead, CUDA, cuDNN
 
 device = gpu_device()
-model = create_model("timm/convnext_tiny.fb_in1k"; pretrained = true) |> device
+model = create_model("timm/convnext_tiny.fb_in1k") |> device
 logits = model(device(rand(Float32, 224, 224, 3, 8)))
 ```

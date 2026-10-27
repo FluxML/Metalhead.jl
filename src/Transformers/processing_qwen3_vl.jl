@@ -49,7 +49,7 @@ where it would, `<|vision_start|><|image_pad|><|vision_end|>`.
 
 ```julia
 using Metalhead, HuggingFaceTokenizers
-model = create_model("Qwen/Qwen3.5-0.8B"; pretrained = true)
+model = create_model("Qwen/Qwen3.5-0.8B")
 proc = create_processor("Qwen/Qwen3.5-0.8B")
 image = rand(UInt8, 640, 480, 3)                       # width × height × channels
 prompt = "<|im_start|>user\\n<|vision_start|><|image_pad|><|vision_end|>" *
@@ -109,14 +109,10 @@ function (p::Qwen3VLProcessor)(; images = nothing, text = nothing)
         error("Qwen3VLProcessor needs `images` or `text`")
     images === nothing || p.image_processor !== nothing ||
         error("Qwen3VLProcessor has no image processor for `images`")
-    one_text = text isa AbstractString
-    text === nothing || one_text ||
-        text isa AbstractVector && all(t -> t isa AbstractString, text) ||
-        throw(ArgumentError("`text` is a string or a vector of strings, got a $(typeof(text))"))
+    texts, one_text = text === nothing ? (nothing, false) : text_list(text)
     tok = text === nothing ? nothing : tokenizer_of(p)
     image_inputs = images === nothing ? (;) : p.image_processor(images)
     text === nothing && return image_inputs
-    texts = one_text ? [text] : collect(text)
     if images !== nothing
         merge_length = p.image_processor.merge_size^2
         counts = [prod(g) ÷ merge_length for g in eachcol(image_inputs.image_grid_thw)]

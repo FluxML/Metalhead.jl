@@ -217,6 +217,12 @@ end
     @test logits ≈ model(one.input_ids; one.pixel_values, one.image_grid_thw)
     @test model.model(one) ≈ forward_features(model, one.input_ids; one.pixel_values,
         one.image_grid_thw)
+    @test forward_features(model, one) ≈ model.model(one)
+    @test forward_intermediates(model, one; indices = 1, intermediates_only = true) ≈
+          forward_intermediates(model, one.input_ids; indices = 1, one.pixel_values,
+        one.image_grid_thw, intermediates_only = true)
+    @test feature_info(model)[1].module_name == "model.language_model.layers.0"
+    @test length(feature_info(model)) == length(model.model.language_model.layers)
     # a batch, padded on the right: each prompt as alone
     other = "62 <|image_pad|> 63 9 10 11 12 13 14"
     batch = proc(; images, text = [prompt, other])

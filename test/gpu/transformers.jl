@@ -38,12 +38,12 @@ end
     images = [rand(UInt8, 50, 30, 3), rand(UInt8, 20, 60, 3)]
     inputs = GPU(proc(; images))
     @test inputs.pixel_values isa CUDA.CuArray
-    @test inputs.original_sizes == ((30, 50), (60, 20))
+    @test inputs.original_sizes == ((; height = 30, width = 50), (; height = 60, width = 20))
     # the tiny model's own prompts, as its vocabulary and positions are smaller
     model = GPU(fixture_model(fixture("sam3_tiny"); eltype = Float32))
     input_ids = GPU([1 2; 5 7; 9 3; 2 2])
     outputs = model(merge(inputs, (; input_ids)))
-    objects = Metalhead.Transformers.post_process_instance_segmentation(proc, outputs;
+    objects = post_process_instance_segmentation(proc, outputs;
         threshold = 0.0, target_sizes = inputs.original_sizes)
     @test size(objects[2].masks)[1:2] == (20, 60)
 end

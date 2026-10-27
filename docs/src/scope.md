@@ -11,11 +11,11 @@ belongs in Metalhead when both of these hold:
 
 In scope:
 
-- Architectures, their configurations and weights, and the feature interface of image
-  models (`forward_features`, `forward_intermediates`, ...).
+- Architectures, their configurations and weights, and the feature interface of image and
+  language models (`forward_features`, `forward_intermediates`, ...).
 - The inference preprocessing that a checkpoint's configuration sets: resizing, cropping,
-  normalising, and the packing specific to a model, such as image patches and image
-  placeholder tokens.
+  normalising, and the packing of inputs: the token indices and padding of a batch of texts,
+  and what is specific to a model, such as image patches and image placeholder tokens.
 - The post-processing specific to a model, such as SAM 3's masks and boxes.
 - The schedulers and sampling loops of the ported diffusion pipelines. The sampler, not the
   denoiser alone, defines the image. A scheduler is ported along with a pipeline that uses

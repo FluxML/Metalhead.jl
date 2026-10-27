@@ -33,11 +33,13 @@ reasons.
   (`loadweights.jl`), the architecture registry (`ArchSpec`, `AbstractConfigFormat`,
   `register!`), the public API (`api.jl`), and `processors.jl`: `create_processor`, the
   interface of processor classes (`@processor`, `register_processor!`,
-  `standardize_settings`), AutoProcessor's lookup and the strict reading of settings;
-  `tokenizers.jl`, the internal interface through which processors and pipelines use a
-  tokenizer (`load_tokenizer`, `encode_ids`, `token_id`, `pad_token_id`, `pad_ids`).
-  `images.jl` has the image layout that every processor takes (`image_array`). Nothing
-  there is specific to one library.
+  `standardize_settings`), AutoProcessor's lookup, the strict reading of settings and the
+  generic post-processing functions; `tokenizers.jl`, the internal interface through which
+  processors and pipelines use a tokenizer (`load_tokenizer`, `encode_ids`, `token_id`,
+  `pad_token_id`, `pad_ids`), and `TextProcessor`, the processor of a repository whose
+  processor is its tokenizer (a language model's). `images.jl` has the image layout that
+  every processor takes (`image_array`, and its inverse `image_matrix`). Nothing there is
+  specific to one library.
 - `src/Timm/`: one file per timm family. Ports of `timm.layers` classes go in `layers.jl`.
   `config.jl` is timm's `AbstractConfigFormat`, the template for any other library: it says
   how a `config.json` names an architecture and its arguments. A library gets its own
@@ -55,10 +57,11 @@ reasons.
   `AbstractConfigFormat`s: a model's `config.json` and a pipeline's `model_index.json`,
   whose components load from subfolders of the repository. The tokenizer of a pipeline is
   HuggingFaceTokenizers.jl's `Tokenizer` of its `tokenizer/` subfolder, which `create_model`
-  loads through the extension.
+  loads through the extension, or once the extension is loaded (`DeferredTokenizer`).
 - `ext/`: package extensions. HuggingFaceTokenizers.jl's `Tokenizer` is the tokenizer of a
   checkpoint: its extension loads it from `tokenizer.json` and implements the interface of
-  `src/hub/tokenizers.jl`; ImageCore lets processors take images of colorants; CUDA.
+  `src/hub/tokenizers.jl`; ImageCore lets processors take images of colorants and gives
+  `image_matrix`; CUDA.
 - `src/legacy/`: the hand-written models of Metalhead 0.9 (`ResNet(50)`, `Metalhead.Layers`,
   `pretrain = true`). Deprecated, untested, and removed in 0.11: don't extend them.
 - `test/`: run with ParallelTestRunner. Each file is a `@testset` in its own module. Shared

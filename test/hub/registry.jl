@@ -119,10 +119,12 @@ toy(; width = 2) = Dense(width => width)
             write(joinpath(dir, "config.json"), """{"kind": "toy"}""")
             config = Metalhead.JSON.parsefile(joinpath(dir, "config.json"))
             @test identify(config)[2] == "toy"
-            @test size(create_model(dir).weight) == (3, 3)
-            @test size(create_model(dir; width = 4).weight) == (4, 4)
+            # a directory names a checkpoint, whose weights load by default
+            @test_throws "has no safetensors weights" create_model(dir)
+            @test size(create_model(dir; pretrained = false).weight) == (3, 3)
+            @test size(create_model(dir; pretrained = false, width = 4).weight) == (4, 4)
             write(joinpath(dir, "config.json"), """{"kind": "missing"}""")
-            @test_throws "not been ported" create_model(dir)
+            @test_throws "not been ported" create_model(dir; pretrained = false)
         end
     finally
         delete!(REGISTRY, "toy")

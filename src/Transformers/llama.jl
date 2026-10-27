@@ -86,12 +86,57 @@ end
 # `lm_head` of its `forward_head`.
 abstract type CausalLM end
 
-function forward_features(m::CausalLM, input_ids; attention_mask = nothing)
+function forward_features(m::CausalLM, input_ids::AbstractArray{<:Integer};
+        attention_mask = nothing)
     return m.model(input_ids; attention_mask)
 end
 
-function (m::CausalLM)(input_ids; attention_mask = nothing)
-    return forward_head(m, forward_features(m, input_ids; attention_mask))
+function (m::CausalLM)(input_ids; kwargs...)
+    return forward_head(m, forward_features(m, input_ids; kwargs...))
+end
+
+# The output of a processor, a NamedTuple, as the token indices and the keyword arguments
+# `input_keys(model)` of a model, `nothing` for those it lacks.
+function token_inputs(m, inputs::NamedTuple)
+    check_inputs(m, inputs, (:input_ids,); hint = input_hint(m))
+    return inputs.input_ids, (; (k => get(inputs, k, nothing) for k in input_keys(m))...)
+end
+input_keys(::CausalLM) = (:attention_mask,)
+input_hint(::CausalLM) = "pass `text` to the processor"
+
+function forward_features(m::CausalLM, inputs::NamedTuple)
+    input_ids, kwargs = token_inputs(m, inputs)
+    return forward_features(m, input_ids; kwargs...)
+end
+
+function forward_intermediates(m::CausalLM, inputs::NamedTuple; kwargs...)
+    input_ids, model_kwargs = token_inputs(m, inputs)
+    return forward_intermediates(m, input_ids; model_kwargs..., kwargs...)
+end
+
+function forward_intermediates(m::CausalLM, input_ids::AbstractVector{<:Integer};
+        intermediates_only::Bool = false, kwargs...)
+    batched = forward_intermediates(m, reshape(input_ids, :, 1); intermediates_only,
+        (k => one_sequence(k, v) for (k, v) in pairs(kwargs))...)
+    unbatch(x) = dropdims(x; dims = 3)
+    intermediates_only && return map(unbatch, batched)
+    features, intermediates = batched
+    return unbatch(features), map(unbatch, intermediates)
+end
+
+# A keyword argument of the model for one sequence as that of a batch of one
+one_sequence(k, v::AbstractVector) = k === :attention_mask ? reshape(v, :, 1) : v
+one_sequence(k, v::AbstractMatrix) = k === :position_ids ? reshape(v, size(v)..., 1) : v
+one_sequence(k, v) = v
+
+# The decoder of a language model, and the name of its module in PyTorch
+decoder(m::CausalLM) = m.model, "model"
+
+function feature_info(m::CausalLM)
+    model, name = decoder(m)
+    num_chs = size(model.embed_tokens.weight, 1)
+    return [(; num_chs, reduction = 1, module_name = "$name.layers.$(i - 1)")
+            for i in eachindex(model.layers)]
 end
 
 @concrete struct LlamaForCausalLM <: CausalLM
@@ -109,12 +154,15 @@ forward_head(m::LlamaForCausalLM, x; pre_logits::Bool = false) = pre_logits ? x 
 
 The outputs of the decoder layers of a language model (Llama, Qwen2, Qwen3, Qwen3.5,
 Gemma 3, Granite) for the token indices `input_ids` of size `(seq_len, batch_size)`, each of
-size `(hidden_size, seq_len, batch_size)`: the `i`-th intermediate
+size `(hidden_size, seq_len, batch_size)`, or of a vector for a single sequence, each of
+size `(hidden_size, seq_len)`: the `i`-th intermediate
 is transformers' `output_hidden_states[i]`, the output of the `i`-th layer, except that the
 last one is not normed unless `norm = true`. The features are the hidden states after the final
 norm, as [`forward_features`](@ref) returns them. `indices`, `norm`, `stop_early` and
 `intermediates_only` are those of the vision models, and `attention_mask` that of the model,
-as is the `position_ids` keyword of Qwen3.5.
+as is the `position_ids` keyword of Qwen3.5. The output of a processor can replace
+`input_ids` and `attention_mask`, as for the model. [`feature_info`](@ref) gives the
+`hidden_size` and the module of each layer.
 """
 function forward_intermediates(m::CausalLM, input_ids::AbstractMatrix{<:Integer};
         indices = nothing, norm::Bool = false, stop_early::Bool = false,
@@ -143,8 +191,9 @@ sequence, to logits of size `(vocab_size, seq_len, batch_size)`, with causal att
 indices start at 1: add 1 to the ids of a Hugging Face tokenizer. A batch of sequences of
 different lengths, padded on the right, takes the tokenizer's `attention_mask` of size
 `(seq_len, batch_size)` as a keyword argument, which keeps the padding out of the keys.
-[`forward_features`](@ref) returns the hidden states after the final norm, and
-[`forward_intermediates`](@ref) those of each layer.
+The output of its processor, a [`TextProcessor`](@ref Metalhead.TextProcessor), can replace
+both: `model(tok(texts))`. [`forward_features`](@ref) returns the hidden states after the
+final norm, and [`forward_intermediates`](@ref) those of each layer.
 """
 function llama_for_causal_lm(; vocab_size = 32000, hidden_size = 4096,
         intermediate_size = 11008, num_hidden_layers = 32, num_attention_heads = 32,

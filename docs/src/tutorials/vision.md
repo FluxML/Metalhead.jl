@@ -25,7 +25,7 @@ using Statistics: mean
 
 seed!(42)
 repo = "timm/resnet18.a1_in1k"
-model = create_model(repo; pretrained = true)
+model = create_model(repo)
 transform = create_processor(repo)
 ```
 
@@ -219,7 +219,7 @@ size. Here the model is ResNet-18, whose classifier is the `fc` field, so we can
 linear probe we just trained:
 
 ```julia
-tuned = create_model(repo; pretrained = true, num_classes = length(classes))
+tuned = create_model(repo; num_classes = length(classes))
 Flux.loadmodel!(tuned.fc, Flux.state(head))
 Flux.trainmode!(tuned)
 opt_state = Flux.setup(Adam(1e-5), tuned)
@@ -293,7 +293,7 @@ With `output_fmt = "NLC"` it keeps patch tokens as channels × tokens × batch; 
 `return_prefix_tokens = true` it also returns the prefix tokens separately. The integer
 `indices = 1` above selects the last transformer block.
 
-For useful pretrained embeddings, load a ViT checkpoint with `pretrained = true` and prepare
+For useful pretrained embeddings, load a ViT checkpoint, `create_model(repo)`, and prepare
 its images with its processor, `create_processor(repo)`. DINOv2, CLIP and SigLIP variants
 have different pooling and prefix-token conventions; `forward_head(...; pre_logits = true)`
 applies the model's own pooling to its final features.
@@ -309,7 +309,7 @@ DINOv2's patches of 14 pixels cut into a grid of 64 × 48:
 using LinearAlgebra: svd
 
 repo = "timm/vit_small_patch14_reg4_dinov2.lvd142m"
-dinov2 = create_model(repo; pretrained = true, dynamic_img_size = true)
+dinov2 = create_model(repo; dynamic_img_size = true)
 transform = create_processor(repo; input_size = (3, 672, 896))   # channels, height, width
 
 cats = load(download("http://images.cocodataset.org/val2017/000000039769.jpg"))

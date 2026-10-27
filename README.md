@@ -49,7 +49,7 @@ Classify an image:
 ```julia
 using Metalhead, Flux, FileIO, ImageCore
 
-model = create_model("timm/convnext_tiny.fb_in1k"; pretrained = true)
+model = create_model("timm/convnext_tiny.fb_in1k")           # with its pretrained weights
 transform = create_processor("timm/convnext_tiny.fb_in1k")   # timm's eval transform
 
 x = transform(load("dog.jpg"))   # 224 × 224 × 3 × 1: width × height × channels × batch
@@ -62,19 +62,17 @@ Continue a text, with the tokenizer of the repository, which
 ```julia
 import HuggingFaceTokenizers as HFT
 
-model = create_model("HuggingFaceTB/SmolLM2-135M"; pretrained = true)
+model = create_model("HuggingFaceTB/SmolLM2-135M")
 tok = create_processor("HuggingFaceTB/SmolLM2-135M")
 
-ids = HFT.encode(tok, "The capital of France is the city of").ids .+ 1   # let ids start from 1
-HFT.decode(tok, [argmax(model(ids)[:, end]) - 1])                       # " Paris"
+logits = model(tok("The capital of France is the city of"))
+HFT.decode(tok, argmax(logits[:, end]))   # " Paris"
 ```
 
 Segment the objects that a text names:
 
 ```julia
-using Metalhead.Transformers: post_process_instance_segmentation
-
-model = create_model("unsloth/sam3.1"; pretrained = true)
+model = create_model("unsloth/sam3.1")
 proc = create_processor("unsloth/sam3.1")
 
 inputs = proc(; images = load("cats.jpg"), text = "a cat")
@@ -87,8 +85,9 @@ Generate an image on a GPU:
 ```julia
 using CUDA, cuDNN
 
-pipe = create_model("black-forest-labs/FLUX.2-klein-4B"; pretrained = true, eltype = BFloat16)
+pipe = create_model("black-forest-labs/FLUX.2-klein-4B"; eltype = BFloat16)
 image = gpu(pipe)("A photo of a red fox sitting in fresh snow"; num_inference_steps = 4)
+save("fox.png", Metalhead.image_matrix(cpu(image))[1])
 ```
 
 The [getting started guide](https://fluxml.ai/Metalhead.jl/dev/tutorials/quickstart/)

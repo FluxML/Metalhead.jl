@@ -66,10 +66,11 @@ function instantiate(format::DiffusersPipelineFormat, spec, source, config;
     return spec.build(; components..., args...)
 end
 
-# The tokenizer of a pipeline, from its subfolder, as `create_processor(repo; subfolder =
-# "tokenizer")` loads it: HuggingFaceTokenizers' `Tokenizer`, or `nothing` without
-# HuggingFaceTokenizers or without a tokenizer.json (a local pipeline saved without one).
-pipeline_tokenizer(s::ModelSource) = load_tokenizer(ProcessorFiles(s))
+# The tokenizer of a pipeline, from its subfolder: HuggingFaceTokenizers' `Tokenizer`, or
+# without HuggingFaceTokenizers the `DeferredTokenizer` of its tokenizer.json, which the
+# pipeline loads once HuggingFaceTokenizers is loaded; `nothing` without a tokenizer.json
+# (a local pipeline saved without one).
+pipeline_tokenizer(s::ModelSource) = load_tokenizer_or_defer(ProcessorFiles(s))
 
 # Diffusers components have no processor of their own: a pipeline preprocesses in its code.
 function instantiate_processor(::DiffusersFormat, files, config; kwargs...)
@@ -77,5 +78,5 @@ function instantiate_processor(::DiffusersFormat, files, config; kwargs...)
 end
 
 function instantiate_processor(::DiffusersPipelineFormat, files, config; kwargs...)
-    return error("$(config["_class_name"]) has no processor: it prepares its inputs itself, with the tokenizer `pipe.tokenizer` of `pipe = create_model(repo)`, which `create_processor(repo; subfolder = \"tokenizer\")` loads alone")
+    return error("$(config["_class_name"]) has no processor: it prepares its inputs itself, with the tokenizer `pipe.tokenizer` of `pipe = create_model(repo)`, which `create_processor(repo; subfolder = \"tokenizer\")` loads alone, as a `TextProcessor`")
 end

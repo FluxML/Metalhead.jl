@@ -20,6 +20,31 @@ function image_array(x)
     throw(ArgumentError("an image must be an array of size (width, height, channels) of integers from 0 to 255 or of reals from 0 to 1, got a $(typeof(x))"))
 end
 
+"""
+    image_matrix(x) -> AbstractMatrix{<:Colorant}
+
+The inverse of [`image_array`](@ref Metalhead.image_array): the array `x` of size
+`(width, height, channels)`, such as an image that a pipeline generates or a mask of SAM 3,
+as a matrix of colorants of size `(height, width)`, which FileIO saves and image viewers
+show. It needs ImageCore (or Images.jl) loaded.
+
+The channels make RGB (3), RGBA (4), gray (1) or gray and alpha (2) colorants; a matrix
+`(width, height)`, such as a mask, a gray image. 8-bit values (integers from 0 to 255) make
+`N0f8` colorants, `Bool`s gray `Bool`s, and other reals, from 0 to 1, `Float32` colorants.
+An array of size `(width, height, channels, batch)` gives a vector of images.
+
+```julia
+using ImageCore, FileIO
+image = pipe("A photo of a red fox sitting in fresh snow"; num_inference_steps = 4)
+FileIO.save("fox.png", Metalhead.image_matrix(cpu(image))[1])
+```
+"""
+function image_matrix(x)
+    Base.get_extension(@__MODULE__, :MetalheadImageCoreExt) === nothing &&
+        error("`image_matrix` needs ImageCore: run `using ImageCore` (or `using Images`)")
+    throw(ArgumentError("`image_matrix` takes an array of reals of size (width, height, channels), (width, height, channels, batch) or (width, height), got a $(typeof(x))"))
+end
+
 # The images of `images`, one image or a vector of them (or an array of size
 # `(width, height, channels, batch)`), each through `image_array`.
 image_batch(images::AbstractVector) = [image_array(x) for x in images]

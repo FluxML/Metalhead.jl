@@ -55,7 +55,8 @@ end
     @test length(architectures) > 30
     @test setdiff(architectures, list_models()) == []
     new = [:Metalhead, :create_model, :create_processor, :list_models, :forward_features,
-        :forward_head,
-        :forward_intermediates, :feature_info]
+        :forward_head, :forward_intermediates, :feature_info,
+        :post_process_object_detection, :post_process_instance_segmentation,
+        :post_process_semantic_segmentation]
     @test setdiff(names(Metalhead), new, keys(Metalhead.LEGACY_REPLACEMENTS)) == []
 end

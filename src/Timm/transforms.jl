@@ -86,7 +86,7 @@ NamedTuple: a `Float32` array of size `(W, H, 3, batch)`, where `(3, H, W)` is
 them as PIL images. One image gives a batch of one.
 
 ```julia
-model = create_model("timm/convnext_tiny.fb_in1k"; pretrained = true)
+model = create_model("timm/convnext_tiny.fb_in1k")
 transform = create_processor("timm/convnext_tiny.fb_in1k")
 logits = model(transform(image))    # transform(image): 224 × 224 × 3 × 1
 ```

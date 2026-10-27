@@ -4,7 +4,8 @@ module MetalheadImageCoreExt
 
 using Metalhead: Metalhead
 using ImageCore: Colorant, AbstractRGB, TransparentRGB, AbstractGray, TransparentGray,
-                 FixedPoint, N0f8, red, green, blue, alpha, gray
+                 FixedPoint, N0f8, red, green, blue, alpha, gray, RGB, RGBA, Gray,
+                 GrayA, colorview
 
 # The channels of a colorant in the order of Pillow's modes RGB, RGBA, L and LA, whatever the
 # order of its fields (BGR, ARGB, ...).
@@ -36,6 +37,30 @@ function Metalhead.image_array(img::AbstractMatrix{C}) where {C <: Colorant}
     fill_channels!(out, img, fs)
     return out
 end
+
+# Arrays `(width, height, channels)` as matrices of colorants `(height, width)`, the inverse
+function Metalhead.image_matrix(x::AbstractArray{<:Real, 3})
+    c = size(x, 3)
+    1 <= c <= 4 ||
+        throw(ArgumentError("an image has 1 to 4 channels (L, LA, RGB or RGBA), got $c"))
+    channels = permutedims(colorant_values(x), (3, 2, 1))
+    c == 1 && return colorview(Gray, channels[1, :, :])
+    return colorview((GrayA, RGB, RGBA)[c - 1], channels)
+end
+function Metalhead.image_matrix(x::AbstractMatrix{<:Real})
+    return colorview(Gray, permutedims(colorant_values(x)))
+end
+function Metalhead.image_matrix(x::AbstractArray{<:Real, 4})
+    return [Metalhead.image_matrix(xi) for xi in eachslice(x; dims = 4)]
+end
+
+colorant_values(x::AbstractArray{Bool}) = Array(x)
+function colorant_values(x::AbstractArray{<:Integer})
+    all(v -> 0 <= v <= 255, x) ||
+        throw(ArgumentError("an image of integers has values from 0 to 255"))
+    return reinterpret.(N0f8, UInt8.(Array(x)))
+end
+colorant_values(x::AbstractArray{<:Real}) = Float32.(Array(x))
 
 function fill_channels!(out::Array{T}, img, fs) where {T}
     @inbounds for (i, row) in enumerate(axes(img, 1)), (j, col) in enumerate(axes(img, 2))

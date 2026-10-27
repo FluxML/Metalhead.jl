@@ -11,7 +11,7 @@ of its own, and `create_model` builds them all.
 using Metalhead, Flux, HuggingFaceTokenizers
 using CUDA, cuDNN                   # optional: for a GPU
 
-pipe = create_model("black-forest-labs/FLUX.2-klein-4B"; pretrained = true, eltype = BFloat16)
+pipe = create_model("black-forest-labs/FLUX.2-klein-4B"; eltype = BFloat16)
 pipe = gpu(pipe)
 
 image = pipe("A photo of a red fox sitting in fresh snow, looking at the camera";
@@ -25,13 +25,14 @@ guidance (`guidance_scale = 4`, the default), and is the one to fine-tune.
 
 ![A red fox in the snow, by FLUX.2 [klein] 4B](../assets/flux2-fox.jpg)
 
-`image` has size `(width, height, 3, batch)`, with values in [0, 1]. ImageCore.jl (or
-Images.jl) makes an image of it, and FileIO saves it:
+`image` has size `(width, height, 3, batch)`, with values in [0, 1]. With ImageCore.jl (or
+Images.jl) loaded, [`Metalhead.image_matrix`](@ref) makes a vector of images of it, height ×
+width matrices of `RGB` pixels, and FileIO saves them:
 
 ```julia
 using ImageCore, FileIO
 
-img = colorview(RGB, permutedims(Float32.(cpu(image[:, :, :, 1])), (3, 2, 1)))
+img = only(Metalhead.image_matrix(cpu(image)))
 FileIO.save("fox.png", img)  # HuggingFaceTokenizers exports a `save` too
 ```
 
@@ -94,17 +95,19 @@ the noise level σ: the first step sets the composition, and the others add deta
 prediction is the image of the pipeline.*
 
 `pipe.tokenizer` is the tokenizer of the text encoder,
-HuggingFaceTokenizers.jl's `Tokenizer`, which `gpu` and `bf16` leave as it is; it loads with
-the pipeline when HuggingFaceTokenizers is loaded first, and is `nothing` otherwise, when
-the pipeline takes embeddings only. A pipeline has no processor of its own: it prepares its
-inputs itself.
-`create_processor(repo; subfolder = "tokenizer")` loads the tokenizer alone, and each other
-component loads on its own with `subfolder` too:
+HuggingFaceTokenizers.jl's `Tokenizer`, which `gpu` and `bf16` leave as it is. It loads with
+the pipeline when HuggingFaceTokenizers is loaded first. Otherwise the pipeline keeps the
+file of the tokenizer, and loads it once HuggingFaceTokenizers is loaded: a pipeline loaded
+without it takes embeddings, and takes prompts after `using HuggingFaceTokenizers`, without
+loading it again. A pipeline has no processor of its own: it prepares its inputs itself.
+`create_processor(repo; subfolder = "tokenizer")` loads the tokenizer alone, as a
+[`TextProcessor`](@ref Metalhead.TextProcessor), and each other component loads on its own
+with `subfolder` too:
 
 ```julia
 using Metalhead: Diffusers   # HuggingFaceTokenizers exports an `encode` and a `decode` too
 
-vae = create_model("black-forest-labs/FLUX.2-klein-4B"; subfolder = "vae", pretrained = true)
+vae = create_model("black-forest-labs/FLUX.2-klein-4B"; subfolder = "vae")
 x = rand(Float32, 256, 256, 3, 1) .* 2 .- 1    # an image with values in [-1, 1]
 latents = Diffusers.mode(Diffusers.encode(vae, x))   # 32 × 32 × 32 × 1
 y = Diffusers.decode(vae, latents)                   # 256 × 256 × 3 × 1

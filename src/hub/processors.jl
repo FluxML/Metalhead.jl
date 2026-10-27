@@ -428,7 +428,7 @@ function auto_processor_class(files::ProcessorFiles, config)
                 "the processor of the model type `$model_type`")
     end
     (has_file(files, "tokenizer_config.json") || has_file(files, "tokenizer.json")) &&
-        return AutoTokenizer
+        return TextProcessor
     found = image_processor_config(files)
     if found !== nothing
         dict, file = found
@@ -525,6 +525,35 @@ end
 ChainRulesCore.@non_differentiable check_inputs(::Any...)
 
 """
+    post_process_object_detection(processor, outputs; kwargs...)
+
+The objects that a model detects in each image, from its `outputs` and its `processor`
+(transformers' `post_process_object_detection`): for each image, a NamedTuple of their
+`scores` and `boxes`. The processor of each model has a method; that of SAM 3 is
+[`Sam3Processor`](@ref Metalhead.Transformers.Sam3Processor).
+"""
+function post_process_object_detection end
+
+"""
+    post_process_instance_segmentation(processor, outputs; kwargs...)
+
+The objects that a model segments in each image, from its `outputs` and its `processor`
+(transformers' `post_process_instance_segmentation`): for each image, a NamedTuple of their
+`scores`, `boxes` and `masks`. The processor of each model has a method; that of SAM 3 is
+[`Sam3Processor`](@ref Metalhead.Transformers.Sam3Processor).
+"""
+function post_process_instance_segmentation end
+
+"""
+    post_process_semantic_segmentation(processor, outputs; kwargs...)
+
+The semantic segmentation of each image by a model, from its `outputs` and its `processor`
+(transformers' `post_process_semantic_segmentation`). The processor of each model has a
+method; that of SAM 3 is [`Sam3Processor`](@ref Metalhead.Transformers.Sam3Processor).
+"""
+function post_process_semantic_segmentation end
+
+"""
     instantiate_processor(format::AbstractConfigFormat, files, config; kwargs...)
         -> Union{Nothing, AbstractProcessor}
 
@@ -558,15 +587,14 @@ component has is an error.
 Returns the most complete processor the repository describes, as transformers'
 `AutoProcessor` does: the class that its files or its model type name, such as a processor
 that combines an image processor and a tokenizer (`Transformers.Sam3Processor`); else its
-tokenizer; else its image processor, such as the
-[`Timm.EvalTransform`](@ref Metalhead.Timm.EvalTransform) of every timm checkpoint.
-Calling a processor returns what the model takes, a NamedTuple (an array for
-`Timm.EvalTransform`):
+tokenizer, as a [`TextProcessor`](@ref Metalhead.TextProcessor); else its image processor,
+such as the [`Timm.EvalTransform`](@ref Metalhead.Timm.EvalTransform) of every timm
+checkpoint. Calling a processor returns what the model takes, a NamedTuple (an array for
+`Timm.EvalTransform`), with token indices that start at 1:
 
 ```julia
 using HuggingFaceTokenizers
-using Metalhead.Transformers: post_process_instance_segmentation
-model = create_model("unsloth/sam3.1"; pretrained = true)
+model = create_model("unsloth/sam3.1")
 proc = create_processor("unsloth/sam3.1")
 img = rand(UInt8, 640, 480, 3)                       # width × height × channels
 inputs = proc(; images = img, text = "a cat")
@@ -582,15 +610,15 @@ where it comes from.
 
 Metalhead ports no tokenizer: the tokenizer of a repository is HuggingFaceTokenizers.jl's
 `Tokenizer` of its tokenizer.json, which needs `using HuggingFaceTokenizers` before
-`create_processor`, and whose token ids start at 0, the token indices of the models at 1:
+`create_processor`. Its token ids start at 0, the token indices of the models and of
+processors at 1, and `decode(proc, indices)` decodes token indices:
 
 ```julia
 using HuggingFaceTokenizers
-model = create_model("HuggingFaceTB/SmolLM2-135M"; pretrained = true)
+model = create_model("HuggingFaceTB/SmolLM2-135M")
 tok = create_processor("HuggingFaceTB/SmolLM2-135M")
-ids = encode(tok, "The capital of France is").ids .+ 1
-logits = model(ids)
-decode(tok, [argmax(logits[:, end]) - 1])   # " Paris"
+logits = model(tok("The capital of France is"))
+decode(tok, argmax(logits[:, end]))   # " Paris"
 ```
 """
 function create_processor(name::AbstractString;

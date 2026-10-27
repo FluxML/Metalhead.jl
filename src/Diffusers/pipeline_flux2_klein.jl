@@ -15,17 +15,18 @@ predicts the flow of the latents; `vae`, the
 [`AutoencoderKLFlux2`](@ref Metalhead.Diffusers.autoencoder_kl_flux2) that decodes them;
 `scheduler`, the [`FlowMatchEulerDiscreteScheduler`](@ref Metalhead.Diffusers.FlowMatchEulerDiscreteScheduler);
 and `tokenizer`, the tokenizer of the text encoder: HuggingFaceTokenizers.jl's `Tokenizer`
-of the `tokenizer/` subfolder, which `create_model` loads with `using HuggingFaceTokenizers`
-first, or `nothing` without it (or for a pipeline saved without a tokenizer), when the
-pipeline takes prompt embeddings only. `is_distilled` checkpoints (FLUX.2 [klein] 4B, 9B)
-sample in a few steps without classifier-free guidance; the base ones (FLUX.2 [klein] base
-4B, 9B) take about 50 steps and a `guidance_scale` of 4.
+of the `tokenizer/` subfolder. Without `using HuggingFaceTokenizers` before `create_model`,
+it is a reference to the tokenizer.json, which the pipeline loads once HuggingFaceTokenizers
+is loaded, without loading the pipeline again; it is `nothing` for a pipeline saved without
+a tokenizer, which takes prompt embeddings only. `is_distilled` checkpoints (FLUX.2 [klein]
+4B, 9B) sample in a few steps without classifier-free guidance; the base ones (FLUX.2
+[klein] base 4B, 9B) take about 50 steps and a `guidance_scale` of 4.
 
 `gpu(pipeline)` and `bf16(pipeline)` move and convert every component but the tokenizer.
 
 ```julia
 using Metalhead, HuggingFaceTokenizers
-pipe = create_model("black-forest-labs/FLUX.2-klein-4B"; pretrained = true, eltype = BFloat16)
+pipe = create_model("black-forest-labs/FLUX.2-klein-4B"; eltype = BFloat16)
 image = pipe("A cat holding a sign that says hello world"; num_inference_steps = 4)
 ```
 """
@@ -64,8 +65,8 @@ The embeddings of a prompt (a string) or of a vector of prompts, as diffusers'
 `(length(text_encoder_out_layers) * hidden_size, max_sequence_length, batch)`. Each prompt
 is formatted with the chat template of the Qwen3 text encoder (a user message, with thinking
 disabled and a generation prompt), tokenized with `pipeline.tokenizer` (which needs `using
-HuggingFaceTokenizers` before `create_model`), truncated to `max_sequence_length` tokens
-and padded on the right to them. The embeddings are the hidden states of the layers
+HuggingFaceTokenizers`), truncated to `max_sequence_length` tokens and padded on the right
+to them. The embeddings are the hidden states of the layers
 `text_encoder_out_layers` of the text encoder (transformers' `output_hidden_states`, of
 which that of the last layer is normed), concatenated along the features.
 
@@ -76,9 +77,13 @@ the text encoder.
 function encode_prompt(p::Flux2KleinPipeline,
         prompt::Union{AbstractString, AbstractVector{<:AbstractString}};
         max_sequence_length::Integer = 512, text_encoder_out_layers = (9, 18, 27))
-    p.tokenizer === nothing &&
-        error("the pipeline has no tokenizer to encode prompts: run `using HuggingFaceTokenizers` before `create_model`, from a repository with a tokenizer/tokenizer.json; or pass prompt embeddings, or the token indices of the prompts to `encode_prompt`")
-    inputs = qwen3_prompt_inputs(p.tokenizer, prompt; max_sequence_length)
+    tok = resolve_tokenizer(p.tokenizer)
+    if tok === nothing
+        p.tokenizer isa DeferredTokenizer &&
+            error("the tokenizer of the pipeline needs HuggingFaceTokenizers.jl to encode prompts: run `using HuggingFaceTokenizers`, and call the pipeline again, which needn't be loaded again; or pass prompt embeddings, or the token indices of the prompts to `encode_prompt`")
+        error("the pipeline has no tokenizer to encode prompts, as its repository has no tokenizer/tokenizer.json: pass prompt embeddings, or the token indices of the prompts to `encode_prompt`")
+    end
+    inputs = qwen3_prompt_inputs(tok, prompt; max_sequence_length)
     return encode_prompt(p, inputs.input_ids; inputs.attention_mask,
         text_encoder_out_layers)
 end

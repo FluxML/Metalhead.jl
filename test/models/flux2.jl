@@ -132,8 +132,8 @@ end
     @test pipe.is_distilled && pipe.tokenizer === nothing
     @test pipe.text_encoder isa Metalhead.Transformers.LlamaForCausalLM
     @test create_model(dir; subfolder = "vae") isa D.AutoencoderKLFlux2
-    @test_throws "no tokenizer" pipe("a prompt")
-    @test_throws "no tokenizer" D.encode_prompt(pipe, "a prompt")
+    @test_throws "has no tokenizer to encode prompts" pipe("a prompt")
+    @test_throws "has no tokenizer to encode prompts" D.encode_prompt(pipe, "a prompt")
     embeds = randn(Float32, 48, 7, 1)
     image = pipe(embeds; height = 16, width = 20, num_inference_steps = 2)
     @test size(image) == (20, 16, 3, 1) && eltype(image) == Float32
@@ -164,7 +164,7 @@ with_tokenizer(p, tokenizer) = D.Flux2KleinPipeline(p.scheduler, p.vae, p.text_e
 
 @testset "tokenizer" begin
     # the tokenizer of a pipeline is HuggingFaceTokenizers' of its tokenizer/ subfolder,
-    # which `create_model` loads only with HuggingFaceTokenizers (with
+    # which a pipeline loaded without HuggingFaceTokenizers loads once it is (with
     # METALHEAD_TEST_NETWORK, another test of this worker may have loaded it)
     if Base.get_extension(Metalhead, :MetalheadHuggingFaceTokenizersExt) === nothing
         mktempdir() do dir
@@ -175,8 +175,11 @@ with_tokenizer(p, tokenizer) = D.Flux2KleinPipeline(p.scheduler, p.vae, p.text_e
             index["tokenizer"] = ["transformers", "Qwen2TokenizerFast"]
             write(joinpath(dir, "model_index.json"), JSON.json(index))
             pipe = create_model(dir)
-            @test pipe.tokenizer === nothing
-            @test_throws "run `using HuggingFaceTokenizers` before `create_model`" pipe(
+            @test pipe.tokenizer ==
+                  Metalhead.DeferredTokenizer(joinpath(dir, "tokenizer", "tokenizer.json"),
+                nothing)
+            @test Flux.f16(pipe).tokenizer === pipe.tokenizer
+            @test_throws "run `using HuggingFaceTokenizers`, and call the pipeline again" pipe(
                 "a prompt")
         end
     end

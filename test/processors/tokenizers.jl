@@ -3,7 +3,10 @@ using JSON: JSON
 using SafeTensors: SafeTensors
 using Metalhead: ProcessorFiles, model_source, load_tokenizer, encode_ids, token_id,
                  pad_token_id, pad_ids, tokenizer_of, load_processor, AbstractProcessor,
-                 AbstractImageProcessor, @processor
+                 AbstractImageProcessor, @processor, TextProcessor, DeferredTokenizer,
+                 load_tokenizer_or_defer, resolve_tokenizer
+
+include(joinpath(@__DIR__, "..", "processors_setup.jl"))
 
 const REFERENCES = joinpath(pkgdir(Metalhead), "test", "references")
 
@@ -84,6 +87,41 @@ end
     @test endswith(plain, "\n  tokenizer: MetalheadTestTokenizer")
 end
 
+# A tokenizer of words, whose ids are those of `vocab`, after the id 9 of a special token
+struct WordTokenizer
+    pad::Union{Nothing, Int}
+end
+const VOCAB = Dict("hello" => 3, "world" => 4, "again" => 5)
+function Metalhead.encode_ids(::WordTokenizer, text::AbstractString;
+        add_special_tokens::Bool = true)
+    ids = [VOCAB[w] for w in split(text)]
+    return add_special_tokens ? [9; ids] : ids
+end
+Metalhead.pad_token_id(t::WordTokenizer) = t.pad
+
+@testset "TextProcessor" begin
+    tok = TextProcessor(WordTokenizer(7))
+    # one text gives vectors, as the model takes them
+    @test tok("hello world") == (; input_ids = [10, 4, 5], attention_mask = [1, 1, 1])
+    @test tok(; text = "hello world") == tok("hello world")
+    @test tok("hello world"; add_special_tokens = false).input_ids == [4, 5]
+    # a batch, padded on the right with the padding token
+    out = tok(["hello", "hello world again"])
+    @test out.input_ids == [10 10; 4 4; 8 5; 8 6]
+    @test out.attention_mask == [1 1; 1 1; 0 1; 0 1]
+    check_documented_keys(TextProcessor, [out])
+    # without a padding token, with the token index 1, which the attention mask leaves out
+    @test TextProcessor(WordTokenizer(nothing))(["hello", "hello world"]).input_ids ==
+          [10 10; 4 4; 1 5]
+    @test_throws "a string or a vector of strings" tok(1)
+    @test_throws "a string or a vector of strings" tok(["hello", 1])
+    @test_throws "TextProcessor has no tokenizer to encode text" TextProcessor()("hello")
+    @test sprint(show, tok) == "TextProcessor(tokenizer = WordTokenizer)"
+    @test sprint(show, MIME("text/plain"), tok) == "TextProcessor\n  tokenizer: WordTokenizer"
+    @test_throws "no settings to override (got `padding_side`)" load_processor(TextProcessor,
+        files(mktempdir()); padding_side = "left")
+end
+
 # With METALHEAD_TEST_NETWORK, another test of this worker may have loaded
 # HuggingFaceTokenizers
 if Base.get_extension(Metalhead, :MetalheadHuggingFaceTokenizersExt) === nothing
@@ -91,7 +129,19 @@ if Base.get_extension(Metalhead, :MetalheadHuggingFaceTokenizersExt) === nothing
         mktempdir() do dir
             write(joinpath(dir, "tokenizer.json"), "{}")
             @test load_tokenizer(files(dir)) === nothing
+            @test_throws "run `using HuggingFaceTokenizers` before `create_processor`" load_processor(
+                TextProcessor, files(dir))
+            # a pipeline keeps its tokenizer.json, which loads with HuggingFaceTokenizers
+            deferred = load_tokenizer_or_defer(files(dir))
+            @test deferred == DeferredTokenizer(joinpath(dir, "tokenizer.json"), nothing)
+            @test resolve_tokenizer(deferred) === nothing
+            write(joinpath(dir, "tokenizer_config.json"), JSON.json(Dict("pad_token" => "<pad>")))
+            @test load_tokenizer_or_defer(files(dir)).pad == "<pad>"
         end
+        mktempdir() do dir
+            @test load_tokenizer_or_defer(files(dir)) === nothing
+        end
+        @test resolve_tokenizer(WordTokenizer(1)) == WordTokenizer(1)
         @test_throws MethodError encode_ids("tokenizer", "text")
     end
 end
@@ -112,7 +162,9 @@ if TEST_NETWORK
         "Qwen/Qwen3-0.6B" => "<|endoftext|>" => 151643,
         "unsloth/Llama-3.2-1B" => "<|finetune_right_pad_id|>" => 128004,
         "unsloth/gemma-3-270m" => "<pad>" => 0]
-        tok = @test_logs create_processor(repo)
+        proc = @test_logs create_processor(repo)
+        @test proc isa TextProcessor
+        tok = proc.tokenizer
         @test tok isa Tokenizer
         @test load_tokenizer(files(repo)) === tok
         name = replace(repo, "/" => "--")
@@ -122,7 +174,21 @@ if TEST_NETWORK
         for (b, prompt) in enumerate(prompts)
             @test encode_ids(tok, prompt)[1:n] == ids[:, b]
             @test HuggingFaceTokenizers.encode(tok, prompt).ids[1:n] == ids[:, b]
+            # the processor gives token indices, from 1, and decodes them
+            inputs = proc(prompt)
+            @test inputs.input_ids == encode_ids(tok, prompt) .+ 1
+            @test all(==(1), inputs.attention_mask)
+            @test HuggingFaceTokenizers.decode(proc, inputs.input_ids) ==
+                  HuggingFaceTokenizers.decode(tok, encode_ids(tok, prompt))
         end
+        @test HuggingFaceTokenizers.decode(proc, ids[end, 1] + 1) ==
+              HuggingFaceTokenizers.decode(tok, [ids[end, 1]])
+        batch = proc(prompts)
+        lengths = [length(encode_ids(tok, p)) for p in prompts]
+        @test batch.attention_mask == [Int(i <= l) for i in 1:maximum(lengths), l in lengths]
+        padding = something(pad_token_id(tok), 0) + 1
+        @test batch.input_ids == [i <= l ? proc(p).input_ids[i] : padding
+                                  for i in 1:maximum(lengths), (p, l) in zip(prompts, lengths)]
         if pad === nothing
             @test pad_token_id(tok) === nothing
             @test_throws "no padding token" pad_ids(encode_ids.((tok,), prompts),
@@ -193,6 +259,13 @@ if TEST_NETWORK
         @test pad_token_id(load(padding, Dict("pad_token" => "<pad>"))) == 1
         @test pad_token_id(load(nothing, Dict("pad_token" => nothing))) === nothing
         @test pad_token_id(load(nothing, nothing)) === nothing
+        # a pipeline loaded before HuggingFaceTokenizers keeps the file of its tokenizer
+        dir = mktempdir()
+        write(joinpath(dir, "tokenizer.json"), JSON.json(tokenizer_json()))
+        deferred = DeferredTokenizer(joinpath(dir, "tokenizer.json"), "<pad>")
+        @test resolve_tokenizer(deferred) isa Tokenizer
+        @test pad_token_id(resolve_tokenizer(deferred)) == 2
+        @test load_tokenizer_or_defer(files(dir)) isa Tokenizer
         tok = @test_logs (:warn, r"not in the vocabulary") load(nothing,
             Dict("pad_token" => "<absent>"))
         @test pad_token_id(tok) === nothing
@@ -236,7 +309,7 @@ if TEST_NETWORK
         name = replace(repo, "/" => "--")
         ref = reference(name)
         prompt = metadata(name)["prompt"]
-        tok = @test_logs create_processor(repo; subfolder = "tokenizer")
+        tok = (@test_logs create_processor(repo; subfolder = "tokenizer")).tokenizer
         @test tok isa Tokenizer
         # the tokenizer of the pipeline, and the inputs of its `encode_prompt`
         @test D.pipeline_tokenizer(Metalhead.subsource(model_source(repo, nothing),
