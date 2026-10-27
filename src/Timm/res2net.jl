@@ -29,13 +29,16 @@ function Bottle2neck(inplanes, planes; stride = 1, downsample = nothing, cardina
     outplanes = planes * BOTTLE2NECK_EXPANSION
     num_scales = max(1, scale - 1)
     is_first = stride > 1 || downsample !== nothing
-    convs = [Conv((3, 3), width => width; stride, pad = 1, groups = cardinality,
+    convs = [init_layer(
+                 Conv, (3, 3), width => width; stride, pad = 1, groups = cardinality,
                  bias = false) for _ in 1:num_scales]
     return Bottle2neck(
-        Conv((1, 1), inplanes => width * scale; bias = false), BatchNorm(width * scale),
-        convs, [BatchNorm(width) for _ in 1:num_scales],
+        init_layer(Conv, (1, 1), inplanes => width * scale; bias = false),
+        init_layer(BatchNorm, width * scale),
+        convs, [init_layer(BatchNorm, width) for _ in 1:num_scales],
         is_first ? MeanPool((3, 3); stride, pad = 1) : nothing,
-        Conv((1, 1), width * scale => outplanes; bias = false), BatchNorm(outplanes),
+        init_layer(Conv, (1, 1), width * scale => outplanes; bias = false),
+        init_layer(BatchNorm, outplanes),
         act_layer, downsample, scale, width, is_first)
 end
 

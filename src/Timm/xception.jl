@@ -14,7 +14,7 @@ Flux.@layer XceptionSeparableConv2d
 
 function XceptionSeparableConv2d(in_chs, out_chs; kernel_size = 3, stride = 1,
         dilation = 1, padding = "", act_layer = identity, eps = 1e-5)
-    bn(c) = BatchNorm(c; eps = Float32(eps))
+    bn(c) = init_layer(BatchNorm, c; eps = Float32(eps))
     conv_dw = create_conv2d(
         in_chs, in_chs, kernel_size; stride, padding, dilation, depthwise = true)
     return XceptionSeparableConv2d(conv_dw, bn(in_chs), act_layer,
@@ -38,7 +38,7 @@ function XceptionPreSeparableConv2d(in_chs, out_chs; kernel_size = 3, stride = 1
     conv_dw = create_conv2d(
         in_chs, in_chs, kernel_size; stride, padding, dilation, depthwise = true)
     return XceptionPreSeparableConv2d(
-        first_act ? BatchNorm(in_chs, relu; eps = Float32(eps)) : identity, conv_dw,
+        first_act ? init_layer(BatchNorm, in_chs, relu; eps = Float32(eps)) : identity, conv_dw,
         create_conv2d(in_chs, out_chs, 1))
 end
 
@@ -99,7 +99,7 @@ function PreXceptionModule(in_chs, out_chs; stride = 1, dilation = 1, pad_type =
     out_chs = as_triple(out_chs)
     shortcut = !no_skip && (out_chs[end] != in_chs || stride != 1) ?
                create_conv2d(in_chs, out_chs[end], 1; stride) : identity
-    norm = BatchNorm(in_chs, relu; eps = Float32(eps))
+    norm = init_layer(BatchNorm, in_chs, relu; eps = Float32(eps))
     stack = Chain(
         (;
         (Symbol(:conv, i) => XceptionPreSeparableConv2d(

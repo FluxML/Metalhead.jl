@@ -4,6 +4,7 @@
 struct DiffusersFormat <: AbstractConfigFormat end
 const DIFFUSERS = DiffusersFormat()
 Base.show(io::IO, ::DiffusersFormat) = print(io, "diffusers")
+direct_weight_init(::DiffusersFormat) = true
 
 # The model_index.json of a diffusers pipeline: its class in `_class_name`, and each component
 # as `name => [library, class]`, saved in the subfolder `name` (`[null, null]` if absent).

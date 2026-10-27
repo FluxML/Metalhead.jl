@@ -53,7 +53,7 @@ Flux.@layer ZImageAttention
 
 function z_image_attention(dim; heads, head_dim, qk_norm)
     inner = heads * head_dim
-    linear(in_out) = Dense(in_out; bias = false)
+    linear(in_out) = init_layer(Dense, in_out; bias = false)
     norm() = qk_norm ? RMSNorm(head_dim; eps = 1e-5) : nothing
     return ZImageAttention(heads, linear(dim => inner), linear(dim => inner),
         linear(dim => inner), norm(), norm(),
@@ -96,9 +96,11 @@ Flux.@layer ZImageTransformerBlock
 function z_image_block(dim; heads, norm_eps, qk_norm, modulation)
     norm() = RMSNorm(dim; eps = norm_eps)
     hidden = floor(Int, dim / 3 * 8)
-    ff = ZImageFeedForward(Dense(dim => hidden; bias = false),
-        Dense(hidden => dim; bias = false), Dense(dim => hidden; bias = false))
-    adaln = modulation ? Chain(Dense(min(dim, ADALN_EMBED_DIM) => 4dim)) : nothing
+    ff = ZImageFeedForward(init_layer(Dense, dim => hidden; bias = false),
+        init_layer(Dense, hidden => dim; bias = false),
+        init_layer(Dense, dim => hidden; bias = false))
+    adaln = modulation ?
+            Chain(init_layer(Dense, min(dim, ADALN_EMBED_DIM) => 4dim)) : nothing
     return ZImageTransformerBlock(
         z_image_attention(dim; heads, head_dim = dim ÷ heads, qk_norm), ff, norm(), norm(),
         norm(), norm(), adaln)
@@ -351,20 +353,25 @@ function z_image_transformer_2d_model(; all_patch_size = (2,), all_f_patch_size 
     pairs = [Symbol(p, "-", f) for (p, f) in zip(all_patch_size, all_f_patch_size)]
     patches = [(p, f) for (p, f) in zip(all_patch_size, all_f_patch_size)]
     adaln_dim = min(dim, ADALN_EMBED_DIM)
-    final_layer(p, f) = ZImageFinalLayer(LayerNorm(dim; affine = false, eps = 1e-6),
-        Dense(dim => p * p * f * in_channels), Chain(swish, Dense(adaln_dim => dim)))
+    final_layer(p, f) = ZImageFinalLayer(
+        init_layer(LayerNorm, dim; affine = false, eps = 1e-6),
+        init_layer(Dense, dim => p * p * f * in_channels),
+        Chain(swish, init_layer(Dense, adaln_dim => dim)))
     block(modulation) = z_image_block(dim; heads = n_heads, norm_eps, qk_norm, modulation)
     t_embedder = ZImageTimestepEmbedder(
-        Chain(Dense(ADALN_EMBED_DIM => 1024), swish, Dense(1024 => adaln_dim)),
+        Chain(init_layer(Dense, ADALN_EMBED_DIM => 1024), swish,
+            init_layer(Dense, 1024 => adaln_dim)),
         ADALN_EMBED_DIM)
     return ZImageTransformer2DModel(in_channels, Float64(t_scale),
-        NamedTuple{Tuple(pairs)}(Tuple(Dense(f * p * p * in_channels => dim)
+        NamedTuple{Tuple(pairs)}(Tuple(init_layer(Dense, f * p * p * in_channels => dim)
         for (p, f) in patches)),
         NamedTuple{Tuple(pairs)}(Tuple(final_layer(p, f) for (p, f) in patches)),
         [block(true) for _ in 1:n_refiner_layers],
         [block(false) for _ in 1:n_refiner_layers], t_embedder,
-        Chain(RMSNorm(cap_feat_dim; eps = norm_eps), Dense(cap_feat_dim => dim)),
-        zeros(Float32, dim, 1), zeros(Float32, dim, 1), [block(true) for _ in 1:n_layers],
+        Chain(RMSNorm(cap_feat_dim; eps = norm_eps),
+            init_layer(Dense, cap_feat_dim => dim)),
+        init_array(Flux.zeros32, dim, 1), init_array(Flux.zeros32, dim, 1),
+        [block(true) for _ in 1:n_layers],
         ZImageRopeEmbedder(Float64(rope_theta), Tuple(axes_dims), Tuple(axes_lens)))
 end
 

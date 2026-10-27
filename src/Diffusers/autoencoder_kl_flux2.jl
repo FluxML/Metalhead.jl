@@ -62,10 +62,13 @@ function autoencoder_kl_flux2(; in_channels = 3, out_channels = 3,
     decoder = vae_decoder(; in_channels = latent_channels, out_channels, up_block_types,
         block_out_channels = something(decoder_block_out_channels, block_out_channels),
         layers_per_block, norm_num_groups, act_fn, mid_block_add_attention)
-    quant_conv = use_quant_conv ? Conv((1, 1), 2latent_channels => 2latent_channels) : nothing
-    post_quant_conv = use_post_quant_conv ? Conv((1, 1), latent_channels => latent_channels) :
+    quant_conv = use_quant_conv ?
+                 init_layer(Conv, (1, 1), 2latent_channels => 2latent_channels) : nothing
+    post_quant_conv = use_post_quant_conv ?
+                      init_layer(Conv, (1, 1), latent_channels => latent_channels) :
                       nothing
-    bn = BatchNorm(prod(patch_size) * latent_channels; affine = false, track_stats = true,
+    bn = init_layer(
+        BatchNorm, prod(patch_size) * latent_channels; affine = false, track_stats = true,
         eps = Float32(batch_norm_eps), momentum = Float32(batch_norm_momentum))
     return AutoencoderKLFlux2(encoder, decoder, quant_conv, post_quant_conv, bn)
 end

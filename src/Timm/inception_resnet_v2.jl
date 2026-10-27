@@ -42,7 +42,7 @@ function InceptionResNetV2Block35(; scale = 1.0)
         Chain(inception_conv(320, 32, 1), inception_conv(32, 32, 3; padding = 1)),
         Chain(inception_conv(320, 32, 1), inception_conv(32, 48, 3; padding = 1),
             inception_conv(48, 64, 3; padding = 1)),
-        Conv((1, 1), 128 => 320), relu)
+        init_layer(Conv, (1, 1), 128 => 320), relu)
 end
 
 function (m::InceptionResNetV2Block35)(x)
@@ -84,7 +84,7 @@ function InceptionResNetV2Block17(; scale = 1.0)
         Chain(inception_conv(1088, 128, 1),
             inception_conv(128, 160, (1, 7); padding = (0, 3)),
             inception_conv(160, 192, (7, 1); padding = (3, 0))),
-        Conv((1, 1), 384 => 1088), relu)
+        init_layer(Conv, (1, 1), 384 => 1088), relu)
 end
 
 function (m::InceptionResNetV2Block17)(x)
@@ -128,7 +128,7 @@ function InceptionResNetV2Block8(; scale = 1.0, no_relu = false)
         Chain(inception_conv(2080, 192, 1),
             inception_conv(192, 224, (1, 3); padding = (0, 1)),
             inception_conv(224, 256, (3, 1); padding = (1, 0))),
-        Conv((1, 1), 448 => 2080), no_relu ? nothing : relu)
+        init_layer(Conv, (1, 1), 448 => 2080), no_relu ? nothing : relu)
 end
 
 function (m::InceptionResNetV2Block8)(x)

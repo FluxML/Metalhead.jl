@@ -131,7 +131,7 @@ function granite_like(decoder_layer; vocab_size, hidden_size, num_hidden_layers,
     head_dim, num_key_value_heads = attention_heads(; hidden_size, num_attention_heads,
         num_key_value_heads, head_dim)
     init = normal_init(initializer_range)
-    dense(in_out, bias) = Dense(in_out; bias, init)
+    dense(in_out, bias) = init_layer(Dense, in_out; bias, init)
     norm() = RMSNorm(hidden_size; eps = rms_norm_eps)
     function layer()
         attention = GraniteAttention(head_dim, Float64(attention_multiplier),
@@ -142,7 +142,7 @@ function granite_like(decoder_layer; vocab_size, hidden_size, num_hidden_layers,
             dropout_or_identity(attention_dropout))
         return decoder_layer(attention, dense, norm)
     end
-    embed_tokens = Embedding(vocab_size => hidden_size; init)
+    embed_tokens = init_layer(Embedding, vocab_size => hidden_size; init)
     rotary_emb = rope_parameters === nothing ? nothing :
                  RotaryEmbedding(head_dim, rope_parameters)
     model = GraniteModel(embed_tokens, [layer() for _ in 1:num_hidden_layers], norm(),

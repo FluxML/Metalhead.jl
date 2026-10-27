@@ -16,6 +16,12 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
   `Qwen3ForCausalLM` checkpoint, as diffusers loads a `Qwen3Model`, whose prompt embeddings
   are a matrix per prompt, without the padding.
 
+### Fixed
+
+- Pretrained models allocate their weights directly in the requested `eltype`, without
+  random initialization or a temporary Float32 model. Mixed precision normalization and
+  random initialization of replacement classifiers are preserved (#366).
+
 ## [0.10.0]
 
 Breaking: Flux 0.16.14, NNlib 0.9.55 and MLUtils 0.4.9 are now the minimum versions, and the

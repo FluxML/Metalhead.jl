@@ -968,8 +968,8 @@ function sam3_vit_model(; hidden_size = 1024, intermediate_size = 4736,
     theta = sam3_rope_theta(rope_parameters, rope_theta)
     act = sam3_act(hidden_act)
     init = normal_init(initializer_range)
-    dense(io) = Dense(io; init)
-    norm() = LayerNorm(hidden_size; eps = Float32(layer_norm_eps))
+    dense(io) = init_layer(Dense, io; init)
+    norm() = init_layer(LayerNorm, hidden_size; eps = Float32(layer_norm_eps))
     image_h, image_w = image_size isa Integer ? (image_size, image_size) : Tuple(image_size)
     pretrain = pretrain_image_size isa Integer ? pretrain_image_size :
                first(pretrain_image_size)
@@ -990,19 +990,22 @@ function sam3_vit_model(; hidden_size = 1024, intermediate_size = 4736,
     end
     num_patches = (pretrain ÷ patch_size)^2
     embeddings = Sam3ViTEmbeddings(
-        Sam3ViTPatchEmbeddings(Conv((patch_size, patch_size), num_channels => hidden_size;
+        Sam3ViTPatchEmbeddings(init_layer(
+            Conv, (patch_size, patch_size), num_channels => hidden_size;
             stride = patch_size, bias = false)),
-        Float32(initializer_range) .* randn(Float32, hidden_size, num_patches, 1),
+        init(hidden_size, num_patches, 1),
         dropout_or_identity(hidden_dropout), patch_size)
     return Sam3ViTModel(embeddings, norm(), layers, patch_size)
 end
 
 function sam3_fpn_layer(in_channels, fpn_dim, scale_factor)
     scale_layers = if scale_factor == 4
-        Chain(ConvTranspose((2, 2), in_channels => in_channels ÷ 2; stride = 2), gelu_erf,
-            ConvTranspose((2, 2), in_channels ÷ 2 => in_channels ÷ 4; stride = 2))
+        Chain(
+            init_layer(ConvTranspose, (2, 2), in_channels => in_channels ÷ 2; stride = 2),
+            gelu_erf,
+            init_layer(ConvTranspose, (2, 2), in_channels ÷ 2 => in_channels ÷ 4; stride = 2))
     elseif scale_factor == 2
-        Chain(ConvTranspose((2, 2), in_channels => in_channels ÷ 2; stride = 2))
+        Chain(init_layer(ConvTranspose, (2, 2), in_channels => in_channels ÷ 2; stride = 2))
     elseif scale_factor == 1
         Chain(identity)  # torch's empty ModuleList; Flux's `Chain()` returns `nothing`
     elseif scale_factor == 0.5
@@ -1012,8 +1015,8 @@ function sam3_fpn_layer(in_channels, fpn_dim, scale_factor)
     end
     channels = scale_factor == 4 ? in_channels ÷ 4 :
                scale_factor == 2 ? in_channels ÷ 2 : in_channels
-    return Sam3FPNLayer(scale_layers, Conv((1, 1), channels => fpn_dim),
-        Conv((3, 3), fpn_dim => fpn_dim; pad = 1))
+    return Sam3FPNLayer(scale_layers, init_layer(Conv, (1, 1), channels => fpn_dim),
+        init_layer(Conv, (3, 3), fpn_dim => fpn_dim; pad = 1))
 end
 
 """
@@ -1051,22 +1054,22 @@ function sam3_attention(c, init)
     d = c.hidden_size
     d % c.num_attention_heads == 0 ||
         error("`hidden_size = $d` must be divisible by `num_attention_heads = $(c.num_attention_heads)`")
-    dense() = Dense(d => d; init)
+    dense() = init_layer(Dense, d => d; init)
     return Sam3Attention(c.num_attention_heads, dense(), dense(), dense(), dense())
 end
 
 function sam3_mlp(c, init)
     return Sam3MLP(sam3_act(c.hidden_act),
-        Dense(c.hidden_size => c.intermediate_size; init),
-        Dense(c.intermediate_size => c.hidden_size; init),
+        init_layer(Dense, c.hidden_size => c.intermediate_size; init),
+        init_layer(Dense, c.intermediate_size => c.hidden_size; init),
         dropout_or_identity(c.hidden_dropout))
 end
 
 # transformers' blocks use `nn.LayerNorm`'s default eps, not their config's `layer_norm_eps`
-sam3_norm(d) = LayerNorm(d; eps = 1.0f-5)
+sam3_norm(d) = init_layer(LayerNorm, d; eps = 1.0f-5)
 
 function decoder_mlp(dims, init)
-    layers = [Dense(dims[i] => dims[i + 1]; init) for i in 1:(length(dims) - 1)]
+    layers = [init_layer(Dense, dims[i] => dims[i + 1]; init) for i in 1:(length(dims) - 1)]
     return Sam3DecoderMLP(layers[1], layers[2], length(layers) == 3 ? layers[3] : nothing)
 end
 
@@ -1080,9 +1083,10 @@ function sam3_geometry_encoder(config)
                   sam3_mlp(c, init), sam3_norm(d))
               for _ in 1:(c.num_layers)]
     return Sam3GeometryEncoder(Sam3SinePositionEmbedding(d ÷ 2, 10_000, true, 2π),
-        Embedding(2 => d; init), Embedding(1 => d; init), Dense(4 => d; init),
-        Conv((c.roi_size, c.roi_size), d => d), Dense(d + 2 => d; init), sam3_norm(d),
-        Dense(d => d; init), sam3_norm(d), layers, sam3_norm(d), c.roi_size)
+        init_layer(Embedding, 2 => d; init), init_layer(Embedding, 1 => d; init),
+        init_layer(Dense, 4 => d; init), init_layer(Conv, (c.roi_size, c.roi_size), d => d),
+        init_layer(Dense, d + 2 => d; init), sam3_norm(d),
+        init_layer(Dense, d => d; init), sam3_norm(d), layers, sam3_norm(d), c.roi_size)
 end
 
 function sam3_detr_encoder(config)
@@ -1105,8 +1109,9 @@ function sam3_detr_decoder(config)
                   drop(), sam3_norm(d), sam3_mlp(c, init), sam3_norm(d), drop())
               for _ in 1:(c.num_layers)]
     return Sam3DetrDecoder(layers, sam3_norm(d), decoder_mlp((d, d, d, 4), init),
-        Embedding(c.num_queries => d; init), Embedding(c.num_queries => 4; init),
-        Embedding(1 => d; init), decoder_mlp((d, d, d, 1), init), sam3_norm(d),
+        init_layer(Embedding, c.num_queries => d; init),
+        init_layer(Embedding, c.num_queries => 4; init),
+        init_layer(Embedding, 1 => d; init), decoder_mlp((d, d, d, 1), init), sam3_norm(d),
         decoder_mlp((2d, d, d), init), decoder_mlp((2, d, heads), init),
         decoder_mlp((2, d, heads), init),
         Sam3SinePositionEmbedding(d ÷ 2, 10_000, false, 2π), 10.0)
@@ -1119,11 +1124,12 @@ function sam3_mask_decoder(config)
     d = c.hidden_size
     d % 8 == 0 || error("the mask decoder's `hidden_size = $d` must be divisible by 8, its groups of channels")
     pixel_decoder = Sam3PixelDecoder(
-        [Conv((3, 3), d => d; pad = 1) for _ in 1:(c.num_upsampling_stages)],
-        [GroupNorm(d, 8) for _ in 1:(c.num_upsampling_stages)])
+        [init_layer(Conv, (3, 3), d => d; pad = 1) for _ in 1:(c.num_upsampling_stages)],
+        [init_layer(GroupNorm, d, 8) for _ in 1:(c.num_upsampling_stages)])
     return Sam3MaskDecoder(pixel_decoder,
-        Sam3MaskEmbedder([Dense(d => d; init) for _ in 1:3], relu), Conv((1, 1), d => d),
-        Conv((1, 1), d => 1), sam3_attention(c, init), sam3_norm(d),
+        Sam3MaskEmbedder([init_layer(Dense, d => d; init) for _ in 1:3], relu),
+        init_layer(Conv, (1, 1), d => d),
+        init_layer(Conv, (1, 1), d => 1), sam3_attention(c, init), sam3_norm(d),
         dropout_or_identity(c.dropout))
 end
 
@@ -1132,8 +1138,8 @@ function sam3_dot_product_scoring(config)
     init = normal_init(c.initializer_range)
     d = c.hidden_size
     return Sam3DotProductScoring(decoder_mlp((d, c.intermediate_size, d), init),
-        dropout_or_identity(c.dropout), sam3_norm(d), Dense(d => d; init),
-        Dense(d => d; init), 1 / sqrt(d), 12.0)
+        dropout_or_identity(c.dropout), sam3_norm(d), init_layer(Dense, d => d; init),
+        init_layer(Dense, d => d; init), 1 / sqrt(d), 12.0)
 end
 
 # The text encoder of a `Sam3Config` without a `text_config`
@@ -1172,7 +1178,7 @@ function sam3_model(; vision_config = nothing, text_config = nothing,
         config_args(clip_text_model_with_projection, text)...)
     text_hidden = size(text_encoder.text_projection.weight, 2)
     d = sam3_block_config(detr_encoder_config, SAM3_ENCODER_DEFAULTS).hidden_size
-    text_projection = Dense(text_hidden => d; init = normal_init(initializer_range))
+    text_projection = init_layer(Dense, text_hidden => d; init = normal_init(initializer_range))
     return Sam3Model(vision_encoder, text_encoder, text_projection,
         sam3_geometry_encoder(geometry_encoder_config),
         sam3_detr_encoder(detr_encoder_config),

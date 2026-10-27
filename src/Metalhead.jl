@@ -25,6 +25,7 @@ using SafeTensors: SafeTensors
 include("hub/checkpoint.jl")
 include("hub/download.jl")
 include("hub/loadweights.jl")
+include("hub/initialization.jl")
 include("hub/registry.jl")
 include("hub/api.jl")
 include("hub/images.jl")

@@ -56,10 +56,10 @@ function VGGConvMlp(in_features = 512, out_features = 4096, kernel_size = 7;
         mlp_ratio = 1.0, drop_rate = 0.2)
     mid_features = trunc(Int, out_features * mlp_ratio)
     return VGGConvMlp(
-        Conv((kernel_size, kernel_size), in_features => mid_features;
+        init_layer(Conv, (kernel_size, kernel_size), in_features => mid_features;
             init = kaiming_normal_fan_out),
         relu, dropout_or_identity(drop_rate),
-        Conv((1, 1), mid_features => out_features; init = kaiming_normal_fan_out),
+        init_layer(Conv, (1, 1), mid_features => out_features; init = kaiming_normal_fan_out),
         relu, kernel_size)
 end
 
@@ -101,8 +101,9 @@ function vgg(; cfg, num_classes = 1000, in_chans = 3, output_stride = 32, mlp_ra
             push!(layers, MaxPool((2, 2); stride = 2))
         else
             push!(layers,
-                Conv((3, 3), prev_chs => v; pad = 1, init = kaiming_normal_fan_out))
-            norm_layer === nothing || push!(layers, BatchNorm(v))
+                init_layer(
+                    Conv, (3, 3), prev_chs => v; pad = 1, init = kaiming_normal_fan_out))
+            norm_layer === nothing || push!(layers, init_layer(BatchNorm, v))
             push!(layers, relu)
             prev_chs = v
         end

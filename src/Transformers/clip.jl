@@ -149,8 +149,8 @@ function clip_text_model_with_projection(; vocab_size = 49408, hidden_size = 512
         error("`hidden_size = $hidden_size` must be divisible by `num_attention_heads = $num_attention_heads`")
     act = act_fn(hidden_act; table = SAM3_ACT2FN)
     init = normal_init(initializer_range)
-    dense(io; bias = true) = Dense(io; bias, init)
-    norm() = LayerNorm(hidden_size; eps = Float32(layer_norm_eps))
+    dense(io; bias = true) = init_layer(Dense, io; bias, init)
+    norm() = init_layer(LayerNorm, hidden_size; eps = Float32(layer_norm_eps))
     layers = [CLIPEncoderLayer(
                   CLIPAttention(num_attention_heads, dense(hidden_size => hidden_size),
                       dense(hidden_size => hidden_size), dense(hidden_size => hidden_size),
@@ -161,8 +161,8 @@ function clip_text_model_with_projection(; vocab_size = 49408, hidden_size = 512
                       dense(intermediate_size => hidden_size)),
                   norm())
               for _ in 1:num_hidden_layers]
-    embeddings = CLIPTextEmbeddings(Embedding(vocab_size => hidden_size; init),
-        Embedding(max_position_embeddings => hidden_size; init))
+    embeddings = CLIPTextEmbeddings(init_layer(Embedding, vocab_size => hidden_size; init),
+        init_layer(Embedding, max_position_embeddings => hidden_size; init))
     text_model = CLIPTextModel(embeddings, CLIPEncoder(layers), norm(), eos_token_id)
     return CLIPTextModelWithProjection(text_model,
         dense(hidden_size => projection_dim; bias = false))

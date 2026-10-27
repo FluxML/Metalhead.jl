@@ -67,7 +67,8 @@ function create_conv2d(in_chs, out_chs, kernel_size; stride = 1, dilation = 1,
     num_experts > 0 && return CondConv2d(in_chs, out_chs, kernel_size; stride, dilation,
         padding, groups, bias, num_experts)
     k, s, d = (reverse(to_2tuple(v)) for v in (kernel_size, stride, dilation))
-    conv(pad) = Conv(k, in_chs => out_chs; stride = s, pad, dilation = d, groups, bias)
+    conv(pad) = init_layer(
+        Conv, k, in_chs => out_chs; stride = s, pad, dilation = d, groups, bias)
     padding isa AbstractString || return conv(reverse(to_2tuple(padding)))
     padding = lowercase(padding)
     padding == "valid" && return conv(0)
@@ -152,9 +153,11 @@ function CondConv2d(in_chs, out_chs, kernel_size; num_experts, stride = 1, dilat
           nothing
     # the normal(0, sqrt(2 / fan_out)) init of timm's _init_weight_goog, which all the
     # models using CondConv2d apply
-    weight = randn(Float32, prod(k) * (in_chs ÷ groups) * out_chs, num_experts) .*
-             sqrt(2.0f0 / (prod(k) * out_chs ÷ groups))
-    return CondConv2d(weight, bias ? zeros(Float32, out_chs, num_experts) : false, k, s,
+    weight = init_array(prod(k) * (in_chs ÷ groups) * out_chs, num_experts) do ds...
+        return randn(Float32, ds...) .* sqrt(2.0f0 / (prod(k) * out_chs ÷ groups))
+    end
+    return CondConv2d(
+        weight, bias ? init_array(Flux.zeros32, out_chs, num_experts) : false, k, s,
         pad, d, groups)
 end
 
@@ -177,7 +180,8 @@ function conv_norm_act(in_chs, out_chs, kernel_size = 1; stride = 1, padding = "
     use_aa = aa_layer !== nothing && stride > 1
     conv = create_conv2d(in_chs, out_chs, kernel_size; stride = use_aa ? 1 : stride,
         padding, dilation, groups, bias)
-    bn = BatchNorm(out_chs, apply_act ? act_layer : identity; eps = Float32(eps),
+    bn = init_layer(
+        BatchNorm, out_chs, apply_act ? act_layer : identity; eps = Float32(eps),
         momentum = Float32(momentum))
     use_aa || return Chain(; conv, bn)
     return Chain(; conv, bn, aa = create_aa(aa_layer, out_chs; stride))
@@ -193,7 +197,7 @@ end
 function create_classifier(num_features, num_classes; pool_type = "avg", drop_rate = nothing)
     pool_type == "avg" || error("global pool `$pool_type` is not supported")
     global_pool = select_adaptive_pool2d(; flatten = true)
-    fc = num_classes > 0 ? Dense(num_features => num_classes) : identity
+    fc = num_classes > 0 ? init_layer(Dense, num_features => num_classes) : identity
     return drop_rate === nothing ? (global_pool, fc) : (global_pool, Dropout(drop_rate), fc)
 end
 
@@ -236,7 +240,8 @@ Flux.f16(m::LayerNorm2d, cx) = f32(m, cx)
 Flux.bf16(m::LayerNorm2d, cx) = f32(m, cx)
 
 function LayerNorm2d(channels::Integer; eps = 1e-6)
-    return LayerNorm2d(ones(Float32, channels), zeros(Float32, channels), eps)
+    return LayerNorm2d(init_array(Flux.ones32, channels; norm = true),
+        init_array(Flux.zeros32, channels; norm = true), eps)
 end
 
 function (m::LayerNorm2d)(x)
@@ -258,7 +263,8 @@ Flux.@layer Mlp
 function Mlp(
         in_features, hidden_features, out_features = in_features; act_layer = gelu_erf,
         bias = true, drop = 0.0, use_conv = false, init = TRUNC_NORMAL)
-    linear(i, o) = use_conv ? Conv((1, 1), i => o; bias, init) : Dense(i => o; bias, init)
+    linear(i, o) = use_conv ? init_layer(Conv, (1, 1), i => o; bias, init) :
+                   init_layer(Dense, i => o; bias, init)
     return Mlp(linear(in_features, hidden_features),
         act_layer, dropout_or_identity(drop), identity,
         linear(hidden_features, out_features), dropout_or_identity(drop))
@@ -290,7 +296,9 @@ patch_grid(m::PatchEmbed, x) = size(x)[1:2] .÷ m.proj.stride
 end
 Flux.@layer LayerScale
 
-layer_scale(dim, init_values) = LayerScale(fill(Float32(init_values), dim))
+function layer_scale(dim, init_values)
+    return LayerScale(init_array(d -> fill(Float32(init_values), d), dim))
+end
 
 (m::LayerScale)(x) = x .* m.gamma
 
@@ -312,10 +320,11 @@ Flux.@layer AttentionPoolLatent
 function attention_pool_latent(
         dim; num_heads = 8, mlp_ratio = 4.0, qkv_bias = true, norm_eps = 1e-6,
         act_layer = gelu_erf)
-    latent = Flux.truncated_normal(; std = dim^-0.5, lo = -2, hi = 2)(dim, 1, 1)
-    return AttentionPoolLatent(num_heads, latent, Dense(dim => dim; bias = qkv_bias),
-        Dense(dim => 2dim; bias = qkv_bias), Dense(dim => dim), identity,
-        LayerNorm(dim; eps = norm_eps), Mlp(dim, floor(Int, dim * mlp_ratio); act_layer))
+    latent = init_array(Flux.truncated_normal(; std = dim^-0.5, lo = -2, hi = 2), dim, 1, 1)
+    return AttentionPoolLatent(
+        num_heads, latent, init_layer(Dense, dim => dim; bias = qkv_bias),
+        init_layer(Dense, dim => 2dim; bias = qkv_bias), init_layer(Dense, dim => dim), identity,
+        init_layer(LayerNorm, dim; eps = norm_eps), Mlp(dim, floor(Int, dim * mlp_ratio); act_layer))
 end
 
 function (m::AttentionPoolLatent)(x)
@@ -345,7 +354,8 @@ function NormMlpClassifierHead(in_features, num_classes; drop_rate = 0.0)
     return NormMlpClassifierHead(
         select_adaptive_pool2d(; flatten = false), LayerNorm2d(in_features),
         Flux.flatten, identity, dropout_or_identity(drop_rate),
-        num_classes > 0 ? Dense(in_features => num_classes; init = TRUNC_NORMAL) :
+        num_classes > 0 ?
+        init_layer(Dense, in_features => num_classes; init = TRUNC_NORMAL) :
         identity)
 end
 
@@ -366,8 +376,8 @@ Flux.@layer SEModule
 
 function SEModule(channels::Integer; rd_ratio = 1 / 16, rd_divisor = 8)
     rd_channels = make_divisible(channels * rd_ratio, rd_divisor; round_limit = 0.0)
-    return SEModule(Conv((1, 1), channels => rd_channels), identity, relu,
-        Conv((1, 1), rd_channels => channels), sigmoid)
+    return SEModule(init_layer(Conv, (1, 1), channels => rd_channels), identity, relu,
+        init_layer(Conv, (1, 1), rd_channels => channels), sigmoid)
 end
 
 function (m::SEModule)(x)
@@ -386,7 +396,7 @@ function EcaModule(channels::Integer; gamma = 2, beta = 1)
     t = trunc(Int, abs(log(channels) / log(2) + beta) / gamma)  # math.log(channels, 2)
     kernel_size = max(isodd(t) ? t : t + 1, 3)
     return EcaModule(
-        Conv((kernel_size,), 1 => 1; pad = (kernel_size - 1) ÷ 2, bias = false), sigmoid)
+        init_layer(Conv, (kernel_size,), 1 => 1; pad = (kernel_size - 1) ÷ 2, bias = false), sigmoid)
 end
 
 function (m::EcaModule)(x)
@@ -422,9 +432,9 @@ function GluMlp(
         in_features, hidden_features, out_features = in_features; act_layer = sigmoid,
         bias = true, drop = 0.0, init = TRUNC_NORMAL)
     iseven(hidden_features) || error("`hidden_features` ($hidden_features) must be even")
-    return GluMlp(Dense(in_features => hidden_features; bias, init),
+    return GluMlp(init_layer(Dense, in_features => hidden_features; bias, init),
         act_layer, dropout_or_identity(drop), identity,
-        Dense(hidden_features ÷ 2 => out_features; bias, init), dropout_or_identity(drop))
+        init_layer(Dense, hidden_features ÷ 2 => out_features; bias, init), dropout_or_identity(drop))
 end
 
 function (m::GluMlp)(x)
@@ -454,9 +464,10 @@ function GatedMlp(
             error("`hidden_features` ($hidden_features) must be even")
         gate, fc2_in = gate_layer(hidden_features), hidden_features ÷ 2
     end
-    return GatedMlp(Dense(in_features => hidden_features; bias, init), act_layer,
+    return GatedMlp(
+        init_layer(Dense, in_features => hidden_features; bias, init), act_layer,
         dropout_or_identity(drop), gate, identity,
-        Dense(fc2_in => out_features; bias, init), dropout_or_identity(drop))
+        init_layer(Dense, fc2_in => out_features; bias, init), dropout_or_identity(drop))
 end
 
 (m::GatedMlp)(x) = m.drop2(m.fc2(m.norm(m.gate(m.drop1(m.act(m.fc1(x)))))))
@@ -539,7 +550,7 @@ end
 Flux.@layer LayerScale2d
 
 function LayerScale2d(dim::Integer, init_values = 1e-5)
-    return LayerScale2d(fill(Float32(init_values), dim))
+    return LayerScale2d(init_array(d -> fill(Float32(init_values), d), dim))
 end
 
 (m::LayerScale2d)(x) = x .* reshape(m.gamma, 1, 1, :, 1)
@@ -579,7 +590,7 @@ function MultiQueryAttention2d(dim, dim_out = dim; num_heads = 8, key_dim = noth
         kv_stride > 1 || return Chain(; proj)
         down_conv = create_conv2d(dim, dim, dw_kernel_size; stride = kv_stride, dilation,
             padding, depthwise = true)
-        norm = BatchNorm(dim; eps = Float32(norm_layer.eps),
+        norm = init_layer(BatchNorm, dim; eps = Float32(norm_layer.eps),
             momentum = Float32(norm_layer.momentum))
         return Chain(; down_conv, norm, proj)
     end

@@ -22,6 +22,7 @@ using ConcreteStructs: @concrete
 using ChainRulesCore: ChainRulesCore
 using JSON: JSON
 using ..Metalhead: ArchSpec, AbstractConfigFormat, ModelSource, register!, declared_args,
+                   init_layer, init_array,
                    identify, lookup, source_config, source_file, subsource, ProcessorFiles,
                    load_tokenizer_or_defer, resolve_tokenizer, DeferredTokenizer,
                    encode_ids, pad_token_id, pad_ids, image_array, image_batch,
@@ -29,7 +30,7 @@ using ..Metalhead: ArchSpec, AbstractConfigFormat, ModelSource, register!, decla
 using ..Timm: pil_resize
 using ..Transformers: RMSNorm, CausalLM, decoder, embed, to_device_of, device_indices
 import ..Metalhead: architecture_of, model_args, weights_name, instantiate,
-                    instantiate_processor, forward_intermediates
+                    instantiate_processor, forward_intermediates, direct_weight_init
 
 include("config.jl")
 include("layers.jl")

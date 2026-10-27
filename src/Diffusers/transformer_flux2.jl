@@ -18,7 +18,8 @@ Flux.@layer Flux2FeedForward
 
 function flux2_feed_forward(dim; mult, bias)
     inner = floor(Int, dim * mult)
-    return Flux2FeedForward(Dense(dim => 2inner; bias), swiglu, Dense(inner => dim; bias))
+    return Flux2FeedForward(init_layer(Dense, dim => 2inner; bias),
+        swiglu, init_layer(Dense, inner => dim; bias))
 end
 
 (m::Flux2FeedForward)(x) = m.linear_out(m.act_fn(m.linear_in(x)))
@@ -44,7 +45,7 @@ Flux.@layer Flux2Attention
 
 function flux2_attention(dim; heads, head_dim, eps, bias)
     inner = heads * head_dim
-    linear(in_out) = Dense(in_out; bias)
+    linear(in_out) = init_layer(Dense, in_out; bias)
     norm() = RMSNorm(head_dim; eps)
     return Flux2Attention(head_dim, linear(dim => inner), linear(dim => inner),
         linear(dim => inner), norm(), norm(), linear_dropout(inner => dim, 0.0; bias), norm(),
@@ -82,8 +83,8 @@ function flux2_parallel_self_attention(dim; heads, head_dim, eps, bias, mlp_rati
     inner = heads * head_dim
     mlp_hidden = floor(Int, dim * mlp_ratio)
     return Flux2ParallelSelfAttention(head_dim, inner,
-        Dense(dim => 3inner + 2mlp_hidden; bias), swiglu, RMSNorm(head_dim; eps),
-        RMSNorm(head_dim; eps), Dense(inner + mlp_hidden => dim; bias))
+        init_layer(Dense, dim => 3inner + 2mlp_hidden; bias), swiglu, RMSNorm(head_dim; eps),
+        RMSNorm(head_dim; eps), init_layer(Dense, inner + mlp_hidden => dim; bias))
 end
 
 function (m::Flux2ParallelSelfAttention)(x, (cos, sin))
@@ -277,8 +278,9 @@ function flux2_transformer_2d_model(; patch_size = 1, in_channels = 128, out_cha
     dim = num_attention_heads * attention_head_dim
     out_channels = something(out_channels, in_channels)
     kw = (; heads = num_attention_heads, head_dim = attention_head_dim, eps, bias = false)
-    norm() = LayerNorm(dim; affine = false, eps)
-    double_block() = Flux2TransformerBlock(norm(), norm(), flux2_attention(dim; kw...), norm(),
+    norm() = init_layer(LayerNorm, dim; affine = false, eps)
+    double_block() = Flux2TransformerBlock(
+        norm(), norm(), flux2_attention(dim; kw...), norm(),
         flux2_feed_forward(dim; mult = mlp_ratio, bias = false), norm(),
         flux2_feed_forward(dim; mult = mlp_ratio, bias = false))
     single_block() = Flux2SingleTransformerBlock(norm(),
@@ -287,14 +289,16 @@ function flux2_transformer_2d_model(; patch_size = 1, in_channels = 128, out_cha
     time_guidance_embed = Flux2TimestepGuidanceEmbeddings(
         Timesteps(timestep_guidance_channels, true, 0, 1), embedder(),
         guidance_embeds ? embedder() : nothing)
-    modulation(sets) = Flux2Modulation(Dense(dim => 3dim * sets; bias = false), swish)
-    return Flux2Transformer2DModel(Flux2PosEmbed(Float64(rope_theta), Tuple(axes_dims_rope)),
+    modulation(sets) = Flux2Modulation(init_layer(Dense, dim => 3dim * sets; bias = false), swish)
+    return Flux2Transformer2DModel(
+        Flux2PosEmbed(Float64(rope_theta), Tuple(axes_dims_rope)),
         time_guidance_embed, modulation(2), modulation(2), modulation(1),
-        Dense(in_channels => dim; bias = false),
-        Dense(joint_attention_dim => dim; bias = false),
-        [double_block() for _ in 1:num_layers], [single_block() for _ in 1:num_single_layers],
+        init_layer(Dense, in_channels => dim; bias = false),
+        init_layer(Dense, joint_attention_dim => dim; bias = false),
+        [double_block() for _ in 1:num_layers], [single_block()
+                                                 for _ in 1:num_single_layers],
         AdaLayerNormContinuous(dim, dim; elementwise_affine = false, eps, bias = false),
-        Dense(dim => patch_size^2 * out_channels; bias = false))
+        init_layer(Dense, dim => patch_size^2 * out_channels; bias = false))
 end
 
 register!(ArchSpec(DIFFUSERS, "Flux2Transformer2DModel", flux2_transformer_2d_model;

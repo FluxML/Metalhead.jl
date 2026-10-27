@@ -53,7 +53,7 @@ function autoencoder_kl(; in_channels = 3, out_channels = 3,
     decoder = vae_decoder(; in_channels = latent_channels, out_channels, up_block_types,
         block_out_channels, layers_per_block, norm_num_groups, act_fn,
         mid_block_add_attention)
-    conv(c) = Conv((1, 1), c => c)
+    conv(c) = init_layer(Conv, (1, 1), c => c)
     quant_conv = use_quant_conv ? conv(2latent_channels) : nothing
     post_quant_conv = use_post_quant_conv ? conv(latent_channels) : nothing
     return AutoencoderKL(encoder, decoder, quant_conv, post_quant_conv,

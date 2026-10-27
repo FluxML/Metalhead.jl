@@ -33,7 +33,7 @@ end
 Flux.@layer ResMLPAffine
 
 function ResMLPAffine(dim::Integer)
-    return ResMLPAffine(ones(Float32, dim, 1, 1), zeros(Float32, dim, 1, 1))
+    return ResMLPAffine(init_array(Flux.ones32, dim, 1, 1), init_array(Flux.zeros32, dim, 1, 1))
 end
 
 (m::ResMLPAffine)(x) = m.beta .+ m.alpha .* x
@@ -65,8 +65,8 @@ Flux.@layer SpatialGatingUnit
 # Not a `SpatialGatingUnit` method: it would replace the two-field constructor.
 function make_spatial_gating_unit(dim, seq_len)
     init(dims...) = 1.0f-6 .* randn(Float32, dims...)
-    proj = Dense(seq_len => seq_len; init, bias = ones(Float32, seq_len))
-    return SpatialGatingUnit(LayerNorm(dim ÷ 2; eps = 1e-5), proj)
+    proj = init_layer(Dense, seq_len => seq_len; init, bias = init_array(Flux.ones32, seq_len))
+    return SpatialGatingUnit(init_layer(LayerNorm, dim ÷ 2; eps = 1e-5), proj)
 end
 
 function (m::SpatialGatingUnit)(x)
@@ -88,6 +88,7 @@ end
 
 # timm's init_weights of GluMlp: the gate half of fc1 starts near zero with bias one.
 function init_glu_gate!(m::GluMlp)
+    weight_init_context() === nothing || return m
     h = size(m.fc1.weight, 1) ÷ 2
     m.fc1.weight[(h + 1):end, :] .= 1.0f-6 .* randn(Float32, h, size(m.fc1.weight, 2))
     m.fc1.bias[(h + 1):end] .= 1
@@ -96,7 +97,7 @@ end
 
 const MIXER_ACTIVATIONS = Dict("gelu" => gelu_erf, "silu" => swish)
 const MIXER_NORMS = Dict(
-    "layernorm" => dim -> LayerNorm(dim; eps = 1e-6), "affine" => ResMLPAffine)
+    "layernorm" => dim -> init_layer(LayerNorm, dim; eps = 1e-6), "affine" => ResMLPAffine)
 # The (block, MLP) pairs the fixtures cover.
 const MIXER_BLOCK_MLPS = Dict(
     "MixerBlock" => ("Mlp", "GluMlp"), "ResBlock" => ("Mlp",),
@@ -132,10 +133,11 @@ function make_res_mlp_block(dim, seq_len, mlp_ratio; mlp_layer, norm_layer, act_
         init_values, drop, drop_path)
     mlp_ratio isa Real || error("ResBlock needs a single `mlp_ratio`, got $mlp_ratio")
     channels_dim = trunc(Int, dim * mlp_ratio)
-    linear_tokens = Dense(seq_len => seq_len; init = Flux.glorot_uniform)
+    linear_tokens = init_layer(Dense, seq_len => seq_len; init = Flux.glorot_uniform)
     return ResMLPBlock(norm_layer(dim), linear_tokens, token_drop_path(drop_path),
         norm_layer(dim), mixer_mlp(mlp_layer, dim, channels_dim; act_layer, drop),
-        fill(Float32(init_values), dim), fill(Float32(init_values), dim))
+        init_array(d -> fill(Float32(init_values), d), dim),
+        init_array(d -> fill(Float32(init_values), d), dim))
 end
 
 function make_spatial_gating_block(dim, seq_len, mlp_ratio; mlp_layer, norm_layer,
@@ -224,12 +226,13 @@ function mlp_mixer(; num_classes = 1000, img_size = 224, in_chans = 3, patch_siz
                   act_layer = MIXER_ACTIVATIONS[act_layer], drop = proj_drop_rate,
                   drop_path = drop_path_rate)
               for _ in 1:num_blocks]
-    stem = PatchEmbed(Conv((pw, ph), in_chans => embed_dim; stride = (pw, ph),
+    stem = PatchEmbed(init_layer(Conv, (pw, ph), in_chans => embed_dim; stride = (pw, ph),
         init = lecun_normal))
     head = identity
     if num_classes > 0
-        head_bias = nlhb ? fill(Float32(-log(num_classes)), num_classes) : true
-        head = Dense(embed_dim => num_classes; init = Flux.zeros32, bias = head_bias)
+        head_bias = nlhb ?
+                    init_array(d -> fill(Float32(-log(num_classes)), d), num_classes) : true
+        head = init_layer(Dense, embed_dim => num_classes; init = Flux.zeros32, bias = head_bias)
     end
     return MlpMixer(stem, Chain(blocks), norm(embed_dim), global_pool,
         dropout_or_identity(drop_rate), head)

@@ -11,7 +11,7 @@ const BATCHNORM2D = (; eps = 1e-5, momentum = 0.1)
 # timm's BatchNormAct2d, whose parameters are those of the BatchNorm:
 # `get_norm_act_layer(norm_layer, act_layer)(channels, apply_act = apply_act)`.
 function norm_act(norm_layer, channels, act_layer; apply_act = true)
-    return BatchNorm(channels, apply_act ? act_layer : identity;
+    return init_layer(BatchNorm, channels, apply_act ? act_layer : identity;
         eps = Float32(norm_layer.eps), momentum = Float32(norm_layer.momentum))
 end
 
@@ -39,8 +39,8 @@ function SqueezeExcite(in_chs; rd_ratio = 0.25, rd_channels = nothing, act_layer
         rd_channels = rd_round_fn(in_chs * rd_ratio)
     end
     act_layer = something(force_act_layer, act_layer)
-    return SqueezeExcite(Conv((1, 1), in_chs => rd_channels), act_layer,
-        Conv((1, 1), rd_channels => in_chs), gate_layer)
+    return SqueezeExcite(init_layer(Conv, (1, 1), in_chs => rd_channels), act_layer,
+        init_layer(Conv, (1, 1), rd_channels => in_chs), gate_layer)
 end
 
 function (m::SqueezeExcite)(x)
@@ -275,7 +275,8 @@ function CondConvResidual(in_chs, out_chs; dw_kernel_size = 3, stride = 1, dilat
         norm_act(norm_layer, mid_chs, act_layer), se,
         create_conv2d(mid_chs, out_chs, pw_kernel_size; padding = pad_type, num_experts),
         norm_act(norm_layer, out_chs, act_layer; apply_act = false),
-        dropout_or_identity(drop_path_rate; dims = 4), Dense(in_chs => num_experts),
+        dropout_or_identity(drop_path_rate; dims = 4),
+        init_layer(Dense, in_chs => num_experts),
         in_chs == out_chs && stride == 1 && !noskip)
 end
 

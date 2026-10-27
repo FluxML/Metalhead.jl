@@ -48,6 +48,10 @@ or its shards (the default).
 """
 weights_name(::AbstractConfigFormat) = "model"
 
+# Built-in libraries route their constructors through init_layer and init_array. Other
+# formats retain the build-and-convert contract until their builders opt into this path.
+direct_weight_init(::AbstractConfigFormat) = false
+
 """
     instantiate(format, spec, source, config; pretrained, eltype, kwargs...)
 
@@ -58,11 +62,17 @@ configuration describes several models (a diffusers pipeline) builds them here.
 function instantiate(format::AbstractConfigFormat, spec, source, config; pretrained::Bool,
         eltype, kwargs...)
     args = model_args(format, spec, config, NamedTuple(kwargs))
-    model = ELTYPE_CONVERTERS[eltype](spec.build(; args...))
+    # Validate the requested type for both construction paths.
+    convert_eltype = ELTYPE_CONVERTERS[eltype]
     if pretrained
         skip = skip_prefix(format, config, args)
+        model = direct_weight_init(format) ?
+                build_pretrained(spec.build, args, eltype; skip) :
+                convert_eltype(spec.build(; args...))
         load_state!(model, Checkpoint(source_weights(source, weights_name(format))); skip,
             ignore = [DEFAULT_IGNORE; spec.ignore])
+    else
+        model = convert_eltype(spec.build(; args...))
     end
     return Flux.testmode!(model)
 end
