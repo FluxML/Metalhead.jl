@@ -51,4 +51,16 @@ function Metalhead.pad_token_id(tok::Tokenizer)
     return is_none(padding) ? nothing : pyconvert(Int, padding["pad_id"])
 end
 
+# The text of the token indices of the models, which start at 1, by the tokenizer of a
+# processor, whose token ids start at 0
+function HuggingFaceTokenizers.decode(p::Metalhead.AbstractProcessor,
+        indices::AbstractVector{<:Integer}; kwargs...)
+    ids = [Int(i) - 1 for i in indices]
+    return HuggingFaceTokenizers.decode(Metalhead.tokenizer_of(p), ids; kwargs...)
+end
+function HuggingFaceTokenizers.decode(p::Metalhead.AbstractProcessor, index::Integer;
+        kwargs...)
+    return HuggingFaceTokenizers.decode(p, [index]; kwargs...)
+end
+
 end # module

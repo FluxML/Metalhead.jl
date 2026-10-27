@@ -36,6 +36,7 @@ include("Transformers/Transformers.jl")
 include("Diffusers/Diffusers.jl")
 
 export create_model, create_processor, list_models, forward_features, forward_head,
-       forward_intermediates, feature_info
+       forward_intermediates, feature_info, post_process_object_detection,
+       post_process_instance_segmentation, post_process_semantic_segmentation
 
 end # module

@@ -170,9 +170,19 @@ function stack_images(images)
     return stack(images)
 end
 
-# `target_sizes` as a vector of (height, width): a vector of pairs, or a 2 × batch matrix.
+# The sizes of images, such as `target_sizes`, as a vector of `(; height, width)`: from a
+# collection of `(; height, width)` or of `(height, width)` pairs, or a 2 × batch matrix.
 size_list(::Nothing) = nothing
-function size_list(sizes::AbstractMatrix{<:Integer})
-    return [(Int(h), Int(w)) for (h, w) in eachcol(sizes)]
+size_list(sizes::AbstractMatrix{<:Integer}) = [image_size(s) for s in eachcol(sizes)]
+size_list(sizes) = [image_size(s) for s in sizes]
+
+function image_size(s::NamedTuple)
+    haskey(s, :height) && haskey(s, :width) ||
+        throw(ArgumentError("an image size is `(; height, width)` or `(height, width)`, got $(repr(s))"))
+    return (; height = Int(s.height), width = Int(s.width))
 end
-size_list(sizes) = [(Int(first(s)), Int(last(s))) for s in sizes]
+function image_size(s)
+    s isa Union{Tuple, AbstractVector} && length(s) == 2 ||
+        throw(ArgumentError("an image size is `(; height, width)` or `(height, width)`, got $(repr(s))"))
+    return (; height = Int(first(s)), width = Int(last(s)))
+end

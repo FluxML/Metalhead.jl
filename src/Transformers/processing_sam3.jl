@@ -26,7 +26,7 @@ reversed), which the model takes as it is (`model(inputs)`):
 | Key                  | Size                    | Contents                                                                         |
 |:-------------------- |:----------------------- |:-------------------------------------------------------------------------------- |
 | `pixel_values`       | `(W, H, 3, batch)`      | the images, resized and normalised, `Float32`; with `images`                     |
-| `original_sizes`     | `batch`                 | a tuple of the `(height, width)` of each image, for the boxes and post-processing; `gpu` leaves it on the CPU |
+| `original_sizes`     | `batch`                 | a tuple of the `(; height, width)` of each image, for the boxes and post-processing; `gpu` leaves it on the CPU |
 | `input_ids`          | `(32, batch)`           | token indices of the prompts, 1-based, padded on the right; with a prompt        |
 | `attention_mask`     | `(32, batch)`           | 1 for the tokens, 0 for the padding; with a prompt                               |
 | `input_boxes`        | `(4, num_boxes, batch)` | box prompts `(cx, cy, w, h)`, normalised to the image; only with box prompts     |
@@ -40,19 +40,16 @@ reversed), which the model takes as it is (`model(inputs)`):
   - `input_boxes` holds the boxes `(x1, y1, x2, y2)` of each image in its pixels, a vector
     of boxes per image (or `nothing` for none), and `input_boxes_labels` their labels,
     1 (positive, the default) or 0 (negative). Images with fewer boxes are padded with
-    `point_pad_value`. The boxes need the images, or their `original_sizes`
-    `(height, width)`.
+    `point_pad_value`. The boxes need the images, or their `original_sizes`,
+    `(; height, width)` or `(height, width)`.
 
-Post-process the outputs of the model with [`post_process_instance_segmentation`](@ref
-Metalhead.Transformers.post_process_instance_segmentation),
-[`post_process_object_detection`](@ref Metalhead.Transformers.post_process_object_detection)
-or [`post_process_semantic_segmentation`](@ref
-Metalhead.Transformers.post_process_semantic_segmentation) of the processor.
+Post-process the outputs of the model with [`post_process_instance_segmentation`](@ref),
+[`post_process_object_detection`](@ref) or [`post_process_semantic_segmentation`](@ref) of
+the processor.
 
 ```julia
 using Metalhead, HuggingFaceTokenizers
-using Metalhead.Transformers: post_process_instance_segmentation
-model = create_model("unsloth/sam3.1"; pretrained = true)
+model = create_model("unsloth/sam3.1")
 proc = create_processor("unsloth/sam3.1")
 image = rand(UInt8, 640, 480, 3)                     # width × height × channels
 inputs = proc(; images = image, text = "a cat")
@@ -121,15 +118,16 @@ function sam3_boxes(p::Sam3Processor, boxes, labels, original_sizes)
     n = maximum(b -> b === nothing ? 0 : length(b), boxes; init = 0)
     xyxy = fill(Float32(pad), 4, n, length(boxes))
     box_labels = fill(pad, n, length(boxes))
-    for (j, (image_boxes, (h, w))) in enumerate(zip(boxes, original_sizes))
+    for (j, (image_boxes, s)) in enumerate(zip(boxes, original_sizes))
         image_boxes === nothing && continue
+        scale = Float32.((s.width, s.height, s.width, s.height))
         length(labels[j]) == length(image_boxes) ||
             error("image $j has $(length(image_boxes)) boxes and $(length(labels[j])) labels")
         for (i, box) in enumerate(image_boxes)
             length(box) == 4 || error("a box is (x1, y1, x2, y2), got $(repr(box))")
             v = Float32.(collect(box))
             # transformers leaves boxes with a padding coordinate as they are
-            xyxy[:, i, j] .= any(==(pad), v) ? v : v ./ Float32.((w, h, w, h))
+            xyxy[:, i, j] .= any(==(pad), v) ? v : v ./ scale
             box_labels[i, j] = labels[j][i]
         end
     end

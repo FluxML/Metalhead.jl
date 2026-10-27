@@ -40,6 +40,29 @@ end
     @test size(model(rand(1:16, 5))) == (16, 5)
     @test size(forward_features(model, rand(1:16, 5, 3))) == (8, 5, 3)
     @test list_models(; byfamily = true)["llama"] == ["LlamaForCausalLM"]
+
+    # the output of a TextProcessor, a vector for one text, a matrix for a batch
+    ids = rand(1:16, 5, 2)
+    mask = [1 1; 1 1; 1 1; 1 0; 1 0]
+    @test model((; input_ids = ids, attention_mask = mask)) ≈ model(ids; attention_mask = mask)
+    @test model((; input_ids = ids[:, 1])) ≈ model(ids[:, 1])
+    @test forward_features(model, (; input_ids = ids, attention_mask = mask)) ≈
+          forward_features(model, ids; attention_mask = mask)
+    @test_throws "has no `input_ids` (it has `attention_mask`); pass `text` to the processor" model((;
+        attention_mask = mask))
+    # the features of one sequence, as those of a batch of one
+    features, hidden = forward_intermediates(model, ids[:, 1])
+    batched = forward_intermediates(model, ids[:, 1:1])
+    @test features ≈ batched[1][:, :, 1] && size(features) == (8, 5)
+    @test only(hidden) ≈ only(batched[2])[:, :, 1]
+    @test only(forward_intermediates(model, ids[:, 1]; attention_mask = ones(Int, 5),
+        intermediates_only = true)) ≈ only(hidden)
+    @test forward_intermediates(model, (; input_ids = ids, attention_mask = mask);
+        intermediates_only = true) ≈
+          forward_intermediates(model, ids; attention_mask = mask, intermediates_only = true)
+    @test feature_info(model) == [(; num_chs = 8, reduction = 1, module_name = "model.layers.0")]
+    @test length(feature_info(create_model("LlamaForCausalLM"; tiny...,
+        num_hidden_layers = 3))) == 3
     config = Metalhead.JSON.parsefile(joinpath(fixture("llama_tiny"), "config.json"))
     @test Metalhead.identify(config) ==
           (Metalhead.Transformers.TRANSFORMERS, "LlamaForCausalLM")

@@ -3,8 +3,7 @@
 ## Models
 
 `create_model` and `list_models` apply to every ported model. The other functions are the
-interface of image backbones and classifiers; language models have `forward_features`,
-`forward_head` and `forward_intermediates` too.
+interface of image backbones and classifiers, and of language models.
 
 ```@docs
 create_model
@@ -23,6 +22,7 @@ of the Python library of its checkpoints, with its settings as fields.
 
 ```@docs
 create_processor
+Metalhead.TextProcessor
 Metalhead.Timm.EvalTransform
 Metalhead.Transformers.Qwen3VLProcessor
 Metalhead.Transformers.Qwen2VLImageProcessor
@@ -33,16 +33,18 @@ Metalhead.Transformers.Sam3ImageProcessor
 Post-processing takes the processor and the outputs of the model:
 
 ```@docs
-Metalhead.Transformers.post_process_object_detection
-Metalhead.Transformers.post_process_instance_segmentation
-Metalhead.Transformers.post_process_semantic_segmentation
+post_process_object_detection
+post_process_instance_segmentation
+post_process_semantic_segmentation
 ```
 
 Image processors take images in one layout, to which an extension for another type of image
-adds a method:
+adds a method, and `image_matrix` turns arrays of that layout, such as generated images,
+back into images of colorants:
 
 ```@docs
 Metalhead.image_array
+Metalhead.image_matrix
 ```
 
 ## timm
@@ -89,9 +91,8 @@ diffusers builders the arguments of the model's constructor.
 Modules = [Metalhead.Timm, Metalhead.Transformers]
 Order = [:function]
 Filter = f -> !(f in (Metalhead.Timm.pretrained_cfg, Metalhead.Timm.pil_resize,
-    Metalhead.Transformers.post_process_object_detection,
-    Metalhead.Transformers.post_process_instance_segmentation,
-    Metalhead.Transformers.post_process_semantic_segmentation))
+    post_process_object_detection, post_process_instance_segmentation,
+    post_process_semantic_segmentation))
 ```
 
 ```@docs

@@ -143,7 +143,7 @@ function fixture_model(dir; eltype = Float64)
     config = Metalhead.JSON.parsefile(joinpath(dir, "config.json"))
     haskey(config, "shrink") || return create_model(dir; pretrained = true, eltype)
     keep = (config["pretrained_cfg"]["input_size"][1], config["num_classes"])
-    model = shrink_channels(create_model(dir), config["shrink"]; keep)
+    model = shrink_channels(create_model(dir; pretrained = false), config["shrink"]; keep)
     model = Metalhead.ELTYPE_CONVERTERS[eltype](model)
     spec = Metalhead.lookup(config["architecture"])
     Metalhead.load_state!(model, Checkpoint(joinpath(dir, "model.safetensors"));

@@ -34,8 +34,8 @@ end
         "model_args" => Dict("embed_dim" => 16, "depth" => 1, "num_heads" => 2),
         "pretrained_cfg" => Dict("input_size" => [3, 28, 42], "fixed_input_size" => true))
     write(joinpath(dir, "config.json"), JSON.json(config))
-    @test create_model(dir).grid_size == (2, 3)
-    @test create_model(dir; img_size = 14).grid_size == (1, 1)
+    @test create_model(dir; pretrained = false).grid_size == (2, 3)
+    @test create_model(dir; pretrained = false, img_size = 14).grid_size == (1, 1)
 end
 
 @testset "forward_intermediates" begin

@@ -18,10 +18,12 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
 - Flux ports of [timm](https://github.com/huggingface/pytorch-image-models) models that load
   their weights directly from the Hugging Face Hub (#305, #307, #319, #320):
   - `create_model` builds a model from a Hub repository (`"timm/resnet50.a1_in1k"`), a bare
-    architecture (`"resnet50"`) or a local directory. Weights are random unless
-    `pretrained = true`. It takes timm's keyword arguments (`num_classes`, `in_chans`, ...),
-    plus `pretrained`, `revision` and `eltype` (`Float16`, `Flux.BFloat16`, `Float32` or
-    `Float64`).
+    architecture (`"resnet50"`) or a local directory. A repository or a directory loads its
+    weights; a bare architecture has random weights unless `pretrained = true`, which loads
+    those of its default validated checkpoint (`pretrained = false` builds a repository's
+    architecture with random weights). It takes timm's keyword arguments (`num_classes`,
+    `in_chans`, ...), plus `pretrained`, `revision` and `eltype` (`Float16`,
+    `Flux.BFloat16`, `Float32` or `Float64`).
   - `list_models`, `forward_features`, `forward_head` and `Metalhead.Timm.pretrained_cfg`,
     which returns the preprocessing settings of a checkpoint.
   - Architecture names are unique across libraries. A library registers its architectures with
@@ -55,8 +57,9 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
   linearly (`"linear"`) (#336). `create_model` loads them from their Hub repository, and
   takes the fields of `config.json` as keyword arguments. They take token indices starting
   at 1 and return logits; there is no key-value cache yet. Batches padded on the right take
-  the tokenizer's `attention_mask`, and `forward_intermediates` returns the hidden states of
-  the decoder layers.
+  the tokenizer's `attention_mask`, and the models take the output of their processor as it
+  is (`model(tok(texts))`). `forward_intermediates` returns the hidden states of the decoder
+  layers, for a batch or a single sequence, and `feature_info` gives their modules.
 - Qwen3.5, the vision-language model of the Qwen3.5 checkpoints
   (`Qwen3_5ForConditionalGeneration`), validated against `Qwen/Qwen3.5-0.8B` on text and on
   an image (#340). Its decoder alternates gated attention with gated delta rule (linear
@@ -77,14 +80,17 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
   pipeline from the `model_index.json` of a repository, or one of its components with
   `subfolder` (`"org/name/vae"` also names one). The tokenizer of a pipeline,
   `pipe.tokenizer`, is HuggingFaceTokenizers' `Tokenizer` of its `tokenizer/` subfolder,
-  which `create_model` loads with the extension, and
+  which `create_model` loads with the extension (a pipeline loaded before the extension
+  loads it once the extension is loaded), and
   `Metalhead.Diffusers.encode_prompt(pipe, prompts)` embeds prompts as diffusers'
   `encode_prompt` does, with the chat template of the text encoder (#348).
 - An extension for HuggingFaceTokenizers.jl (`ext/`): with it loaded, `create_processor`
-  returns the tokenizer of a language model, HuggingFaceTokenizers' `Tokenizer` of the
-  repository's `tokenizer.json` with the padding token of its `tokenizer_config.json`
-  (Metalhead ports no tokenizer, #348), and processors and pipelines take text as strings
-  (#332, #348).
+  returns the processor of a language model, a `Metalhead.TextProcessor`, which encodes
+  texts into the 1-based token indices and the attention mask of the models, padded on the
+  right, and decodes token indices with `decode(tok, indices)`. Its tokenizer is
+  HuggingFaceTokenizers' `Tokenizer` of the repository's `tokenizer.json` with the padding
+  token of its `tokenizer_config.json` (Metalhead ports no tokenizer, #348), and processors
+  and pipelines take text as strings (#332, #348).
 - Processors (#348): `create_processor` loads the processor of a checkpoint, which turns raw
   inputs (images, text, boxes) into the inputs of the model, and its outputs back into
   results, as the checkpoint's configuration and its Python library do. It takes the names
@@ -101,7 +107,10 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
   - `Metalhead.Transformers.Sam3Processor` and its `Sam3ImageProcessor`, for SAM 3, with box
     prompts, and the tokenizer of the repository (HuggingFaceTokenizers' `Tokenizer`) for its
     text. `post_process_instance_segmentation`, `post_process_object_detection` and
-    `post_process_semantic_segmentation` take the processor and the outputs of the model.
+    `post_process_semantic_segmentation`, exported by Metalhead, take the processor and the
+    outputs of the model. Image sizes, such as the `original_sizes` of its output and the
+    `target_sizes` of post-processing, are `(; height, width)`; `(height, width)` tuples
+    are accepted too.
 
   Settings are read from the repository's files over the defaults of the Python class,
   strictly: a setting that the port doesn't implement is an error, and an unknown key a
@@ -113,10 +122,13 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
   constructors check its settings with `Metalhead.standardize_settings` (see "Porting
   internals" in the API reference). Processors other than timm's return NamedTuples with
   the keys of transformers, in Julia's layout, with token indices from 1, which the models
-  take as they are (`model(inputs::NamedTuple)`: Qwen3.5 and SAM 3). They match
+  take as they are (`model(inputs::NamedTuple)`: the language models, Qwen3.5 and SAM 3).
+  They match
   transformers bit for bit on 8-bit images.
 - An extension for ImageCore: processors take matrices of colorants, such as the images that
-  `FileIO.load` returns (#348).
+  `FileIO.load` returns (#348), and `Metalhead.image_matrix` turns arrays of their layout,
+  such as the images that a pipeline generates and the masks of SAM 3, back into matrices of
+  colorants.
 - Mixed precision under `eltype = Float16` or `Flux.BFloat16` (or `f16`/`bf16`, #332): the
   RMSNorms of the language models and timm's `LayerNorm2d` keep their parameters in
   `Float32`, as Flux's `BatchNorm`, `GroupNorm` and `LayerNorm` do, and normalise in

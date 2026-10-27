@@ -401,14 +401,9 @@ end
 end
 Flux.@layer Qwen3_5ForCausalLM
 
-function forward_features(m::Qwen3_5ForCausalLM, input_ids; attention_mask = nothing,
-        position_ids = nothing)
+function forward_features(m::Qwen3_5ForCausalLM, input_ids::AbstractArray{<:Integer};
+        attention_mask = nothing, position_ids = nothing)
     return m.model(input_ids; attention_mask, position_ids)
-end
-
-function (m::Qwen3_5ForCausalLM)(input_ids; attention_mask = nothing,
-        position_ids = nothing)
-    return forward_head(m, forward_features(m, input_ids; attention_mask, position_ids))
 end
 
 function forward_head(m::Qwen3_5ForCausalLM, x; pre_logits::Bool = false)
@@ -693,13 +688,12 @@ end
 end
 Flux.@layer Qwen3_5ForConditionalGeneration
 
-function forward_features(m::Qwen3_5ForConditionalGeneration, input_ids; kwargs...)
+function forward_features(m::Qwen3_5ForConditionalGeneration,
+        input_ids::AbstractArray{<:Integer}; kwargs...)
     return m.model(input_ids; kwargs...)
 end
 
-function (m::Qwen3_5ForConditionalGeneration)(input_ids; kwargs...)
-    return forward_head(m, forward_features(m, input_ids; kwargs...))
-end
+decoder(m::Qwen3_5ForConditionalGeneration) = m.model.language_model, "model.language_model"
 
 """
     (model::Qwen3_5ForConditionalGeneration)(inputs::NamedTuple)
@@ -713,16 +707,20 @@ ignored. The `input_ids` of one text, a vector, give the logits (or hidden state
 padded on the right, as the processor pads it, and each text gets the outputs it gets
 alone, at the positions of its tokens.
 """
-(m::Qwen3_5ForConditionalGeneration)(inputs::NamedTuple) = qwen3_5_on_inputs(m, inputs)
-(m::Qwen3_5Model)(inputs::NamedTuple) = qwen3_5_on_inputs(m, inputs)
-
-function qwen3_5_on_inputs(m, inputs)
-    check_inputs(m, inputs, (:input_ids,);
-        hint = "pass `text` to the processor, with an image placeholder for each image")
-    return m(inputs.input_ids; pixel_values = get(inputs, :pixel_values, nothing),
-        image_grid_thw = get(inputs, :image_grid_thw, nothing),
-        attention_mask = get(inputs, :attention_mask, nothing))
+function (m::Qwen3_5ForConditionalGeneration)(inputs::NamedTuple)
+    return forward_head(m, forward_features(m, inputs))
 end
+function (m::Qwen3_5Model)(inputs::NamedTuple)
+    input_ids, kwargs = token_inputs(m, inputs)
+    return m(input_ids; kwargs...)
+end
+
+input_keys(::Qwen3_5Model) = (:attention_mask, :pixel_values, :image_grid_thw)
+function input_hint(::Qwen3_5Model)
+    return "pass `text` to the processor, with an image placeholder for each image"
+end
+input_keys(m::Qwen3_5ForConditionalGeneration) = input_keys(m.model)
+input_hint(m::Qwen3_5ForConditionalGeneration) = input_hint(m.model)
 
 function forward_head(m::Qwen3_5ForConditionalGeneration, x; pre_logits::Bool = false)
     return pre_logits ? x : m.lm_head(x)

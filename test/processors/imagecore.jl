@@ -1,6 +1,6 @@
 using Metalhead, Test
 using ImageCore
-using Metalhead: image_array, image_batch
+using Metalhead: image_array, image_batch, image_matrix
 
 const PROCESSORS = joinpath(pkgdir(Metalhead), "test", "fixtures", "processors")
 const REFERENCES = joinpath(pkgdir(Metalhead), "test", "references")
@@ -45,6 +45,32 @@ colorants(x::AbstractMatrix{UInt8}) = colorants(reshape(x, size(x)..., 1))
     @test_throws "convert them to RGB" image_array(HSV.(RGB.(rgba)))
     @test image_batch([rgba, rgba]) == [x, x]
     @test image_batch(rgba) == [x]
+end
+
+@testset "image_matrix" begin
+    # the inverse of image_array, for images in the layout of processors and pipelines
+    x = rand(UInt8, 7, 5, 4)
+    for c in 1:4
+        img = image_matrix(x[:, :, 1:c])
+        @test img == colorants(x[:, :, 1:c])
+        @test image_array(img) == x[:, :, 1:c]
+    end
+    @test image_matrix(x[:, :, 1:3]) isa AbstractMatrix{RGB{N0f8}}
+    @test image_matrix(x[:, :, 1]) == colorants(x[:, :, 1])
+    @test image_matrix(Int.(x[:, :, 1:3])) == colorants(x[:, :, 1:3])
+    @test_throws "from 0 to 255" image_matrix(fill(256, 2, 2, 3))
+    # reals from 0 to 1, in Float32, as a pipeline generates them in any precision
+    y = rand(Float32, 6, 4, 3, 2)
+    imgs = image_matrix(y)
+    @test length(imgs) == 2 && imgs[2] isa AbstractMatrix{RGB{Float32}}
+    @test size(imgs[2]) == (4, 6) && imgs[2][3, 5] == RGB(y[5, 3, :, 2]...)
+    @test image_array(imgs[2]) == y[:, :, :, 2]
+    @test image_matrix(Float16.(y[:, :, :, 1])) isa AbstractMatrix{RGB{Float32}}
+    # a mask of SAM 3 (width, height)
+    mask = rand(Bool, 6, 4)
+    @test image_matrix(mask) == Gray.(permutedims(mask))
+    @test_throws "1 to 4 channels" image_matrix(rand(Float32, 2, 2, 5))
+    @test_throws "takes an array of reals" image_matrix([RGB(1, 0, 0)])
 end
 
 @testset "processors" begin

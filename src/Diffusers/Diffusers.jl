@@ -20,7 +20,8 @@ using ChainRulesCore: ChainRulesCore
 using JSON: JSON
 using ..Metalhead: ArchSpec, AbstractConfigFormat, ModelSource, register!, declared_args,
                    identify, lookup, source_config, source_file, subsource, ProcessorFiles,
-                   load_tokenizer, encode_ids, pad_token_id, pad_ids
+                   load_tokenizer_or_defer, resolve_tokenizer, DeferredTokenizer,
+                   encode_ids, pad_token_id, pad_ids
 using ..Transformers: RMSNorm, to_device_of
 import ..Metalhead: architecture_of, model_args, weights_name, instantiate,
                     instantiate_processor, forward_intermediates

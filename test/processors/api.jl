@@ -40,6 +40,20 @@ end
     @test Metalhead.convert_to_rgb(image_array(x[:, :, 1])) == repeat(x[:, :, 1:1], 1, 1, 3)
     @test Metalhead.convert_to_rgb(cat(x, x[:, :, 1:1]; dims = 3)) == x  # alpha dropped
     @test_throws "1 to 4 channels" Metalhead.convert_to_rgb(rand(UInt8, 2, 2, 5))
+    # its inverse needs ImageCore, which another test of this worker may have loaded
+    if Base.get_extension(Metalhead, :MetalheadImageCoreExt) === nothing
+        @test_throws "run `using ImageCore`" Metalhead.image_matrix(x)
+    end
+end
+
+@testset "post-processing" begin
+    # generic functions of Metalhead, with a method for the processor of each model
+    for f in (:post_process_object_detection, :post_process_instance_segmentation,
+        :post_process_semantic_segmentation)
+        @test f in names(Metalhead)
+        @test getfield(Metalhead, f) === getfield(Metalhead.Transformers, f)
+        @test hasmethod(getfield(Metalhead, f), Tuple{Sam3Processor, NamedTuple})
+    end
 end
 
 @testset "AutoProcessor's lookup" begin

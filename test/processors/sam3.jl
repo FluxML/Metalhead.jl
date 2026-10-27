@@ -81,7 +81,7 @@ function check_outputs(name, out)
     for k in keys(out)
         r = REF["$name/$k"]
         if k === :original_sizes
-            @test out[k] == Tuple((h, w) for (h, w) in eachcol(r))
+            @test out[k] == Tuple((; height, width) for (height, width) in eachcol(r))
         elseif k === :input_ids
             @test out[k] == r .+ 1
         elseif k === :pixel_values
@@ -132,6 +132,9 @@ end
     out = proc(; original_sizes = [(9, 13), (16, 24), (30, 8)], inputs.input_boxes,
         inputs.input_boxes_labels, text = inputs.text)
     @test out.input_boxes == REF["batch/input_boxes"]
+    @test out.original_sizes[2] == (; height = 16, width = 24)
+    @test proc(; original_sizes = out.original_sizes, inputs.input_boxes,
+        inputs.input_boxes_labels, text = inputs.text) == out
     @test out.input_ids == REF["batch/input_ids"] .+ 1
     @test !haskey(out, :pixel_values)
     # boxes as an array (4, num_boxes, num_images) and labels (num_boxes, num_images)
@@ -210,6 +213,15 @@ end
     none = post_process_instance_segmentation(proc, outputs; threshold = 0.999,
         target_sizes)
     @test size(none[1].masks) == (16, 12, 0)
+    # sizes as `(; height, width)`, as the processor gives `original_sizes`
+    named = [(; height, width) for (height, width) in target_sizes]
+    @test post_process_instance_segmentation(proc, outputs; threshold,
+        target_sizes = named) == post_process_instance_segmentation(proc, outputs;
+        threshold, target_sizes)
+    @test_throws "`(; height, width)` or `(height, width)`" post_process_object_detection(
+        proc, outputs; target_sizes = [(; h = 12, w = 16), (; h = 9, w = 7)])
+    @test_throws "`(; height, width)` or `(height, width)`" post_process_object_detection(
+        proc, outputs; target_sizes = [(12, 16, 3), (9, 7, 3)])
 end
 
 @testset "settings" begin
