@@ -37,18 +37,30 @@ function source_weights(s::ModelSource, name = "model")
     return [joinpath(dir, f) for f in shard_files(JSON.parsefile(index))]
 end
 
-# The `config.json` of a source, or the `model_index.json` of a diffusers pipeline.
+# The files that say what model a source holds, by precedence: the `modules.json` of a
+# sentence-transformers model, which also has the config.json of its transformers model; the
+# `config.json` of a model; the `model_index.json` of a diffusers pipeline.
+const CONFIG_FILES = ("modules.json", "config.json", "model_index.json")
+
+# A parsed configuration file `name`, as `find_format` takes it: a modules.json, a list of
+# modules, as `Dict("modules.json" => modules)`.
+function config_of(name, parsed)
+    return name == "modules.json" ? Dict{String, Any}(name => parsed) : parsed
+end
+
+# The configuration of a source, from the first of `CONFIG_FILES` that it has.
 function source_config(s::ModelSource)
-    files = [join_path(s.subfolder, f) for f in ("config.json", "model_index.json")]
+    files = [join_path(s.subfolder, f) for f in CONFIG_FILES]
     if s.dir === nothing
-        _, path = hf_download_first(s.repo, files, "configuration"; revision = s.revision)
-        return JSON.parsefile(path)
+        file, path = hf_download_first(s.repo, files, "configuration";
+            revision = s.revision)
+        return config_of(basename(file), JSON.parsefile(path))
     end
-    for file in files
+    for (name, file) in zip(CONFIG_FILES, files)
         path = joinpath(s.dir, file)
-        isfile(path) && return JSON.parsefile(path)
+        isfile(path) && return config_of(name, JSON.parsefile(path))
     end
-    return error("$(join_path(s.dir, s.subfolder)) has neither a config.json nor a model_index.json")
+    return error("$(join_path(s.dir, s.subfolder)) has no modules.json, config.json or model_index.json")
 end
 
 function bare_spec(name)
@@ -104,6 +116,12 @@ Changing `num_classes` of a pretrained model re-initialises its classifier.
 A diffusers repository holds a pipeline, described by its `model_index.json`, whose
 components are in subfolders: `create_model` builds the whole pipeline, and with `subfolder`
 (e.g. `"vae"` or `"transformer"`) a single component, which `"org/name/vae"` also names.
+
+A sentence-transformers repository, with a `modules.json`, holds an embedding model, the
+modules of a pipeline over a transformers model: `create_model` builds a
+[`SentenceTransformer`](@ref Metalhead.SentenceTransformers.SentenceTransformer), whatever
+the `config.json` of its transformers model names, and its keyword arguments are the
+settings of the model, such as `truncate_dim`.
 
 The model is returned in test mode; call `Flux.trainmode!` before training.
 """

@@ -71,6 +71,17 @@ logits = model(tok("The capital of France is the city of"))
 HFT.decode(tok, argmax(logits[:, end]))   # " Paris"
 ```
 
+Embed queries and documents, to retrieve the documents that answer a query:
+
+```julia
+model = create_model("Qwen/Qwen3-Embedding-0.6B")   # a sentence-transformers model
+
+queries = encode_query(model, ["What is the capital of China?", "Explain gravity"])
+documents = encode_document(model, ["The capital of China is Beijing.",
+    "Gravity is a force that attracts two bodies towards each other."])
+similarity(model, queries, documents)   # 2 × 2: [0.76 0.16; 0.14 0.59]
+```
+
 Segment the objects that a text names:
 
 ```julia
@@ -100,8 +111,9 @@ explains models, processors and the feature interface, and the tutorials cover
 [language models](https://fluxml.ai/Metalhead.jl/dev/tutorials/language_models/),
 [vision-language models](https://fluxml.ai/Metalhead.jl/dev/tutorials/vision_language/),
 [segmentation](https://fluxml.ai/Metalhead.jl/dev/tutorials/segmentation/),
-[zero-shot classification](https://fluxml.ai/Metalhead.jl/dev/tutorials/zero_shot/) and
-[text-to-image generation](https://fluxml.ai/Metalhead.jl/dev/tutorials/text_to_image/).
+[zero-shot classification](https://fluxml.ai/Metalhead.jl/dev/tutorials/zero_shot/),
+[text-to-image generation](https://fluxml.ai/Metalhead.jl/dev/tutorials/text_to_image/) and
+[text embeddings](https://fluxml.ai/Metalhead.jl/dev/tutorials/embeddings/).
 
 ## Models
 
@@ -110,6 +122,7 @@ explains models, processors and the feature interface, and the tutorials cover
 | [timm](https://github.com/huggingface/pytorch-image-models) | ResNet, ResNeXt, Wide ResNet, SE- and ECA-ResNet, Res2Net, ConvNeXt, DenseNet, VGG, Inception, Inception-ResNet, Xception, EfficientNet and EfficientNetV2, MobileNetV1 to V4, MNASNet, MixNet, FBNet, LCNet, ConvMixer, MLP-Mixer, ResMLP, gMLP, and ViT with the image encoders of DINOv2, CLIP and SigLIP |
 | [transformers](https://github.com/huggingface/transformers) | Llama, Qwen2, Qwen3 and Qwen3 MoE, Gemma 3, and Granite, with its mixtures of experts and the Granite 4.0 models without Mamba layers; Qwen3.5, Qwen3.5 MoE (Qwen3.6) and Qwen3.8, vision-language models; SigLIP and SigLIP 2, image-text dual encoders for zero-shot classification and retrieval; SAM 3 and SAM 3.1, which segment the objects that a prompt describes |
 | [diffusers](https://github.com/huggingface/diffusers) | FLUX.2 [klein] and Z-Image (Turbo): the text-to-image pipelines, their transformers and their autoencoders; FLUX.2 [klein] also edits images |
+| [sentence-transformers](https://github.com/huggingface/sentence-transformers) | Text embeddings: the pooling, projections, normalization and prompts of a repository's `modules.json`, over the transformers models, such as Qwen3-Embedding |
 
 The [list of models](https://fluxml.ai/Metalhead.jl/dev/models/) gives each architecture of
 these families and the Hub checkpoints whose outputs were compared with PyTorch's. Other Hub

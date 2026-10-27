@@ -3,26 +3,30 @@
 Metalhead.jl provides Flux ports of Hugging Face Hub models: the vision models of
 [timm](https://github.com/huggingface/pytorch-image-models), language models of
 [transformers](https://github.com/huggingface/transformers) (Llama, Qwen, Gemma 3 and
-Granite for now), and text-to-image pipelines of
-[diffusers](https://github.com/huggingface/diffusers) (FLUX.2 [klein] and Z-Image for now). Each port
-mirrors the PyTorch module tree, loads the original safetensors weights by name, and is
-checked numerically against PyTorch, and so is the processor of each checkpoint, its
-inference pre- and post-processing. `create_model` and `create_processor` are the entry
-points.
+Granite for now), text-to-image pipelines of
+[diffusers](https://github.com/huggingface/diffusers) (FLUX.2 [klein] and Z-Image for now),
+and the text embeddings of
+[sentence-transformers](https://github.com/huggingface/sentence-transformers) (its modules
+over the transformers models: Qwen3-Embedding for now). Each port mirrors the PyTorch module
+tree, loads the original safetensors weights by name, and is checked numerically against
+PyTorch, and so is the processor of each checkpoint, its inference pre- and post-processing.
+`create_model` and `create_processor` are the entry points.
 
 ## Scope
 
 Port what a checkpoint determines and validate it against PyTorch; don't reimplement the
-general-purpose machinery of timm, transformers and diffusers. A feature belongs when the
-checkpoint determines it (its configuration, its weights, or upstream code specific to the
-architecture), and getting it wrong would silently change the results.
+general-purpose machinery of timm, transformers, diffusers and sentence-transformers. A
+feature belongs when the checkpoint determines it (its configuration, its weights, or
+upstream code specific to the architecture), and getting it wrong would silently change the
+results.
 
 - In: architectures and weights, the feature interface, the processors (the inference pre-
   and post-processing a checkpoint sets), the schedulers and sampling loops of ported
-  pipelines, the key-value cache.
+  pipelines, the pooling, projections, normalization and prompts of sentence-transformers
+  models, the key-value cache.
 - Out: tokenization algorithms (HuggingFaceTokenizers.jl, through an extension), chat
   templates, decoding strategies, training utilities, augmentation, data loading, task APIs,
-  quantization, LoRA.
+  quantization, LoRA, sentence-transformers' evaluation and similarity utilities.
 
 General-purpose code that parity needs stays internal. `docs/src/scope.md` has the
 reasons.
@@ -60,10 +64,21 @@ reasons.
   as the decoder of its `...ForCausalLM` checkpoint). The tokenizer of a pipeline is
   HuggingFaceTokenizers.jl's `Tokenizer` of its `tokenizer/` subfolder, which `create_model`
   loads through the extension, or once the extension is loaded (`DeferredTokenizer`).
+- `src/SentenceTransformers/`: sentence-transformers models, one file per upstream module
+  (`transformer.jl`, `pooling.jl`, `dense.jl`, `normalize.jl`) and `model.jl`, the
+  `SentenceTransformer` with `encode`, `encode_query`, `encode_document` and `similarity`.
+  `config.jl` has the `AbstractConfigFormat` of a `modules.json`, which `source_config`
+  reads before the `config.json` of the same repository, so that `create_model` builds the
+  `SentenceTransformer`, each module from its subfolder; it reads the modules'
+  configurations strictly (`read_settings`). The Transformer module holds the base model of
+  a ported transformers architecture (`AUTO_MODELS`, transformers' `AutoModel`) and the
+  tokenizer of the repository; a SentenceTransformer prepares its inputs itself and has no
+  processor.
 - `ext/`: package extensions. HuggingFaceTokenizers.jl's `Tokenizer` is the tokenizer of a
-  checkpoint: its extension loads it from `tokenizer.json` and implements the interface of
-  `src/hub/tokenizers.jl`; ImageCore lets processors take images of colorants and gives
-  `image_matrix`; CUDA.
+  checkpoint: its extension loads it from `tokenizer.json`, implements the interface of
+  `src/hub/tokenizers.jl` and adds `encode(model::SentenceTransformer, texts)` to
+  HuggingFaceTokenizers' `encode`; ImageCore lets processors take images of colorants and
+  gives `image_matrix`; CUDA.
 - `src/legacy/`: the hand-written models of Metalhead 0.9 (`ResNet(50)`, `Metalhead.Layers`,
   `pretrain = true`). Deprecated, untested, and removed in 0.11: don't extend them.
 - `test/`: run with ParallelTestRunner. Each file is a `@testset` in its own module. Shared
@@ -75,7 +90,9 @@ reasons.
   `test/references/` (helpers in `test/processors_setup.jl`).
 - `porting/`: the Python (uv) project that writes the fixtures and references
   (`dump_processor.py` and `dump_timm_transform.py` those of processors, through the full
-  upstream path). The package and its tests never run Python.
+  upstream path; `dump_sentence_transformers.py` the tiny sentence-transformers models,
+  saved as sentence-transformers saves them, with a tokenizer of numbered words). The
+  package and its tests never run Python.
 - `skills/port-hf-model/SKILL.md`: the porting workflow, conventions and numerical pitfalls.
 - `docs/`: Documenter. `docs/make.jl` generates `index.md` (from the README) and `models.md`
   (from the registry), and checks that the migration guide names only ported architectures.

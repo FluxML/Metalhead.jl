@@ -9,8 +9,9 @@ This page is about adding a model. Metalhead admits models whose weights are on 
 [Hugging Face Hub](https://huggingface.co/models). For now these are
 [timm](https://github.com/huggingface/pytorch-image-models) vision models,
 [transformers](https://github.com/huggingface/transformers) language, vision-language and
-segmentation models, and [diffusers](https://github.com/huggingface/diffusers) models and
-pipelines. A port is a Flux reimplementation of the PyTorch code, validated as described in
+segmentation models, [diffusers](https://github.com/huggingface/diffusers) models and
+pipelines, and the text embeddings of
+[sentence-transformers](https://github.com/huggingface/sentence-transformers). A port is a Flux reimplementation of the PyTorch code, validated as described in
 [How models are validated](@ref validation). It includes what the checkpoint determines
 besides the model, such as its preprocessing, but not general-purpose machinery: see
 [Scope](@ref scope). The registry and `create_model` are not specific to timm: a library
@@ -22,8 +23,8 @@ like `src/Timm/config.jl`.
 
 The porting tools in [`porting/`](https://github.com/FluxML/Metalhead.jl/tree/master/porting)
 are a Python project managed with [uv](https://docs.astral.sh/uv/). It pins timm,
-transformers, diffusers and a CPU build of PyTorch. Python is only needed to port a model:
-the package and its tests don't use it.
+transformers, diffusers, sentence-transformers and a CPU build of PyTorch. Python is only
+needed to port a model: the package and its tests don't use it.
 
 ```sh
 cd porting
@@ -80,6 +81,13 @@ the `config` and the sizes of the `inputs` (see `porting/specs/transformer_flux2
 pipeline registers its class too, built from components in subfolders, and its fixture runs a
 pipeline of tiny components end to end (`porting/specs/flux2_klein_tiny.json`). The references
 of a component are named `<org>/<repo>/<subfolder>`.
+
+A sentence-transformers model is the modules of a `modules.json` over a transformers model:
+a new transformers model for embeddings is added to `AUTO_MODELS`
+(`src/SentenceTransformers/transformer.jl`), and a new module is a file with a loader in
+`MODULE_LOADERS`. Its specs have `"library": "sentence-transformers"`
+(`porting/specs/st_qwen3_dense.json`), and the references are
+`uv run dump_reference.py <org>/<repo>` of a repository with a `modules.json`.
 
 A checkpoint whose processor class isn't ported yet needs its processor too, ported with the
 model: one file per upstream class, under transformers' file names

@@ -1,0 +1,8 @@
+{
+    "embedding_dimension": 16,
+    "pooling_mode": [
+        "lasttoken",
+        "weightedmean"
+    ],
+    "include_prompt": false
+}

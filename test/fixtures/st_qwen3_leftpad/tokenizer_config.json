@@ -1,0 +1,13 @@
+{
+  "backend": "tokenizers",
+  "cls_token": "<|cls|>",
+  "eos_token": "<|eos|>",
+  "is_local": true,
+  "local_files_only": false,
+  "model_max_length": 12,
+  "pad_token": "<|pad|>",
+  "padding_side": "left",
+  "sep_token": "<|sep|>",
+  "tokenizer_class": "TokenizersBackend",
+  "unk_token": "<|unk|>"
+}

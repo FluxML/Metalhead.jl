@@ -84,6 +84,11 @@ Metalhead.Diffusers.step
 Metalhead.Diffusers.compute_empirical_mu
 ```
 
+## sentence-transformers
+
+`create_model` builds a `SentenceTransformer` from a repository with a `modules.json`. Its
+classes and functions have their own [API reference](sentence_transformers.md).
+
 ## Builders
 
 `create_model` calls these with the architecture's default arguments, merged with the
@@ -120,6 +125,7 @@ Metalhead.Transformers.MultiheadAttention
 Metalhead.Diffusers
 Metalhead.Diffusers.timestep_embedding
 Metalhead.Diffusers.AdaLayerNormContinuous
+Metalhead.SentenceTransformers
 Metalhead.ArchSpec
 Metalhead.AbstractConfigFormat
 Metalhead.architecture_of

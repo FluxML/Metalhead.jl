@@ -5,8 +5,9 @@ page describes what is checked, and what that guarantees.
 
 ## What a port is
 
-A port is a Julia file in `src/Timm/` (timm), `src/Transformers/` (transformers) or
-`src/Diffusers/` (diffusers) that rebuilds the PyTorch module tree with Flux layers.
+A port is a Julia file in `src/Timm/` (timm), `src/Transformers/` (transformers),
+`src/Diffusers/` (diffusers) or `src/SentenceTransformers/` (sentence-transformers) that
+rebuilds the PyTorch module tree with Flux layers.
 Each PyTorch submodule becomes a field with the same name, so a checkpoint's `state_dict`
 keys follow from the structure of the Flux model. Weights load by name, with no hand-written
 mapping. Arrays use Flux's layout, which is PyTorch's with the dimensions reversed (NCHW
@@ -69,6 +70,17 @@ channels (grey, grey and alpha, RGB, RGBA), which they must prepare as diffusers
 bit. Images over the area limit of 1024 × 1024 pixels, which diffusers resizes with Pillow,
 are too large to edit with tiny models: for two of them, one RGBA, whose colours Pillow
 resizes premultiplied by its alpha, the fixtures store the images that diffusers prepares.
+
+For a sentence-transformers model, the fixture is a tiny transformers model with a tokenizer
+of numbered words and the modules of a `modules.json`, saved by sentence-transformers itself
+(`save`) and loaded back. Its inputs are texts, and it stores what `encode`, `encode_query` and
+`encode_document` return in float64, with the inputs and the token and sentence embeddings of
+the model, which must match to 1e-8. The fixtures cover every `Pooling` mode with the padding
+on the right and on the left and with the prompt included or not, `Dense` modules (each
+activation function, a bias or not, residuals), `Normalize`, prompts, `truncate_dim`, the
+configuration files of sentence-transformers before and after 5, and a tokenizer that pads on
+the left, whose embeddings Metalhead's right padding must reproduce. The tests stand in for the
+tokenizer with a few lines of Julia, so that they need no tokenizer package.
 
 Fixtures are under 1 MB each. They run without Python and without network access.
 

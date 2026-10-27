@@ -20,6 +20,10 @@ flow of random latents; the metadata has its parameter count. A diffusers pipeli
 (`<org>/<repo>` with a model_index.json) generates an image from `PIPELINE_PROMPT` end to end,
 from fixed initial noise. FLUX.2 [klein] also edits the image of `IMAGE_URL` as `EDIT_PROMPT`
 says. Random inputs are stored rounded to float16, so that both sides use the same values.
+
+A sentence-transformers model (`<org>/<repo>` with a modules.json) is run through its `encode`,
+`encode_query` and `encode_document` on `EMBEDDING_CALLS`, in float32: the embeddings, the inputs
+of the model and the similarities of the queries and the documents.
 """
 import argparse
 import contextlib
@@ -67,8 +71,11 @@ def dump_reference(repo, revision, batch, layers=None, selective_shards=False):
     sha = HfApi().model_info(repo, revision=revision).sha
     if subfolder:
         return dump_diffusers_reference(repo, subfolder, sha, batch)
-    if any(f.rfilename == "model_index.json" for f in HfApi().model_info(repo, revision=sha).siblings):
+    siblings = {f.rfilename for f in HfApi().model_info(repo, revision=sha).siblings}
+    if "model_index.json" in siblings:
         return dump_pipeline_reference(repo, sha)
+    if "modules.json" in siblings:
+        return dump_sentence_transformers_reference(repo, sha)
     config = json.loads(pathlib.Path(hf_hub_download(repo, "config.json", revision=sha)).read_text())
     if config.get("model_type") in ("sam3", "sam3_video"):
         return dump_sam3_reference(repo, sha)
@@ -202,6 +209,47 @@ def first_layers(repo, sha, num_hidden_layers):
         (tmp / "model.safetensors.index.json").write_text(
             json.dumps({"metadata": index.get("metadata", {}), "weight_map": weight_map}))
         yield str(tmp), None
+
+
+EMBEDDING_CALLS = [
+    ("encode_query", ["What is the capital of China?", "Explain gravity"]),
+    ("encode_document", ["The capital of China is Beijing.",
+                         "Gravity is a force that attracts two bodies towards each other. It "
+                         "gives weight to physical objects and is responsible for the movement "
+                         "of planets around the sun."]),
+    ("encode", ["A man is eating food.", "Un homme mange de la nourriture.",
+                "The quick brown fox jumps over the lazy dog, " * 3])]
+
+
+def dump_sentence_transformers_reference(repo, sha):
+    """The embeddings of a sentence-transformers model, in float32, by each method of
+    `EMBEDDING_CALLS` on its texts, in one batch ("<method>/embeddings"), with the inputs of
+    the model ("<method>/input_ids", 0-based, "attention_mask"), and the similarities of the
+    queries and the documents ("similarity")."""
+    import sentence_transformers
+    from sentence_transformers import SentenceTransformer
+    model = SentenceTransformer(repo, revision=sha, device="cpu",
+                                model_kwargs={"dtype": torch.float32,
+                                              "attn_implementation": "sdpa"})
+    tensors, embeddings = {}, {}
+    with torch.no_grad():
+        for method, texts in EMBEDDING_CALLS:
+            e = getattr(model, method)(texts, convert_to_tensor=True)
+            prompt = {"encode_query": model.prompts.get("query"),
+                      "encode_document": model.prompts.get("document")}.get(method)
+            features = model.preprocess(texts, prompt=prompt or None)
+            tensors.update({f"{method}/embeddings": e,
+                            f"{method}/input_ids": features["input_ids"],
+                            f"{method}/attention_mask": features["attention_mask"]})
+            embeddings[method] = e
+        tensors["similarity"] = model.similarity(embeddings["encode_query"],
+                                                 embeddings["encode_document"])
+    out = reference_path(repo)
+    meta = {"repo": repo, "revision": sha, "calls": json.dumps(EMBEDDING_CALLS),
+            "sentence_transformers": sentence_transformers.__version__, **versions()}
+    save_file({k: v.contiguous() for k, v in tensors.items()}, out, metadata=meta)
+    print(f"{out}: {repo}@{sha}, {out.stat().st_size / 1e3:.1f} kB, similarities "
+          f"{tensors['similarity'].tolist()}")
 
 
 IMAGE_PROMPT = "Describe this image in one sentence."

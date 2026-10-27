@@ -20,6 +20,10 @@ A spec with "library": "diffusers" describes a diffusers model, "architecture" (
 sizes of its inputs (see `diffusers_inputs`). A "Flux2KleinPipeline" or "ZImagePipeline" spec
 has "components" instead, and is run end to end (see `dump_flux2_klein` and `dump_z_image`).
 
+A spec with "library": "sentence-transformers" describes a SentenceTransformer of a tiny
+transformers model and a tokenizer of numbered words, saved as sentence-transformers saves it,
+and the outputs of its `encode` (see dump_sentence_transformers.py).
+
 Optional spec keys: "shrink": k divides every channel count by k (see `shrunk_channels` in
 common.py; the Julia side applies `shrink_channels` from config.json), and
 "weight_dtype": "float16" stores the weights in half precision, and "tap_depth": d records the
@@ -72,6 +76,9 @@ def dump(spec_path, args):
         return dump_transformers(spec, out, args)
     if spec.get("library") == "diffusers":
         return dump_diffusers(spec, out, args)
+    if spec.get("library") == "sentence-transformers":
+        from dump_sentence_transformers import dump_sentence_transformers
+        return dump_sentence_transformers(spec, out, args)
 
     torch.manual_seed(spec.get("seed", 0))
     model = build(spec).eval()

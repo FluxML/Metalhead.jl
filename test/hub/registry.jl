@@ -76,7 +76,7 @@ end
     @test identify(Metalhead.source_config(vae)) == (DIFFUSERS, "AutoencoderKLFlux2")
     @test Metalhead.source_weights(vae, Metalhead.weights_name(DIFFUSERS)) ==
           [joinpath(dir, "vae", "diffusion_pytorch_model.safetensors")]
-    @test_throws "neither a config.json nor a model_index.json" Metalhead.source_config(
+    @test_throws "has no modules.json, config.json or model_index.json" Metalhead.source_config(
         Metalhead.subsource(s, "tokenizer"))
 end
 

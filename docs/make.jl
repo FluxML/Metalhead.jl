@@ -9,6 +9,8 @@ open(joinpath(@__DIR__, "src", "index.md"), "w") do io
     write(io, "```@meta\nEditURL = \"../../README.md\"\n```\n\n", readme)
 end
 
+const ST = Metalhead.SentenceTransformers
+
 function family_file(spec)
     if spec.format == Metalhead.Timm.TIMM
         aliases = Dict("vision_transformer" => "vit", "xception_aligned" => "xception")
@@ -41,12 +43,14 @@ function write_model_list(path)
         "res2net" => "Res2Net",
         "resnet" => "ResNet",
         "sam3" => "SAM 3",
+        "sentence_transformers" => "Sentence Transformers",
         "siglip" => "SigLIP and SigLIP 2",
         "vgg" => "VGG",
         "vision_transformer" => "Vision Transformer (ViT)",
         "xception_aligned" => "Aligned Xception",
         "z_image" => "Z-Image")
     title(family) = get(titles, family, family)
+    st_types = join(("`$t`" for t in sort!(collect(keys(ST.AUTO_MODELS)))), ", ")
     notes = Dict("granite" => "Granite 4.0 models load without Mamba layers, so the hybrid " *
                               "\"H\" models (`granite-4.0-h-*`) don't load.",
         "qwen" => "`Qwen3-30B-A3B` and `Qwen3.6-35B-A3B` were validated on their first 4 " *
@@ -60,10 +64,15 @@ function write_model_list(path)
                     "`Siglip2Model`s, which take images of any aspect ratio; the others, of " *
                     "fixed resolution, are `SiglipModel`s.",
         "z_image" => "`AutoencoderKL` is diffusers' autoencoder of Stable Diffusion and " *
-                     "FLUX.1 too, validated with the one of Z-Image.")
+                     "FLUX.1 too, validated with the one of Z-Image.",
+        "sentence_transformers" => "A repository with a `modules.json` loads as a " *
+                                   "`SentenceTransformer`, whose Transformer module holds " *
+                                   "a transformers model of a validated `model_type` " *
+                                   "($st_types).")
     libraries = ["timm" => "Vision models (timm)",
         "transformers" => "Language, vision-language, image-text and segmentation models (transformers)",
-        "diffusers" => "Image generation (diffusers)"]
+        "diffusers" => "Image generation (diffusers)",
+        "sentence-transformers" => "Text embeddings (sentence-transformers)"]
     library(spec) = replace(string(spec.format), " pipeline" => "")
     ArchSpec = Metalhead.ArchSpec
     groups = Dict{String, Dict{String, Vector{ArchSpec}}}()
@@ -161,14 +170,16 @@ makedocs(; modules = [Metalhead],
             "Vision-language models" => "tutorials/vision_language.md",
             "Segmenting objects" => "tutorials/segmentation.md",
             "Zero-shot classification" => "tutorials/zero_shot.md",
-            "Text-to-image generation" => "tutorials/text_to_image.md"],
+            "Text-to-image generation" => "tutorials/text_to_image.md",
+            "Text embeddings" => "tutorials/embeddings.md"],
         "Models" => "models.md",
         "Development" => ["How models are validated" => "validation.md",
             "Scope" => "scope.md",
             "Porting a model" => "contributing.md"],
         "Migrating from 0.9" => "migration.md",
         "API reference" => ["Overview" => "api/reference.md",
-            "SigLIP and SigLIP 2" => "api/siglip.md"]
+            "SigLIP and SigLIP 2" => "api/siglip.md",
+            "Sentence transformers" => "api/sentence_transformers.md"]
     ],
     warnonly = [:example_block, :missing_docs],
     format = Documenter.HTML(canonical = "https://fluxml.ai/Metalhead.jl/stable/",
