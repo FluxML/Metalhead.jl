@@ -633,8 +633,11 @@ above, with these differences.
   (`.float()` in `get_1d_rotary_pos_embed`), `apply_rotary_emb` (`x.float()`) and the Euler
   `step` of the scheduler in float32. `exact_float64_diffusers` (`porting/common.py`) patches
   them; a model that imports a helper by name (`from ..embeddings import apply_rotary_emb`) needs
-  the patch in its own module. Pipelines also keep the noise levels and the eps of the latent
-  statistics in float32, so pipeline fixtures match to about 1e-12.
+  the patch in its own module, and a helper defined inside a method (Z-Image's
+  `apply_rotary_emb`, in its attention processor's `__call__`) a patch of the method. Pipelines also keep the noise levels and the eps of the latent
+  statistics in float32, so pipeline fixtures match to about 1e-12. A pipeline that casts its
+  latents to float32 itself (Z-Image's `.float()` and `assert latents.dtype == torch.float32`)
+  runs as a copy of its `__call__` with float64 in their place (`float64_z_image_call`).
 - **Half precision** (see "Half precision" above). diffusers casts to float32 where 16 bits
   lose too much: the sinusoidal timestep embeddings (angles of timesteps near 1000 are off by
   radians in BFloat16) and the scheduler's step. Do the same, and convert back like torch's
@@ -644,6 +647,10 @@ above, with these differences.
   model's eltype), mirror it, and loosen `check_half_precision` for that fixture with a
   comment, rather than diverge from diffusers.
 - **Specs.** `{"library": "diffusers", "architecture": "<class>", "config": {...}, "inputs": {...}, "tap_depth": 2}`.
+  A forward that takes a list of tensors of different sizes (Z-Image's captions) has it stored as
+  `inputs/<i>/<j>`, which `fixture_inputs` reads as a `Vector`; the Julia forward takes it so,
+  and the tensors of equal sizes stacked (Z-Image's latents). `"weight_dtype": "float16"`
+  halves the weights of a diffusers model (Z-Image's timestep MLP alone has 300k parameters).
   `diffusers_inputs` in `porting/dump.py` builds the inputs of each class from the sizes in
   `"inputs"`; add a branch for a new class. A pipeline spec has `"components"` (configs, with
   the text encoder as a transformers spec) and the settings of a run (`porting/specs/flux2_klein_tiny.json`);

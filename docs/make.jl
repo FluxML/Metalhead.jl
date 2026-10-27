@@ -43,13 +43,16 @@ function write_model_list(path)
         "sam3" => "SAM 3",
         "vgg" => "VGG",
         "vision_transformer" => "Vision Transformer (ViT)",
-        "xception_aligned" => "Aligned Xception")
+        "xception_aligned" => "Aligned Xception",
+        "z_image" => "Z-Image")
     title(family) = get(titles, family, family)
     notes = Dict("granite" => "Granite 4.0 models load without Mamba layers, so the hybrid " *
                               "\"H\" models (`granite-4.0-h-*`) don't load.",
         "sam3" => "`jetjodh/sam3` is an ungated copy of the weights of Meta's gated " *
                   "`facebook/sam3`. Only the detector of `Sam3VideoModel` is ported, not " *
-                  "its tracker.")
+                  "its tracker.",
+        "z_image" => "`AutoencoderKL` is diffusers' autoencoder of Stable Diffusion and " *
+                     "FLUX.1 too, validated with the one of Z-Image.")
     libraries = ["timm" => "Vision models (timm)",
         "transformers" => "Language, vision-language and segmentation models (transformers)",
         "diffusers" => "Image generation (diffusers)"]
