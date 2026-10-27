@@ -5,13 +5,14 @@ using Metalhead.Transformers: CLIPProcessor, CLIPImageProcessor
 const T = Metalhead.Transformers
 
 include(joinpath(@__DIR__, "..", "processors_setup.jl"))
+include(joinpath(@__DIR__, "..", "data.jl"))
+using .TestData: test_data
 
 # Written by porting/dump_processor.py, through transformers' AutoProcessor
 const CLIP_REPO = "openai/clip-vit-base-patch32"
 const CLIP = joinpath(pkgdir(Metalhead), "test", "fixtures", "processors",
     "openai--clip-vit-base-patch32")
-const FILE = joinpath(pkgdir(Metalhead), "test", "references", "processors",
-    "clip.safetensors")
+const FILE = test_data("references/processors/clip.safetensors")
 const META = SafeTensors.deserialize(FILE).metadata
 const REF = Metalhead.Checkpoint(FILE)
 const CASES = sort!([k

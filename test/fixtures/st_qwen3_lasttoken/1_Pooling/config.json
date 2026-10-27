@@ -1,5 +1,0 @@
-{
-    "embedding_dimension": 16,
-    "pooling_mode": "lasttoken",
-    "include_prompt": true
-}

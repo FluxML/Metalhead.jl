@@ -1,8 +1,0 @@
-{
-    "in_features": 16,
-    "out_features": 12,
-    "bias": true,
-    "activation_function": "torch.nn.modules.activation.Tanh",
-    "module_input_name": "sentence_embedding",
-    "module_output_name": "sentence_embedding"
-}

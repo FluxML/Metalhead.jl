@@ -209,6 +209,7 @@ end
 function with_changes(f, name, changes...)
     mktempdir() do dir
         cp(fixture(name), dir; force = true)
+        chmod(dir, 0o755; recursive = true)  # a copy of a read-only artifact
         for (file, content) in changes
             path = joinpath(dir, file)
             if content === nothing
