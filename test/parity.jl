@@ -410,22 +410,45 @@ function check_clip_reference(file)
 end
 
 """
-    check_encoder_reference(file; model = reference_model(file)) -> NamedTuple
+    encoder_reference_model(file)
+
+The transformers model that the `config.json` of the repository of a text encoder's reference
+`file` names, at its commit, even for a sentence-transformers repository (with a
+modules.json), for which `create_model` builds the embedding model over it.
+"""
+function encoder_reference_model(file)
+    meta = SafeTensors.deserialize(file).metadata
+    repo, revision = meta["repo"], meta["revision"]
+    config = Metalhead.JSON.parsefile(Metalhead.hf_download(repo, "config.json"; revision))
+    format = Metalhead.Transformers.TRANSFORMERS
+    spec = Metalhead.lookup(Metalhead.architecture_of(format, config))
+    return Metalhead.instantiate(format, spec, Metalhead.model_source(repo, revision, ""),
+        config; pretrained = true, eltype = Float32)
+end
+
+"""
+    check_encoder_reference(file; model = encoder_reference_model(file)) -> NamedTuple
 
 Compare a text encoder (BERT, XLM-RoBERTa, ModernBERT, with or without a head) with the
 reference outputs of its real checkpoint, written by porting/dump_reference.py, on the
 texts of the metadata (and the passages paired with them, for a classifier): whether the
-processor of the repository (`create_processor`, with HuggingFaceTokenizers.jl loaded) gives
+processor of the repository (`create_processor`, with HuggingFaceTokenizers.jl loaded; the
+`TextProcessor` of a sentence-transformers repository's tokenizer) gives
 transformers' `input_ids`, `attention_mask` and `token_type_ids`, and the largest relative
 errors, on the tokens that the attention mask keeps, of the hidden states of the base model
 (`hidden`), of its `pooler_output` (`pooled`) and of the logits of a classifier or, for a
 masked language model, of the last token of each text (`logits`), from the reference's token
 indices.
 """
-function check_encoder_reference(file; model = reference_model(file))
+function check_encoder_reference(file; model = encoder_reference_model(file))
     meta = SafeTensors.deserialize(file).metadata
     ref = Checkpoint(file)
-    proc = create_processor(meta["repo"]; revision = meta["revision"])
+    source = Metalhead.model_source(meta["repo"], meta["revision"], "")
+    # a sentence-transformers repository has no processor: its model tokenizes the texts
+    proc = haskey(Metalhead.source_config(source), "modules.json") ?
+           Metalhead.load_processor(Metalhead.TextProcessor,
+               Metalhead.ProcessorFiles(source)) :
+           create_processor(meta["repo"]; revision = meta["revision"])
     strings(key) = Vector{String}(Metalhead.JSON.parse(meta[key]))
     text_pair = haskey(meta, "text_pairs") ? strings("text_pairs") : nothing
     inputs = proc(strings("texts"); text_pair)
