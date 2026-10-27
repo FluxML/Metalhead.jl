@@ -18,7 +18,7 @@ export Parity, check_fixture, check_lm_reference, check_image_reference, check_s
        reference_input, relerr, tapify, fixture, reference, test_data_names, reference_files,
        reference_files_of,
        check_param_counts,
-       check_gradient, check_half_precision, JSON, SafeTensors, TEST_NETWORK, TEST_LARGE,
+       check_gradient, check_half_precision, warnings, JSON, SafeTensors, TEST_NETWORK, TEST_LARGE,
        check_intermediate_api, IdsTokenizer
 
 # The reference tests download pretrained weights from the Hub.
@@ -118,18 +118,26 @@ function check_half_precision(model, x...; T = Float16, rtol = 1e-2, kwargs...)
         end
     end
     walk(half, "model")
-    logs, y = Test.collect_test_logs(; min_level = Base.CoreLogging.Warn) do
-        return half(map(a -> convert_floats(cast, a), x)...; kwargs...)
-    end
+    logged, y = warnings(() -> half(map(a -> convert_floats(cast, a), x)...; kwargs...))
     outputs(y) = y isa NamedTuple ? Tuple(Iterators.flatten(map(outputs, values(y)))) : (y,)
     err = maximum(((a, b),) -> relerr(Float32.(a), b),
         zip(outputs(y), outputs(model(x...; kwargs...))))
     output = eltype.(outputs(y))
-    # deprecations, such as Base's of `disable_sigint` on Julia 1.14, aren't about precision
-    warnings = [l.message for l in logs if l.group !== :depwarn]
-    ok = isempty(wrong) && all(==(T), output) && isempty(warnings) && err <= rtol
-    ok || @info "not in mixed precision" T wrong output warnings err
+    ok = isempty(wrong) && all(==(T), output) && isempty(logged) && err <= rtol
+    ok || @info "not in mixed precision" T wrong output warnings = logged err
     return ok
+end
+
+"""
+    warnings(f) -> (messages, value)
+
+The value of `f()` and the messages of the warnings it logs, but deprecations: those of
+Julia 1.14, such as Base's of `disable_sigint` that GPUToolbox calls, aren't about the
+code under test.
+"""
+function warnings(f)
+    logs, y = Test.collect_test_logs(f; min_level = Base.CoreLogging.Warn)
+    return [l.message for l in logs if l.group !== :depwarn], y
 end
 
 # `f` applied to an input with floating-point values, or to each of a vector of them (the

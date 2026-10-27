@@ -116,13 +116,14 @@ end
     @test eltype(pipe.vae.bn.μ) == eltype(pipe.text_encoder.model.norm.weight) == Float32
     embeds = D.encode_prompt(pipe, rand(1:32, 7, 2); text_encoder_out_layers = (1, 2, 3))
     @test eltype(embeds) == Float16
-    @test_logs min_level=Base.CoreLogging.Warn begin
+    logged, _ = warnings() do
         image = pipe(embeds; height = 16, width = 20, num_inference_steps = 2)
         @test eltype(image) == Float16
         edited = pipe(embeds; image = rand(UInt8, 64, 64, 3), height = 16, width = 20,
             num_inference_steps = 1)
         @test eltype(edited) == Float16
     end
+    @test isempty(logged)
 end
 
 @testset "autoencoder" begin
