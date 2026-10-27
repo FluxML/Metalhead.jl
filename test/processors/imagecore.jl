@@ -1,11 +1,12 @@
 using Metalhead, Test
 using ImageCore
 using Metalhead: image_array, image_batch, image_matrix
+include(joinpath(@__DIR__, "..", "data.jl"))
+using .TestData: test_data
 
 const PROCESSORS = joinpath(pkgdir(Metalhead), "test", "fixtures", "processors")
-const REFERENCES = joinpath(pkgdir(Metalhead), "test", "references")
-const TIMM = Metalhead.Checkpoint(joinpath(REFERENCES, "timm_transforms.safetensors"))
-const SAM3 = Metalhead.Checkpoint(joinpath(REFERENCES, "processors", "sam3.safetensors"))
+const TIMM = Metalhead.Checkpoint(test_data("references/timm_transforms.safetensors"))
+const SAM3 = Metalhead.Checkpoint(test_data("references/processors/sam3.safetensors"))
 
 # The image of colorants that an array (width, height, channels) of UInt8 stands for, a
 # matrix (height, width) as FileIO loads it

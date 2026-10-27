@@ -70,7 +70,7 @@ end
     @test eltype(pipe.vae.encoder.conv_norm_out.γ) == Float32
     embeds = D.encode_prompt(pipe, rand(1:32, 7, 2))
     @test eltype(first(embeds)) == Float16
-    @test_logs min_level=Base.CoreLogging.Warn begin
+    logged, _ = warnings() do
         image = pipe(embeds; height = 12, width = 16, num_inference_steps = 2,
             guidance_scale = 0)
         @test eltype(image) == Float16
@@ -79,6 +79,7 @@ end
             guidance_scale = 0, output_type = :latent)
         @test eltype(latents) == Float32
     end
+    @test isempty(logged)
 end
 
 @testset "autoencoder" begin

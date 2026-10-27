@@ -73,6 +73,12 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
   `Qwen3ForCausalLM` checkpoint, as diffusers loads a `Qwen3Model`, whose prompt embeddings
   are a matrix per prompt, without the padding.
 
+### Changed
+
+- The package no longer contains the data of its tests, which made it a download of 68 MB
+  (2.6 MB now): the fixtures and reference outputs are lazy artifacts on the Hub dataset
+  `FluxML/metalhead-test-data`, which the tests download on first use (#372).
+
 ### Fixed
 
 - Pretrained models allocate their weights directly in the requested `eltype`, without

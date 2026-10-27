@@ -5,13 +5,14 @@ using Metalhead.Transformers: Qwen3VLProcessor, Qwen2VLImageProcessor
 const T = Metalhead.Transformers
 
 include(joinpath(@__DIR__, "..", "processors_setup.jl"))
+include(joinpath(@__DIR__, "..", "data.jl"))
+using .TestData: test_data
 
 # Written by porting/dump_processor.py, through transformers' AutoProcessor
 const QWEN_REPO = "Qwen/Qwen3.5-0.8B"
 const QWEN = joinpath(pkgdir(Metalhead), "test", "fixtures", "processors",
     "Qwen--Qwen3.5-0.8B")
-const FILE = joinpath(pkgdir(Metalhead), "test", "references", "processors",
-    "qwen3_vl.safetensors")
+const FILE = test_data("references/processors/qwen3_vl.safetensors")
 const META = SafeTensors.deserialize(FILE).metadata
 const REF = Metalhead.Checkpoint(FILE)
 const CASES = sort!([k for (k, v) in META
@@ -380,8 +381,7 @@ if TEST_NETWORK
     # prompts and the image of the reference of its model (test/models/qwen3_5.jl)
     @testset "Qwen/Qwen3.8-27B" begin
         repo = "Qwen/Qwen3.8-27B"
-        file = joinpath(pkgdir(Metalhead), "test", "references",
-            "Qwen--Qwen3.8-27B.safetensors")
+        file = test_data("references/Qwen--Qwen3.8-27B.safetensors")
         meta = SafeTensors.deserialize(file).metadata
         ref = Metalhead.Checkpoint(file)
         proc = @test_logs create_processor(repo)

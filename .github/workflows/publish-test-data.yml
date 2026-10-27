@@ -1,0 +1,53 @@
+name: Publish test data
+
+# Fixtures and references that a merged pull request committed to test/ would ship with the
+# package: upload them to the Hub dataset FluxML/metalhead-test-data as lazy artifacts
+# (porting/publish.jl) and open a pull request that removes them and binds them in
+# test/Artifacts.toml. Each run publishes all of them from master and updates that pull
+# request. Needs the secret HF_TOKEN, with write access to the dataset.
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'test/fixtures/**'
+      - 'test/references/**'
+  workflow_dispatch:
+
+concurrency:
+  group: publish-test-data
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: master
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1'
+      - uses: astral-sh/setup-uv@v10.3.0
+      - name: Publish
+        run: julia porting/publish.jl
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      - name: Open a pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git add -A test
+          git diff --cached --quiet && exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Publish test data"
+          git push --force origin HEAD:refs/heads/publish-test-data
+          if [ -z "$(gh pr list --head publish-test-data --json number --jq '.[]')" ]; then
+            gh pr create --base master --head publish-test-data --title "Publish test data" \
+              --body "Moves the fixtures and references committed to test/ to the Hub dataset FluxML/metalhead-test-data (porting/publish.jl). Merge it before a release, so that the package doesn't ship them."
+          fi

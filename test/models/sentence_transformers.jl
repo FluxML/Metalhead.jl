@@ -198,7 +198,9 @@ end
         inputs = ST.preprocess(model, ["5 6 7", "8 9 10 11", "12"]; prompt = "1 2 ")
         half = f16(model)
         @test eltype(half[1].auto_model.norm.weight) == Float32
-        y = (@test_logs half(inputs)).sentence_embedding
+        logged, out = warnings(() -> half(inputs))
+        @test isempty(logged)
+        y = out.sentence_embedding
         @test eltype(y) == Float16
         @test relerr(Float32.(y), model(inputs).sentence_embedding) <= 1e-2
     end
@@ -209,6 +211,7 @@ end
 function with_changes(f, name, changes...)
     mktempdir() do dir
         cp(fixture(name), dir; force = true)
+        chmod(dir, 0o755; recursive = true)  # a copy of a read-only artifact
         for (file, content) in changes
             path = joinpath(dir, file)
             if content === nothing

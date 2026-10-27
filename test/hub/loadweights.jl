@@ -1,5 +1,7 @@
 using Metalhead, Test
 using Flux, ConcreteStructs
+include(joinpath(@__DIR__, "..", "data.jl"))
+using .TestData: fixture
 
 @concrete struct Block
     conv
@@ -121,7 +123,7 @@ end
     @test_throws "not supported" create_model("resnet18"; aa_layer = "blur")
     @test_throws MethodError create_model("resnet18"; not_a_kwarg = 1)
     # a directory, as a repository, names a checkpoint, whose weights load by default
-    dir = joinpath(pkgdir(Metalhead), "test", "fixtures", "llama_tiny")
+    dir = fixture("llama_tiny")
     weights(m) = m.model.embed_tokens.weight
     @test weights(create_model(dir)) == weights(create_model(dir; pretrained = true))
     @test weights(create_model(dir)) != weights(create_model(dir; pretrained = false))

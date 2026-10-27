@@ -1,9 +1,0 @@
-{
-    "in_features": 12,
-    "out_features": 8,
-    "bias": true,
-    "activation_function": "torch.nn.modules.activation.ReLU",
-    "module_input_name": "sentence_embedding",
-    "module_output_name": "sentence_embedding",
-    "use_residual": true
-}

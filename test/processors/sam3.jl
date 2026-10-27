@@ -7,13 +7,14 @@ using Metalhead.Transformers: Sam3Processor, Sam3ImageProcessor,
                               post_process_semantic_segmentation
 
 include(joinpath(@__DIR__, "..", "processors_setup.jl"))
+include(joinpath(@__DIR__, "..", "data.jl"))
+using .TestData: test_data
 
 # Written by porting/dump_processor.py, through transformers' AutoProcessor
 const PROCESSORS = joinpath(pkgdir(Metalhead), "test", "fixtures", "processors")
 const SAM3 = joinpath(PROCESSORS, "unsloth--sam3.1")
 const SAM3_VIDEO = joinpath(PROCESSORS, "jetjodh--sam3")
-const FILE = joinpath(pkgdir(Metalhead), "test", "references", "processors",
-    "sam3.safetensors")
+const FILE = test_data("references/processors/sam3.safetensors")
 const META = SafeTensors.deserialize(FILE).metadata
 const REF = Metalhead.Checkpoint(FILE)
 const CASES = sort!([k for (k, v) in META

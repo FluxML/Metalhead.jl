@@ -5,10 +5,11 @@ using Metalhead.Transformers: SiglipProcessor, SiglipImageProcessor, Siglip2Proc
                               Siglip2ImageProcessor, image_size_for_max_num_patches
 
 include(joinpath(@__DIR__, "..", "processors_setup.jl"))
+include(joinpath(@__DIR__, "..", "data.jl"))
+using .TestData: test_data
 
 # Written by porting/dump_processor.py, through transformers' AutoProcessor
 const PROCESSORS = joinpath(pkgdir(Metalhead), "test", "fixtures", "processors")
-const REFERENCES = joinpath(pkgdir(Metalhead), "test", "references", "processors")
 const SIGLIP = joinpath(PROCESSORS, "google--siglip-base-patch16-224")
 const SIGLIP2_224 = joinpath(PROCESSORS, "google--siglip2-base-patch16-224")
 const NAFLEX = joinpath(PROCESSORS, "google--siglip2-base-patch16-naflex")
@@ -23,8 +24,8 @@ function References(file)
     cases = sort!([k for (k, v) in meta if startswith(v, "{") && haskey(JSON.parse(v), "create")])
     return References(meta, Metalhead.Checkpoint(file), cases)
 end
-const SIGLIP_REF = References(joinpath(REFERENCES, "siglip.safetensors"))
-const NAFLEX_REF = References(joinpath(REFERENCES, "siglip2.safetensors"))
+const SIGLIP_REF = References(test_data("references/processors/siglip.safetensors"))
+const NAFLEX_REF = References(test_data("references/processors/siglip2.safetensors"))
 
 numbered(r, prefix) = [r.ref["$prefix/$i"]
                        for i in 1:count(k -> occursin(Regex("^$prefix/\\d+\$"), k), keys(r.ref))]

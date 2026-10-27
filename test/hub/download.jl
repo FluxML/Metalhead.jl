@@ -1,8 +1,9 @@
 using Metalhead, Test
 using Flux, SafeTensors
 using Metalhead: HF, JSON, ModelSource, source_config, source_weights, hf_download_first
+include(joinpath(@__DIR__, "..", "data.jl"))
+using .TestData: fixture
 
-const FIXTURES = joinpath(pkgdir(Metalhead), "test", "fixtures")
 const SHA = "0123456789abcdef0123456789abcdef01234567"
 const SHARDS = ["model-00001-of-00002.safetensors", "model-00002-of-00002.safetensors"]
 
@@ -18,7 +19,7 @@ function cache_repo(cache, repo, files)
 end
 
 function fixture_files(name)
-    dir = joinpath(FIXTURES, name)
+    dir = fixture(name)
     return [relpath(joinpath(root, f), dir) => joinpath(root, f)
             for (root, _, fs) in walkdir(dir) for f in fs if f != "acts.safetensors"]
 end
@@ -26,8 +27,7 @@ end
 # resnet_basic, with its weights in two shards, without the `num_batches_tracked` scalars
 # that SafeTensors.jl can't write and the loader ignores
 function sharded_files(dir)
-    tensors = SafeTensors.deserialize(joinpath(FIXTURES, "resnet_basic",
-        "model.safetensors"))
+    tensors = SafeTensors.deserialize(joinpath(fixture("resnet_basic"), "model.safetensors"))
     names = sort!([k for k in keys(tensors) if ndims(tensors[k]) > 0])
     weight_map = Dict(k => SHARDS[mod1(i, 2)] for (i, k) in enumerate(names))
     for shard in SHARDS
@@ -35,7 +35,7 @@ function sharded_files(dir)
             Dict(k => collect(tensors[k]) for (k, s) in weight_map if s == shard))
     end
     write(joinpath(dir, "index.json"), JSON.json(Dict("weight_map" => weight_map)))
-    return ["config.json" => joinpath(FIXTURES, "resnet_basic", "config.json"),
+    return ["config.json" => joinpath(fixture("resnet_basic"), "config.json"),
         "model.safetensors.index.json" => joinpath(dir, "index.json"),
         (shard => joinpath(dir, shard) for shard in SHARDS)...]
 end
@@ -104,7 +104,7 @@ end
     with_cache(; offline = true) do sharded, pipeline
         @test source_weights(hub("metalhead/sharded")) == joinpath.(sharded, SHARDS)
         model = create_model("metalhead/sharded"; pretrained = true, revision = SHA)
-        expected = create_model(joinpath(FIXTURES, "resnet_basic"); pretrained = true)
+        expected = create_model(fixture("resnet_basic"); pretrained = true)
         x = rand(Float32, 32, 32, 3, 1)
         @test model(x) ≈ expected(x)
 
@@ -114,7 +114,7 @@ end
             "diffusion_pytorch_model") ==
               [joinpath(pipeline, "vae", "diffusion_pytorch_model.safetensors")]
         pipe = create_model("metalhead/pipeline"; pretrained = true, revision = SHA)
-        expected = create_model(joinpath(FIXTURES, "flux2_klein_tiny"); pretrained = true)
+        expected = create_model(fixture("flux2_klein_tiny"); pretrained = true)
         @test Flux.trainables(pipe) == Flux.trainables(expected)
 
         @test_throws ["metalhead/absent@$SHA has no safetensors weights in the cache",

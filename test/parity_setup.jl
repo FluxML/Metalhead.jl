@@ -2,6 +2,8 @@ module ParitySetup
 using Metalhead
 include(joinpath(pkgdir(Metalhead), "test", "parity.jl"))
 using .Parity
+include(joinpath(pkgdir(Metalhead), "test", "data.jl"))
+using .TestData
 using JSON: JSON
 using SafeTensors: SafeTensors
 using Flux, Functors
@@ -13,9 +15,10 @@ export Parity, check_fixture, check_lm_reference, check_image_reference, check_s
        check_encoder_reference,
        check_pipeline_fixture, check_diffusers_reference, fixture_model, fixture_inputs,
        shrink_channels,
-       reference_input, relerr, tapify, fixture, reference_files, reference_files_of,
+       reference_input, relerr, tapify, fixture, reference, test_data_names, reference_files,
+       reference_files_of,
        check_param_counts,
-       check_gradient, check_half_precision, JSON, SafeTensors, TEST_NETWORK, TEST_LARGE,
+       check_gradient, check_half_precision, warnings, JSON, SafeTensors, TEST_NETWORK, TEST_LARGE,
        check_intermediate_api, IdsTokenizer
 
 # The reference tests download pretrained weights from the Hub.
@@ -25,18 +28,16 @@ const TEST_LARGE = TEST_NETWORK && parse(Bool, get(ENV, "METALHEAD_TEST_LARGE", 
 
 const TEST_DIR = joinpath(pkgdir(Metalhead), "test")
 
-fixture(name) = joinpath(TEST_DIR, "fixtures", name)
-
 function reference_files(prefix; org = "timm")
-    return filter(
-        f -> startswith(basename(f), "$org--$prefix") && endswith(f, ".safetensors"),
-        readdir(joinpath(TEST_DIR, "references"); join = true))
+    names = filter(f -> startswith(f, "$org--$prefix") && endswith(f, ".safetensors"),
+        test_data_names("references"))
+    return map(reference, names)
 end
 
 # The reference files of the checkpoints registered for `arch`, which a repository prefix
 # can't single out when an organisation publishes several architectures (Qwen).
 function reference_files_of(arch)
-    return [joinpath(TEST_DIR, "references", replace(repo, "/" => "--") * ".safetensors")
+    return [reference(replace(repo, "/" => "--") * ".safetensors")
             for (repo, _) in Metalhead.lookup(arch).references]
 end
 
@@ -117,18 +118,26 @@ function check_half_precision(model, x...; T = Float16, rtol = 1e-2, kwargs...)
         end
     end
     walk(half, "model")
-    logs, y = Test.collect_test_logs(; min_level = Base.CoreLogging.Warn) do
-        return half(map(a -> convert_floats(cast, a), x)...; kwargs...)
-    end
+    logged, y = warnings(() -> half(map(a -> convert_floats(cast, a), x)...; kwargs...))
     outputs(y) = y isa NamedTuple ? Tuple(Iterators.flatten(map(outputs, values(y)))) : (y,)
     err = maximum(((a, b),) -> relerr(Float32.(a), b),
         zip(outputs(y), outputs(model(x...; kwargs...))))
     output = eltype.(outputs(y))
-    # deprecations, such as Base's of `disable_sigint` on Julia 1.14, aren't about precision
-    warnings = [l.message for l in logs if l.group !== :depwarn]
-    ok = isempty(wrong) && all(==(T), output) && isempty(warnings) && err <= rtol
-    ok || @info "not in mixed precision" T wrong output warnings err
+    ok = isempty(wrong) && all(==(T), output) && isempty(logged) && err <= rtol
+    ok || @info "not in mixed precision" T wrong output warnings = logged err
     return ok
+end
+
+"""
+    warnings(f) -> (messages, value)
+
+The value of `f()` and the messages of the warnings it logs, but deprecations: those of
+Julia 1.14, such as Base's of `disable_sigint` that GPUToolbox calls, aren't about the
+code under test.
+"""
+function warnings(f)
+    logs, y = Test.collect_test_logs(f; min_level = Base.CoreLogging.Warn)
+    return [l.message for l in logs if l.group !== :depwarn], y
 end
 
 # `f` applied to an input with floating-point values, or to each of a vector of them (the
