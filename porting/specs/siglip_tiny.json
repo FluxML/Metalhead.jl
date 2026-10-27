@@ -1,0 +1,14 @@
+{
+  "library": "transformers",
+  "architecture": "SiglipModel",
+  "model_type": "siglip",
+  "config": {
+    "text_config": {"vocab_size": 64, "hidden_size": 16, "intermediate_size": 24,
+                    "num_hidden_layers": 2, "num_attention_heads": 2,
+                    "max_position_embeddings": 8},
+    "vision_config": {"hidden_size": 16, "intermediate_size": 24, "num_hidden_layers": 2,
+                      "num_attention_heads": 2, "image_size": 16, "patch_size": 4}
+  },
+  "inputs": {"texts": 3, "images": 2},
+  "tap_depth": 3
+}

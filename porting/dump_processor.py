@@ -1,6 +1,6 @@
 """Write the fixtures and references of processors, through the full upstream path.
 
-    uv run dump_processor.py [sam3] [qwen3_vl]    # all by default
+    uv run dump_processor.py [sam3] [qwen3_vl] [siglip] [siglip2]    # all by default
 
 sam3: the processor of SAM 3 as `AutoProcessor.from_pretrained(repo)` loads it, called on tiny
 images, prompts and boxes (`proc(images=..., text=..., input_boxes=...)`), for
@@ -23,6 +23,11 @@ loads it, called on tiny images and prompts with image placeholders, for
 src/Transformers/processing_qwen3_vl.jl and image_processing_qwen2_vl.jl. Writes the small JSON
 files of Qwen/Qwen3.5-0.8B and test/references/processors/qwen3_vl.safetensors, laid out as
 SAM 3's (see `qwen3_vl`).
+
+siglip and siglip2: the processors of SigLIP (`SiglipProcessor`, of google/siglip-base-patch16-224
+and google/siglip2-base-patch16-224) and of the NaFlex checkpoints of SigLIP 2
+(`Siglip2Processor`, of google/siglip2-base-patch16-naflex), laid out as SAM 3's (see
+`siglip`), for src/Transformers/processing_siglip*.jl and image_processing_siglip*.jl.
 """
 import json
 import pathlib
@@ -47,9 +52,9 @@ CLIP = dict(image_mean=[0.48145466, 0.4578275, 0.40821073],
 
 
 def main():
-    names = sys.argv[1:] or ["sam3", "qwen3_vl"]
+    names = sys.argv[1:] or ["sam3", "qwen3_vl", "siglip", "siglip2"]
     for name in names:
-        {"qwen3_vl": qwen3_vl, "sam3": sam3}[name]()
+        {"qwen3_vl": qwen3_vl, "sam3": sam3, "siglip": siglip, "siglip2": siglip2}[name]()
 
 
 def copy_config_files(repo, revision, files):
@@ -384,6 +389,164 @@ def qwen3_vl_tokenizer(tokenizer, tensors, meta):
         decoded.append({str(skip): tokenizer.decode(ids, skip_special_tokens=skip)
                         for skip in (False, True)})
     meta["tokenizer/decoded"] = json.dumps(decoded)
+
+
+SIGLIP_REPOS = {"google/siglip-base-patch16-224": "7fd15f0689c79d79e38b1c2e2e2370a7bf2761ed",
+                "google/siglip2-base-patch16-224": "75de2d55ec2d0b4efc50b3e9ad70dba96a7b2fa2"}
+SIGLIP2_REPO, SIGLIP2_REVISION = ("google/siglip2-base-patch16-naflex",
+                                  "b53b807d3a2d5e2b3911292f2d69e5341cdc064c")
+SIGLIP_FILES = ["config.json", "preprocessor_config.json", "tokenizer_config.json",
+                "special_tokens_map.json"]
+# what transformers' SiglipProcessor needs to pad the texts as SigLIP was trained (and its
+# model cards pass), Metalhead's default
+SIGLIP_PADDING = dict(padding="max_length", max_length=64)
+
+
+def siglip_run(tensors, meta, padding):
+    """`run(name, images, create, text=..., repo=..., revision=...)` of the cases of a SigLIP
+    processor: `AutoProcessor.from_pretrained(repo, **create)(images=..., text=..., **padding,
+    **call)`, stored as SAM 3's cases, with the token ids that transformers' tokenizer gives
+    each prompt."""
+    def run(name, images, create, text=None, modes=None, repo=None, revision=None, call=None):
+        proc = AutoProcessor.from_pretrained(repo, revision=revision, **create)
+        pil = [Image.fromarray(img.numpy() if img.ndim == 2 else img.permute(1, 2, 0).numpy(),
+                               mode=mode) if mode else img
+               for img, mode in zip(images, modes or [None] * len(images))]
+        out = proc(images=pil or None, text=text, return_tensors="pt",
+                   **dict(padding, **(call or {})))
+        for i, image in enumerate(images):
+            tensors[f"{name}/image/{i + 1}"] = image.contiguous()
+        for key, value in out.items():
+            tensors[f"{name}/{key}"] = torch.as_tensor(value).contiguous()
+        texts = [] if text is None else [text] if isinstance(text, str) else text
+        for i, prompt in enumerate(texts):
+            tensors[f"{name}/text_ids/{i + 1}"] = torch.tensor(proc.tokenizer(prompt)["input_ids"])
+        meta[name] = json.dumps(dict(create=create, text=text, modes=modes, repo=repo,
+                                     revision=revision, call=call, cls=type(proc).__name__,
+                                     tokenizer=type(proc.tokenizer).__name__))
+        return proc
+    return run
+
+
+def siglip_cases(run, uint8, gen, create, resample):
+    """The cases that the SigLIP processors share, with the settings `create` (small
+    images), as SAM 3's. Returns the image of reals of "float_no_rescale"."""
+    run("exact", [uint8(3, 16, 24)], create, text="a photo of a cat")
+    run("upscale", [uint8(3, 9, 13)], create, text="A Photo of TWO cats!")
+    run("downscale", [uint8(3, 50, 70)], dict(create, **CLIP), text=["a dog"])
+    run("resample", [uint8(3, 9, 13)], dict(create, resample=resample), text="a cat")
+    # images of reals in [0, 1], which Metalhead takes as already rescaled
+    run("float", [torch.rand(3, 9, 13, generator=gen)], dict(create, do_rescale=False),
+        text="a cat")
+    # the 8-bit scale of an image of reals: Metalhead multiplies it by 255 without do_rescale
+    x = torch.rand(3, 9, 13, generator=gen)
+    run("float_no_rescale", [x * 255], dict(create, do_rescale=False), text="a cat")
+    run("no_rescale", [uint8(3, 9, 13)], dict(create, do_rescale=False), text="a cat")
+    run("no_normalize", [uint8(3, 9, 13)], dict(create, do_normalize=False), text="a cat")
+    run("neither", [uint8(3, 9, 13)], dict(create, do_rescale=False, do_normalize=False),
+        text="a cat")
+    run("text_only", [], create, text=["a cat", "two dogs on a sofa, in the sun"])
+    run("images_only", [uint8(3, 9, 13), uint8(3, 30, 8)], create)
+    return x
+
+
+def siglip():
+    """test/references/processors/siglip.safetensors: the outputs of transformers'
+    `SiglipProcessor` of google/siglip-base-patch16-224 (SigLIP's tokenizer) and of
+    google/siglip2-base-patch16-224 (Gemma's, the cases "gemma/<name>"), called with
+    `SIGLIP_PADDING`, on tiny random images and prompts, as SAM 3's: "<name>/image/<i>",
+    "<name>/<key>" and the token ids of each prompt, "<name>/text_ids/<i>". The metadata of
+    a case hold `create`, the prompts, `call`, the other keywords of the call, and the classes
+    of the processor and of its tokenizer."""
+    for repo, revision in SIGLIP_REPOS.items():
+        copy_config_files(repo, revision, SIGLIP_FILES)
+    gen = torch.Generator().manual_seed(0)
+
+    def uint8(*shape):
+        return torch.randint(0, 256, shape, generator=gen, dtype=torch.uint8)
+
+    tensors, meta = {}, {**versions()}
+    small = dict(size={"height": 16, "width": 24})
+    for repo, revision in SIGLIP_REPOS.items():
+        prefix = "" if repo == "google/siglip-base-patch16-224" else "gemma/"
+        base = siglip_run(tensors, meta, SIGLIP_PADDING)
+
+        def run(name, images, create, **kwargs):
+            return base(prefix + name, images, create, repo=repo, revision=revision,
+                        **kwargs)
+
+        x = siglip_cases(run, uint8, gen, small, resample=2 if prefix == "" else 3)
+        tensors[prefix + "float_no_rescale/image/1"] = x
+        run("batch", [uint8(3, 9, 13), uint8(3, 16, 24), uint8(3, 30, 8)], small,
+            text=["a cat", "Two DOGS, on a sofa!", "a red car"])
+        run("no_resize", [uint8(3, 9, 13), uint8(3, 9, 13)], dict(do_resize=False),
+            text=["a cat", "a dog"])
+        # SigLIP converts to RGB, the SigLIP 2 checkpoints set it to None. transformers 5.21
+        # composites RGBA over white, which Metalhead's `convert_to_rgb` doesn't (yet)
+        if prefix == "":
+            run("grey", [uint8(9, 13)], small, text="a cat", modes=["L"])
+        run("max_length", [], small, text=["a cat", "a photo of a dog"],
+            call=dict(max_length=12))
+
+    out = ROOT / "test" / "references" / "processors" / "siglip.safetensors"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    save_file(tensors, out, metadata=meta)
+    print(f"{out}: {out.stat().st_size / 1e3:.1f} kB")
+
+
+def siglip2():
+    """test/references/processors/siglip2.safetensors: the outputs of transformers'
+    `Siglip2Processor` of google/siglip2-base-patch16-naflex, with its default padding and
+    truncation of the texts, on tiny random images and prompts, as SAM 3's: "<name>/image/<i>",
+    "<name>/<key>" and the token ids that transformers' tokenizer (`Siglip2Tokenizer`, which
+    lowercases) gives each prompt, "<name>/text_ids/<i>". The "default" case keeps the
+    settings of the repository and stores every `stride`-th patch of its `pixel_values`. Also
+    stores a table of `get_image_size_for_max_num_patches`, "image_sizes", of rows (height,
+    width, patch_size, max_num_patches, target height, target width)."""
+    copy_config_files(SIGLIP2_REPO, SIGLIP2_REVISION, SIGLIP_FILES)
+    gen = torch.Generator().manual_seed(0)
+
+    def uint8(*shape):
+        return torch.randint(0, 256, shape, generator=gen, dtype=torch.uint8)
+
+    tensors, meta = {}, {"repo": SIGLIP2_REPO, "revision": SIGLIP2_REVISION, **versions()}
+    base = siglip_run(tensors, meta, {})
+
+    def run(name, images, create, **kwargs):
+        return base(name, images, create, repo=SIGLIP2_REPO, revision=SIGLIP2_REVISION,
+                    **kwargs)
+
+    small = dict(patch_size=4, max_num_patches=12)
+    x = siglip_cases(run, uint8, gen, small, resample=3)
+    tensors["float_no_rescale/image/1"] = x
+    run("batch", [uint8(3, 9, 13), uint8(3, 16, 12), uint8(3, 30, 8), uint8(3, 4, 4)], small,
+        text=["a cat", "Two DOGS, on a sofa!", "a red car", "ÀÉÎ ÇÑ straße"])
+    run("tall", [uint8(3, 60, 8)], small, text="a tall image")
+    run("wide", [uint8(3, 5, 90)], small, text="a wide image")
+    run("no_resize", [uint8(3, 12, 16), uint8(3, 8, 4)], dict(small, do_resize=False),
+        text=["a cat", "a dog"])
+    # Siglip2ImageProcessor converts to RGB only with do_convert_rgb (None by default)
+    run("grey", [uint8(9, 13)], dict(small, do_convert_rgb=True), text="a cat", modes=["L"])
+    long = "a photo of " + " and ".join(["a small red cat"] * 20)
+    run("long", [], small, text=[long, "a cat"])  # truncated to 64 tokens
+    run("max_length", [], small, text=[long, "a cat", "a photo of a dog"],
+        call=dict(max_length=12))
+    run("default", [uint8(3, 40, 56)], {}, text="a photo of a cat")
+    tensors["default/pixel_values"] = tensors["default/pixel_values"][:, ::16].contiguous()
+    meta["default"] = json.dumps(dict(json.loads(meta["default"]), stride=16))
+
+    from transformers.models.siglip2.image_processing_siglip2 import (
+        get_image_size_for_max_num_patches)
+    sizes = [(1, 1), (10, 10), (31, 33), (100, 3000), (256, 256), (480, 640), (375, 500),
+             (1080, 1920), (3000, 4000), (8, 1500), (65, 12000), (16, 16), (15, 17)]
+    table = [[h, w, p, n, *get_image_size_for_max_num_patches(h, w, p, n)]
+             for h, w in sizes for p, n in ((16, 256), (14, 1024), (4, 12))]
+    tensors["image_sizes"] = torch.tensor(table)
+
+    out = ROOT / "test" / "references" / "processors" / "siglip2.safetensors"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    save_file(tensors, out, metadata=meta)
+    print(f"{out}: {out.stat().st_size / 1e3:.1f} kB")
 
 
 if __name__ == "__main__":

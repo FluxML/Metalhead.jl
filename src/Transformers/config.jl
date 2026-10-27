@@ -6,10 +6,16 @@ const TRANSFORMERS = TransformersFormat()
 direct_weight_init(::TransformersFormat) = true
 Base.show(io::IO, ::TransformersFormat) = print(io, "transformers")
 
+# The class that transformers' AutoModel builds for a `model_type` (`MODEL_MAPPING_NAMES`),
+# of the ported classes: the architecture of a config.json without `architectures`, as
+# those of the SigLIP 2 checkpoints of fixed resolution.
+const MODEL_TYPE_CLASSES = Dict{String, String}()
+
 function architecture_of(::TransformersFormat, config)
+    haskey(config, "model_type") || return nothing
     archs = get(config, "architectures", nothing)
-    haskey(config, "model_type") && archs isa AbstractVector && !isempty(archs) ||
-        return nothing
+    archs isa AbstractVector && !isempty(archs) ||
+        return get(MODEL_TYPE_CLASSES, config["model_type"], nothing)
     length(archs) == 1 ||
         error("config.json names several architectures, $(join(archs, ", ")); expected one")
     return only(archs)

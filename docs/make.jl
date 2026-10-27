@@ -41,6 +41,7 @@ function write_model_list(path)
         "res2net" => "Res2Net",
         "resnet" => "ResNet",
         "sam3" => "SAM 3",
+        "siglip" => "SigLIP and SigLIP 2",
         "vgg" => "VGG",
         "vision_transformer" => "Vision Transformer (ViT)",
         "xception_aligned" => "Aligned Xception",
@@ -53,10 +54,13 @@ function write_model_list(path)
         "sam3" => "`jetjodh/sam3` is an ungated copy of the weights of Meta's gated " *
                   "`facebook/sam3`. Only the detector of `Sam3VideoModel` is ported, not " *
                   "its tracker.",
+        "siglip" => "The NaFlex checkpoints of SigLIP 2 (`google/siglip2-*-naflex`) are " *
+                    "`Siglip2Model`s, which take images of any aspect ratio; the others, of " *
+                    "fixed resolution, are `SiglipModel`s.",
         "z_image" => "`AutoencoderKL` is diffusers' autoencoder of Stable Diffusion and " *
                      "FLUX.1 too, validated with the one of Z-Image.")
     libraries = ["timm" => "Vision models (timm)",
-        "transformers" => "Language, vision-language and segmentation models (transformers)",
+        "transformers" => "Language, vision-language, image-text and segmentation models (transformers)",
         "diffusers" => "Image generation (diffusers)"]
     library(spec) = replace(string(spec.format), " pipeline" => "")
     ArchSpec = Metalhead.ArchSpec
@@ -154,13 +158,15 @@ makedocs(; modules = [Metalhead],
             "Language models" => "tutorials/language_models.md",
             "Vision-language models" => "tutorials/vision_language.md",
             "Segmenting objects" => "tutorials/segmentation.md",
+            "Zero-shot classification" => "tutorials/zero_shot.md",
             "Text-to-image generation" => "tutorials/text_to_image.md"],
         "Models" => "models.md",
         "Development" => ["How models are validated" => "validation.md",
             "Scope" => "scope.md",
             "Porting a model" => "contributing.md"],
         "Migrating from 0.9" => "migration.md",
-        "API reference" => "api/reference.md"
+        "API reference" => ["Overview" => "api/reference.md",
+            "SigLIP and SigLIP 2" => "api/siglip.md"]
     ],
     warnonly = [:example_block, :missing_docs],
     format = Documenter.HTML(canonical = "https://fluxml.ai/Metalhead.jl/stable/",

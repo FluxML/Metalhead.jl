@@ -12,7 +12,8 @@ With "mrope_positions": true, it takes random `position_ids` of size (3, batch, 
 temporal, height and width positions of a multimodal rotary embedding (Qwen3.5).
 A vision encoder (Qwen3_5VisionModel) has "grid_thw" instead of "input_shape": the
 (t, h, w) grids of patches of its images (see `dump_transformers_vision`). A Sam3Model has
-"inputs", the sizes of its images and prompts (see `dump_sam3`).
+"inputs", the sizes of its images and prompts (see `dump_sam3`), and so do SiglipModel and
+Siglip2Model (see `dump_siglip`).
 
 A spec with "library": "diffusers" describes a diffusers model, "architecture" (the class, e.g.
 "Flux2Transformer2DModel") with the arguments "config", saved with `save_pretrained`, and the
@@ -198,6 +199,8 @@ def dump_transformers(spec, out, args):
         return dump_transformers_vision(spec, out, args)
     if spec["architecture"] == "Sam3Model":
         return dump_sam3(spec, out, args)
+    if spec["architecture"] in ("SiglipModel", "Siglip2Model"):
+        return dump_siglip(spec, out, args)
     seed = spec.get("seed", 0)
     torch.manual_seed(seed)
     model = build(spec).eval()
@@ -383,6 +386,79 @@ def dump_sam3(spec, out, args):
     acts = {"inputs/1": pixel_values, "inputs/2": input_ids + 1, **taps,
             **{f"output/{k}": getattr(outputs, k).contiguous() for k in SAM3_OUTPUTS},
             **{f"kwargs/{k}": v.contiguous() for k, v in kwargs.items()}}
+    meta = {"spec": json.dumps(spec), "call_order": json.dumps(order),
+            "num_params": str(sum(p.numel() for p in model.parameters())), **versions()}
+    save_file(acts, out / "acts.safetensors", metadata=meta)
+
+    size = sum(f.stat().st_size for f in out.iterdir())
+    print(f"{out}: {len(model.state_dict())} tensors, {len(taps)} taps, {size / 1e6:.2f} MB")
+    return size <= args.max_bytes or bool(args.out)
+
+
+SIGLIP_OUTPUTS = ("logits_per_image", "logits_per_text", "text_embeds", "image_embeds")
+
+
+def dump_siglip(spec, out, args):
+    """Write the fixture of a SiglipModel or a Siglip2Model, whose inputs `spec["inputs"]`
+    sizes: "texts" random sequences of "seq_len" token ids ("inputs/1", 1-based as the Julia
+    model takes them), with "kwargs/attention_mask" if they are padded on the right after
+    "lengths"; and random images ("inputs/2"). A SiglipModel takes "images" images of the
+    model's `image_size`, or of "image_size" [h, w] with "interpolate_pos_encoding"
+    ("kwargs/interpolate_pos_encoding", a scalar). A Siglip2Model takes patches, (images,
+    "max_num_patches", patch_dim), of images of the grids "spatial_shapes" [[h, w], ...]
+    ("kwargs/spatial_shapes"), zero after the patches of each image, which
+    "kwargs/pixel_attention_mask" marks unless "pixel_mask" is false. The outputs are
+    "output/<name>" for `SIGLIP_OUTPUTS`, and "output/text_model_output/<name>" and
+    "output/vision_model_output/<name>" for those of the text and vision models."""
+    seed = spec.get("seed", 0)
+    torch.manual_seed(seed)
+    model = build(spec).eval()
+    rerandomize(model, seed)
+    model.save_pretrained(out)
+    model = model.double()
+    exact_float64(model)
+
+    tap_dtype = getattr(torch, args.tap_dtype or ("float32" if args.all_taps else "float16"))
+    taps, order = {}, []
+    names = {n for n, m in model.named_modules()
+             if n and any(True for _ in m.parameters())
+             and (args.all_taps or n.count(".") <= spec.get("tap_depth", 1))}
+    cfg, sizes = model.config, spec["inputs"]
+    gen = torch.Generator().manual_seed(seed + 1)
+    text, vision = cfg.text_config, cfg.vision_config
+    n = sizes.get("seq_len", text.max_position_embeddings)
+    input_ids = torch.randint(text.vocab_size, (sizes["texts"], n), generator=gen)
+    kwargs = {}
+    if "lengths" in sizes:
+        kwargs["attention_mask"] = torch.stack([torch.arange(n) < l for l in sizes["lengths"]]).long()
+    if spec["architecture"] == "Siglip2Model":
+        shapes = torch.tensor(sizes["spatial_shapes"])
+        k = sizes["max_num_patches"]
+        mask = torch.stack([torch.arange(k) < h * w for h, w in shapes.tolist()]).long()
+        patch_dim = vision.num_channels * vision.patch_size ** 2
+        pixel_values = torch.randn(len(shapes), k, patch_dim, generator=gen, dtype=torch.float64)
+        pixel_values = pixel_values * mask[..., None]
+        kwargs["spatial_shapes"] = shapes
+        if sizes.get("pixel_mask", True):
+            kwargs["pixel_attention_mask"] = mask
+    else:
+        h, w = sizes.get("image_size", [vision.image_size] * 2)
+        pixel_values = torch.randn(sizes["images"], vision.num_channels, h, w, generator=gen,
+                                   dtype=torch.float64)
+        if sizes.get("interpolate_pos_encoding"):
+            kwargs["interpolate_pos_encoding"] = True
+    with torch.no_grad():
+        handles = tap_hooks(model, names, taps, order, tap_dtype)
+        outputs = model(input_ids=input_ids, pixel_values=pixel_values, **kwargs)
+        for h in handles:
+            h.remove()
+
+    acts = {"inputs/1": input_ids + 1, "inputs/2": pixel_values, **taps,
+            **{f"output/{k}": getattr(outputs, k).contiguous() for k in SIGLIP_OUTPUTS},
+            **{f"kwargs/{k}": torch.as_tensor(v).contiguous() for k, v in kwargs.items()}}
+    for part in ("text_model_output", "vision_model_output"):
+        for k in ("last_hidden_state", "pooler_output"):
+            acts[f"output/{part}/{k}"] = getattr(getattr(outputs, part), k).contiguous()
     meta = {"spec": json.dumps(spec), "call_order": json.dumps(order),
             "num_params": str(sum(p.numel() for p in model.parameters())), **versions()}
     save_file(acts, out / "acts.safetensors", metadata=meta)

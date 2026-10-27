@@ -64,6 +64,8 @@ def dump_reference(repo, revision, batch, layers=None):
     config = json.loads(pathlib.Path(hf_hub_download(repo, "config.json", revision=sha)).read_text())
     if config.get("model_type") in ("sam3", "sam3_video"):
         return dump_sam3_reference(repo, sha)
+    if config.get("model_type") in ("siglip", "siglip2"):
+        return dump_siglip_reference(repo, sha)
     if "model_type" in config:
         return dump_lm_reference(repo, sha, layers=layers)
     if layers is not None:
@@ -240,6 +242,51 @@ def dump_sam3_reference(repo, sha, size=336, top=2, stride=2):
     save_file({k: v.contiguous() for k, v in tensors.items()}, out, metadata=meta)
     print(f"{out}: {repo}@{sha}, {out.stat().st_size / 1e3:.1f} kB, "
           f"(presence, objects) {summary}")
+
+
+SIGLIP_TEXTS = ["a photo of 2 cats", "a photo of 2 dogs", "Two CATS asleep on a pink couch"]
+COCO_URL = "http://images.cocodataset.org/val2017/000000039769.jpg"
+
+
+def dump_siglip_reference(repo, sha, size=(224, 168), stride=8):
+    """The similarities of SigLIP or SigLIP 2 (`SiglipModel`, `Siglip2Model`) between the
+    image of `COCO_URL`, resized to `size` (w, h) and stored as uint8 ("image"), and
+    `SIGLIP_TEXTS`, from the inputs of the repo's processor (`padding="max_length"` for a
+    `SiglipProcessor`, as its model cards pass it): the token ids, every `stride`-th pixel
+    or patch feature of the pixel values (and the patch grids and masks of SigLIP 2), the
+    outputs of the model but its hidden states, and every `stride`-th token of those."""
+    import io
+    import urllib.request
+    from PIL import Image
+    from transformers import AutoModel, AutoProcessor
+    model = AutoModel.from_pretrained(repo, revision=sha, dtype=torch.float32,
+                                      attn_implementation="sdpa").eval()
+    processor = AutoProcessor.from_pretrained(repo, revision=sha)
+    with urllib.request.urlopen(COCO_URL) as f:
+        image = Image.open(io.BytesIO(f.read())).convert("RGB").resize(size, Image.BICUBIC)
+    pixels = torch.from_numpy(np.asarray(image).copy()).permute(2, 0, 1).contiguous()
+    padding = {} if type(processor).__name__ == "Siglip2Processor" else dict(padding="max_length")
+    inputs = processor(images=[pixels], text=SIGLIP_TEXTS, return_tensors="pt", **padding)
+    with torch.no_grad():
+        outputs = model(**inputs)
+    pixel_values = inputs["pixel_values"]
+    pixel_values = (pixel_values[:, :, ::stride, ::stride] if pixel_values.ndim == 4
+                    else pixel_values[:, ::stride // 2, ::stride])
+    tensors = {"image": pixels, "input_ids": inputs["input_ids"], "pixel_values": pixel_values,
+               **{k: inputs[k] for k in ("spatial_shapes", "pixel_attention_mask") if k in inputs}}
+    for k in ("logits_per_image", "logits_per_text", "text_embeds", "image_embeds"):
+        tensors[k] = getattr(outputs, k).clone()  # logits_per_image may be a view
+    for part in ("text_model_output", "vision_model_output"):
+        out = getattr(outputs, part)
+        tensors[f"{part}/pooler_output"] = out.pooler_output
+        tensors[f"{part}/last_hidden_state"] = out.last_hidden_state[:, ::stride]
+    out = reference_path(repo)
+    meta = {"repo": repo, "revision": sha, "class": type(model).__name__,
+            "texts": json.dumps(SIGLIP_TEXTS), "stride": str(stride), **versions()}
+    save_file({k: v.contiguous() for k, v in tensors.items()}, out, metadata=meta)
+    probs = outputs.logits_per_image.sigmoid()[0].tolist()
+    print(f"{out}: {repo}@{sha}, {out.stat().st_size / 1e3:.1f} kB, probabilities "
+          f"{[round(p, 4) for p in probs]}")
 
 
 def reference_path(name):

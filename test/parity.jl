@@ -7,8 +7,7 @@ using Metalhead: Checkpoint, join_key, layer_params
 
 export Tap, tapify, check_fixture, fixture_model, fixture_inputs, shrink_channels,
        check_lm_reference, check_image_reference, check_sam3_reference, check_pipeline_fixture,
-       reference_model,
-       check_diffusers_reference,
+       reference_model, check_siglip_reference, check_diffusers_reference,
        reference_input, relerr
 
 relerr(a, b) = norm(a .- b) / max(norm(b), floatmin(Float64))
@@ -304,6 +303,44 @@ function check_sam3_reference(file)
 end
 
 """
+    check_siglip_reference(file) -> NamedTuple
+
+Compare SigLIP or SigLIP 2 with the reference outputs of its real checkpoint, written by
+porting/dump_reference.py, on the inputs that the processor of the repository
+(`create_processor`) makes of the stored 8-bit image and of the texts of the metadata, which
+it encodes with the tokenizer of the repository (HuggingFaceTokenizers.jl must be loaded):
+whether those inputs are transformers' (its token ids, the stored pixels or patch features,
+the grids and masks of the patches), and the largest relative errors of the logits, of the
+normalized embeddings, of the outputs of the text and vision models (`pooler_output`) and
+of their hidden states, every `stride` tokens.
+"""
+function check_siglip_reference(file)
+    meta = SafeTensors.deserialize(file).metadata
+    ref = Checkpoint(file)
+    model = create_model(meta["repo"]; pretrained = true, revision = meta["revision"])
+    proc = create_processor(meta["repo"]; revision = meta["revision"])
+    s = parse(Int, meta["stride"])
+    inputs = proc(; images = ref["image"],
+        text = Vector{String}(Metalhead.JSON.parse(meta["texts"])))
+    pixels = ndims(inputs.pixel_values) == 4 ? inputs.pixel_values[1:s:end, 1:s:end, :, :] :
+             inputs.pixel_values[1:s:end, 1:(s ÷ 2):end, :]
+    same = inputs.input_ids == ref["input_ids"] .+ 1 && pixels == ref["pixel_values"] &&
+           all(k -> !haskey(ref, string(k)) || inputs[k] == ref[string(k)],
+        (:spatial_shapes, :pixel_attention_mask))
+    y = model(inputs)
+    err(k) = relerr(y[k], ref[string(k)])
+    part(p, k) = relerr(k === :last_hidden_state ? y[p][k][:, 1:s:end, :] : y[p][k],
+        ref["$p/$k"])
+    return (; repo = meta["repo"], inputs = same, logits = max(err(:logits_per_image),
+            err(:logits_per_text)),
+        embeds = max(err(:text_embeds), err(:image_embeds)),
+        pooled = max(part(:text_model_output, :pooler_output),
+            part(:vision_model_output, :pooler_output)),
+        hidden = max(part(:text_model_output, :last_hidden_state),
+            part(:vision_model_output, :last_hidden_state)))
+end
+
+"""
     check_pipeline_fixture(dir; eltype = Float64, device = identity) -> NamedTuple
 
 Compare a diffusers text-to-image pipeline written by porting/dump.py (a directory with a
@@ -477,7 +514,8 @@ end
 
 The inputs of the model of a fixture: "input" (token ids are made 1-based) or the positional
 "inputs/1", "inputs/2", ..., a list being "inputs/<i>/1", "inputs/<i>/2", ... (see
-[`acts_list`](@ref)), and the keyword arguments "kwargs/<name>".
+[`acts_list`](@ref)), and the keyword arguments "kwargs/<name>", of which a tensor of no
+dimensions is a scalar (a flag such as `interpolate_pos_encoding`).
 """
 function fixture_inputs(acts)
     args = if haskey(acts, "input")
@@ -488,7 +526,8 @@ function fixture_inputs(acts)
         Tuple(haskey(acts, "inputs/$i") ? acts["inputs/$i"] : acts_list(acts, "inputs/$i")
         for i in 1:n)
     end
-    kwargs = (; (Symbol(chopprefix(k, "kwargs/")) => acts[k]
+    scalar(x) = ndims(x) == 0 ? x[] : x
+    kwargs = (; (Symbol(chopprefix(k, "kwargs/")) => scalar(acts[k])
                  for k in sort!(filter(startswith("kwargs/"), collect(keys(acts)))))...)
     return args, kwargs
 end
@@ -498,11 +537,12 @@ end
 
 The relative error of the output `y` of a fixture's model against its "output", or, for a
 model that returns a NamedTuple (a vision encoder), the largest error of its fields against
-"output/<name>".
+"output/<name>", and of the fields of a field that is a NamedTuple against
+"output/<name>/<field>".
 """
-function output_error(y, acts)
-    y isa NamedTuple || return relerr(y, acts["output"])
-    return maximum(k -> relerr(y[k], acts["output/$k"]), keys(y))
+function output_error(y, acts, key = "output")
+    y isa NamedTuple || return relerr(y, acts[key])
+    return maximum(k -> output_error(y[k], acts, "$key/$k"), keys(y))
 end
 
 """

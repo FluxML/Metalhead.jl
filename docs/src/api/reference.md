@@ -63,6 +63,8 @@ Metalhead.Transformers.Sam3VideoModel
 Metalhead.Transformers.Sam3VisionModel
 ```
 
+The models and processors of SigLIP and SigLIP 2 have their own [API reference](siglip.md).
+
 ## diffusers
 
 ```@docs
@@ -114,6 +116,7 @@ Metalhead.Timm.EfficientNetBuilder
 Metalhead.Timm.MixedConv2d
 Metalhead.Timm.CondConv2d
 Metalhead.Transformers
+Metalhead.Transformers.MultiheadAttention
 Metalhead.Diffusers
 Metalhead.Diffusers.timestep_embedding
 Metalhead.Diffusers.AdaLayerNormContinuous

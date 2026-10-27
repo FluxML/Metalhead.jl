@@ -515,6 +515,16 @@ first. The workflow is the one above, with these differences.
   ported part as its field (`detector_model`), whose other weights go in `ignore`. On the
   CPU, NNlib's `conv` allocates a workspace per thread, gigabytes for 3 × 3 convolutions of
   288 × 288 maps.
+- **Dual encoders** (SigLIP and SigLIP 2, `siglip.jl`, `siglip2.jl`). A spec has `"inputs"`,
+  the numbers of texts and images (or the patch grids of SigLIP 2's NaFlex images); the
+  outputs are a NamedTuple whose NamedTuple fields (`text_model_output`) `dump.py` stores as
+  `output/<field>/<name>`. The fields of transformers' outputs keep its names, with the
+  dimensions reversed: `logits_per_image` is `(num_texts, num_images)`. The models also take
+  the outputs of their processors, and transformers' `get_text_features` and
+  `get_image_features` encode one side. A `config.json` without `architectures` (the
+  fixed-resolution SigLIP 2 checkpoints) names its class by its `model_type`, which the port
+  adds to `MODEL_TYPE_CLASSES` (`config.jl`). torch's CPU antialiased bilinear interpolation
+  returns a constant column for outputs one pixel wide: don't build fixtures that hit it.
 - **References.** `uv run dump_reference.py <org>/<repo>` tokenizes `PROMPTS` with the repo's
   tokenizer and stores the ids, the hidden states, the last-position logits and the greedy
   continuation (`check_lm_reference` in `test/parity.jl`); the logits come from the model's

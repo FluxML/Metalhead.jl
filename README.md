@@ -7,8 +7,9 @@
 Metalhead.jl brings pretrained models from the [Hugging Face Hub](https://huggingface.co/models)
 to [Flux.jl](https://fluxml.ai), **in pure Julia**: about 300 vision models from
 [timm](https://github.com/huggingface/pytorch-image-models); the language models Llama, Qwen,
-Gemma 3 and Granite, the vision-language models Qwen3.5 and Qwen3.8 and the segmentation
-model SAM 3 from [transformers](https://github.com/huggingface/transformers); and the
+Gemma 3 and Granite, the vision-language models Qwen3.5 and Qwen3.8, the image-text encoders
+SigLIP and SigLIP 2 and the segmentation model SAM 3 from
+[transformers](https://github.com/huggingface/transformers); and the
 text-to-image pipelines FLUX.2 [klein] and Z-Image-Turbo from
 [diffusers](https://github.com/huggingface/diffusers). FLUX.2 [klein] also edits images.
 
@@ -98,7 +99,8 @@ explains models, processors and the feature interface, and the tutorials cover
 [vision models](https://fluxml.ai/Metalhead.jl/dev/tutorials/vision/),
 [language models](https://fluxml.ai/Metalhead.jl/dev/tutorials/language_models/),
 [vision-language models](https://fluxml.ai/Metalhead.jl/dev/tutorials/vision_language/),
-[segmentation](https://fluxml.ai/Metalhead.jl/dev/tutorials/segmentation/) and
+[segmentation](https://fluxml.ai/Metalhead.jl/dev/tutorials/segmentation/),
+[zero-shot classification](https://fluxml.ai/Metalhead.jl/dev/tutorials/zero_shot/) and
 [text-to-image generation](https://fluxml.ai/Metalhead.jl/dev/tutorials/text_to_image/).
 
 ## Models
@@ -106,7 +108,7 @@ explains models, processors and the feature interface, and the tutorials cover
 | Library | Ported families |
 |:--|:--|
 | [timm](https://github.com/huggingface/pytorch-image-models) | ResNet, ResNeXt, Wide ResNet, SE- and ECA-ResNet, Res2Net, ConvNeXt, DenseNet, VGG, Inception, Inception-ResNet, Xception, EfficientNet and EfficientNetV2, MobileNetV1 to V4, MNASNet, MixNet, FBNet, LCNet, ConvMixer, MLP-Mixer, ResMLP, gMLP, and ViT with the image encoders of DINOv2, CLIP and SigLIP |
-| [transformers](https://github.com/huggingface/transformers) | Llama, Qwen2 and Qwen3, Gemma 3, and Granite, with its mixtures of experts and the Granite 4.0 models without Mamba layers; Qwen3.5 and Qwen3.8, vision-language models; SAM 3 and SAM 3.1, which segment the objects that a prompt describes |
+| [transformers](https://github.com/huggingface/transformers) | Llama, Qwen2 and Qwen3, Gemma 3, and Granite, with its mixtures of experts and the Granite 4.0 models without Mamba layers; Qwen3.5 and Qwen3.8, vision-language models; SigLIP and SigLIP 2, image-text dual encoders for zero-shot classification and retrieval; SAM 3 and SAM 3.1, which segment the objects that a prompt describes |
 | [diffusers](https://github.com/huggingface/diffusers) | FLUX.2 [klein] and Z-Image (Turbo): the text-to-image pipelines, their transformers and their autoencoders; FLUX.2 [klein] also edits images |
 
 The [list of models](https://fluxml.ai/Metalhead.jl/dev/models/) gives each architecture of
