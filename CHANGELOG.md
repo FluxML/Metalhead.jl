@@ -6,7 +6,7 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
 
 ## [0.10.0]
 
-Breaking: Flux 0.16.14, NNlib 0.9.54 and MLUtils 0.4.9 are now the minimum versions, and the
+Breaking: Flux 0.16.14, NNlib 0.9.55 and MLUtils 0.4.9 are now the minimum versions, and the
 hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and the
 [migration guide](https://fluxml.ai/Metalhead.jl/dev/migration/)).
 
@@ -150,7 +150,7 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
 ### Changed
 
 - New dependencies: HuggingFaceApi, SafeTensors, JSON and ConcreteStructs, and the weak
-  dependencies HuggingFaceTokenizers and ImageCore. Flux 0.16.14, NNlib 0.9.54 and MLUtils
+  dependencies HuggingFaceTokenizers and ImageCore. Flux 0.16.14, NNlib 0.9.55 and MLUtils
   0.4.9 are now the minimum versions (#335, #337, #341).
 - Downloads share the cache of Python's `huggingface_hub` (`~/.cache/huggingface/hub`), and
   its `HF_TOKEN`, `HF_HUB_CACHE` and `HF_HUB_OFFLINE` environment variables.
@@ -170,6 +170,8 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
 ### Fixed
 
 - `MobileNetv3` on Julia 1.13 (#303).
+- On CUDA GPUs, the mean pooling of Inception v3 and v4 and Res2Net on feature maps of 1 × 1
+  or 2 × 2, wrong with cuDNN before NNlib 0.9.55.
 
 ## [0.9.7] - 2026-10-23
 
