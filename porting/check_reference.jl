@@ -31,12 +31,18 @@ for file in ARGS
         continue
     end
     if haskey(ref, "input_ids")
-        r = check_lm_reference(file)
-        ok = r.hidden_states <= 1e-4 && r.last_logits <= 1e-4 && r.generated
-        global pass &= ok
-        println(rpad(meta["repo"], 50), " hidden_states ", round(r.hidden_states; sigdigits = 2),
-            "  last_logits ", round(r.last_logits; sigdigits = 2),
-            "  greedy ", r.generated ? "same" : "DIFFERENT", ok ? "  ok" : "  FAIL")
+        model = reference_model(file)
+        checks = Pair{String, Function}["" => check_lm_reference]
+        haskey(ref, "image/input_ids") && push!(checks, " (image)" => check_image_reference)
+        for (what, check) in checks
+            r = check(file; model)
+            ok = r.hidden_states <= 1e-4 && r.last_logits <= 1e-4 && r.generated
+            global pass &= ok
+            println(rpad(meta["repo"] * what, 50), " hidden_states ",
+                round(r.hidden_states; sigdigits = 2),
+                "  last_logits ", round(r.last_logits; sigdigits = 2),
+                "  greedy ", r.generated ? "same" : "DIFFERENT", ok ? "  ok" : "  FAIL")
+        end
         continue
     end
     model = create_model(meta["repo"]; pretrained = true, revision = meta["revision"])

@@ -448,7 +448,9 @@ causal attention (`"full_attention"`), as `layer_types` says, by default every
 `full_attention_interval`-th layer. The attention has a sigmoid gate on its output, norms
 its queries and keys per head and rotates the first `head_dim * partial_rotary_factor`
 features of each with the multimodal rotary embedding of `rope_parameters["mrope_section"]`
-(only the default `rope_type`). The RMSNorms scale by `1 + weight`.
+(only the default `rope_type`). The RMSNorms scale by `1 + weight`. The output of the gated
+delta rule is gated with SiLU, as in transformers, which ignores `output_gate_type`: it may
+be `nothing`, `"silu"` or `"swish"` (Qwen3.8's), and other values are an error.
 """
 function qwen3_5_text_model(; vocab_size = 248_320, hidden_size = 4096,
         intermediate_size = 12_288, num_hidden_layers = 32, num_attention_heads = 16,
@@ -458,8 +460,9 @@ function qwen3_5_text_model(; vocab_size = 248_320, hidden_size = 4096,
         attention_bias = false, attention_dropout = 0.0, head_dim = 256,
         linear_conv_kernel_dim = 4, linear_key_head_dim = 128, linear_value_head_dim = 128,
         linear_num_key_heads = 16, linear_num_value_heads = 32, layer_types = nothing,
-        full_attention_interval = 4)
+        full_attention_interval = 4, output_gate_type = nothing)
     types = qwen3_5_layer_types(; num_hidden_layers, layer_types, full_attention_interval)
+    check_output_gate_type(output_gate_type)
     head_dim, num_key_value_heads = attention_heads(; hidden_size, num_attention_heads,
         num_key_value_heads, head_dim)
     linear_num_value_heads % linear_num_key_heads == 0 ||
@@ -529,13 +532,14 @@ function qwen3_5_for_causal_lm(; vocab_size = 248_320, hidden_size = 4096,
         partial_rotary_factor = nothing, attention_bias = false, attention_dropout = 0.0,
         head_dim = 256, linear_conv_kernel_dim = 4, linear_key_head_dim = 128,
         linear_value_head_dim = 128, linear_num_key_heads = 16, linear_num_value_heads = 32,
-        layer_types = nothing, full_attention_interval = 4)
+        layer_types = nothing, full_attention_interval = 4, output_gate_type = nothing)
     model = qwen3_5_text_model(; vocab_size, hidden_size, intermediate_size,
         num_hidden_layers, num_attention_heads, num_key_value_heads, hidden_act,
         max_position_embeddings, initializer_range, rms_norm_eps, rope_parameters,
         rope_theta, rope_scaling, partial_rotary_factor, attention_bias, attention_dropout,
         head_dim, linear_conv_kernel_dim, linear_key_head_dim, linear_value_head_dim,
-        linear_num_key_heads, linear_num_value_heads, layer_types, full_attention_interval)
+        linear_num_key_heads, linear_num_value_heads, layer_types, full_attention_interval,
+        output_gate_type)
     lm_head = tie_word_embeddings ? TiedLMHead(model.embed_tokens.weight) :
               init_layer(Dense, hidden_size => vocab_size; bias = false,
         init = normal_init(initializer_range))
@@ -556,6 +560,17 @@ function qwen3_5_layer_types(; num_hidden_layers, layer_types, full_attention_in
             error("`layer_types` entry $(repr(t)) is not supported; supported: $supported")
     end
     return types
+end
+
+# `output_gate_type`, which `Qwen3_5TextConfig` doesn't declare and transformers doesn't
+# read: its `Qwen3_5RMSNormGated` always gates with SiLU. Qwen3.8 sets "swish", the same.
+# transformers' Qwen4-Exp reads the key as the activation of the same gate, so that a
+# checkpoint with another value would be computed with the wrong one.
+function check_output_gate_type(output_gate_type)
+    supported = (nothing, "silu", "swish")
+    output_gate_type in supported ||
+        error("`output_gate_type = $(repr(output_gate_type))` is not supported by the Metalhead port of Qwen3.5, whose linear attention, like transformers', gates its output with SiLU; supported: $supported")
+    return nothing
 end
 
 # The rotary embedding of `rope_parameters` (or `rope_scaling`), whose `rope_theta` and
@@ -791,4 +806,5 @@ end
 register!(ArchSpec(TRANSFORMERS, "Qwen3_5ForConditionalGeneration",
     qwen3_5_for_conditional_generation;
     family = "qwen", ignore = [r"^mtp\."],
-    references = ["Qwen/Qwen3.5-0.8B" => "2fc06364715b967f1860aea9cf38778875588b17"]))
+    references = ["Qwen/Qwen3.5-0.8B" => "2fc06364715b967f1860aea9cf38778875588b17",
+        "Qwen/Qwen3.8-27B" => "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0"]))

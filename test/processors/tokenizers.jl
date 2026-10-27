@@ -321,4 +321,18 @@ if TEST_NETWORK
         @test size(short.input_ids) == (8, 2) && all(==(1), short.attention_mask[:, 1])
         @test short.input_ids[:, 1] == ref["input_ids"][1:8] .+ 1
     end
+
+    # the Qwen3 tokenizer of Z-Image-Turbo, whose pipeline formats prompts with thinking
+    # enabled
+    @testset "Z-Image-Turbo" begin
+        D = Metalhead.Diffusers
+        repo = "Tongyi-MAI/Z-Image-Turbo"
+        name = replace(repo, "/" => "--")
+        ref = reference(name)
+        tok = (@test_logs create_processor(repo; subfolder = "tokenizer")).tokenizer
+        @test tok isa Tokenizer
+        out = D.z_image_prompt_inputs(tok, metadata(name)["prompt"])
+        @test out.input_ids == ref["input_ids"] .+ 1
+        @test out.attention_mask == ref["attention_mask"]
+    end
 end

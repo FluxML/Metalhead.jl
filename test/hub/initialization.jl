@@ -10,7 +10,8 @@ const FIXTURES = joinpath(pkgdir(Metalhead), "test", "fixtures")
     for name in ("resnet_basic", "convnext_linear_mlp", "vit_dinov2_reg", "resmlp",
         "gmlp", "efficientnet_cc_tf_same", "llama_options", "gemma3_tiny",
         "granitemoe_tiny", "qwen3_5_tiny", "sam3_tiny", "vae_flux2_options",
-        "transformer_flux2_options")
+        "transformer_flux2_options", "autoencoder_kl_tiny", "autoencoder_kl_options",
+        "transformer_z_image_tiny", "transformer_z_image_options")
         dir = joinpath(FIXTURES, name)
         source = model_source(dir, nothing)
         config = source_config(source)

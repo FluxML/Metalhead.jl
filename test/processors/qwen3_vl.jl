@@ -369,4 +369,33 @@ if TEST_NETWORK
         @test HuggingFaceTokenizers.decode(tok, inputs.input_ids[1:3] .- 1;
             skip_special_tokens = false) == "<|im_start|>user\n"
     end
+
+    # Qwen3.8 has the preprocessor_config.json of Qwen3.5, and a tokenizer.json with the
+    # tokens that Qwen3.5's lacks: the inputs that transformers' processor made of the
+    # prompts and the image of the reference of its model (test/models/qwen3_5.jl)
+    @testset "Qwen/Qwen3.8-27B" begin
+        repo = "Qwen/Qwen3.8-27B"
+        file = joinpath(pkgdir(Metalhead), "test", "references",
+            "Qwen--Qwen3.8-27B.safetensors")
+        meta = SafeTensors.deserialize(file).metadata
+        ref = Metalhead.Checkpoint(file)
+        proc = @test_logs create_processor(repo)
+        @test proc isa Qwen3VLProcessor && proc.tokenizer isa Tokenizer
+        @test Metalhead.settings(proc.image_processor) ==
+              Metalhead.settings(create_processor(QWEN).image_processor)
+        @test Metalhead.token_id(proc.tokenizer, "<|audio_pad|>") !== nothing
+        ids = ref["input_ids"]
+        for (b, prompt) in enumerate(JSON.parse(meta["prompts"]))
+            @test Metalhead.encode_ids(proc.tokenizer, prompt)[1:size(ids, 1)] == ids[:, b]
+        end
+        # transformers' `min_pixels` kept the size of the image
+        image = ref["image/image"]
+        proc = create_processor(repo;
+            size = (; shortest_edge = size(image, 1) * size(image, 2),
+                longest_edge = 16_777_216))
+        out = proc(; images = image, text = meta["image_text"])
+        @test out.input_ids == vec(ref["image/input_ids"]) .+ 1
+        @test out.image_grid_thw == ref["image/image_grid_thw"]
+        @test Float16.(out.pixel_values) == ref["image/pixel_values"]
+    end
 end

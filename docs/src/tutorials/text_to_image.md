@@ -36,11 +36,33 @@ img = only(Metalhead.image_matrix(cpu(image)))
 FileIO.save("fox.png", img)  # HuggingFaceTokenizers exports a `save` too
 ```
 
+## Z-Image-Turbo
+
+[Z-Image-Turbo](https://huggingface.co/Tongyi-MAI/Z-Image-Turbo) of Alibaba's Tongyi Lab, a
+model of 6 billion parameters under the Apache 2.0 license, distilled to generate an image
+in 9 steps without guidance, loads the same way, as a
+[`ZImagePipeline`](@ref Metalhead.Diffusers.ZImagePipeline):
+
+```julia
+pipe = gpu(create_model("Tongyi-MAI/Z-Image-Turbo"; eltype = BFloat16))
+image = pipe("A photo of a red fox sitting in fresh snow, looking at the camera";
+    num_inference_steps = 9, guidance_scale = 0)
+```
+
+Its defaults are those of diffusers' `ZImagePipeline`, for the base model Z-Image: 50 steps
+with classifier-free guidance (`guidance_scale = 5`). The pipeline downloads 33 GB (its
+transformer is stored in `Float32`) and holds 21 GB of weights in `BFloat16`. Its text
+encoder is the Qwen3 decoder whose hidden states of the second-to-last layer condition the
+image, one matrix per prompt without the padding; `negative_prompt` gives the negative
+prompts of guidance, and `cfg_normalization` and `cfg_truncation` limit it as in diffusers.
+
 ## Options
 
 The keyword arguments of the pipeline are those of diffusers' `Flux2KleinPipeline`:
 
-- `height` and `width` (1024 by default), multiples of 16.
+- `height` and `width` (1024 by default, or the size of the first reference image), multiples
+  of 16.
+- `image`: reference images, to edit (see [Image editing](@ref image_editing) below).
 - `num_inference_steps`, and `guidance_scale` for the base checkpoints.
 - `latents`: the initial noise, of size `(width ÷ 16, height ÷ 16, 128, batch)`. By default it is
   drawn from `rng` (`Random.default_rng()`), so that `rng = Xoshiro(0)` makes an image
@@ -67,6 +89,34 @@ images = [pipe(prompt; width = 1024, height = 768, num_inference_steps = 4,
 
 *Four prompts, with the seeds 1 to 4, in 4 steps each.*
 
+## [Image editing](@id image_editing)
+
+Given reference images, `image`, FLUX.2 [klein] generates the image that the prompt asks of
+them: the same scene at another time, an object added or restyled, or the subjects of several
+images put together. A reference image is an image as processors take it (see
+[`Metalhead.image_array`](@ref)): an array of size `(width, height, channels)` of 8-bit values
+or of reals from 0 to 1, or, with ImageCore loaded, a matrix of colorants as `FileIO.load`
+returns it.
+
+```julia
+using FileIO
+
+fox = load("fox.png")
+night = pipe("Make it night, under the northern lights"; image = fox, num_inference_steps = 4)
+```
+
+A vector of images gives several references, which every prompt of a batch takes. The image
+has the size of the first reference by default; `height` and `width` set another. The
+pipeline prepares each reference as diffusers prepares a PIL image: an image of more than
+1024 × 1024 pixels is resized to about that area with Pillow's Lanczos filter (reals are
+first rounded to 8 bits), its sides are cropped about the centre to multiples of 16, and it is
+converted to RGB; a side under 64 pixels, or an aspect ratio over 8:1, is an error. The
+autoencoder encodes each reference into latents, normalised as the latents of the pipeline,
+and the transformer attends to their tokens along with those of the image it denoises: each
+reference has a time coordinate of its own in the rotary positions (10 for the first, 20 for
+the second, ...), the generated image 0. The more reference tokens, the slower each step: one
+reference of the size of the output about doubles the tokens of the image.
+
 ## The steps of the pipeline
 
 The prompt is formatted with the chat template of the Qwen3 text encoder, tokenized by the
@@ -86,7 +136,7 @@ indices of prompts tokenized otherwise, with their attention mask.
 The components are fields of the pipeline: `pipe.text_encoder` is a Qwen3 language model (see
 [Language models](@ref language_models)), `pipe.transformer` predicts the flow of the latents
 at each step, `pipe.vae` decodes the final latents into an image, and `pipe.scheduler` holds the
-noise levels of the steps.
+noise levels of the steps. `pipe.vae` also encodes the reference images of an edit.
 
 ![The image that FLUX.2 [klein] predicts at each of its four steps](../assets/flux2_steps.jpg)
 

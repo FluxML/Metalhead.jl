@@ -519,9 +519,13 @@ first. The workflow is the one above, with these differences.
   tokenizer and stores the ids, the hidden states, the last-position logits and the greedy
   continuation (`check_lm_reference` in `test/parity.jl`); the logits come from the model's
   own head, which may scale (Granite) or softcap them. Prefer the smallest checkpoint of
-  the architecture. Metalhead ports no tokenizer (see "Processors"); with
-  `METALHEAD_TEST_NETWORK`, `test/processors/tokenizers.jl` checks that the tokenizer of each
-  repository of its list gives the ids of its reference: add the new one.
+  the architecture. A checkpoint that doesn't fit in memory in float32 (Qwen3.8-27B) gets
+  `--layers k`, the real weights of its first `k` decoder layers: `reference_model`
+  (`test/parity.jl`) builds the same layers from `config.json`, loads them strictly and
+  checks the keys and shapes of the other layers. Its test runs only with `TEST_LARGE`.
+  Metalhead ports no tokenizer (see "Processors"); with `METALHEAD_TEST_NETWORK`,
+  `test/processors/tokenizers.jl` checks that the tokenizer of each repository of its list
+  gives the ids of its reference: add the new one.
 
 ## Processors
 
@@ -617,7 +621,7 @@ above, with these differences.
   (`transformers/`, `autoencoders/`) and `pipelines/<name>/pipeline_<name>.py`. Shared blocks
   are in `models/embeddings.py`, `normalization.py`, `attention_processor.py`, `resnet.py`,
   `unets/unet_2d_blocks.py` and `autoencoders/vae.py`: port them once, in
-  `src/Diffusers/layers.jl` or `vae.jl`. Leave out what text-to-image doesn't run (the KV cache
+  `src/Diffusers/layers.jl` or `vae.jl`. Leave out what inference doesn't run (the KV cache
   of reference images, LoRA, fused projections, tiling) and say so in the file header.
 - **Registry.** Register the class of `_class_name` with `DIFFUSERS` and the pipeline family,
   e.g. `register!(ArchSpec(DIFFUSERS, "AutoencoderKLFlux2", builder; family = "flux2", references = [...]))`.
@@ -644,8 +648,11 @@ above, with these differences.
   (`.float()` in `get_1d_rotary_pos_embed`), `apply_rotary_emb` (`x.float()`) and the Euler
   `step` of the scheduler in float32. `exact_float64_diffusers` (`porting/common.py`) patches
   them; a model that imports a helper by name (`from ..embeddings import apply_rotary_emb`) needs
-  the patch in its own module. Pipelines also keep the noise levels and the eps of the latent
-  statistics in float32, so pipeline fixtures match to about 1e-12.
+  the patch in its own module, and a helper defined inside a method (Z-Image's
+  `apply_rotary_emb`, in its attention processor's `__call__`) a patch of the method. Pipelines also keep the noise levels and the eps of the latent
+  statistics in float32, so pipeline fixtures match to about 1e-12. A pipeline that casts its
+  latents to float32 itself (Z-Image's `.float()` and `assert latents.dtype == torch.float32`)
+  runs as a copy of its `__call__` with float64 in their place (`float64_z_image_call`).
 - **Half precision** (see "Half precision" above). diffusers casts to float32 where 16 bits
   lose too much: the sinusoidal timestep embeddings (angles of timesteps near 1000 are off by
   radians in BFloat16) and the scheduler's step. Do the same, and convert back like torch's
@@ -655,13 +662,23 @@ above, with these differences.
   model's eltype), mirror it, and loosen `check_half_precision` for that fixture with a
   comment, rather than diverge from diffusers.
 - **Specs.** `{"library": "diffusers", "architecture": "<class>", "config": {...}, "inputs": {...}, "tap_depth": 2}`.
+  A forward that takes a list of tensors of different sizes (Z-Image's captions) has it stored as
+  `inputs/<i>/<j>`, which `fixture_inputs` reads as a `Vector`; the Julia forward takes it so,
+  and the tensors of equal sizes stacked (Z-Image's latents). `"weight_dtype": "float16"`
+  halves the weights of a diffusers model (Z-Image's timestep MLP alone has 300k parameters).
   `diffusers_inputs` in `porting/dump.py` builds the inputs of each class from the sizes in
   `"inputs"`; add a branch for a new class. A pipeline spec has `"components"` (configs, with
   the text encoder as a transformers spec) and the settings of a run (`porting/specs/flux2_klein_tiny.json`);
   `dump_flux2_klein` saves the pipeline without a tokenizer and runs it from random token ids
-  and fixed noise, and `Parity.check_pipeline_fixture` compares the prompt embeddings, latents
-  and images. Give a tiny text encoder fewer layers than `text_encoder_out_layers` asks for
-  only knowingly: transformers norms the last of `output_hidden_states`.
+  and fixed noise, and with random reference images (`"edit"`), and
+  `Parity.check_pipeline_fixture` compares the prompt embeddings, latents and images, and the
+  reference images as the pipeline prepares them. A pipeline takes images, as processors do,
+  through `image_batch`; it prepares PIL images, of 8-bit values, as diffusers does, with
+  `Timm.pil_resize` (premultiplied by the alpha for LA and RGBA images, as Pillow resizes
+  them). To check preparation that the tiny models can't run end to end (images over an
+  area limit), stop the pipeline before it encodes them (`prepared_images` in `dump.py`).
+  Give a tiny text encoder fewer layers than `text_encoder_out_layers` asks for only
+  knowingly: transformers norms the last of `output_hidden_states`.
 - **Taps.** torch hooks modules that diffusers calls as modules even when they have no
   parameters (`pos_embed`); a Julia helper that computes the same tables leaves them
   "not tapped", which is harmless. A tapped submodule is wrapped in a `Tap`, so helpers that

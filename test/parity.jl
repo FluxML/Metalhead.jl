@@ -7,6 +7,7 @@ using Metalhead: Checkpoint, join_key, layer_params
 
 export Tap, tapify, check_fixture, fixture_model, fixture_inputs, shrink_channels,
        check_lm_reference, check_image_reference, check_sam3_reference, check_pipeline_fixture,
+       reference_model,
        check_diffusers_reference,
        reference_input, relerr
 
@@ -152,17 +153,64 @@ function fixture_model(dir; eltype = Float64)
 end
 
 """
-    check_lm_reference(file) -> NamedTuple
+    reference_model(file)
+
+The model of the reference `file` of a language model, written by porting/dump_reference.py:
+that of its repository at its commit. A reference of the first layers of a checkpoint
+(`num_hidden_layers` in its metadata, from `dump_reference.py --layers`) gets the model of
+`config.json` with those layers only, whose weights load strictly. The weights of each other
+layer must then have the keys and shapes of the first of those layers of the same type in
+`layer_types`, so that the whole checkpoint would load too.
+"""
+function reference_model(file)
+    meta = SafeTensors.deserialize(file).metadata
+    repo, revision = meta["repo"], meta["revision"]
+    haskey(meta, "num_hidden_layers") ||
+        return create_model(repo; pretrained = true, revision)
+    k = parse(Int, meta["num_hidden_layers"])
+    source = Metalhead.model_source(repo, revision, "")
+    config = Metalhead.source_config(source)
+    nested = haskey(config, "text_config")
+    text = nested ? config["text_config"] : config
+    n = text["num_hidden_layers"]
+    types = get(text, "layer_types", nothing)
+    first_layers = Dict{String, Any}("num_hidden_layers" => k)
+    types === nothing || (first_layers["layer_types"] = types[1:k])
+    kwargs = nested ? (; text_config = Metalhead.nt(merge(text, first_layers))) :
+             Metalhead.nt(first_layers)
+    model = create_model(repo; pretrained = false, revision, kwargs...)
+    ckpt = Checkpoint(Metalhead.source_weights(source))
+    prefix = last(Metalhead.Transformers.decoder(model)) * ".layers."
+    function shapes(i)
+        layer = "$prefix$i."
+        return Dict(chopprefix(key, layer) => Metalhead.torch_shape(ckpt, key)
+        for key in keys(ckpt) if startswith(key, layer))
+    end
+    for i in k:(n - 1)
+        j = types === nothing ? 0 : findfirst(==(types[i + 1]), types) - 1
+        j < k || error("layer $i is a $(types[i + 1]) layer, unlike the first $k")
+        shapes(i) == shapes(j) ||
+            error("the weights of layer $i differ in keys or shapes from those of layer $j")
+    end
+    other_layers = Regex("^" * replace(prefix, "." => "\\.") * "(" * join(k:(n - 1), "|") *
+                         ")\\.")
+    spec = Metalhead.lookup(only(config["architectures"]))
+    Metalhead.load_state!(model, ckpt;
+        ignore = [Metalhead.DEFAULT_IGNORE; spec.ignore; other_layers])
+    return model
+end
+
+"""
+    check_lm_reference(file; model = reference_model(file)) -> NamedTuple
 
 Compare a causal language model with the reference outputs of its real checkpoint, written by
 porting/dump_reference.py: the relative errors of the hidden states and of the logits of the
 last position, and whether greedy decoding reproduces transformers' continuation of the first
 prompt.
 """
-function check_lm_reference(file)
+function check_lm_reference(file; model = reference_model(file))
     meta = SafeTensors.deserialize(file).metadata
     ref = Checkpoint(file)
-    model = create_model(meta["repo"]; pretrained = true, revision = meta["revision"])
     ids = ref["input_ids"] .+ 1
     hidden = forward_features(model, ids)
     logits = forward_head(model, hidden[:, end, :])
@@ -173,7 +221,7 @@ function check_lm_reference(file)
 end
 
 """
-    check_image_reference(file) -> NamedTuple
+    check_image_reference(file; model = reference_model(file)) -> NamedTuple
 
 Compare a vision-language model with the reference outputs of its real checkpoint on a
 prompt about an image ("image/..." keys, written by porting/dump_reference.py): the relative
@@ -181,10 +229,9 @@ errors of the hidden states and of the logits of the last position, and whether 
 decoding reproduces transformers' continuation, from the same `pixel_values` and
 `image_grid_thw`.
 """
-function check_image_reference(file)
+function check_image_reference(file; model = reference_model(file))
     meta = SafeTensors.deserialize(file).metadata
     ref = Checkpoint(file)
-    model = create_model(meta["repo"]; pretrained = true, revision = meta["revision"])
     ids = ref["image/input_ids"] .+ 1
     images = (; pixel_values = Float32.(ref["image/pixel_values"]),
         image_grid_thw = ref["image/image_grid_thw"])
@@ -262,8 +309,10 @@ end
 Compare a diffusers text-to-image pipeline written by porting/dump.py (a directory with a
 model_index.json) with diffusers': the relative errors of the prompt embeddings of its token ids
 (and of the negative prompt's, for classifier-free guidance), and of the denoised latents and
-the images that the pipeline makes from diffusers' embeddings and initial noise. `device`
-(e.g. `gpu_device()`) moves the pipeline and its inputs.
+the images that the pipeline makes from diffusers' embeddings and initial noise. With an
+"edit" in the spec, also those of the edit of its reference images (`edit_latents`,
+`edit_image`), and of the reference images that the pipeline prepares (`reference_images`).
+`device` (e.g. `gpu_device()`) moves the pipeline and its inputs.
 """
 function check_pipeline_fixture(dir; eltype = Float64, device = identity)
     file = joinpath(dir, "acts.safetensors")
@@ -272,6 +321,8 @@ function check_pipeline_fixture(dir; eltype = Float64, device = identity)
     pipe = device(create_model(dir; pretrained = true, eltype))
     input(key) = device(Base.eltype(acts[key]) <: AbstractFloat ? eltype.(acts[key]) :
                         acts[key])
+    pipe isa Metalhead.Diffusers.ZImagePipeline &&
+        return check_z_image_fixture(pipe, acts, spec, input)
     encode(prefix) = cpu(Metalhead.Diffusers.encode_prompt(pipe,
         input(prefix * "input_ids") .+ 1; attention_mask = input(prefix * "attention_mask"),
         text_encoder_out_layers = Tuple(spec["text_encoder_out_layers"])))
@@ -282,10 +333,54 @@ function check_pipeline_fixture(dir; eltype = Float64, device = identity)
         negative_prompt_embeds = guided ? input("negative_prompt_embeds") : nothing)
     latents = cpu(pipe(input("prompt_embeds"); kwargs..., output_type = :latent))
     image = cpu(pipe(input("prompt_embeds"); kwargs...))
+    edit = haskey(spec, "edit") ? check_pipeline_edit(pipe, acts, spec, kwargs, input) :
+           (; edit_latents = 0.0, edit_image = 0.0, reference_images = 0.0)
     return (; prompt_embeds = relerr(encode(""), acts["prompt_embeds"]),
         negative_prompt_embeds = guided ?
                                  relerr(encode("negative_"), acts["negative_prompt_embeds"]) :
                                  0.0,
+        latents = relerr(latents, acts["output_latents"]),
+        image = relerr(image, acts["output"]), edit...)
+end
+
+# The values in [-1, 1] of the 8-bit values of an image that a pipeline prepares.
+from_8bit(x) = 2 .* (Float32.(x) ./ 255) .- 1
+
+function check_pipeline_edit(pipe, acts, spec, kwargs, input)
+    edit = spec["edit"]
+    n = count(k -> startswith(k, "edit/image/"), keys(acts))
+    images = [acts["edit/image/$i"] for i in 1:n]
+    f = 2 * Metalhead.Diffusers.vae_scale_factor(pipe)
+    prepared = [relerr(Metalhead.Diffusers.reference_image(x, f),
+                    from_8bit(acts["edit/prepared/$i"])) for (i, x) in enumerate(images)]
+    hw = (; height = get(edit, "height", nothing), width = get(edit, "width", nothing))
+    kwargs = merge(kwargs, (; image = images, hw..., latents = input("edit/latents")))
+    latents = cpu(pipe(input("prompt_embeds"); kwargs..., output_type = :latent))
+    image = cpu(pipe(input("prompt_embeds"); kwargs...))
+    return (; edit_latents = relerr(latents, acts["edit/output_latents"]),
+        edit_image = relerr(image, acts["edit/output"]), reference_images = maximum(prepared))
+end
+
+# The Z-Image pipeline takes the prompt embeddings as a list, "prompt_embeds/<i>", whose
+# lengths differ, and has the classifier-free guidance options of the spec.
+function check_z_image_fixture(pipe, acts, spec, input)
+    embeds(key) = [input("$key/$j") for j in 1:count(startswith("$key/"), keys(acts))]
+    joined(xs) = reduce(hcat, cpu.(xs))
+    encode(prefix) = joined(Metalhead.Diffusers.encode_prompt(pipe,
+        input(prefix * "input_ids") .+ 1; attention_mask = input(prefix * "attention_mask")))
+    guided = haskey(acts, "negative_prompt_embeds/1")
+    kwargs = (; height = spec["height"], width = spec["width"],
+        num_inference_steps = spec["num_inference_steps"],
+        guidance_scale = spec["guidance_scale"],
+        cfg_normalization = get(spec, "cfg_normalization", false),
+        cfg_truncation = get(spec, "cfg_truncation", 1.0), latents = input("latents"),
+        negative_prompt_embeds = guided ? embeds("negative_prompt_embeds") : nothing)
+    latents = cpu(pipe(embeds("prompt_embeds"); kwargs..., output_type = :latent))
+    image = cpu(pipe(embeds("prompt_embeds"); kwargs...))
+    return (; prompt_embeds = relerr(encode(""), joined(acts_list(acts, "prompt_embeds"))),
+        negative_prompt_embeds = guided ?
+                                 relerr(encode("negative_"),
+            joined(acts_list(acts, "negative_prompt_embeds"))) : 0.0,
         latents = relerr(latents, acts["output_latents"]),
         image = relerr(image, acts["output"]))
 end
@@ -296,7 +391,8 @@ end
 Compare a diffusers model or pipeline with the reference outputs of its real checkpoint,
 written by porting/dump_reference.py: the relative errors of the latents and images of an
 autoencoder, of the output of a transformer, or of the prompt embeddings, denoised latents and
-image of a pipeline, which starts from its own prompt embeddings.
+image of a pipeline, which starts from its own prompt embeddings (and the same of an edit of
+a reference image, `edit_...`, when the reference has one).
 """
 function check_diffusers_reference(file; eltype = Float32)
     meta = SafeTensors.deserialize(file).metadata
@@ -304,26 +400,70 @@ function check_diffusers_reference(file; eltype = Float32)
     model = create_model(meta["repo"]; pretrained = true, revision = meta["revision"], eltype)
     D = Metalhead.Diffusers
     class = meta["class"]
+    # the difference of the parameter counts, when the reference has PyTorch's
+    counts = haskey(meta, "num_params") ?
+             (; num_params = abs(sum(length, Flux.trainables(model)) - parse(Int, meta["num_params"]))) :
+             (;)
     if startswith(class, "Autoencoder")
         x = Base.eltype(ref["output"]).(reference_input(Tuple(Metalhead.JSON.parse(meta["input_shape"]))))
         latents = D.mode(D.encode(model, x))
         return (; repo = meta["repo"], latents = relerr(latents, ref["latents"]),
-            output = relerr(D.decode(model, latents), ref["output"]))
+            output = relerr(D.decode(model, latents), ref["output"]), counts...)
     elseif class == "Flux2Transformer2DModel"
         inputs = [x isa AbstractArray{Float16} ? eltype.(x) : x
                   for x in (ref["inputs/$i"] for i in 1:5)]
         return (; repo = meta["repo"], output = relerr(model(inputs...), ref["output"]))
+    elseif class == "ZImageTransformer2DModel"
+        half(x) = x isa AbstractArray{Float16} ? eltype.(x) : x
+        y = model(half(ref["inputs/1"]), ref["inputs/2"], half.(acts_list(ref, "inputs/3")))
+        return (; repo = meta["repo"], output = relerr(y, ref["output"]), counts...)
+    elseif class == "ZImagePipeline"
+        return check_z_image_reference(model, ref, meta, eltype)
     end
-    embeds = D.encode_prompt(model, ref["input_ids"] .+ 1; attention_mask = ref["attention_mask"])
+    steps = parse(Int, meta["num_inference_steps"])
+    # the edit of a reference image takes its size
+    function generate(prefix; kwargs...)
+        embeds = D.encode_prompt(model, ref[prefix * "input_ids"] .+ 1;
+            attention_mask = ref[prefix * "attention_mask"])
+        n = size(ref[prefix * "prompt_embeds"], 2)
+        kwargs = (; kwargs..., num_inference_steps = steps, guidance_scale = 1.0,
+            latents = eltype.(ref[prefix * "latents"]))
+        latents = model(embeds; kwargs..., output_type = :latent)
+        image = model(embeds; kwargs...)
+        return (; prompt_embeds = relerr(embeds[:, 1:n, :], ref[prefix * "prompt_embeds"]),
+            latents = relerr(latents, ref[prefix * "output_latents"]),
+            image = relerr(image, ref[prefix * "output"]))
+    end
+    errs = generate(""; height = parse(Int, meta["height"]), width = parse(Int, meta["width"]))
+    haskey(ref, "edit/output") || return (; repo = meta["repo"], errs...)
+    edit = generate("edit/"; image = ref["edit/image"])
+    return (; repo = meta["repo"], errs..., edit_prompt_embeds = edit.prompt_embeds,
+        edit_latents = edit.latents, edit_image = edit.image)
+end
+
+# The Z-Image pipeline starts from the embeddings of its prompt, a list of one, of which the
+# reference has the first positions.
+function check_z_image_reference(pipe, ref, meta, eltype)
+    embeds = Metalhead.Diffusers.encode_prompt(pipe, ref["input_ids"] .+ 1;
+        attention_mask = ref["attention_mask"])
     n = size(ref["prompt_embeds"], 2)
     kwargs = (; height = parse(Int, meta["height"]), width = parse(Int, meta["width"]),
-        num_inference_steps = parse(Int, meta["num_inference_steps"]), guidance_scale = 1.0,
+        num_inference_steps = parse(Int, meta["num_inference_steps"]),
+        guidance_scale = parse(Float64, meta["guidance_scale"]),
         latents = eltype.(ref["latents"]))
-    latents = model(embeds; kwargs..., output_type = :latent)
-    image = model(embeds; kwargs...)
-    return (; repo = meta["repo"], prompt_embeds = relerr(embeds[:, 1:n, :], ref["prompt_embeds"]),
+    latents = pipe(embeds; kwargs..., output_type = :latent)
+    image = pipe(embeds; kwargs...)
+    return (; repo = meta["repo"], prompt_embeds = relerr(embeds[1][:, 1:n], ref["prompt_embeds"]),
         latents = relerr(latents, ref["output_latents"]), image = relerr(image, ref["output"]))
 end
+
+"""
+    acts_list(acts, key) -> Vector
+
+A list stored as "<key>/1", "<key>/2", ..., such as the captions of the Z-Image transformer,
+whose lengths differ.
+"""
+acts_list(acts, key) = [acts["$key/$j"] for j in 1:count(startswith("$key/"), keys(acts))]
 
 function greedy_decode(model, ids, n; kwargs...)
     for _ in 1:n
@@ -336,14 +476,17 @@ end
     fixture_inputs(acts) -> (args, kwargs)
 
 The inputs of the model of a fixture: "input" (token ids are made 1-based) or the positional
-"inputs/1", "inputs/2", ..., and the keyword arguments "kwargs/<name>".
+"inputs/1", "inputs/2", ..., a list being "inputs/<i>/1", "inputs/<i>/2", ... (see
+[`acts_list`](@ref)), and the keyword arguments "kwargs/<name>".
 """
 function fixture_inputs(acts)
     args = if haskey(acts, "input")
         x = acts["input"]
         (Base.eltype(x) <: Integer ? x .+ 1 : x,)  # 0-based token ids
     else
-        Tuple(acts["inputs/$i"] for i in 1:count(startswith("inputs/"), keys(acts)))
+        n = maximum(k -> parse(Int, split(k, '/')[2]), filter(startswith("inputs/"), keys(acts)))
+        Tuple(haskey(acts, "inputs/$i") ? acts["inputs/$i"] : acts_list(acts, "inputs/$i")
+        for i in 1:n)
     end
     kwargs = (; (Symbol(chopprefix(k, "kwargs/")) => acts[k]
                  for k in sort!(filter(startswith("kwargs/"), collect(keys(acts)))))...)

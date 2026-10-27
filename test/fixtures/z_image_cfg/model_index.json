@@ -1,0 +1,24 @@
+{
+  "_class_name": "ZImagePipeline",
+  "_diffusers_version": "0.42.1",
+  "scheduler": [
+    "diffusers",
+    "FlowMatchEulerDiscreteScheduler"
+  ],
+  "text_encoder": [
+    "transformers",
+    "Qwen3Model"
+  ],
+  "tokenizer": [
+    null,
+    null
+  ],
+  "transformer": [
+    "diffusers",
+    "ZImageTransformer2DModel"
+  ],
+  "vae": [
+    "diffusers",
+    "AutoencoderKL"
+  ]
+}
