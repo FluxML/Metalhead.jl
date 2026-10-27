@@ -84,6 +84,13 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
   loads it once the extension is loaded), and
   `Metalhead.Diffusers.encode_prompt(pipe, prompts)` embeds prompts as diffusers'
   `encode_prompt` does, with the chat template of the text encoder (#348).
+- Image editing with FLUX.2 [klein]: `Flux2KleinPipeline` takes reference images, `image`
+  (one image or a vector of them, as processors take images), and generates the image that
+  the prompt asks of them. As diffusers does, it prepares each (an image over 1024 × 1024
+  pixels resized with Pillow's Lanczos filter, the sides cropped to multiples of 16), encodes
+  it with the autoencoder and lets the transformer attend to its tokens; the image takes the
+  size of the first reference by default. Validated against diffusers with tiny pipelines and
+  `black-forest-labs/FLUX.2-klein-4B` (#365).
 - An extension for HuggingFaceTokenizers.jl (`ext/`): with it loaded, `create_processor`
   returns the processor of a language model, a `Metalhead.TextProcessor`, which encodes
   texts into the 1-based token indices and the attention mask of the models, padded on the

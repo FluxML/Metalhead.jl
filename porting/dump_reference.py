@@ -14,7 +14,8 @@ norm, the logits of the last position, and the greedy continuation of the first 
 A diffusers component is named `<org>/<repo>/<subfolder>` (e.g. `.../vae`): an autoencoder
 encodes and decodes `reference_input` images, and a FLUX.2 transformer predicts the flow of
 random latents. A diffusers pipeline (`<org>/<repo>` with a model_index.json) generates an image
-from `PIPELINE_PROMPT` end to end, from fixed initial noise. Random inputs are stored rounded to
+from `PIPELINE_PROMPT` end to end, from fixed initial noise, and edits the image of `IMAGE_URL`
+as `EDIT_PROMPT` says. Random inputs are stored rounded to
 float16, so that both sides use the same values.
 """
 import argparse
@@ -124,6 +125,7 @@ def image_reference(model, repo, sha, max_new_tokens, size=(224, 160)):
     """The outputs of a vision-language model on `IMAGE_PROMPT` about the image of `IMAGE_URL`,
     resized to `size` (w, h) and preprocessed by the repo's processor with `min_pixels` low
     enough to keep its size, under keys "image/...". The pixel values are rounded to float16."""
+    import gc
     import io
     import urllib.request
     from PIL import Image
@@ -161,6 +163,7 @@ def dump_sam3_reference(repo, sha, size=336, top=2, stride=2):
     masks, of which only those of the `top` best queries ("mask_queries", 1-based), every
     `stride` pixels; and the scores, boxes and mask areas of transformers'
     `post_process_instance_segmentation` at the size of the image ("post/...")."""
+    import gc
     import io
     import urllib.request
     from PIL import Image
@@ -261,35 +264,77 @@ def dump_diffusers_reference(repo, subfolder, sha, batch):
 PIPELINE_PROMPT = "A photo of a red fox sitting in fresh snow, looking at the camera"
 
 
-def dump_pipeline_reference(repo, sha, height=256, width=256, steps=4, embed_positions=24):
-    """An image of a diffusers text-to-image pipeline, in float32, from fixed noise.
+EDIT_PROMPT = "Put a small red knitted hat on the cat"
+
+
+def dump_pipeline_reference(repo, sha, height=256, width=256, steps=4, embed_positions=24,
+                            edit_size=(200, 136)):
+    """An image of a diffusers text-to-image pipeline, in float32, from fixed noise, and an
+    edit of the image of `IMAGE_URL`, resized to `edit_size` (w, h), by `EDIT_PROMPT`.
 
     Stores the token ids and mask of the prompt (0-based), the prompt embeddings of its first
-    `embed_positions` positions, the initial noise, the denoised latents and the image."""
+    `embed_positions` positions, the initial noise, the denoised latents and the image; and
+    the same under "edit/..." for the edit (half as many positions of its embeddings), with
+    its reference image ("edit/image", 8-bit), whose size the edit takes. The text encoder
+    runs first, alone, to halve the memory."""
+    import gc
+    import io
+    import urllib.request
     import diffusers
-    pipe = diffusers.DiffusionPipeline.from_pretrained(repo, revision=sha, torch_dtype=torch.float32)
+    from PIL import Image
+    from transformers import AutoTokenizer, Qwen3ForCausalLM
+    Pipeline = diffusers.Flux2KleinPipeline
+    index = json.loads(pathlib.Path(hf_hub_download(repo, "model_index.json", revision=sha)).read_text())
+    assert index["_class_name"] == "Flux2KleinPipeline", index["_class_name"]
+    tokenizer = AutoTokenizer.from_pretrained(repo, subfolder="tokenizer", revision=sha)
+    text_encoder = Qwen3ForCausalLM.from_pretrained(repo, subfolder="text_encoder", revision=sha,
+                                                    torch_dtype=torch.float32).eval()
+
+    def tokens(prompt):
+        text = tokenizer.apply_chat_template([{"role": "user", "content": prompt}], tokenize=False,
+                                             add_generation_prompt=True, enable_thinking=False)
+        return tokenizer(text, return_tensors="pt", padding="max_length", truncation=True,
+                         max_length=512)
+
+    with torch.no_grad():  # as `pipe.encode_prompt(prompt)`
+        embeds = {p: Pipeline._get_qwen3_prompt_embeds(text_encoder, tokenizer, p, device="cpu")
+                  for p in (PIPELINE_PROMPT, EDIT_PROMPT)}
+    del text_encoder
+    gc.collect()
+
+    pipe = diffusers.DiffusionPipeline.from_pretrained(repo, revision=sha, text_encoder=None,
+                                                       tokenizer=None, torch_dtype=torch.float32)
     pipe.set_progress_bar_config(disable=True)
-    assert type(pipe).__name__ == "Flux2KleinPipeline", type(pipe).__name__
-    tokenizer = pipe.tokenizer
-    text = tokenizer.apply_chat_template([{"role": "user", "content": PIPELINE_PROMPT}], tokenize=False,
-                                         add_generation_prompt=True, enable_thinking=False)
-    tokens = tokenizer(text, return_tensors="pt", padding="max_length", truncation=True, max_length=512)
+    with urllib.request.urlopen(IMAGE_URL) as f:
+        image = Image.open(io.BytesIO(f.read())).convert("RGB").resize(edit_size, Image.BICUBIC)
+    pixels = torch.from_numpy(np.asarray(image).copy()).permute(2, 0, 1)
     gen = torch.Generator().manual_seed(0)
     f = pipe.vae_scale_factor * 2
-    latents = half_randn(gen, 1, pipe.transformer.config.in_channels, height // f, width // f)
-    with torch.no_grad():
-        prompt_embeds, _ = pipe.encode_prompt(PIPELINE_PROMPT)
-        kwargs = dict(prompt_embeds=prompt_embeds, height=height, width=width,
-                      num_inference_steps=steps, guidance_scale=1.0)
-        denoised = pipe(latents=latents.clone(), output_type="latent", **kwargs).images
-        image = pipe(latents=latents.clone(), output_type="pt", **kwargs).images
+    channels = pipe.transformer.config.in_channels
+    tensors = {}
+    edit_h, edit_w = edit_size[1] // f * f, edit_size[0] // f * f  # the crop of the image
+    for prefix, prompt, (h, w), positions, inputs in [
+            ("", PIPELINE_PROMPT, (height, width), embed_positions,
+             dict(height=height, width=width)),
+            ("edit/", EDIT_PROMPT, (edit_h, edit_w), embed_positions // 2, dict(image=image))]:
+        latents = half_randn(gen, 1, channels, h // f, w // f)
+        kwargs = dict(prompt_embeds=embeds[prompt], num_inference_steps=steps, guidance_scale=1.0,
+                      **inputs)
+        with torch.no_grad():
+            denoised = pipe(latents=latents.clone(), output_type="latent", **kwargs).images
+            output = pipe(latents=latents.clone(), output_type="pt", **kwargs).images
+        ids = tokens(prompt)
+        tensors.update({prefix + "input_ids": ids["input_ids"],
+                        prefix + "attention_mask": ids["attention_mask"],
+                        prefix + "prompt_embeds": embeds[prompt][:, :positions],
+                        prefix + "latents": latents.half(), prefix + "output_latents": denoised,
+                        prefix + "output": output})
+    tensors["edit/image"] = pixels
     out = reference_path(repo)
-    meta = {"repo": repo, "revision": sha, "class": type(pipe).__name__,
+    meta = {"repo": repo, "revision": sha, "class": index["_class_name"],
             "prompt": PIPELINE_PROMPT, "height": str(height), "width": str(width),
-            "num_inference_steps": str(steps), **versions()}
-    tensors = {"input_ids": tokens["input_ids"], "attention_mask": tokens["attention_mask"],
-               "prompt_embeds": prompt_embeds[:, :embed_positions], "latents": latents.half(),
-               "output_latents": denoised, "output": image}
+            "num_inference_steps": str(steps), "edit_prompt": EDIT_PROMPT,
+            "edit_image": IMAGE_URL, **versions()}
     save_file({k: v.contiguous() for k, v in tensors.items()}, out, metadata=meta)
     print(f"{out}: {repo}@{sha}, {out.stat().st_size / 1e3:.1f} kB")
 

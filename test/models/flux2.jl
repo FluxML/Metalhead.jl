@@ -29,7 +29,72 @@ end
         # Float32 even in a Float64 pipeline
         @test r.latents <= 1e-10
         @test r.image <= 1e-10
+        # editing random reference images: the tiny one, an RGB and an RGBA image at a given
+        # size; the other, a grey and a grey and alpha image, at the size of the first
+        @test r.edit_latents <= 1e-10
+        @test r.edit_image <= 1e-10
+        @test r.reference_images == 0
     end
+end
+
+# `large_image` of porting/dump_timm_transform.py
+function large_image(c, h, w)
+    return [UInt8((2h + 3w + 50c + mod(h * w * c + 7h + 11w, 37) * 3 +
+                   mod(h ÷ 16 + w ÷ 16, 2) * 60) % 256)
+            for w in 0:(w - 1), h in 0:(h - 1), c in 0:(c - 1)]
+end
+
+eight_bit(x) = round.(UInt8, (x .+ 1) ./ 2 .* 255)
+
+@testset "reference images" begin
+    # images over 1024 × 1024 pixels, resized by Pillow's Lanczos filter (an RGBA image with
+    # its colours premultiplied by the alpha) and cropped as diffusers does, every 7th pixel
+    file = joinpath(fixture("flux2_klein_tiny"), "acts.safetensors")
+    acts = Metalhead.Checkpoint(file)
+    spec = JSON.parse(SafeTensors.deserialize(file).metadata["spec"])
+    @test length(spec["large_images"]) == 2
+    for (i, (w, h, c)) in enumerate(spec["large_images"])
+        x = D.reference_image(large_image(c, h, w), 4)
+        @test size(x) == (acts["large/$i/size"]..., 3)
+        @test eight_bit(x)[1:7:end, 1:7:end, :] == acts["large/$i"]
+    end
+    # an image of reals is rounded to 8 bits, as diffusers makes PIL images of its own
+    image = acts["edit/image/1"]
+    @test D.reference_image(image ./ 255, 4) == D.reference_image(image, 4)
+    @test D.reference_image(min.(Float32.(image) ./ 255 .+ 0.4f0 / 255, 1), 4) ==
+          D.reference_image(image, 4)
+    @test D.reference_image(Int.(image), 4) == D.reference_image(image, 4)
+    @test size(D.reference_image(image, 16)) == (64, 64, 3)
+    @test D.reference_image(image[:, :, 1], 4) ==
+          D.reference_image(repeat(image[:, :, 1:1], 1, 1, 3), 4)
+    @test_throws "at least 64 pixels" D.reference_image(zeros(UInt8, 63, 100, 3), 16)
+    @test_throws "aspect ratio" D.reference_image(zeros(UInt8, 64, 520, 3), 16)
+    @test_throws "from 0 to 255" D.reference_image(fill(256, 64, 64, 3), 16)
+    @test_throws "from 0 to 1" D.reference_image(fill(1.5, 64, 64, 3), 16)
+
+    pipe = create_model(fixture("flux2_klein_tiny"))
+    embeds = randn(Float32, 48, 7, 2)
+    images = [acts["edit/image/1"], acts["edit/image/2"]]
+    kwargs = (; num_inference_steps = 2, latents = randn(Float32, 5, 4, 16, 2))
+    edited = pipe(embeds; image = images, height = 16, width = 20, kwargs...)
+    @test size(edited) == (20, 16, 3, 2)
+    # the size of the first image by default, after its crop
+    @test size(pipe(embeds[:, :, 1:1]; image = images, num_inference_steps = 1)) ==
+          (68, 64, 3, 1)
+    @test size(pipe(embeds[:, :, 1:1]; image = reverse(images), num_inference_steps = 1)) ==
+          (64, 80, 3, 1)
+    # the reference images change the image, and so does their order
+    @test !(pipe(embeds; height = 16, width = 20, kwargs...) ≈ edited)
+    @test !(pipe(embeds; image = reverse(images), height = 16, width = 20, kwargs...) ≈
+            edited)
+    # one image, a vector of them or an array of images of the same size
+    single = pipe(embeds; image = images[1], height = 16, width = 20, kwargs...)
+    @test pipe(embeds; image = images[1:1], height = 16, width = 20, kwargs...) == single
+    pair = pipe(embeds; image = [images[1], images[1]], height = 16, width = 20, kwargs...)
+    stacked = cat(images[1], images[1]; dims = 4)
+    @test pipe(embeds; image = stacked, height = 16, width = 20, kwargs...) ≈ pair
+    @test_throws "no images" pipe(embeds; image = Matrix{UInt8}[], kwargs...)
+    @test_throws "at least 64 pixels" pipe(embeds; image = zeros(UInt8, 32, 64, 3), kwargs...)
 end
 
 @testset "gradient" begin
@@ -54,6 +119,9 @@ end
     @test_logs min_level=Base.CoreLogging.Warn begin
         image = pipe(embeds; height = 16, width = 20, num_inference_steps = 2)
         @test eltype(image) == Float16
+        edited = pipe(embeds; image = rand(UInt8, 64, 64, 3), height = 16, width = 20,
+            num_inference_steps = 1)
+        @test eltype(edited) == Float16
     end
 end
 

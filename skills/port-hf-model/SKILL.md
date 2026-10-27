@@ -606,7 +606,7 @@ above, with these differences.
   (`transformers/`, `autoencoders/`) and `pipelines/<name>/pipeline_<name>.py`. Shared blocks
   are in `models/embeddings.py`, `normalization.py`, `attention_processor.py`, `resnet.py`,
   `unets/unet_2d_blocks.py` and `autoencoders/vae.py`: port them once, in
-  `src/Diffusers/layers.jl` or `vae.jl`. Leave out what text-to-image doesn't run (the KV cache
+  `src/Diffusers/layers.jl` or `vae.jl`. Leave out what inference doesn't run (the KV cache
   of reference images, LoRA, fused projections, tiling) and say so in the file header.
 - **Registry.** Register the class of `_class_name` with `DIFFUSERS` and the pipeline family,
   e.g. `register!(ArchSpec(DIFFUSERS, "AutoencoderKLFlux2", builder; family = "flux2", references = [...]))`.
@@ -648,9 +648,15 @@ above, with these differences.
   `"inputs"`; add a branch for a new class. A pipeline spec has `"components"` (configs, with
   the text encoder as a transformers spec) and the settings of a run (`porting/specs/flux2_klein_tiny.json`);
   `dump_flux2_klein` saves the pipeline without a tokenizer and runs it from random token ids
-  and fixed noise, and `Parity.check_pipeline_fixture` compares the prompt embeddings, latents
-  and images. Give a tiny text encoder fewer layers than `text_encoder_out_layers` asks for
-  only knowingly: transformers norms the last of `output_hidden_states`.
+  and fixed noise, and with random reference images (`"edit"`), and
+  `Parity.check_pipeline_fixture` compares the prompt embeddings, latents and images, and the
+  reference images as the pipeline prepares them. A pipeline takes images, as processors do,
+  through `image_batch`; it prepares PIL images, of 8-bit values, as diffusers does, with
+  `Timm.pil_resize` (premultiplied by the alpha for LA and RGBA images, as Pillow resizes
+  them). To check preparation that the tiny models can't run end to end (images over an
+  area limit), stop the pipeline before it encodes them (`prepared_images` in `dump.py`).
+  Give a tiny text encoder fewer layers than `text_encoder_out_layers` asks for only
+  knowingly: transformers norms the last of `output_hidden_states`.
 - **Taps.** torch hooks modules that diffusers calls as modules even when they have no
   parameters (`pos_embed`); a Julia helper that computes the same tables leaves them
   "not tapped", which is harmless. A tapped submodule is wrapped in a `Tap`, so helpers that

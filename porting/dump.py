@@ -480,7 +480,17 @@ def dump_flux2_klein(spec, out, args):
     Spec keys: "components" ("vae", "transformer", "text_encoder" as transformers specs,
     "scheduler"), "is_distilled", "lengths" and "seq_len" of the prompts ("negative_lengths" for
     classifier-free guidance), "height", "width", "num_inference_steps", "guidance_scale" and
-    "text_encoder_out_layers"."""
+    "text_encoder_out_layers".
+
+    With "edit", the pipeline also edits random 8-bit reference images of the sizes
+    `[width, height, channels]` of its "images" (L, LA, RGB or RGBA), at its "height" and
+    "width" (by default the size of the first image): the fixture stores the images
+    ("edit/image/<i>"), the 8-bit values of the images that the pipeline prepares
+    ("edit/prepared/<i>"), the initial noise and the latents and images of the pipeline. Images
+    larger than the pipeline's area limit can't run through tiny models: for those of
+    "large_images", `large_image` of dump_timm_transform.py (reproduced in Julia), only the
+    images that the pipeline prepares are stored, every 7th pixel ("large/<i>"), with their
+    size ("large/<i>/size", width and height)."""
     from diffusers import (AutoencoderKLFlux2, FlowMatchEulerDiscreteScheduler,
                            Flux2KleinPipeline, Flux2Transformer2DModel)
     seed = spec.get("seed", 0)
@@ -532,14 +542,77 @@ def dump_flux2_klein(spec, out, args):
                       guidance_scale=spec.get("guidance_scale", 4.0))
         denoised = pipe(latents=latents.clone(), output_type="latent", **kwargs).images
         image = pipe(latents=latents.clone(), output_type="pt", **kwargs).images
-    tensors.update({"latents": latents, "output_latents": denoised.contiguous(),
-                    "output": image.contiguous()})
+        tensors.update({"latents": latents, "output_latents": denoised.contiguous(),
+                        "output": image.contiguous()})
+        common = {k: kwargs[k] for k in ("prompt_embeds", "negative_prompt_embeds",
+                                         "num_inference_steps", "guidance_scale")}
+        if "edit" in spec:
+            tensors.update(dump_flux2_klein_edit(pipe, spec["edit"], gen, common))
+        for i, (w, h, c) in enumerate(spec.get("large_images", [])):
+            from dump_timm_transform import large_image
+            prepared, = prepared_images(pipe, [pil_image(torch.from_numpy(large_image(c, h, w)))],
+                                        **common)
+            tensors[f"large/{i + 1}"] = eight_bit(prepared)[:, ::7, ::7].contiguous()
+            tensors[f"large/{i + 1}/size"] = torch.tensor(prepared.shape[:1:-1])
     meta = {"spec": json.dumps(spec), **versions()}
     save_file({k: v.contiguous() for k, v in tensors.items()}, out / "acts.safetensors", metadata=meta)
 
     size = sum(f.stat().st_size for f in out.rglob("*") if f.is_file())
     print(f"{out}: pipeline, {size / 1e6:.2f} MB")
     return size <= args.max_bytes or bool(args.out)
+
+
+def pil_image(array):
+    """A (channels, height, width) uint8 tensor as a PIL image: L, LA, RGB or RGBA."""
+    from PIL import Image
+    hwc = array.permute(1, 2, 0).contiguous().numpy()
+    return Image.fromarray(hwc[:, :, 0] if hwc.shape[2] == 1 else hwc)
+
+
+def eight_bit(image):
+    """The 8-bit values (3, height, width) of an image that a pipeline prepares, (1, 3, h, w)
+    in [-1, 1]."""
+    return ((image[0].double() + 1) / 2 * 255).round().to(torch.uint8)
+
+
+class Prepared(Exception):
+    pass
+
+
+def prepared_images(pipe, images, **kwargs):
+    """The reference images `images` as `pipe(image=images, **kwargs)` prepares them, before
+    it encodes them, which it is stopped from doing."""
+    def stop(images, **_):
+        raise Prepared(images)
+    pipe.prepare_image_latents = stop
+    try:
+        pipe(image=images, output_type="latent", **kwargs)
+    except Prepared as e:
+        return e.args[0]
+    finally:
+        del pipe.prepare_image_latents
+    raise RuntimeError("the pipeline didn't prepare the reference images")
+
+
+def dump_flux2_klein_edit(pipe, edit, gen, kwargs):
+    """The tensors of the "edit" of a pipeline spec (see `dump_flux2_klein`)."""
+    arrays = [torch.randint(0, 256, (c, h, w), generator=gen, dtype=torch.uint8)
+              for w, h, c in edit["images"]]
+    images = [pil_image(a) for a in arrays]
+    size = dict(height=edit.get("height"), width=edit.get("width"))
+    prepared = prepared_images(pipe, images, **kwargs, **size)
+    f = pipe.vae_scale_factor * 2
+    height, width = size["height"] or prepared[0].shape[2], size["width"] or prepared[0].shape[3]
+    b = kwargs["prompt_embeds"].shape[0]
+    shape = (b, pipe.transformer.config.in_channels, height // f, width // f)
+    latents = torch.randn(shape, generator=gen, dtype=torch.float64)
+    run = dict(kwargs, image=images, **size)
+    denoised = pipe(latents=latents.clone(), output_type="latent", **run).images
+    image = pipe(latents=latents.clone(), output_type="pt", **run).images
+    return {**{f"edit/image/{i + 1}": a for i, a in enumerate(arrays)},
+            **{f"edit/prepared/{i + 1}": eight_bit(x) for i, x in enumerate(prepared)},
+            "edit/latents": latents, "edit/output_latents": denoised.contiguous(),
+            "edit/output": image.contiguous()}
 
 
 if __name__ == "__main__":
