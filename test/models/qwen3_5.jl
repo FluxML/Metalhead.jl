@@ -123,6 +123,16 @@ end
     @test_throws "linear_num_value_heads" qwen3_5(; linear_num_key_heads = 2,
         linear_num_value_heads = 3)
     @test_throws "hidden_act" qwen3_5(; hidden_act = "relu")
+    # transformers gates the linear attention with SiLU whatever `output_gate_type` says:
+    # Qwen3.8 sets "swish", the same function
+    tokens = rand(1:16, 5, 2)
+    for gate in ("silu", "swish")
+        @test Flux.loadmodel!(qwen3_5(; output_gate_type = gate), model)(tokens) ≈
+              model(tokens)
+    end
+    @test_throws "output_gate_type" qwen3_5(; output_gate_type = "sigmoid")
+    @test_throws "output_gate_type" create_model("Qwen3_5ForConditionalGeneration";
+        text_config = (; tiny..., output_gate_type = "sigmoid"))
 
     # the positions (temporal, height, width) of the multimodal rotary embedding, by default
     # those of text; a first row of four, transformers' text positions, is ignored
@@ -244,7 +254,11 @@ end
 
 TEST_NETWORK && @testset "references" begin
     for file in reference_files_of("Qwen3_5ForConditionalGeneration")
-        for r in (check_lm_reference(file), check_image_reference(file))
+        # the first 8 of the 64 layers of Qwen3.8-27B, which downloads 56 GB, and whose 8
+        # layers take 24 GB in Float32 (see `reference_model`)
+        contains(file, "Qwen3.8") && !TEST_LARGE && continue
+        model = reference_model(file)
+        for r in (check_lm_reference(file; model), check_image_reference(file; model))
             @test r.hidden_states <= 1e-4
             @test r.last_logits <= 1e-4
             @test r.generated

@@ -66,6 +66,10 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
   attention) layers and has a multimodal rotary embedding; it is also ported alone
   (`Qwen3_5ForCausalLM`), as is its vision encoder (`Qwen3_5VisionModel`). It takes the
   output of its processor (#348). Videos are not supported.
+- Qwen3.8 (`Qwen/Qwen3.8-27B`), a `Qwen3_5ForConditionalGeneration` checkpoint, validated
+  on text and on an image in float32 with the weights of its embeddings, vision encoder,
+  head and first 8 of its 64 decoder layers. Its `output_gate_type` (`"swish"`), which
+  transformers ignores, gating the linear attention with SiLU, must be `"silu"` or `"swish"`.
 - SAM 3, the detector of the Segment Anything Model 3 (`Sam3Model`), which finds and segments
   the objects of an image that a text prompt or box prompts describe, validated against
   `jetjodh/sam3`, an ungated copy of the weights of `facebook/sam3`, and SAM 3.1

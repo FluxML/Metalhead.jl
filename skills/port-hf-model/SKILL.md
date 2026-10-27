@@ -508,9 +508,13 @@ first. The workflow is the one above, with these differences.
   tokenizer and stores the ids, the hidden states, the last-position logits and the greedy
   continuation (`check_lm_reference` in `test/parity.jl`); the logits come from the model's
   own head, which may scale (Granite) or softcap them. Prefer the smallest checkpoint of
-  the architecture. Metalhead ports no tokenizer (see "Processors"); with
-  `METALHEAD_TEST_NETWORK`, `test/processors/tokenizers.jl` checks that the tokenizer of each
-  repository of its list gives the ids of its reference: add the new one.
+  the architecture. A checkpoint that doesn't fit in memory in float32 (Qwen3.8-27B) gets
+  `--layers k`, the real weights of its first `k` decoder layers: `reference_model`
+  (`test/parity.jl`) builds the same layers from `config.json`, loads them strictly and
+  checks the keys and shapes of the other layers. Its test runs only with `TEST_LARGE`.
+  Metalhead ports no tokenizer (see "Processors"); with `METALHEAD_TEST_NETWORK`,
+  `test/processors/tokenizers.jl` checks that the tokenizer of each repository of its list
+  gives the ids of its reference: add the new one.
 
 ## Processors
 
