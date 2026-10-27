@@ -1,0 +1,17 @@
+{
+  "library": "transformers",
+  "architecture": "CLIPTextModelWithProjection",
+  "model_type": "clip_text_model",
+  "config": {
+    "vocab_size": 40,
+    "hidden_size": 12,
+    "intermediate_size": 16,
+    "projection_dim": 6,
+    "num_hidden_layers": 1,
+    "num_attention_heads": 2,
+    "max_position_embeddings": 7,
+    "eos_token_id": 2
+  },
+  "inputs": {"texts": 2, "lengths": [7, 3]},
+  "tap_depth": 3
+}

@@ -69,13 +69,25 @@ function instantiate(format::AbstractConfigFormat, spec, source, config; pretrai
         model = direct_weight_init(format) ?
                 build_pretrained(spec.build, args, eltype; skip) :
                 convert_eltype(spec.build(; args...))
-        load_state!(model, Checkpoint(source_weights(source, weights_name(format))); skip,
+        ckpt = Checkpoint(source_weights(source, weights_name(format)))
+        load_state!(model, ckpt; prefix = checkpoint_prefix(model, ckpt), skip,
             ignore = [DEFAULT_IGNORE; spec.ignore])
     else
         model = convert_eltype(spec.build(; args...))
     end
     return Flux.testmode!(model)
 end
+
+"""
+    checkpoint_prefix(model, ckpt::Checkpoint) -> String
+
+The prefix of the keys under which the checkpoint `ckpt` holds the weights of `model`: `""`
+(the default), or the name of a module that some checkpoints of `model` nest its weights
+in, and that the original library removes from their keys as it loads them (transformers'
+`PrefixChange`: `"text_model"` for the `CLIPTextModel` checkpoints saved before
+transformers 5).
+"""
+checkpoint_prefix(model, ckpt) = ""
 
 """
     ArchSpec(format, name, build; family = "other", defaults = (;),

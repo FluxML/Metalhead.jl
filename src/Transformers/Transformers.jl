@@ -26,7 +26,8 @@ using ..Metalhead: AbstractProcessor, AbstractImageProcessor, register_processor
                    pad_ids, text_list
 using ..Timm: dropout_or_identity, attention_fdrop, feature_take_indices, stage_outputs,
               pil_resize
-import ..Metalhead: layer_params, architecture_of, model_args, direct_weight_init
+import ..Metalhead: layer_params, architecture_of, model_args, direct_weight_init,
+                    checkpoint_prefix
 import ..Metalhead: forward_features, forward_head, forward_intermediates, feature_info
 import ..Metalhead: post_process_object_detection, post_process_instance_segmentation,
                     post_process_semantic_segmentation

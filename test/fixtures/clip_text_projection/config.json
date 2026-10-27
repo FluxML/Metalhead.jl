@@ -1,0 +1,23 @@
+{
+  "architectures": [
+    "CLIPTextModelWithProjection"
+  ],
+  "attention_dropout": 0.0,
+  "bos_token_id": 49406,
+  "dtype": "float32",
+  "eos_token_id": 2,
+  "hidden_act": "quick_gelu",
+  "hidden_size": 12,
+  "initializer_factor": 1.0,
+  "initializer_range": 0.02,
+  "intermediate_size": 16,
+  "layer_norm_eps": 1e-05,
+  "max_position_embeddings": 7,
+  "model_type": "clip_text_model",
+  "num_attention_heads": 2,
+  "num_hidden_layers": 1,
+  "pad_token_id": 1,
+  "projection_dim": 6,
+  "transformers_version": "5.20.2",
+  "vocab_size": 40
+}
