@@ -8,6 +8,27 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
 
 ### Added
 
+- The text encoders BERT, XLM-RoBERTa and ModernBERT (`BertModel`, `XLMRobertaModel` and
+  `ModernBertModel`, with `BertForSequenceClassification`,
+  `XLMRobertaForSequenceClassification`, `ModernBertForSequenceClassification` and
+  `ModernBertForMaskedLM`), the backbones of embedding models, rerankers and masked language
+  models, validated against `sentence-transformers/all-MiniLM-L6-v2`,
+  `BAAI/bge-small-en-v1.5`, `cross-encoder/ms-marco-MiniLM-L6-v2`,
+  `intfloat/multilingual-e5-base`, `BAAI/bge-reranker-base`, `BAAI/bge-reranker-v2-m3`,
+  `Alibaba-NLP/gte-modernbert-base`, `Alibaba-NLP/gte-reranker-modernbert-base` and
+  `answerdotai/ModernBERT-base`. A model maps token indices (and an `attention_mask` for a
+  batch padded on the right, and BERT's `token_type_ids`) to the hidden states of the tokens;
+  `forward_head(model, hidden)` is the `pooler_output` of BERT and XLM-RoBERTa, and
+  `forward_intermediates` returns the output of each layer. XLM-RoBERTa numbers its
+  positions after the padding, ModernBERT alternates local attention in a window of 128
+  tokens with global attention, with a rotary base for each. Pooling the hidden states into
+  one embedding per text is not part of them. `BAAI/bge-m3` has no safetensors weights and
+  doesn't load.
+- `TextProcessor` returns the `token_type_ids` of the tokenizers that transformers gives
+  them (BERT's), as its new setting `model_input_names` says, and encodes pairs of texts
+  with `text_pair`, joined by the template of the tokenizer: the input of a reranker. Its
+  tokenizer no longer truncates the texts when its tokenizer.json sets a truncation
+  (`sentence-transformers/all-MiniLM-L6-v2`), as transformers' tokenizers don't by default.
 - SigLIP and SigLIP 2, Google's image-text dual encoders (`SiglipModel` and `Siglip2Model`),
   for zero-shot classification and image-text retrieval, validated against
   `google/siglip-base-patch16-224`, `google/siglip2-base-patch16-224` and

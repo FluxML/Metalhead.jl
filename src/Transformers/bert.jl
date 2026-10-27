@@ -35,10 +35,13 @@ processor of a repository, a [`TextProcessor`](@ref Metalhead.TextProcessor), ca
 all of them: `model(proc(texts))`.
 
 [`forward_features`](@ref) is the same call, and [`forward_intermediates`](@ref) returns the
-output of each layer (transformers' `hidden_states` without the embeddings). The BERT and
-XLM-RoBERTa models also have transformers' `pooler_output` (hidden_size, batch), the first
-token through the dense layer and `tanh` of the pooler: `forward_head(model, hidden_states)`,
-which errors for a model built without a pooler (`add_pooling_layer = false`).
+output of each layer (transformers' `hidden_states` without the embeddings; ModernBERT's last
+one is normed only with `norm = true`), with the keyword arguments of the vision models'
+(`indices`, `stop_early`, `intermediates_only`) and those of the model. [`feature_info`](@ref)
+gives the module of each layer. The BERT and XLM-RoBERTa models also have transformers'
+`pooler_output` (hidden_size, batch), the first token through the dense layer and `tanh` of
+the pooler: `forward_head(model, hidden_states)`, which errors for a model built without a
+pooler (`add_pooling_layer = false`).
 """
 abstract type TextEncoder end
 
@@ -106,24 +109,12 @@ function forward_intermediates(m::Union{TextEncoder, TextEncoderHead}, inputs::N
     return forward_intermediates(m, input_ids; model_kwargs..., kwargs...)
 end
 
-"""
-    forward_intermediates(model::Union{BertModel, XLMRobertaModel, ModernBertModel},
-                          input_ids; indices = nothing, norm = false, stop_early = false,
-                          intermediates_only = false, attention_mask = nothing,
-                          token_type_ids = nothing)
-
-The outputs of the layers of a text encoder (or of the model of a head such as
-`BertForSequenceClassification`) for the token indices `input_ids` of size
-`(seq_len, batch_size)`, each of size `(hidden_size, seq_len, batch_size)`, or of a vector for
-a single sequence, each of size `(hidden_size, seq_len)`: the `i`-th intermediate is the
-output of the `i`-th layer, transformers' `output_hidden_states[i]` (the embeddings are
-`output_hidden_states[0]`), except that ModernBERT's last one is not normed unless
-`norm = true`. The features are the `last_hidden_state`, as [`forward_features`](@ref)
-returns them. `indices`, `norm`, `stop_early` and `intermediates_only` are those of the
-vision models. The output of a processor can replace `input_ids` and the other
-keyword arguments, as for the model. [`feature_info`](@ref) gives the `hidden_size` and the
-module of each layer.
-"""
+# The outputs of the layers of a text encoder (or of the model of a head), each of size
+# (hidden_size, seq_len, batch_size): the `i`-th is the output of the `i`-th layer,
+# transformers' `output_hidden_states[i]` (the embeddings are `output_hidden_states[0]`), but
+# for ModernBERT's last one, which is not normed unless `norm = true`. The features are the
+# `last_hidden_state`. `indices`, `norm`, `stop_early` and `intermediates_only` are those of
+# the vision models, and the keyword arguments those of the model.
 function forward_intermediates(m::Union{TextEncoder, TextEncoderHead},
         input_ids::AbstractMatrix{<:Integer}; indices = nothing, norm::Bool = false,
         stop_early::Bool = false, intermediates_only::Bool = false, kwargs...)
@@ -316,10 +307,10 @@ bidirectional self-attention and a feed-forward network.
 
 ```julia
 using Metalhead, HuggingFaceTokenizers
-model = create_model(\"sentence-transformers/all-MiniLM-L6-v2\")
-proc = create_processor(\"sentence-transformers/all-MiniLM-L6-v2\")
-y = model(proc([\"A cat sits on the mat.\", \"Dogs bark.\"]))   # the last_hidden_state
-y                     # 384 × seq_len × 2
+model = create_model("sentence-transformers/all-MiniLM-L6-v2")
+proc = create_processor("sentence-transformers/all-MiniLM-L6-v2")
+hidden = model(proc(["A cat sits on the mat.", "Dogs bark."]))   # 384 × seq_len × 2
+pooled = forward_head(model, hidden)                              # 384 × 2
 ```
 """
 @concrete struct BertModel <: BertLikeModel

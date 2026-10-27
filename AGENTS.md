@@ -3,7 +3,7 @@
 Metalhead.jl provides Flux ports of Hugging Face Hub models: the vision models of
 [timm](https://github.com/huggingface/pytorch-image-models), language models of
 [transformers](https://github.com/huggingface/transformers) (Llama, Qwen, Gemma 3 and
-Granite for now), text-to-image pipelines of
+Granite for now, and the text encoders BERT, XLM-RoBERTa and ModernBERT), text-to-image pipelines of
 [diffusers](https://github.com/huggingface/diffusers) (FLUX.2 [klein] and Z-Image for now),
 and the text embeddings of
 [sentence-transformers](https://github.com/huggingface/sentence-transformers) (its modules
@@ -39,8 +39,8 @@ reasons.
   interface of processor classes (`@processor`, `register_processor!`,
   `standardize_settings`), AutoProcessor's lookup, the strict reading of settings and the
   generic post-processing functions; `tokenizers.jl`, the internal interface through which
-  processors and pipelines use a tokenizer (`load_tokenizer`, `encode_ids`, `token_id`,
-  `pad_token_id`, `pad_ids`), and `TextProcessor`, the processor of a repository whose
+  processors and pipelines use a tokenizer (`load_tokenizer`, `encode_ids`, `encode_pair`,
+  `token_id`, `pad_token_id`, `pad_ids`), and `TextProcessor`, the processor of a repository whose
   processor is its tokenizer (a language model's). `images.jl` has the image layout that
   every processor takes (`image_array`, and its inverse `image_matrix`). Nothing there is
   specific to one library.

@@ -538,6 +538,28 @@ first. The workflow is the one above, with these differences.
   their weights under `text_model.` and `vision_model.` (`PrefixChange`), those saved by
   transformers 5 don't. Mirror transformers 5's module tree, and load the other layout with a
   method of `checkpoint_prefix(model, ckpt)` (`src/hub/registry.jl`; CLIP's in `clip.jl`).
+- **Text encoders** (BERT, XLM-RoBERTa and ModernBERT, `bert.jl`, `xlm_roberta.jl`,
+  `modernbert.jl`). A base model is a `TextEncoder`: `model(input_ids; attention_mask,
+  token_type_ids)` returns the `last_hidden_state` array, as a decoder does (the
+  sentence-transformers module calls it so), and `forward_head(model, hidden)` the
+  `pooler_output` of BERT and XLM-RoBERTa. XLM-RoBERTa has the layers of BERT (`BertLikeModel`) and
+  its own embeddings, whose positions follow the token indices, not the `attention_mask`.
+  A head (`...ForSequenceClassification`, `ModernBertForMaskedLM`) is a `TextEncoderHead`
+  around a base model that `encoder_model` returns, and gives its logits. The padding is
+  masked by `kv_lengths`; ModernBERT's local layers use `window` and `q_lengths`, so that the
+  padding queries whose window holds only padding return zeros, as PyTorch does. A bias-free
+  `nn.LayerNorm` is a `BiaslessLayerNorm`. Old checkpoints store `embeddings.position_ids`:
+  put it in `ignore` (`POSITION_IDS_IGNORE`). transformers 5.20 doesn't unpad ModernBERT's
+  batches, so its fixtures compare the padded outputs. A spec is dumped by `dump_encoder`:
+  `"lengths"` pads the random ids with the config's `pad_token_id`, `"token_types"` adds
+  `token_type_ids`, `"model_kwargs"` are arguments of the class that the fixture's config.json
+  holds too (`add_pooling_layer = false`), and `exact_float64` patches ModernBERT's float32
+  rotation of the queries and keys. Its references (`dump_reference.py` writes the
+  `ENCODER_TEXTS`, or `ENCODER_PAIRS` for a classifier, as the repo's tokenizer pads them)
+  are checked by `check_encoder_reference`, which also compares the processor's output with
+  transformers'. A sentence-transformers repo (all-MiniLM-L6-v2) has this reference and its
+  embeddings in one file: `--encoder` dumps the former, and `save_reference` keeps both. A
+  checkpoint with only `pytorch_model.bin` (BAAI/bge-m3) doesn't load.
 - **References.** `uv run dump_reference.py <org>/<repo>` tokenizes `PROMPTS` with the repo's
   tokenizer and stores the ids, the hidden states, the last-position logits and the greedy
   continuation (`check_lm_reference` in `test/parity.jl`); the logits come from the model's
@@ -621,12 +643,19 @@ tokenizing, as transformers does), and `image_processing_qwen2_vl.jl` maps legac
   `tokenizer` is `nothing` without the extension or without a `tokenizer.json`: its images
   still work, and its text calls `tokenizer_of(p)`, whose error says why. Processors use the
   tokenizer only through the internal interface of `src/hub/tokenizers.jl`:
-  `encode_ids(tok, text; add_special_tokens)`, `token_id(tok, token)` and
+  `encode_ids(tok, text; add_special_tokens)`, `encode_pair(tok, text, pair; add_special_tokens)`
+  (the ids and the segment ids of a text, or of a pair that the tokenizer's template joins),
+  `token_id(tok, token)` and
   `pad_token_id(tok)`, ids from 0, and `pad_ids(ids, pad_id; max_length)`, which pads a
   batch on the right into 1-based `input_ids` and an `attention_mask`. A repository whose
-  processor is its tokenizer (a language model's) gets a `Metalhead.TextProcessor`, which
-  does the same for texts, and HuggingFaceTokenizers' `decode` of a processor takes 1-based
-  token indices. In offline tests, a
+  processor is its tokenizer (a language model's, a text encoder's) gets a
+  `Metalhead.TextProcessor`, which does the same for texts (`text_pair` joins each text with a
+  second one, the input of a cross-encoder), and HuggingFaceTokenizers' `decode` of a
+  processor takes 1-based token indices. Its setting `model_input_names` says which of
+  `input_ids`, `token_type_ids` and `attention_mask` it returns, as transformers' tokenizer
+  does: those of tokenizer_config.json, else of its `tokenizer_class` (BERT's has
+  `token_type_ids`). Texts are not truncated, whatever the tokenizer.json sets, as with
+  transformers' default. In offline tests, a
   type with methods of these functions that returns the ids of the references stands in for
   the tokenizer; `METALHEAD_TEST_NETWORK` checks the real one.
 - **Fixtures.** `porting/dump_processor.py` calls `AutoProcessor.from_pretrained(repo)(...)`,

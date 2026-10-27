@@ -212,7 +212,7 @@ def dump_transformers(spec, out, args):
         return dump_siglip(spec, out, args)
     if spec["architecture"].startswith("CLIP"):
         return dump_clip(spec, out, args)
-    if spec["model_type"] in ENCODER_TYPES:
+    if spec.get("model_type") in ENCODER_TYPES:
         return dump_encoder(spec, out, args)
     seed = spec.get("seed", 0)
     torch.manual_seed(seed)

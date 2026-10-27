@@ -63,8 +63,9 @@ Metalhead.Transformers.Sam3VideoModel
 Metalhead.Transformers.Sam3VisionModel
 ```
 
-The models and processors of CLIP, and of SigLIP and SigLIP 2, have their own API references:
-[CLIP](clip.md), and [SigLIP and SigLIP 2](siglip.md).
+The models and processors of CLIP, of the text encoders BERT, XLM-RoBERTa and ModernBERT (and
+their builders), and of SigLIP and SigLIP 2, have their own API references: [CLIP](clip.md),
+[BERT, XLM-RoBERTa and ModernBERT](bert.md), and [SigLIP and SigLIP 2](siglip.md).
 
 ## diffusers
 
@@ -105,7 +106,13 @@ Filter = f -> !(f in (Metalhead.Timm.pretrained_cfg, Metalhead.Timm.pil_resize,
     post_process_semantic_segmentation, Metalhead.Transformers.clip_model,
     Metalhead.Transformers.clip_text_model, Metalhead.Transformers.clip_vision_model,
     Metalhead.Transformers.clip_text_model_with_projection,
-    Metalhead.Transformers.clip_vision_model_with_projection))
+    Metalhead.Transformers.clip_vision_model_with_projection,
+    Metalhead.Transformers.bert_model,
+    Metalhead.Transformers.bert_for_sequence_classification,
+    Metalhead.Transformers.xlm_roberta_model,
+    Metalhead.Transformers.xlm_roberta_for_sequence_classification,
+    Metalhead.Transformers.modernbert_model, Metalhead.Transformers.modernbert_for_masked_lm,
+    Metalhead.Transformers.modernbert_for_sequence_classification))
 ```
 
 ```@docs
