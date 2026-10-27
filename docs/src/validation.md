@@ -86,6 +86,15 @@ position and transformers' greedy continuation of the first prompt. The Flux mod
 the hidden states and logits to 1e-4, and reproduce the continuation exactly. The tests need
 neither Python nor a tokenizer.
 
+A checkpoint too large to run in float32 is checked on its first layers. Qwen3.8-27B would
+take 108 GB: its reference, from `dump_reference.py --layers 8`, comes from the weights of
+its embeddings, vision encoder, final norm and head and of the first 8 of its 64 decoder
+layers, in float32. The Flux model of the same layers loads them strictly, and the weights
+of each other layer must have the keys and shapes of the first of those layers of its type,
+so that the whole checkpoint loads too. It matches to 2e-6 on text and on an image, and
+generates the same tokens. This test downloads 56 GB, takes 44 GB of memory, and runs only
+with `METALHEAD_TEST_LARGE=true` as well.
+
 Metalhead ports no tokenizer: HuggingFaceTokenizers.jl runs Hugging Face's tokenizers library
 on the repository's `tokenizer.json` (see [Language models](@ref language_models)). With
 `METALHEAD_TEST_NETWORK=true`, the test suite adds it to its environment and checks that the

@@ -10,6 +10,9 @@ For a transformers causal LM, the input is `PROMPTS` tokenized by the repo's tok
 a common length (`input_ids`, 0-based), and the outputs are the hidden states after the final
 norm, the logits of the last position, and the greedy continuation of the first prompt
 (`generated_ids`), in float32, so that the Julia tests need neither Python nor a tokenizer.
+With `--layers k`, the model keeps the first k decoder layers of the checkpoint (and its
+embeddings, final norm, head and vision encoder), for a checkpoint too large to run whole in
+float32; the metadata records `num_hidden_layers`.
 
 A diffusers component is named `<org>/<repo>/<subfolder>` (e.g. `.../vae`): an autoencoder
 encodes and decodes `reference_input` images, and a FLUX.2 or Z-Image transformer predicts the
@@ -39,16 +42,18 @@ def main():
     p.add_argument("repos", nargs="+", metavar="repo")
     p.add_argument("--revision", default="main")
     p.add_argument("--batch", type=int, default=2)
+    p.add_argument("--layers", type=int, default=None,
+                   help="keep the first LAYERS decoder layers of a language model")
     args = p.parse_args()
     for repo in args.repos:
-        dump_reference(repo, args.revision, args.batch)
+        dump_reference(repo, args.revision, args.batch, args.layers)
 
 
 PROMPTS = ["The capital of France is Paris, and the capital of Italy is",
            "def fibonacci(n):\n    if n < 2:\n        return n\n    return"]
 
 
-def dump_reference(repo, revision, batch):
+def dump_reference(repo, revision, batch, layers=None):
     parts = repo.split("/")
     repo, subfolder = "/".join(parts[:2]), "/".join(parts[2:])
     sha = HfApi().model_info(repo, revision=revision).sha
@@ -60,7 +65,9 @@ def dump_reference(repo, revision, batch):
     if config.get("model_type") in ("sam3", "sam3_video"):
         return dump_sam3_reference(repo, sha)
     if "model_type" in config:
-        return dump_lm_reference(repo, sha)
+        return dump_lm_reference(repo, sha, layers=layers)
+    if layers is not None:
+        raise ValueError("--layers needs a transformers language model")
     weights = hf_hub_download(repo, "model.safetensors", revision=sha)
     # the repository's pretrained cfg, as timm uses when loading from the Hub: with the
     # architecture's default cfg, a checkpoint of another tag could lose its classifier
@@ -84,14 +91,19 @@ def dump_reference(repo, revision, batch):
     print(f"{out}: {repo}@{sha}, {out.stat().st_size / 1e3:.1f} kB")
 
 
-def dump_lm_reference(repo, sha, max_new_tokens=8):
-    from transformers import AutoModelForCausalLM, AutoModelForImageTextToText, AutoTokenizer
+def dump_lm_reference(repo, sha, max_new_tokens=8, layers=None):
+    from transformers import (AutoConfig, AutoModelForCausalLM, AutoModelForImageTextToText,
+                              AutoTokenizer)
     config = json.loads(pathlib.Path(hf_hub_download(repo, "config.json", revision=sha)).read_text())
     # a vision-language model: AutoModelForCausalLM would build its text model only
     auto = AutoModelForImageTextToText if "vision_config" in config else AutoModelForCausalLM
+    kwargs = {}
+    if layers is not None:
+        # the weights of the other layers are left unused
+        kwargs["config"] = truncated_config(AutoConfig.from_pretrained(repo, revision=sha), layers)
     model = auto.from_pretrained(repo, revision=sha, dtype=torch.float32,
                                  attn_implementation="sdpa",
-                                 experts_implementation="eager").eval()
+                                 experts_implementation="eager", **kwargs).eval()
     tokenizer = AutoTokenizer.from_pretrained(repo, revision=sha)
     ids = [tokenizer(p)["input_ids"] for p in PROMPTS]
     n = min(map(len, ids))
@@ -106,14 +118,28 @@ def dump_lm_reference(repo, sha, max_new_tokens=8):
     out = ROOT / "test" / "references" / (repo.replace("/", "--") + ".safetensors")
     out.parent.mkdir(parents=True, exist_ok=True)
     meta = {"repo": repo, "revision": sha, "prompts": json.dumps(PROMPTS), **versions()}
+    if layers is not None:
+        meta["num_hidden_layers"] = str(layers)
     tensors = {"input_ids": input_ids, "hidden_states": hidden.contiguous(),
                "last_logits": logits.contiguous(), "generated_ids": generated.contiguous()}
     if "vision_config" in config:
-        tensors.update(image_reference(model, repo, sha, max_new_tokens))
+        image_tensors, meta["image_text"] = image_reference(model, repo, sha, max_new_tokens)
+        tensors.update(image_tensors)
         meta["image_prompt"] = IMAGE_PROMPT
     save_file(tensors, out, metadata=meta)
     print(f"{out}: {repo}@{sha}, {out.stat().st_size / 1e3:.1f} kB, greedy continuation "
           f"{tokenizer.decode(generated[0, n:])!r}")
+
+
+def truncated_config(config, layers):
+    """`config` with the first `layers` decoder layers (of its `text_config`, if it has one)."""
+    text = getattr(config, "text_config", config)
+    if not 0 < layers <= text.num_hidden_layers:
+        raise ValueError(f"--layers must be in 1:{text.num_hidden_layers}, got {layers}")
+    if getattr(text, "layer_types", None) is not None:
+        text.layer_types = text.layer_types[:layers]
+    text.num_hidden_layers = layers
+    return config
 
 
 IMAGE_PROMPT = "Describe this image in one sentence."
@@ -124,7 +150,8 @@ IMAGE_URL = ("https://huggingface.co/datasets/huggingface/documentation-images/r
 def image_reference(model, repo, sha, max_new_tokens, size=(224, 160)):
     """The outputs of a vision-language model on `IMAGE_PROMPT` about the image of `IMAGE_URL`,
     resized to `size` (w, h) and preprocessed by the repo's processor with `min_pixels` low
-    enough to keep its size, under keys "image/...". The pixel values are rounded to float16."""
+    enough to keep its size, under keys "image/...", and the text of the chat template. The pixel
+    values are rounded to float16; "image/image" is the resized image, (3, h, w) in uint8."""
     import gc
     import io
     import urllib.request
@@ -146,11 +173,12 @@ def image_reference(model, repo, sha, max_new_tokens, size=(224, 160)):
         generated = model.generate(**inputs, max_new_tokens=max_new_tokens, do_sample=False)
     n = inputs["input_ids"].shape[1]
     print(f"{repo} on the image: {processor.decode(generated[0, n:])!r}")
-    return {"image/input_ids": inputs["input_ids"],
+    return {"image/image": torch.from_numpy(np.asarray(image).copy()).permute(2, 0, 1).contiguous(),
+            "image/input_ids": inputs["input_ids"],
             "image/pixel_values": inputs["pixel_values"].half(),
             "image/image_grid_thw": inputs["image_grid_thw"],
             "image/hidden_states": hidden.contiguous(), "image/last_logits": logits.contiguous(),
-            "image/generated_ids": generated.contiguous()}
+            "image/generated_ids": generated.contiguous()}, text
 
 
 def dump_sam3_reference(repo, sha, size=336, top=2, stride=2):

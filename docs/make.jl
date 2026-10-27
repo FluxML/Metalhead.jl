@@ -48,6 +48,8 @@ function write_model_list(path)
     title(family) = get(titles, family, family)
     notes = Dict("granite" => "Granite 4.0 models load without Mamba layers, so the hybrid " *
                               "\"H\" models (`granite-4.0-h-*`) don't load.",
+        "qwen" => "`Qwen/Qwen3.8-27B` was checked with the weights of its first 8 " *
+                  "decoder layers (see [How models are validated](@ref validation)).",
         "sam3" => "`jetjodh/sam3` is an ungated copy of the weights of Meta's gated " *
                   "`facebook/sam3`. Only the detector of `Sam3VideoModel` is ported, not " *
                   "its tracker.",
