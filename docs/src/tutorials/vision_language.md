@@ -16,7 +16,7 @@ Pkg.add(["Metalhead", "FileIO", "ImageIO", "ImageCore", "HuggingFaceTokenizers"]
 using Metalhead, FileIO, ImageCore, HuggingFaceTokenizers
 using Downloads: download
 
-model = create_model("Qwen/Qwen3.5-0.8B"; pretrained = true)
+model = create_model("Qwen/Qwen3.5-0.8B")
 proc = create_processor("Qwen/Qwen3.5-0.8B")
 ```
 
@@ -57,14 +57,14 @@ position. Greedy decoding appends the most probable token until the end of the a
 
 ```julia
 (; input_ids, pixel_values, image_grid_thw) = inputs
-im_end = only(encode(proc.tokenizer, "<|im_end|>").ids) + 1   # token indices start at 1
+im_end = only(proc(; text = "<|im_end|>").input_ids)   # the token index of <|im_end|>
 n = length(input_ids)
 for _ in 1:200
     next = argmax(model(input_ids; pixel_values, image_grid_thw)[:, end])
     next == im_end && break
     push!(input_ids, next)
 end
-println(decode(proc.tokenizer, input_ids[(n + 1):end] .- 1))
+println(decode(proc, input_ids[(n + 1):end]))
 ```
 
 ```

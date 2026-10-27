@@ -20,10 +20,9 @@ Pkg.add(["Metalhead", "FileIO", "ImageIO", "ImageCore", "HuggingFaceTokenizers"]
 
 ```julia
 using Metalhead, FileIO, ImageCore, HuggingFaceTokenizers
-using Metalhead.Transformers: post_process_instance_segmentation
 using Downloads: download
 
-model = create_model("unsloth/sam3.1"; pretrained = true)   # SAM 3.1; SAM 3: "jetjodh/sam3"
+model = create_model("unsloth/sam3.1")   # SAM 3.1; SAM 3: "jetjodh/sam3"
 proc = create_processor("unsloth/sam3.1")
 ```
 
@@ -45,24 +44,29 @@ size(inputs.pixel_values)      # (1008, 1008, 3, 1)
 outputs = model(inputs)
 ```
 
-[`post_process_instance_segmentation`](@ref Metalhead.Transformers.post_process_instance_segmentation)
-keeps the objects whose score is above `threshold`, with their boxes and masks at the size of
-the image, `target_sizes`:
+[`post_process_instance_segmentation`](@ref) keeps the objects whose score is above
+`threshold`, with their boxes and masks at the size of the image, `target_sizes`:
 
 ```julia
+inputs.original_sizes          # ((height = 480, width = 640),)
 objects = only(post_process_instance_segmentation(proc, outputs; threshold = 0.5,
     target_sizes = inputs.original_sizes))
 objects.scores                 # [0.965, 0.970]
 objects.boxes                  # 4 × 2: the (x1, y1, x2, y2) of each cat, in pixels
 size(objects.masks)            # (640, 480, 2): width × height × objects
+mask = Metalhead.image_matrix(objects.masks[:, :, 1])   # 480 × 640, as `img`
 ```
+
+Sizes are `(; height, width)`, as the processor gives them; `target_sizes` also takes
+`(height, width)` tuples. The masks, like the arrays of the models, are width × height:
+[`Metalhead.image_matrix`](@ref) turns one into a height × width image of `Gray` pixels, as
+FileIO loads images.
 
 The score of an object is the probability of its query times that of the presence of the
 prompt in the image.
-[`post_process_object_detection`](@ref Metalhead.Transformers.post_process_object_detection)
-returns the scores and boxes only, and
-[`post_process_semantic_segmentation`](@ref Metalhead.Transformers.post_process_semantic_segmentation)
-a single mask of the objects of each image, with its probabilities.
+[`post_process_object_detection`](@ref) returns the scores and boxes only, and
+[`post_process_semantic_segmentation`](@ref) a single mask of the objects of each image,
+with its probabilities.
 
 A vector of images makes a batch, with a vector of prompts, one for each image, and the
 post-processing returns the objects of each image.

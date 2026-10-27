@@ -36,7 +36,7 @@ const LEGACY_REPLACEMENTS = Dict{Symbol, Union{Nothing, String}}(
     :UNet => nothing,
     :backbone => "`forward_features(model, x)`",
     :classifier => "`forward_head(model, features)`",
-    :loadpretrain! => "`create_model(\"<organisation>/<repository>\"; pretrained = true)`")
+    :loadpretrain! => "`create_model(\"<organisation>/<repository>\")`")
 
 # Warns once per session for each deprecated function (Base.depwarn is silent outside of
 # tests). Deprecated functions call each other only through internal functions that don't

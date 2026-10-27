@@ -19,7 +19,7 @@ constructors use, don't warn.
 | 0.9 | 0.10 |
 |:--|:--|
 | `ResNet(50)` | `create_model("resnet50")` |
-| `ResNet(50; pretrain = true)` | `create_model("timm/resnet50.tv2_in1k"; pretrained = true)` |
+| `ResNet(50; pretrain = true)` | `create_model("timm/resnet50.tv2_in1k")` |
 | `nclasses = 10` | `num_classes = 10` |
 | `inchannels = 1` | `in_chans = 1` |
 | `imsize = (256, 256)` | `img_size = (256, 256)` (for ViT and the MLP mixers) |
@@ -39,12 +39,12 @@ have a different structure (the PyTorch one), so code that indexes into a model,
 
 The pretrained weights of 0.9 came from torchvision. timm hosts the same weights, as
 `<model>.tv_in1k` (torchvision's `IMAGENET1K_V1`) and `<model>.tv2_in1k` (`IMAGENET1K_V2`).
-The table gives the repository with the version that `pretrain = true` loaded. For ResNet-50,
-the outputs of the two models are bitwise identical.
+The table gives the repository with the version that `pretrain = true` loaded, whose weights
+`create_model` loads. For ResNet-50, the outputs of the two models are bitwise identical.
 
 | 0.9 | 0.10 |
 |:--|:--|
-| `ResNet(18; pretrain = true)`, `ResNet(34; ...)` | `create_model("timm/resnet18.tv_in1k"; pretrained = true)`, `"timm/resnet34.tv_in1k"` |
+| `ResNet(18; pretrain = true)`, `ResNet(34; ...)` | `create_model("timm/resnet18.tv_in1k")`, `"timm/resnet34.tv_in1k"` |
 | `ResNet(50; pretrain = true)`, `101`, `152` | `"timm/resnet50.tv2_in1k"`, `"timm/resnet101.tv2_in1k"`, `"timm/resnet152.tv2_in1k"` |
 | `WideResNet(50; pretrain = true)`, `101` | `"timm/wide_resnet50_2.tv2_in1k"`, `"timm/wide_resnet101_2.tv2_in1k"` |
 | `ResNeXt(50; pretrain = true)` (32×4d) | `"timm/resnext50_32x4d.tv2_in1k"` |

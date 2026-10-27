@@ -10,7 +10,6 @@
 # the GPU when CUDA finds one; FLUX.2 [klein] 4B needs 16 GB of it.
 
 using Metalhead, Flux, HuggingFaceTokenizers, CUDA, cuDNN
-using Metalhead.Transformers: post_process_instance_segmentation
 using Metalhead.Diffusers: encode_prompt, compute_empirical_mu, set_timesteps
 using CairoMakie, FileIO, ImageIO, ImageCore, ImageTransformations
 using Downloads, LinearAlgebra, Printf, Random, Statistics
@@ -52,7 +51,7 @@ labrador() = load(cached("labrador.jpg"))
 cats() = load(cached("cats.jpg"))
 
 # A width × height × 3 array as an image, a height × width matrix of colours
-as_image(x) = colorview(RGB, permutedims(Float32.(clamp.(x, 0, 1)), (3, 2, 1)))
+as_image(x) = Metalhead.image_matrix(clamp.(x, 0, 1))
 
 # The input that a timm transform makes, without its normalisation
 function denormalize(transform, x)
@@ -113,7 +112,7 @@ function bar_axis(pos, labels, values; kwargs...)
 end
 
 function top_classes(repo, img, labels; k = 5)
-    model = create_model(repo; pretrained = true)
+    model = create_model(repo)
     transform = create_processor(repo)
     p = vec(softmax(model(transform(img))))
     top = sortperm(p; rev = true)[1:k]
@@ -179,7 +178,7 @@ end
 
 function features()
     repo = "timm/resnet18.a1_in1k"
-    model = create_model(repo; pretrained = true)
+    model = create_model(repo)
     transform = create_processor(repo)
     x = transform(labrador())
     info = feature_info(model)[2:5]
@@ -221,7 +220,7 @@ rescale(v) = (v .- minimum(v)) ./ (maximum(v) - minimum(v))
 function dinov2_pca()
     repo = "timm/vit_small_patch14_reg4_dinov2.lvd142m"
     device = gpu_device()
-    model = device(create_model(repo; pretrained = true, dynamic_img_size = true))
+    model = device(create_model(repo; dynamic_img_size = true))
     img = cats()
     transform = create_processor(repo; input_size = (3, 672, 896))
     x = transform(img)
@@ -290,7 +289,7 @@ end
 function sam3()
     device = gpu_device()
     repo = "unsloth/sam3.1"
-    model = device(create_model(repo; pretrained = true))
+    model = device(create_model(repo))
     proc = create_processor(repo)
     img = cats()
     box = (340, 20, 638, 376)
@@ -333,12 +332,11 @@ end
 
 function next_token()
     repo = "HuggingFaceTB/SmolLM2-135M"
-    model = create_model(repo; pretrained = true)
+    model = create_model(repo)
     tok = create_processor(repo)
-    ids = encode(tok, "The capital of France is").ids .+ 1
-    p = softmax(model(ids)[:, end])
+    p = softmax(model(tok("The capital of France is"))[:, end])
     top = sortperm(p; rev = true)[1:10]
-    tokens = [repr(decode(tok, [i - 1])) for i in top]
+    tokens = [repr(decode(tok, i)) for i in top]
     foreach((t, v) -> @printf("  %-14s %.4f\n", t, v), tokens, p[top])
     fig = Figure()
     bar_axis(fig[1, 1], tokens, p[top]; width = 520, height = 380,
@@ -363,8 +361,7 @@ vision_language() = (save_asset("cats.jpg", cats()); nothing)
 
 function flux2_pipeline()
     if FLUX2[] === nothing
-        FLUX2[] = gpu(create_model("black-forest-labs/FLUX.2-klein-4B"; pretrained = true,
-            eltype = BFloat16))
+        FLUX2[] = gpu(create_model("black-forest-labs/FLUX.2-klein-4B"; eltype = BFloat16))
     end
     return FLUX2[]
 end
