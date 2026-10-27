@@ -589,8 +589,9 @@ Returns the most complete processor the repository describes, as transformers'
 that combines an image processor and a tokenizer (`Transformers.Sam3Processor`); else its
 tokenizer, as a [`TextProcessor`](@ref Metalhead.TextProcessor); else its image processor,
 such as the [`Timm.EvalTransform`](@ref Metalhead.Timm.EvalTransform) of every timm
-checkpoint. Calling a processor returns what the model takes, a NamedTuple (an array for
-`Timm.EvalTransform`), with token indices that start at 1:
+checkpoint. A diffusers pipeline and a sentence-transformers model prepare their inputs
+themselves, and have none. Calling a processor returns what the model takes, a NamedTuple
+(an array for `Timm.EvalTransform`), with token indices that start at 1:
 
 ```julia
 using HuggingFaceTokenizers
@@ -626,8 +627,11 @@ function create_processor(name::AbstractString;
         kwargs...)
     source = model_source(name, revision, String(subfolder))
     files = ProcessorFiles(source)
-    config = read_json(files, "config.json")
-    config === nothing && (config = read_json(files, "model_index.json"))
+    config = nothing
+    for file in CONFIG_FILES
+        parsed = read_json(files, file)
+        parsed === nothing || (config = config_of(file, parsed); break)
+    end
     found = config === nothing ? nothing : find_format(config)
     if found !== nothing
         p = instantiate_processor(first(found), files, config; kwargs...)

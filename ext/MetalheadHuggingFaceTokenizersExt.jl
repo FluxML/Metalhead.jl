@@ -63,4 +63,10 @@ function HuggingFaceTokenizers.decode(p::Metalhead.AbstractProcessor, index::Int
     return HuggingFaceTokenizers.decode(p, [index]; kwargs...)
 end
 
+# The embeddings of texts by a sentence-transformers model, which tokenizes them
+function HuggingFaceTokenizers.encode(m::Metalhead.SentenceTransformers.SentenceTransformer,
+        texts; kwargs...)
+    return Metalhead.SentenceTransformers.encode(m, texts; kwargs...)
+end
+
 end # module

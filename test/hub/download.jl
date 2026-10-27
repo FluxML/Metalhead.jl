@@ -121,7 +121,7 @@ end
             "tried model.safetensors and model.safetensors.index.json",
             "HF_HUB_OFFLINE is set"] source_weights(hub("metalhead/absent"))
         @test_throws ["has no configuration in the cache",
-            "tried vae/config.json and vae/model_index.json"] source_config(
+            "tried vae/modules.json, vae/config.json and vae/model_index.json"] source_config(
             hub("metalhead/absent"; subfolder = "vae"))
 
         check_pinned_files(; offline = true)
@@ -143,7 +143,7 @@ end
             @test (@test_logs source_config(hub("metalhead/pipeline")))["_class_name"] ==
                   "Flux2KleinPipeline"
             @test_throws ["has no configuration in the cache",
-                "tried config.json and model_index.json",
+                "tried modules.json, config.json and model_index.json",
                 "the Hub can't be reached"] source_config(hub("metalhead/absent"))
             check_pinned_files(; offline = false)
         end
