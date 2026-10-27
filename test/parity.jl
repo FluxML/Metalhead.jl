@@ -8,6 +8,7 @@ using Metalhead: Checkpoint, join_key, layer_params
 export Tap, tapify, check_fixture, fixture_model, fixture_inputs, shrink_channels,
        check_lm_reference, check_image_reference, check_sam3_reference, check_pipeline_fixture,
        reference_model, check_siglip_reference, check_clip_reference,
+       check_encoder_reference,
        check_diffusers_reference,
        reference_input, relerr
 
@@ -406,6 +407,75 @@ function check_clip_reference(file)
     return (;
         repo = meta["repo"], outputs = maximum(k -> relerr(y[k], ref[string(k)]), keys(y)),
         features = maximum(errs), processor_same)
+end
+
+"""
+    encoder_reference_model(file)
+
+The transformers model that the `config.json` of the repository of a text encoder's reference
+`file` names, at its commit, even for a sentence-transformers repository (with a
+modules.json), for which `create_model` builds the embedding model over it.
+"""
+function encoder_reference_model(file)
+    meta = SafeTensors.deserialize(file).metadata
+    repo, revision = meta["repo"], meta["revision"]
+    config = Metalhead.JSON.parsefile(Metalhead.hf_download(repo, "config.json"; revision))
+    format = Metalhead.Transformers.TRANSFORMERS
+    spec = Metalhead.lookup(Metalhead.architecture_of(format, config))
+    return Metalhead.instantiate(format, spec, Metalhead.model_source(repo, revision, ""),
+        config; pretrained = true, eltype = Float32)
+end
+
+"""
+    check_encoder_reference(file; model = encoder_reference_model(file)) -> NamedTuple
+
+Compare a text encoder (BERT, XLM-RoBERTa, ModernBERT, with or without a head) with the
+reference outputs of its real checkpoint, written by porting/dump_reference.py, on the
+texts of the metadata (and the passages paired with them, for a classifier): whether the
+processor of the repository (`create_processor`, with HuggingFaceTokenizers.jl loaded; the
+`TextProcessor` of a sentence-transformers repository's tokenizer) gives
+transformers' `input_ids`, `attention_mask` and `token_type_ids`, and the largest relative
+errors, on the tokens that the attention mask keeps, of the hidden states of the base model
+(`hidden`), of its `pooler_output` (`pooled`) and of the logits of a classifier or, for a
+masked language model, of the last token of each text (`logits`), from the reference's token
+indices.
+"""
+function check_encoder_reference(file; model = encoder_reference_model(file))
+    meta = SafeTensors.deserialize(file).metadata
+    ref = Checkpoint(file)
+    source = Metalhead.model_source(meta["repo"], meta["revision"], "")
+    # a sentence-transformers repository has no processor: its model tokenizes the texts
+    proc = haskey(Metalhead.source_config(source), "modules.json") ?
+           Metalhead.load_processor(Metalhead.TextProcessor,
+               Metalhead.ProcessorFiles(source)) :
+           create_processor(meta["repo"]; revision = meta["revision"])
+    strings(key) = Vector{String}(Metalhead.JSON.parse(meta[key]))
+    text_pair = haskey(meta, "text_pairs") ? strings("text_pairs") : nothing
+    inputs = proc(strings("texts"); text_pair)
+    types = haskey(ref, "token_type_ids") ? (; token_type_ids = ref["token_type_ids"]) : (;)
+    same = inputs.input_ids == ref["input_ids"] .+ 1 &&
+           inputs.attention_mask == ref["attention_mask"] &&
+           get(inputs, :token_type_ids, nothing) == get(types, :token_type_ids, nothing)
+    kwargs = (; attention_mask = ref["attention_mask"], types...)
+    ids = ref["input_ids"] .+ 1
+    hidden = forward_features(model, ids; kwargs...)
+    valid = vec(ref["attention_mask"] .!= 0)
+    tokens(x) = reshape(x, size(x, 1), :)[:, valid]
+    pooled = haskey(ref, "pooler_output") ?
+             relerr(forward_head(Metalhead.Transformers.encoder_model(model), hidden),
+        ref["pooler_output"]) : 0.0
+    logits = if haskey(ref, "logits")
+        relerr(model(ids; kwargs...), ref["logits"])
+    elseif haskey(ref, "last_logits")
+        lengths = vec(sum(ref["attention_mask"]; dims = 1))
+        all_logits = model(ids; kwargs...)
+        last = reduce(hcat, [all_logits[:, n, b] for (b, n) in enumerate(lengths)])
+        relerr(last, ref["last_logits"])
+    else
+        0.0
+    end
+    return (; repo = meta["repo"], inputs = same,
+        hidden = relerr(tokens(hidden), tokens(ref["hidden_states"])), pooled, logits)
 end
 
 """

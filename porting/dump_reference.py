@@ -14,6 +14,15 @@ With `--layers N`, the model keeps its first N decoder layers. `--selective-shar
 downloads only the shards of the kept weights (see `first_layers`), for a sharded checkpoint
 too large to download whole (Qwen3-30B-A3B); its omitted layers are not validated.
 
+For a text encoder (BERT, XLM-RoBERTa, ModernBERT, with or without a head), the input is
+`ENCODER_TEXTS` tokenized by the repo's tokenizer and padded as a batch (`input_ids`,
+`attention_mask` and `token_type_ids` where it returns them), or, for a classifier,
+`ENCODER_PAIRS`, which the tokenizer joins as a (query, passage) pair; the outputs are the
+hidden states of the base model, its `pooler_output` if it has one, the logits of a
+classifier and, for a masked language model, those of the last token of each text
+(`last_logits`). For a sentence-transformers repo, `--encoder` dumps these instead of its
+embeddings; both are kept in the file of the repo (`save_reference`).
+
 A diffusers component is named `<org>/<repo>/<subfolder>` (e.g. `.../vae`): an autoencoder
 encodes and decodes `reference_input` images, and a FLUX.2 or Z-Image transformer predicts the
 flow of random latents; the metadata has its parameter count. A diffusers pipeline
@@ -41,7 +50,8 @@ import pathlib
 import timm
 import torch
 from huggingface_hub import HfApi, hf_hub_download
-from safetensors.torch import save_file
+from safetensors import safe_open
+from safetensors.torch import load_file, save_file
 
 from common import reference_input, versions
 
@@ -56,20 +66,25 @@ def main():
     p.add_argument("--layers", type=int,
                    help="a language model cut to its first N decoder layers, for checkpoints "
                         "too large for the machine (see `first_layers`)")
+    p.add_argument("--encoder", action="store_true",
+                   help="for a sentence-transformers repo, dump the outputs of its BERT, "
+                        "XLM-RoBERTa or ModernBERT encoder (`dump_encoder_reference`) rather "
+                        "than its embeddings; both go in the same file")
     p.add_argument("--selective-shards", action="store_true",
                    help="with --layers, download only kept-weight shards; skip omitted-layer validation")
     args = p.parse_args()
     if args.selective_shards and args.layers is None:
         p.error("--selective-shards needs --layers")
     for repo in args.repos:
-        dump_reference(repo, args.revision, args.batch, args.layers, args.selective_shards)
+        dump_reference(repo, args.revision, args.batch, args.layers, args.selective_shards,
+                       args.encoder)
 
 
 PROMPTS = ["The capital of France is Paris, and the capital of Italy is",
            "def fibonacci(n):\n    if n < 2:\n        return n\n    return"]
 
 
-def dump_reference(repo, revision, batch, layers=None, selective_shards=False):
+def dump_reference(repo, revision, batch, layers=None, selective_shards=False, encoder=False):
     parts = repo.split("/")
     repo, subfolder = "/".join(parts[:2]), "/".join(parts[2:])
     sha = HfApi().model_info(repo, revision=revision).sha
@@ -82,7 +97,7 @@ def dump_reference(repo, revision, batch, layers=None, selective_shards=False):
     siblings = {f.rfilename for f in HfApi().model_info(repo, revision=sha).siblings}
     if "model_index.json" in siblings:
         return dump_pipeline_reference(repo, sha)
-    if "modules.json" in siblings:
+    if "modules.json" in siblings and not encoder:
         return dump_sentence_transformers_reference(repo, sha)
     config = json.loads(pathlib.Path(hf_hub_download(repo, "config.json", revision=sha)).read_text())
     if config.get("model_type") in ("sam3", "sam3_video"):
@@ -91,6 +106,8 @@ def dump_reference(repo, revision, batch, layers=None, selective_shards=False):
         return dump_siglip_reference(repo, sha)
     if config.get("model_type", "").startswith("clip"):
         return dump_clip_reference(repo, sha, config)
+    if config.get("model_type") in ("bert", "xlm-roberta", "modernbert"):
+        return dump_encoder_reference(repo, sha)
     if "model_type" in config:
         return dump_lm_reference(repo, sha, layers=layers, selective_shards=selective_shards)
     if layers is not None:
@@ -257,7 +274,7 @@ def dump_sentence_transformers_reference(repo, sha):
     out = reference_path(repo)
     meta = {"repo": repo, "revision": sha, "calls": json.dumps(EMBEDDING_CALLS),
             "sentence_transformers": sentence_transformers.__version__, **versions()}
-    save_file({k: v.contiguous() for k, v in tensors.items()}, out, metadata=meta)
+    save_reference(out, tensors, meta)
     print(f"{out}: {repo}@{sha}, {out.stat().st_size / 1e3:.1f} kB, similarities "
           f"{tensors['similarity'].tolist()}")
 
@@ -484,6 +501,78 @@ def dump_clip_reference(repo, sha, config, subfolder="", size=(160, 120), stride
     out_path = reference_path(name)
     save_file({k: v.contiguous() for k, v in tensors.items()}, out_path, metadata=meta)
     print(f"{out_path}: {name}@{sha}, {out_path.stat().st_size / 1e3:.1f} kB")
+ENCODER_TEXTS = ["The capital of France is Paris.",
+                 "A cat sat on the mat while the dog barked loudly at the passing cars.",
+                 "def fibonacci(n):\n    return n if n < 2 else fibonacci(n - 1) + fibonacci(n - 2)"]
+ENCODER_PAIRS = [("what is a panda?", "The giant panda is a bear native to central China."),
+                 ("what is a panda?", "Paris is the capital and largest city of France."),
+                 ("how many people live in Berlin?",
+                  "Berlin had a population of 3,520,031 registered inhabitants in 2016.")]
+
+
+def dump_encoder_reference(repo, sha):
+    """The outputs of a text encoder (BertModel, XLMRobertaModel, ModernBertModel, or one with
+    a head) on `ENCODER_TEXTS`, or, for a classifier, on `ENCODER_PAIRS` as (query, passage)
+    pairs, which the repo's tokenizer pads as a batch: "input_ids" (0-based), "attention_mask"
+    and "token_type_ids" if the tokenizer returns them; the "hidden_states" of the base model
+    (all tokens, whose padding is not meaningful), its "pooler_output" if it has one, the
+    "logits" of a classifier, and the "last_logits" of a masked language model, the logits of
+    the last token of each text. The first text of a masked language model ends with a mask."""
+    import transformers
+    from transformers import AutoTokenizer
+    config = json.loads(pathlib.Path(hf_hub_download(repo, "config.json", revision=sha)).read_text())
+    arch = config["architectures"][0]
+    model = getattr(transformers, arch).from_pretrained(
+        repo, revision=sha, dtype=torch.float32, attn_implementation="sdpa").eval()
+    tokenizer = AutoTokenizer.from_pretrained(repo, revision=sha)
+    classifier = arch.endswith("ForSequenceClassification")
+    masked = arch.endswith("ForMaskedLM")
+    texts = list(ENCODER_TEXTS)
+    if masked:
+        texts[0] = ENCODER_TEXTS[0].replace("Paris.", f"{tokenizer.mask_token}.")
+    if classifier:
+        queries, passages = zip(*ENCODER_PAIRS)
+        enc = tokenizer(list(queries), list(passages), padding=True, return_tensors="pt")
+    else:
+        enc = tokenizer(texts, padding=True, return_tensors="pt")
+    base = getattr(model, model.base_model_prefix, model)
+    with torch.no_grad():
+        out = model(**enc)
+        base_out = base(**enc)
+    tensors = {k: v for k, v in enc.items()}
+    tensors["hidden_states"] = base_out.last_hidden_state
+    if getattr(base_out, "pooler_output", None) is not None:
+        tensors["pooler_output"] = base_out.pooler_output
+    if classifier:
+        tensors["logits"] = out.logits
+    if masked:
+        last = enc["attention_mask"].sum(1) - 1
+        tensors["last_logits"] = out.logits[torch.arange(len(texts)), last]
+    path = reference_path(repo)
+    meta = {"repo": repo, "revision": sha, "class": arch, **versions()}
+    if classifier:
+        meta["texts"] = json.dumps(list(queries))
+        meta["text_pairs"] = json.dumps(list(passages))
+    else:
+        meta["texts"] = json.dumps(texts)
+    save_reference(path, tensors, meta)
+    shown = tensors["logits"].flatten().tolist() if classifier else tuple(tensors["hidden_states"].shape)
+    print(f"{path}: {repo}@{sha}, {path.stat().st_size / 1e3:.1f} kB, {shown}")
+
+
+def save_reference(path, tensors, meta):
+    """Write a reference file, keeping what an earlier dump of the same revision wrote to it: a
+    sentence-transformers repo has the embeddings of its model (`dump_sentence_transformers_
+    reference`) and the outputs of its encoder (`dump_encoder_reference`) in one file, under
+    different keys."""
+    tensors = {k: v.contiguous() for k, v in tensors.items()}
+    if path.exists():
+        with safe_open(path, "pt") as f:
+            old = f.metadata()
+        if old.get("revision") == meta["revision"]:
+            tensors = {**load_file(path), **tensors}
+            meta = {**old, **meta}
+    save_file(tensors, path, metadata=meta)
 
 
 def reference_path(name):

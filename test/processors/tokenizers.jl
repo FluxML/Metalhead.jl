@@ -40,6 +40,8 @@ end
 
 struct MetalheadTestTokenizer end
 
+const TEXT_NAMES = ["input_ids", "token_type_ids", "attention_mask"]
+
 const COMPOSITE = ["preprocessor_config.json" => Dict("size" => 6),
     "processor_config.json" => Dict("max_length" => 16),
     "tokenizer_config.json" => Dict("pad_token" => "<pad>")]
@@ -98,6 +100,24 @@ function Metalhead.encode_ids(::WordTokenizer, text::AbstractString;
     return add_special_tokens ? [9; ids] : ids
 end
 Metalhead.pad_token_id(t::WordTokenizer) = t.pad
+# the template of BERT: the id 9 starts a text, 6 ends each of two, the second has type 1
+function Metalhead.encode_pair(t::WordTokenizer, text, pair; add_special_tokens::Bool = true)
+    a = Metalhead.encode_ids(t, text; add_special_tokens)
+    pair === nothing && return (; ids = a, type_ids = zeros(Int, length(a)))
+    b = [VOCAB[w] for w in split(pair)]
+    add_special_tokens || return (; ids = [a; b], type_ids = [zeros(Int, length(a));
+                                        ones(Int, length(b))])
+    return (; ids = [a; 6; b; 6],
+        type_ids = [zeros(Int, length(a) + 1); ones(Int, length(b) + 1)])
+end
+
+# A tokenizer of single texts only
+struct PlainTokenizer end
+function Metalhead.encode_ids(::PlainTokenizer, text::AbstractString;
+        add_special_tokens::Bool = true)
+    return [1]
+end
+Metalhead.pad_token_id(::PlainTokenizer) = 0
 
 @testset "TextProcessor" begin
     tok = TextProcessor(WordTokenizer(7))
@@ -109,16 +129,53 @@ Metalhead.pad_token_id(t::WordTokenizer) = t.pad
     out = tok(["hello", "hello world again"])
     @test out.input_ids == [10 10; 4 4; 8 5; 8 6]
     @test out.attention_mask == [1 1; 1 1; 0 1; 0 1]
-    check_documented_keys(TextProcessor, [out])
+
+    # text encoders: the segment ids of the tokenizer, 0 for the text, 1 for its pair
+    bert = TextProcessor(WordTokenizer(7);
+        model_input_names = ["input_ids", "token_type_ids", "attention_mask"])
+    @test bert("hello world") ==
+          (; input_ids = [10, 4, 5], token_type_ids = [0, 0, 0], attention_mask = [1, 1, 1])
+    pair = bert(["hello", "hello world again"]; text_pair = ["world again", "hello"])
+    @test keys(pair) == (:input_ids, :token_type_ids, :attention_mask)
+    @test pair.input_ids == [10 10; 4 4; 7 5; 5 6; 6 7; 7 4; 8 7]
+    @test pair.token_type_ids == [0 0; 0 0; 0 0; 1 0; 1 0; 1 1; 0 1]
+    @test pair.attention_mask == [1 1; 1 1; 1 1; 1 1; 1 1; 1 1; 0 1]
+    @test bert("hello"; text_pair = "world") ==
+          (; input_ids = [10, 4, 7, 5, 7], token_type_ids = [0, 0, 0, 1, 1],
+        attention_mask = [1, 1, 1, 1, 1])
+    @test bert(; text = "hello", text_pair = "world", add_special_tokens = false) ==
+          (; input_ids = [4, 5], token_type_ids = [0, 1], attention_mask = [1, 1])
+    # the keys, in the order of `model_input_names`
+    plain = TextProcessor(WordTokenizer(7); model_input_names = ["input_ids"])
+    @test plain(["hello", "hello world"]) == (; input_ids = [10 10; 4 4; 8 5])
+    @test keys(tok("hello"; text_pair = "world")) == (:input_ids, :attention_mask)
+    @test tok("hello"; text_pair = "world").input_ids == [10, 4, 7, 5, 7]
+    check_documented_keys(TextProcessor, [out, pair])
+    @test_throws "as many texts as `text` (2), got 1" bert(["hello", "world"];
+        text_pair = ["hello"])
+    @test_throws "as many texts as `text` (1), got 1" bert(["hello"]; text_pair = "world")
+    @test_throws "can't encode a pair of texts" TextProcessor(PlainTokenizer())("a";
+        text_pair = "b")
+    @test TextProcessor(PlainTokenizer(); model_input_names = TEXT_NAMES)("a").token_type_ids ==
+          [0]
+    for names in (["attention_mask"], ["input_ids", "input_ids"],
+        ["input_ids", "position_ids"], "input_ids", [1])
+        @test_throws "`model_input_names` must be input names" TextProcessor(
+            PlainTokenizer(); model_input_names = names)
+    end
     # without a padding token, with the token index 1, which the attention mask leaves out
     @test TextProcessor(WordTokenizer(nothing))(["hello", "hello world"]).input_ids ==
           [10 10; 4 4; 1 5]
     @test_throws "a string or a vector of strings" tok(1)
     @test_throws "a string or a vector of strings" tok(["hello", 1])
     @test_throws "TextProcessor has no tokenizer to encode text" TextProcessor()("hello")
-    @test sprint(show, tok) == "TextProcessor(tokenizer = WordTokenizer)"
-    @test sprint(show, MIME("text/plain"), tok) == "TextProcessor\n  tokenizer: WordTokenizer"
-    @test_throws "no settings to override (got `padding_side`)" load_processor(TextProcessor,
+    @test sprint(show, tok) ==
+          "TextProcessor(tokenizer = WordTokenizer; model_input_names = [\"input_ids\", \"attention_mask\"])"
+    plain_show = sprint(show, MIME("text/plain"), tok)
+    @test startswith(plain_show, "TextProcessor\n  model_input_names = ")
+    @test endswith(plain_show, "\n  tokenizer: WordTokenizer")
+    @test_throws "TextProcessor has no setting `padding_side`" load_processor(
+        TextProcessor,
         files(mktempdir()); padding_side = "left")
 end
 
@@ -186,10 +243,11 @@ if TEST_NETWORK
               HuggingFaceTokenizers.decode(tok, [ids[end, 1]])
         batch = proc(prompts)
         lengths = [length(encode_ids(tok, p)) for p in prompts]
-        @test batch.attention_mask == [Int(i <= l) for i in 1:maximum(lengths), l in lengths]
+        @test batch.attention_mask ==
+              [Int(i <= l) for i in 1:maximum(lengths), l in lengths]
         padding = something(pad_token_id(tok), 0) + 1
         @test batch.input_ids == [i <= l ? proc(p).input_ids[i] : padding
-                                  for i in 1:maximum(lengths), (p, l) in zip(prompts, lengths)]
+               for i in 1:maximum(lengths), (p, l) in zip(prompts, lengths)]
         if pad === nothing
             @test pad_token_id(tok) === nothing
             @test_throws "no padding token" pad_ids(encode_ids.((tok,), prompts),
@@ -294,6 +352,74 @@ if TEST_NETWORK
             @test endswith(sprint(show, MIME("text/plain"), p), "\n  tokenizer: Tokenizer")
             @test !occursin("WordLevel", sprint(show, MIME("text/plain"), p))
         end
+    end
+
+    # The tokenizer of a text encoder: the inputs of its tokenizer_config.json (the encoders
+    # of the Hub are validated by their references, see check_encoder_reference)
+    @testset "text encoders" begin
+        # a BERT-like template, which joins a pair as `[CLS] a [SEP] b [SEP]`, and truncates
+        template(id, type_id) = Dict("SpecialToken" =>
+            Dict("id" => id, "type_id" => type_id))
+        sequence(id, type_id) = Dict("Sequence" => Dict("id" => id, "type_id" => type_id))
+        special(id, n) = id => Dict("id" => id, "ids" => [n], "tokens" => [id])
+        json = tokenizer_json()
+        json["model"]["vocab"]["[CLS]"] = 5
+        json["model"]["vocab"]["[SEP]"] = 6
+        json["post_processor"] = Dict("type" => "TemplateProcessing",
+            "single" => [template("[CLS]", 0), sequence("A", 0), template("[SEP]", 0)],
+            "pair" => [template("[CLS]", 0), sequence("A", 0), template("[SEP]", 0),
+                sequence("B", 1), template("[SEP]", 1)],
+            "special_tokens" => Dict(special("[CLS]", 5), special("[SEP]", 6)))
+        json["truncation"] = Dict("max_length" => 3, "strategy" => "LongestFirst",
+            "stride" => 0, "direction" => "Right")
+        function processor(config; kwargs...)
+            dir = mktempdir()
+            write(joinpath(dir, "tokenizer.json"), JSON.json(json))
+            write(joinpath(dir, "tokenizer_config.json"), JSON.json(config))
+            return create_processor(dir; kwargs...)
+        end
+        default = ["input_ids", "attention_mask"]
+        bert = ["input_ids", "token_type_ids", "attention_mask"]
+        @test processor(Dict("pad_token" => "[PAD]")).model_input_names == default
+        @test processor(Dict("tokenizer_class" => "XLMRobertaTokenizer")).model_input_names ==
+              default
+        for class in ("BertTokenizer", "BertTokenizerFast")
+            @test processor(Dict("tokenizer_class" => class)).model_input_names == bert
+        end
+        # the names of tokenizer_config.json win over the class, an override over both
+        names = Dict("tokenizer_class" => "BertTokenizer", "model_input_names" =>
+            ["input_ids"])
+        @test processor(names).model_input_names == ["input_ids"]
+        p = processor(names; model_input_names = default)
+        @test p.model_input_names == default
+        @test occursin(r"model_input_names = .*override \(tokenizer_config\.json",
+            sprint(show, MIME("text/plain"), p))
+        @test occursin("`tokenizer_class`: BertTokenizer",
+            sprint(show, MIME("text/plain"),
+                processor(Dict("tokenizer_class" => "BertTokenizer"))))
+        @test_throws "`model_input_names` must be input names" processor(names;
+            model_input_names = ["attention_mask"])
+        @test_throws "TextProcessor has no setting `pad_token`" processor(names;
+            pad_token = "[PAD]")
+
+        # pairs go through the template, with segment ids, and nothing is truncated
+        p = processor(Dict("tokenizer_class" => "BertTokenizer", "pad_token" => "<pad>"))
+        out = p("hello world again")   # "again" is not in the vocabulary
+        @test out.input_ids == [6, 4, 5, 1, 7] && out.token_type_ids == zeros(Int, 5)
+        @test out.attention_mask == ones(Int, 5)
+        out = p(["hello", "hello world"]; text_pair = ["world again", "hello"])
+        @test out.input_ids == [6 6; 4 4; 7 5; 5 7; 1 4; 7 7]
+        @test out.token_type_ids == [0 0; 0 0; 0 0; 1 0; 1 1; 1 1]
+        @test out.attention_mask == ones(Int, 6, 2)
+        out = p(["hello", "hello world again"]; text_pair = ["world", "hello"])
+        @test out.input_ids[:, 1] == [6, 4, 7, 5, 7, 3, 3]
+        @test out.token_type_ids[:, 1] == [0, 0, 0, 1, 1, 0, 0]
+        @test out.attention_mask[:, 1] == [1, 1, 1, 1, 1, 0, 0]
+        @test out.input_ids[:, 2] == [6, 4, 5, 1, 7, 4, 7]
+        @test p("hello"; text_pair = "world", add_special_tokens = false).input_ids ==
+              [4, 5]
+        @test encode_ids(p.tokenizer, "hello world again") == [5, 3, 4, 0, 6]
+        @test_throws "as many texts" p(["hello"]; text_pair = ["a", "b"])
     end
 
     @testset "a leaf" begin

@@ -60,5 +60,8 @@ include("image_processing_siglip.jl")
 include("image_processing_siglip2.jl")
 include("processing_siglip.jl")
 include("processing_siglip2.jl")
+include("bert.jl")
+include("xlm_roberta.jl")
+include("modernbert.jl")
 
 end # module

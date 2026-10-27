@@ -1,0 +1,1 @@
+{"library": "transformers", "architecture": "BertModel", "model_type": "bert", "config": {"vocab_size": 64, "hidden_size": 32, "num_hidden_layers": 2, "num_attention_heads": 4, "intermediate_size": 48, "max_position_embeddings": 16, "type_vocab_size": 2, "pad_token_id": 0}, "input_shape": [3, 9], "lengths": [9, 5, 2], "token_types": true, "tap_depth": 4, "seed": 0}

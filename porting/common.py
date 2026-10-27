@@ -52,11 +52,13 @@ def build(spec, **extra):
 def build_transformers(spec):
     """The transformers class `spec["architecture"]`, built from a config of `spec["model_type"]`
     with the fields `spec["config"]`, with PyTorch's scaled_dot_product_attention and the eager
-    loop over the experts of a mixture of experts."""
+    loop over the experts of a mixture of experts. `spec["model_kwargs"]` are arguments of the
+    class (BertModel's `add_pooling_layer`)."""
     import transformers
     config = transformers.AutoConfig.for_model(spec["model_type"], **spec.get("config", {}))
     return getattr(transformers, spec["architecture"])._from_config(
-        config, attn_implementation="sdpa", experts_implementation="eager")
+        config, attn_implementation="sdpa", experts_implementation="eager",
+        **spec.get("model_kwargs", {}))
 
 
 def build_diffusers(spec):
@@ -204,8 +206,9 @@ def rerandomize(model, seed=0):
 
 
 def exact_float64(model):
-    """Compute the RMSNorms, rotary tables, routers and gated delta rules of a transformers
-    model, and the resized position embeddings of SigLIP 2, in its own dtype.
+    """Compute the RMSNorms, rotary tables (and the rotation of ModernBERT's queries and keys),
+    routers and gated delta rules of a transformers model, and the resized position embeddings
+    of SigLIP 2, in its own dtype.
 
     transformers computes them in float32 even in a float64 model, which would limit the
     fixtures to float32 precision. In a float32 model the results are unchanged but for the
@@ -240,6 +243,8 @@ def exact_float64(model):
         elif name == "Siglip2VisionEmbeddings":
             m.resize_positional_embeddings = _exact_resize_positional_embeddings
         elif name.endswith("RotaryEmbedding"):
+            if name == "ModernBertRotaryEmbedding":
+                _exact_float64_modernbert(sys.modules[type(m).__module__])
             if isinstance(m.rope_type, dict):  # a table for each layer type (Gemma 3)
                 m.exact_inv_freq = {t: _exact_inv_freq(m.config.rope_parameters[t],
                                                        getattr(m, f"{t}_inv_freq"))
@@ -250,6 +255,17 @@ def exact_float64(model):
                 mrope = hasattr(m, "mrope_section") and hasattr(m, "recomposition_frequencies")
                 forward = _mrope_rotary_forward if mrope else _rotary_forward
                 m.forward = types.MethodType(forward, m)
+
+
+def _exact_float64_modernbert(module):
+    """Patch `modeling_modernbert` to rotate the queries and keys in their own dtype:
+    transformers casts them to float32 (and back), which would limit a float64 model to float32
+    precision."""
+    def apply_rotary_pos_emb(q, k, cos, sin, unsqueeze_dim=1):
+        cos, sin = cos.unsqueeze(unsqueeze_dim), sin.unsqueeze(unsqueeze_dim)
+        return (q * cos) + (module.rotate_half(q) * sin), (k * cos) + (module.rotate_half(k) * sin)
+
+    module.apply_rotary_pos_emb = apply_rotary_pos_emb
 
 
 def _rmsnorm_forward(self, x):

@@ -13,7 +13,8 @@ temporal, height and width positions of a multimodal rotary embedding (Qwen3.5).
 A vision encoder (Qwen3_5VisionModel) has "grid_thw" instead of "input_shape": the
 (t, h, w) grids of patches of its images (see `dump_transformers_vision`). A Sam3Model has
 "inputs", the sizes of its images and prompts (see `dump_sam3`), and so do SiglipModel,
-Siglip2Model (see `dump_siglip`) and the CLIP models (see `dump_clip`).
+Siglip2Model (see `dump_siglip`) and the CLIP models (see `dump_clip`). The text encoders BERT,
+XLM-RoBERTa and ModernBERT, and their heads, are dumped by `dump_encoder`.
 
 A spec with "library": "diffusers" describes a diffusers model, "architecture" (the class, e.g.
 "Flux2Transformer2DModel") with the arguments "config", saved with `save_pretrained`, and the
@@ -211,6 +212,8 @@ def dump_transformers(spec, out, args):
         return dump_siglip(spec, out, args)
     if spec["architecture"].startswith("CLIP"):
         return dump_clip(spec, out, args)
+    if spec.get("model_type") in ENCODER_TYPES:
+        return dump_encoder(spec, out, args)
     seed = spec.get("seed", 0)
     torch.manual_seed(seed)
     model = build(spec).eval()
@@ -272,6 +275,93 @@ def dump_transformers(spec, out, args):
     acts = {"input": x, "output": logits.contiguous(), "features": features.contiguous(), **taps,
             **intermediates, **{f"kwargs/{k}": v for k, v in stored.items()}}
     meta = {"spec": json.dumps(spec), "call_order": json.dumps(order),
+            "num_params": str(sum(p.numel() for p in model.parameters())), **versions()}
+    save_file(acts, out / "acts.safetensors", metadata=meta)
+
+    size = sum(f.stat().st_size for f in out.iterdir())
+    print(f"{out}: {len(model.state_dict())} tensors, {len(taps)} taps, {size / 1e6:.2f} MB")
+    return size <= args.max_bytes or bool(args.out)
+
+
+# The model types of the text encoders (BERT, XLM-RoBERTa and ModernBERT)
+ENCODER_TYPES = ("bert", "xlm-roberta", "modernbert")
+
+
+def encoder_layers(base):
+    """The list of layers of the base model of a text encoder."""
+    return base.encoder.layer if hasattr(base, "encoder") else base.layers
+
+
+def dump_encoder(spec, out, args):
+    """Write the fixture of a text encoder (BertModel, XLMRobertaModel, ModernBertModel), or of
+    one with a head on top (...ForSequenceClassification, ModernBertForMaskedLM).
+
+    The batch of "input_shape" (batch, seq_len) random token ids is padded on the right after
+    "lengths" (if given) with the padding token of the config, as a tokenizer does, and the
+    model takes the "kwargs/attention_mask". With "token_types": true it takes random
+    "kwargs/token_type_ids" (0 on the padding). The "output" of a base model is its last hidden
+    state (its "pooler_output" is stored too if it has a pooler), that of a head the logits.
+    "features" is the last hidden state of the base model, "intermediates/<i>" the outputs of
+    its layers (transformers' `hidden_states`), and "intermediates_norm/<i>" those with the
+    final norm, for a model that has one. "model_kwargs" are arguments of the class
+    (`add_pooling_layer`), which the fixture's config.json holds too."""
+    seed = spec.get("seed", 0)
+    torch.manual_seed(seed)
+    model = build(spec).eval()
+    rerandomize(model, seed)
+    model.save_pretrained(out)
+    (out / "generation_config.json").unlink(missing_ok=True)
+    if spec.get("model_kwargs"):  # the Julia builder takes them as config fields
+        config = json.loads((out / "config.json").read_text())
+        write_json(out / "config.json", {**config, **spec["model_kwargs"]})
+    model = model.double()
+    exact_float64(model)
+    base = getattr(model, model.base_model_prefix, model)
+
+    tap_dtype = getattr(torch, args.tap_dtype or ("float32" if args.all_taps else "float16"))
+    taps, order = {}, []
+    names = {n for n, m in model.named_modules()
+             if n and any(True for _ in m.parameters())
+             and (args.all_taps or n.count(".") <= spec.get("tap_depth", 1))}
+    cfg = model.config
+    gen = torch.Generator().manual_seed(seed + 1)
+    b, n = spec["input_shape"]
+    pad = cfg.pad_token_id
+    x = torch.randint(cfg.vocab_size - 1, (b, n), generator=gen)
+    x = x + (x >= pad)  # no padding token among the tokens
+    lengths = spec.get("lengths", [n] * b)
+    mask = torch.stack([torch.arange(n) < l for l in lengths])
+    x = torch.where(mask, x, torch.full_like(x, pad))
+    kwargs = {"attention_mask": mask.long()} if "lengths" in spec else {}
+    if spec.get("token_types"):
+        types = torch.randint(cfg.type_vocab_size, (b, n), generator=gen)
+        kwargs["token_type_ids"] = torch.where(mask, types, torch.zeros_like(types))
+
+    layers = encoder_layers(base)
+    hidden = []
+    with torch.no_grad():
+        handles = tap_hooks(model, names, taps, order, tap_dtype)
+        handles += [layer.register_forward_hook(lambda m, i, o: hidden.append(o.detach().clone()))
+                    for layer in layers]
+        y = model(input_ids=x, **kwargs)
+        for h in handles:
+            h.remove()
+        features = base(input_ids=x, **kwargs).last_hidden_state
+    final_norm = getattr(base, "final_norm", None)
+    intermediates = {f"intermediates/{i + 1}": h.contiguous() for i, h in enumerate(hidden)}
+    if final_norm is not None:
+        with torch.no_grad():
+            intermediates.update({f"intermediates_norm/{i + 1}": final_norm(h).contiguous()
+                                  for i, h in enumerate(hidden)})
+    outputs = {"output": (y.logits if hasattr(y, "logits") else y.last_hidden_state).contiguous()}
+    if getattr(y, "pooler_output", None) is not None:
+        outputs["pooler_output"] = y.pooler_output.contiguous()
+    acts = {"input": x, "features": features.contiguous(), **taps, **outputs, **intermediates,
+            **{f"kwargs/{k}": v for k, v in kwargs.items()}}
+    info = [dict(num_chs=cfg.hidden_size, reduction=1, module_name=name)
+            for name, m in model.named_modules() if any(m is layer for layer in layers)]
+    meta = {"spec": json.dumps(spec), "call_order": json.dumps(order),
+            "feature_info": json.dumps(info),
             "num_params": str(sum(p.numel() for p in model.parameters())), **versions()}
     save_file(acts, out / "acts.safetensors", metadata=meta)
 

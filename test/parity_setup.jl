@@ -10,6 +10,7 @@ using ChainRulesCore: unthunk
 
 export Parity, check_fixture, check_lm_reference, check_image_reference, check_sam3_reference,
        reference_model, check_siglip_reference, check_clip_reference,
+       check_encoder_reference,
        check_pipeline_fixture, check_diffusers_reference, fixture_model, fixture_inputs,
        shrink_channels,
        reference_input, relerr, tapify, fixture, reference_files, reference_files_of,

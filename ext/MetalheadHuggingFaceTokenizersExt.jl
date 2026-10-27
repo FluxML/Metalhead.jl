@@ -18,6 +18,8 @@ function load_tokenizer(path::AbstractString, pad::Union{Nothing, String})
         get!(TOKENIZERS, (path, pad)) do
             tok = HuggingFaceTokenizers.from_file(Tokenizer, path)
             py = tok.py_tokenizer
+            # transformers' tokenizers truncate only when asked to, whatever the file says
+            is_none(py.truncation) || py.no_truncation()
             if pad !== nothing && is_none(py.padding)
                 id = py.token_to_id(pad)
                 if is_none(id)
@@ -35,10 +37,18 @@ is_none(x) = pyis(x, pybuiltins.None)
 
 function Metalhead.encode_ids(tok::Tokenizer, text::AbstractString;
         add_special_tokens::Bool = true)
-    encoding = tok.py_tokenizer.encode(String(text); add_special_tokens)
-    ids = pyconvert(Vector{Int}, encoding.ids)
+    return Metalhead.encode_pair(tok, text, nothing; add_special_tokens).ids
+end
+
+function Metalhead.encode_pair(tok::Tokenizer, text::AbstractString,
+        pair::Union{Nothing, AbstractString}; add_special_tokens::Bool = true)
+    py = tok.py_tokenizer
+    encoding = pair === nothing ? py.encode(String(text); add_special_tokens) :
+               py.encode(String(text), String(pair); add_special_tokens)
     # without the padding of a tokenizer.json that pads to a fixed length
-    return ids[pyconvert(Vector{Int}, encoding.attention_mask) .!= 0]
+    keep = pyconvert(Vector{Int}, encoding.attention_mask) .!= 0
+    return (; ids = pyconvert(Vector{Int}, encoding.ids)[keep],
+        type_ids = pyconvert(Vector{Int}, encoding.type_ids)[keep])
 end
 
 function Metalhead.token_id(tok::Tokenizer, token::AbstractString)

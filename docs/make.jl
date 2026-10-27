@@ -28,6 +28,7 @@ end
 
 function write_model_list(path)
     titles = Dict(
+        "bert" => "BERT",
         "clip" => "CLIP",
         "convmixer" => "ConvMixer",
         "convnext" => "ConvNeXt",
@@ -40,6 +41,7 @@ function write_model_list(path)
         "llama" => "Llama",
         "mlp_mixer" => "MLP-Mixer, ResMLP and gMLP",
         "mobilenetv3" => "MobileNetV3/V4, FBNetV3 and LCNet",
+        "modernbert" => "ModernBERT",
         "qwen" => "Qwen",
         "res2net" => "Res2Net",
         "resnet" => "ResNet",
@@ -49,10 +51,19 @@ function write_model_list(path)
         "vgg" => "VGG",
         "vision_transformer" => "Vision Transformer (ViT)",
         "xception_aligned" => "Aligned Xception",
+        "xlm_roberta" => "XLM-RoBERTa",
         "z_image" => "Z-Image")
     title(family) = get(titles, family, family)
     st_types = join(("`$t`" for t in sort!(collect(keys(ST.AUTO_MODELS)))), ", ")
     notes = Dict(
+        "bert" => "`create_model` builds the sentence-transformers model of " *
+                  "`sentence-transformers/all-MiniLM-L6-v2`, `BAAI/bge-small-en-v1.5` and " *
+                  "the other repositories with a modules.json, whose `BertModel` the " *
+                  "references validate. A `BertModel` checkpoint without pooler weights " *
+                  "needs `add_pooling_layer = false`.",
+        "xlm_roberta" => "`BAAI/bge-m3` stores its weights in `pytorch_model.bin` only, which " *
+                         "Metalhead doesn't read; `BAAI/bge-reranker-v2-m3` has the same " *
+                         "architecture and is validated.",
         "clip" => "The main branch of `openai/clip-vit-base-patch32` has no safetensors " *
                   "weights: its validated commit is the pull request of Hugging Face's " *
                   "conversion bot that adds them, which `create_model` loads by default.",
@@ -75,7 +86,7 @@ function write_model_list(path)
                                    "a transformers model of a validated `model_type` " *
                                    "($st_types).")
     libraries = ["timm" => "Vision models (timm)",
-        "transformers" => "Language, vision-language, image-text and segmentation models (transformers)",
+        "transformers" => "Language, text encoder, vision-language, image-text and segmentation models (transformers)",
         "diffusers" => "Image generation (diffusers)",
         "sentence-transformers" => "Text embeddings (sentence-transformers)"]
     library(spec) = replace(string(spec.format), " pipeline" => "")
@@ -183,7 +194,8 @@ makedocs(; modules = [Metalhead],
             "Porting a model" => "contributing.md"],
         "Migrating from 0.9" => "migration.md",
         "API reference" => ["Overview" => "api/reference.md", "CLIP" => "api/clip.md",
-            "SigLIP and SigLIP 2" => "api/siglip.md",
+            "BERT, XLM-RoBERTa and ModernBERT" => "api/bert.md",
+            "SAM 3" => "api/sam3.md", "SigLIP and SigLIP 2" => "api/siglip.md",
             "Sentence transformers" => "api/sentence_transformers.md"]
     ],
     warnonly = [:example_block, :missing_docs],
