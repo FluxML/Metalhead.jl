@@ -69,6 +69,8 @@ Metalhead.Transformers.Sam3VisionModel
 Metalhead.Diffusers.Flux2KleinPipeline
 Metalhead.Diffusers.encode_prompt
 Metalhead.Diffusers.Flux2Transformer2DModel
+Metalhead.Diffusers.ZImagePipeline
+Metalhead.Diffusers.ZImageTransformer2DModel
 Metalhead.Diffusers.encode
 Metalhead.Diffusers.decode
 Metalhead.Diffusers.DiagonalGaussianDistribution
@@ -98,6 +100,8 @@ Filter = f -> !(f in (Metalhead.Timm.pretrained_cfg, Metalhead.Timm.pil_resize,
 ```@docs
 Metalhead.Diffusers.autoencoder_kl_flux2
 Metalhead.Diffusers.flux2_transformer_2d_model
+Metalhead.Diffusers.autoencoder_kl
+Metalhead.Diffusers.z_image_transformer_2d_model
 ```
 
 ## Porting internals

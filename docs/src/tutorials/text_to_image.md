@@ -36,6 +36,26 @@ img = only(Metalhead.image_matrix(cpu(image)))
 FileIO.save("fox.png", img)  # HuggingFaceTokenizers exports a `save` too
 ```
 
+## Z-Image-Turbo
+
+[Z-Image-Turbo](https://huggingface.co/Tongyi-MAI/Z-Image-Turbo) of Alibaba's Tongyi Lab, a
+model of 6 billion parameters under the Apache 2.0 license, distilled to generate an image
+in 9 steps without guidance, loads the same way, as a
+[`ZImagePipeline`](@ref Metalhead.Diffusers.ZImagePipeline):
+
+```julia
+pipe = gpu(create_model("Tongyi-MAI/Z-Image-Turbo"; eltype = BFloat16))
+image = pipe("A photo of a red fox sitting in fresh snow, looking at the camera";
+    num_inference_steps = 9, guidance_scale = 0)
+```
+
+Its defaults are those of diffusers' `ZImagePipeline`, for the base model Z-Image: 50 steps
+with classifier-free guidance (`guidance_scale = 5`). The pipeline downloads 33 GB (its
+transformer is stored in `Float32`) and holds 21 GB of weights in `BFloat16`. Its text
+encoder is the Qwen3 decoder whose hidden states of the second-to-last layer condition the
+image, one matrix per prompt without the padding; `negative_prompt` gives the negative
+prompts of guidance, and `cfg_normalization` and `cfg_truncation` limit it as in diffusers.
+
 ## Options
 
 The keyword arguments of the pipeline are those of diffusers' `Flux2KleinPipeline`:

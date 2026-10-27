@@ -47,6 +47,7 @@ function fixtures_of(library::Symbol)
 end
 
 to_gpu(x::AbstractArray{<:AbstractFloat}) = GPU(Float32.(x))
+to_gpu(x::AbstractVector{<:AbstractArray}) = map(to_gpu, x)
 to_gpu(x::AbstractArray) = GPU(x)
 to_gpu(x) = x
 

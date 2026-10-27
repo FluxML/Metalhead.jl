@@ -56,9 +56,10 @@ function instantiate(format::DiffusersPipelineFormat, spec, source, config;
         else
             subconfig = source_config(sub)
             subformat, architecture = identify(subconfig)
-            architecture == class ||
-                error("component `$name` of $(spec.name) is a $class, but its config.json describes a $architecture")
-            instantiate(subformat, lookup(architecture), sub, subconfig; pretrained, eltype)
+            model = instantiate(subformat, lookup(architecture), sub, subconfig; pretrained,
+                eltype)
+            architecture == class ? model :
+            base_model(model, class, architecture, "component `$name` of $(spec.name)")
         end
         return Symbol(name) => component
     end
@@ -71,6 +72,24 @@ end
 # pipeline loads once HuggingFaceTokenizers is loaded; `nothing` without a tokenizer.json
 # (a local pipeline saved without one).
 pipeline_tokenizer(s::ModelSource) = load_tokenizer_or_defer(ProcessorFiles(s))
+
+# A component that a pipeline holds as the base model of the architecture of its checkpoint,
+# as transformers loads the decoder of a causal language model: Z-Image's `Qwen3Model` text
+# encoder is saved as a `Qwen3ForCausalLM`.
+function base_model(model, class, architecture, what)
+    model isa CausalLM && class == replace(architecture, r"ForCausalLM$" => "Model") ||
+        error("$what is a $class, but its config.json describes a $architecture")
+    return first(decoder(model))
+end
+
+# The tokenizer with which a pipeline encodes prompts, from its `tokenizer`.
+function prompt_tokenizer(tokenizer)
+    tok = resolve_tokenizer(tokenizer)
+    tok === nothing || return tok
+    tokenizer isa DeferredTokenizer &&
+        error("the tokenizer of the pipeline needs HuggingFaceTokenizers.jl to encode prompts: run `using HuggingFaceTokenizers`, and call the pipeline again, which needn't be loaded again; or pass prompt embeddings, or the token indices of the prompts to `encode_prompt`")
+    return error("the pipeline has no tokenizer to encode prompts, as its repository has no tokenizer/tokenizer.json: pass prompt embeddings, or the token indices of the prompts to `encode_prompt`")
+end
 
 # Diffusers components have no processor of their own: a pipeline preprocesses in its code.
 function instantiate_processor(::DiffusersFormat, files, config; kwargs...)

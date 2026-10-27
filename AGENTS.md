@@ -4,7 +4,7 @@ Metalhead.jl provides Flux ports of Hugging Face Hub models: the vision models o
 [timm](https://github.com/huggingface/pytorch-image-models), language models of
 [transformers](https://github.com/huggingface/transformers) (Llama, Qwen, Gemma 3 and
 Granite for now), and text-to-image pipelines of
-[diffusers](https://github.com/huggingface/diffusers) (FLUX.2 [klein] for now). Each port
+[diffusers](https://github.com/huggingface/diffusers) (FLUX.2 [klein] and Z-Image for now). Each port
 mirrors the PyTorch module tree, loads the original safetensors weights by name, and is
 checked numerically against PyTorch, and so is the processor of each checkpoint, its
 inference pre- and post-processing. `create_model` and `create_processor` are the entry
@@ -52,10 +52,12 @@ reasons.
   class under transformers' file names (`image_processing_sam3.jl`, `processing_sam3.jl`);
   `image_processing_backends.jl` has the operations of the torchvision backend that image
   processors share. Tokenizers aren't ported.
-- `src/Diffusers/`: diffusers models (`transformer_flux2.jl`, `autoencoder_kl_flux2.jl`, the
-  autoencoders' encoder and decoder in `vae.jl`), schedulers and pipelines. `config.jl` has two
-  `AbstractConfigFormat`s: a model's `config.json` and a pipeline's `model_index.json`,
-  whose components load from subfolders of the repository. The tokenizer of a pipeline is
+- `src/Diffusers/`: diffusers models (`transformer_flux2.jl`, `transformer_z_image.jl`,
+  `autoencoder_kl_flux2.jl`, `autoencoder_kl.jl`, the autoencoders' encoder and decoder in
+  `vae.jl`), schedulers and pipelines. `config.jl` has two `AbstractConfigFormat`s: a
+  model's `config.json` and a pipeline's `model_index.json`, whose components load from
+  subfolders of the repository (a transformers base model, such as Z-Image's `Qwen3Model`,
+  as the decoder of its `...ForCausalLM` checkpoint). The tokenizer of a pipeline is
   HuggingFaceTokenizers.jl's `Tokenizer` of its `tokenizer/` subfolder, which `create_model`
   loads through the extension, or once the extension is loaded (`DeferredTokenizer`).
 - `ext/`: package extensions. HuggingFaceTokenizers.jl's `Tokenizer` is the tokenizer of a

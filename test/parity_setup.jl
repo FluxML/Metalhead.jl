@@ -91,7 +91,8 @@ end
     check_half_precision(model, x...; T = Float16, rtol = 1e-2, kwargs...) -> Bool
 
 Whether the Float32 `model` converted to `T` (by `f16` or `bf16`) runs in mixed precision on
-the inputs `x` (floating-point arrays are converted to `T`) and keyword arguments `kwargs`:
+the inputs `x` (floating-point arrays, and vectors of them, are converted to `T`) and
+keyword arguments `kwargs`:
 the layers with a conversion method of their own (the norms, such as
 `Flux.f16(::LayerNorm2d, cx)`) keep `Float32` arrays and every other floating-point array is
 `T`, the output has eltype `T`, no warning other than a deprecation is logged (such as
@@ -114,9 +115,8 @@ function check_half_precision(model, x...; T = Float16, rtol = 1e-2, kwargs...)
         end
     end
     walk(half, "model")
-    tohalf(a) = a isa AbstractArray{<:AbstractFloat} ? cast(a) : a
     logs, y = Test.collect_test_logs(; min_level = Base.CoreLogging.Warn) do
-        return half(map(tohalf, x)...; kwargs...)
+        return half(map(a -> convert_floats(cast, a), x)...; kwargs...)
     end
     outputs(y) = y isa NamedTuple ? values(y) : (y,)
     err = maximum(((a, b),) -> relerr(Float32.(a), b),
@@ -129,9 +129,15 @@ function check_half_precision(model, x...; T = Float16, rtol = 1e-2, kwargs...)
     return ok
 end
 
+# `f` applied to an input with floating-point values, or to each of a vector of them (the
+# captions of the Z-Image transformer).
+convert_floats(f, a::AbstractArray{<:AbstractFloat}) = f(a)
+convert_floats(f, a::AbstractVector{<:AbstractArray}) = map(x -> convert_floats(f, x), a)
+convert_floats(f, a) = a
+
 function check_half_precision(name::AbstractString; kwargs...)
     args, inputs = fixture_inputs(Metalhead.Checkpoint(joinpath(fixture(name), "acts.safetensors")))
-    args = map(a -> a isa AbstractArray{<:AbstractFloat} ? Float32.(a) : a, args)
+    args = map(a -> convert_floats(x -> Float32.(x), a), args)
     model = fixture_model(fixture(name); eltype = Float32)
     return check_half_precision(model, args...; inputs..., kwargs...)
 end

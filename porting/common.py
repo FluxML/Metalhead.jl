@@ -471,6 +471,7 @@ def exact_float64_diffusers():
 
     diffusers computes them in float32 even in a float64 model or pipeline, which would limit
     the fixtures to float32 precision. Inputs of other dtypes are computed as diffusers does.
+    So are diffusers' RMSNorms and those of Z-Image (see `_exact_float64_z_image`).
     """
     from diffusers.models import embeddings
     from diffusers.models.transformers import transformer_flux2
@@ -524,10 +525,92 @@ def exact_float64_diffusers():
     transformer_flux2.apply_rotary_emb = rotary
     euler.FlowMatchEulerDiscreteScheduler.step = step
     try:
-        yield
+        with _exact_float64_z_image():
+            yield
     finally:
         (embeddings.get_timestep_embedding, transformer_flux2.Flux2PosEmbed.forward,
          transformer_flux2.apply_rotary_emb, euler.FlowMatchEulerDiscreteScheduler.step) = originals
+
+
+@contextlib.contextmanager
+def _exact_float64_z_image():
+    """Compute diffusers' `RMSNorm` and the timestep embeddings and rotary embeddings of the
+    Z-Image transformer in float64 in a float64 model, which diffusers computes in float32.
+
+    The timestep embeddings are computed in float64 from the timesteps of the model's dtype or
+    of float32 (the pipeline's), and the rotary angles and their rotations of float64 tokens
+    in float64."""
+    from diffusers.models import normalization
+    from diffusers.models.attention_dispatch import dispatch_attention_fn
+    from diffusers.models.transformers import transformer_z_image as z_image
+
+    def rms_norm(self, hidden_states):
+        if hidden_states.dtype != torch.float64:
+            return originals[0](self, hidden_states)
+        variance = hidden_states.pow(2).mean(-1, keepdim=True)
+        hidden_states = hidden_states * torch.rsqrt(variance + self.eps)
+        if self.weight is not None:
+            hidden_states = hidden_states * self.weight
+            if self.bias is not None:
+                hidden_states = hidden_states + self.bias
+        return hidden_states
+
+    def timestep_forward(self, t):
+        if self.mlp[0].weight.dtype != torch.float64:
+            return originals[1](self, t)
+        half = self.frequency_embedding_size // 2
+        freqs = torch.exp(-math.log(10000) * torch.arange(half, dtype=torch.float64) / half)
+        args = t.double()[:, None] * freqs[None]
+        return self.mlp(torch.cat([torch.cos(args), torch.sin(args)], dim=-1))
+
+    def precompute_freqs_cis(dim, end, theta=256.0):
+        freqs_cis = []
+        for d, e in zip(dim, end):
+            freqs = 1.0 / (theta ** (torch.arange(0, d, 2, dtype=torch.float64) / d))
+            angles = torch.outer(torch.arange(e, dtype=torch.float64), freqs)
+            freqs_cis.append(torch.polar(torch.ones_like(angles), angles))
+        return freqs_cis
+
+    def attention(self, attn, hidden_states, encoder_hidden_states=None, attention_mask=None,
+                  freqs_cis=None):
+        if hidden_states.dtype != torch.float64:
+            return originals[3](self, attn, hidden_states, encoder_hidden_states,
+                                attention_mask, freqs_cis)
+        query, key, value = (proj(hidden_states).unflatten(-1, (attn.heads, -1))
+                             for proj in (attn.to_q, attn.to_k, attn.to_v))
+        if attn.norm_q is not None:
+            query = attn.norm_q(query)
+        if attn.norm_k is not None:
+            key = attn.norm_k(key)
+
+        def rotate(x):
+            x = torch.view_as_complex(x.reshape(*x.shape[:-1], -1, 2))
+            return torch.view_as_real(x * freqs_cis.unsqueeze(2)).flatten(3)
+
+        if freqs_cis is not None:
+            query, key = rotate(query), rotate(key)
+        if attention_mask is not None and attention_mask.ndim == 2:
+            attention_mask = attention_mask[:, None, None, :]
+        hidden_states = dispatch_attention_fn(query, key, value, attn_mask=attention_mask,
+                                              dropout_p=0.0, is_causal=False,
+                                              backend=self._attention_backend,
+                                              parallel_config=self._parallel_config)
+        output = attn.to_out[0](hidden_states.flatten(2, 3))
+        return attn.to_out[1](output) if len(attn.to_out) > 1 else output
+
+    targets = [(normalization.RMSNorm, "forward", rms_norm),
+               (z_image.TimestepEmbedder, "forward", timestep_forward),
+               (z_image.RopeEmbedder, "precompute_freqs_cis", staticmethod(precompute_freqs_cis)),
+               (z_image.ZSingleStreamAttnProcessor, "__call__", attention)]
+    originals = [getattr(cls, name) for cls, name, _ in targets]
+    saved = [cls.__dict__[name] for cls, name, _ in targets]
+    for cls, name, patch in targets:
+        setattr(cls, name, patch)
+    try:
+        yield
+    finally:
+        for (cls, name, _), original in zip(targets, saved):
+            setattr(cls, name, original)
 
 
 def state_dict_f32(model):

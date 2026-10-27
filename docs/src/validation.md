@@ -51,13 +51,20 @@ the right and passes its `attention_mask`, and each records the hidden states of
 
 For a diffusers model, the fixture is a small configuration of the class, saved with
 `save_pretrained`, run on random inputs: images for an autoencoder; image tokens, text tokens,
-noise levels and position ids for the FLUX.2 transformer. diffusers computes its timestep and
-rotary embeddings in float32, which `dump.py` computes in float64 too. A pipeline fixture is a
+noise levels and position ids for the FLUX.2 transformer; latent images, timesteps and
+captions of different lengths for the Z-Image transformer, which pads them and masks the
+padding. diffusers computes its timestep and rotary embeddings (and the RMSNorms of Z-Image)
+in float32, which `dump.py` computes in float64 too. A pipeline fixture is a
 whole pipeline of tiny components (text encoder, transformer, autoencoder and scheduler), saved
 like a Hub repository with a `model_index.json`. It stores the prompt embeddings of random
 token ids, which must match to 1e-8, and the latents and images that the pipeline makes from
 fixed noise in a few steps, which match to 1e-10: diffusers keeps the noise levels in float32,
-in a float64 pipeline too. The pipelines also edit random reference images of one to four
+in a float64 pipeline too. The Z-Image pipeline denoises its latents in float32 whatever the
+eltype of its models, so `dump.py` runs a copy of its code with float64 in place of float32.
+One of its fixtures has classifier-free guidance with the normalization and truncation
+options, and prompts whose lengths differ.
+
+The FLUX.2 [klein] pipelines also edit random reference images of one to four
 channels (grey, grey and alpha, RGB, RGBA), which they must prepare as diffusers does, bit for
 bit. Images over the area limit of 1024 × 1024 pixels, which diffusers resizes with Pillow,
 are too large to edit with tiny models: for two of them, one RGBA, whose colours Pillow
@@ -104,6 +111,13 @@ the latents of the pipeline near 1e-3, as rounding errors grow over the denoisin
 that PyTorch's own float32 latents differ from its float64 ones by 6e-4. In float64, the
 port and PyTorch generate the same latents to 1e-12. The transformer and the pipeline download 8 and 16 GB, and run only with
 `METALHEAD_TEST_LARGE=true` as well.
+
+Z-Image-Turbo has the same references: its autoencoder, its transformer on latents of 48
+patches and captions of 10 and 40 tokens, and an image of 256 × 256 pixels generated with
+its settings, 9 steps without guidance. They also store PyTorch's parameter counts. The
+autoencoder lands at 3e-5, the transformer at 6e-6, and the latents and image of the
+pipeline at 3e-6 and 2e-6. The transformer and the pipeline download 25 and 33 GB, and take
+as much memory in float32 on the CPU (the pipeline 42 GB).
 
 ## Processors
 

@@ -15,11 +15,11 @@ embeddings, final norm, head and vision encoder), for a checkpoint too large to 
 float32; the metadata records `num_hidden_layers`.
 
 A diffusers component is named `<org>/<repo>/<subfolder>` (e.g. `.../vae`): an autoencoder
-encodes and decodes `reference_input` images, and a FLUX.2 transformer predicts the flow of
-random latents. A diffusers pipeline (`<org>/<repo>` with a model_index.json) generates an image
-from `PIPELINE_PROMPT` end to end, from fixed initial noise, and edits the image of `IMAGE_URL`
-as `EDIT_PROMPT` says. Random inputs are stored rounded to
-float16, so that both sides use the same values.
+encodes and decodes `reference_input` images, and a FLUX.2 or Z-Image transformer predicts the
+flow of random latents; the metadata has its parameter count. A diffusers pipeline
+(`<org>/<repo>` with a model_index.json) generates an image from `PIPELINE_PROMPT` end to end,
+from fixed initial noise. FLUX.2 [klein] also edits the image of `IMAGE_URL` as `EDIT_PROMPT`
+says. Random inputs are stored rounded to float16, so that both sides use the same values.
 """
 import argparse
 import json
@@ -280,11 +280,23 @@ def dump_diffusers_reference(repo, subfolder, sha, batch):
         tensors = {"inputs/1": hidden.half(), "inputs/2": text.half(), "inputs/3": timestep,
                    "inputs/4": img_ids, "inputs/5": txt_ids, "output": output}
         meta = {}
+    elif config["_class_name"] == "ZImageTransformer2DModel":
+        # latents of 6 × 8 patches, padded to 64 tokens, and captions whose padded lengths
+        # differ (32 and 64), which the attention masks
+        x = half_randn(gen, batch, config["in_channels"], 1, 12, 16)
+        caps = [half_randn(gen, n, config["cap_feat_dim"]) for n in [10, 40][:batch]]
+        timestep = torch.tensor([0.7, 0.3][:batch])
+        with torch.no_grad():
+            output = torch.stack(model(list(x.unbind(0)), timestep, caps).sample)
+        tensors = {"inputs/1": x.half(), "inputs/2": timestep, "output": output,
+                   **{f"inputs/3/{j + 1}": c.half() for j, c in enumerate(caps)}}
+        meta = {}
     else:
         raise SystemExit(f"no reference for {config['_class_name']}")
     name = f"{repo}/{subfolder}"
     out = reference_path(name)
-    meta.update({"repo": name, "revision": sha, "class": config["_class_name"], **versions()})
+    meta.update({"repo": name, "revision": sha, "class": config["_class_name"],
+                 "num_params": str(sum(p.numel() for p in model.parameters())), **versions()})
     save_file({k: v.contiguous() for k, v in tensors.items()}, out, metadata=meta)
     print(f"{out}: {name}@{sha}, {out.stat().st_size / 1e3:.1f} kB")
 
@@ -313,6 +325,8 @@ def dump_pipeline_reference(repo, sha, height=256, width=256, steps=4, embed_pos
     from transformers import AutoTokenizer, Qwen3ForCausalLM
     Pipeline = diffusers.Flux2KleinPipeline
     index = json.loads(pathlib.Path(hf_hub_download(repo, "model_index.json", revision=sha)).read_text())
+    if index["_class_name"] == "ZImagePipeline":
+        return dump_z_image_reference(repo, sha, height, width, embed_positions=embed_positions)
     assert index["_class_name"] == "Flux2KleinPipeline", index["_class_name"]
     tokenizer = AutoTokenizer.from_pretrained(repo, subfolder="tokenizer", revision=sha)
     text_encoder = Qwen3ForCausalLM.from_pretrained(repo, subfolder="text_encoder", revision=sha,
@@ -363,6 +377,48 @@ def dump_pipeline_reference(repo, sha, height=256, width=256, steps=4, embed_pos
             "prompt": PIPELINE_PROMPT, "height": str(height), "width": str(width),
             "num_inference_steps": str(steps), "edit_prompt": EDIT_PROMPT,
             "edit_image": IMAGE_URL, **versions()}
+    save_file({k: v.contiguous() for k, v in tensors.items()}, out, metadata=meta)
+    print(f"{out}: {repo}@{sha}, {out.stat().st_size / 1e3:.1f} kB")
+
+
+def dump_z_image_reference(repo, sha, height, width, steps=9, guidance_scale=0.0,
+                           embed_positions=24):
+    """An image of Z-Image-Turbo with its settings (9 steps without guidance), as
+    `dump_pipeline_reference` makes it. The text encoder and the rest of the pipeline load one
+    after the other, to fit in less memory (16 and 25 GB in float32)."""
+    import gc
+
+    import diffusers
+    load = dict(revision=sha, torch_dtype=torch.float32)
+    pipe = diffusers.ZImagePipeline.from_pretrained(repo, transformer=None, vae=None, **load)
+    text = pipe.tokenizer.apply_chat_template([{"role": "user", "content": PIPELINE_PROMPT}],
+                                              tokenize=False, add_generation_prompt=True,
+                                              enable_thinking=True)
+    tokens = pipe.tokenizer(text, return_tensors="pt", padding="max_length", truncation=True,
+                            max_length=512)
+    with torch.no_grad():
+        prompt_embeds, _ = pipe.encode_prompt(PIPELINE_PROMPT, do_classifier_free_guidance=False)
+    del pipe
+    gc.collect()
+    pipe = diffusers.ZImagePipeline.from_pretrained(repo, text_encoder=None, tokenizer=None, **load)
+    pipe.set_progress_bar_config(disable=True)
+    gen = torch.Generator().manual_seed(0)
+    f = pipe.vae_scale_factor * 2
+    latents = half_randn(gen, 1, pipe.transformer.config.in_channels, 2 * (height // f),
+                         2 * (width // f))
+    with torch.no_grad():
+        kwargs = dict(prompt_embeds=prompt_embeds, height=height, width=width,
+                      num_inference_steps=steps, guidance_scale=guidance_scale)
+        denoised = pipe(latents=latents.clone(), output_type="latent", **kwargs).images
+        image = pipe(latents=latents.clone(), output_type="pt", **kwargs).images
+    out = reference_path(repo)
+    meta = {"repo": repo, "revision": sha, "class": type(pipe).__name__,
+            "prompt": PIPELINE_PROMPT, "height": str(height), "width": str(width),
+            "num_inference_steps": str(steps), "guidance_scale": str(guidance_scale),
+            **versions()}
+    tensors = {"input_ids": tokens["input_ids"], "attention_mask": tokens["attention_mask"],
+               "prompt_embeds": prompt_embeds[0][:embed_positions], "latents": latents.half(),
+               "output_latents": denoised, "output": image}
     save_file({k: v.contiguous() for k, v in tensors.items()}, out, metadata=meta)
     print(f"{out}: {repo}@{sha}, {out.stat().st_size / 1e3:.1f} kB")
 

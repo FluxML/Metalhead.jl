@@ -321,6 +321,8 @@ function check_pipeline_fixture(dir; eltype = Float64, device = identity)
     pipe = device(create_model(dir; pretrained = true, eltype))
     input(key) = device(Base.eltype(acts[key]) <: AbstractFloat ? eltype.(acts[key]) :
                         acts[key])
+    pipe isa Metalhead.Diffusers.ZImagePipeline &&
+        return check_z_image_fixture(pipe, acts, spec, input)
     encode(prefix) = cpu(Metalhead.Diffusers.encode_prompt(pipe,
         input(prefix * "input_ids") .+ 1; attention_mask = input(prefix * "attention_mask"),
         text_encoder_out_layers = Tuple(spec["text_encoder_out_layers"])))
@@ -359,6 +361,30 @@ function check_pipeline_edit(pipe, acts, spec, kwargs, input)
         edit_image = relerr(image, acts["edit/output"]), reference_images = maximum(prepared))
 end
 
+# The Z-Image pipeline takes the prompt embeddings as a list, "prompt_embeds/<i>", whose
+# lengths differ, and has the classifier-free guidance options of the spec.
+function check_z_image_fixture(pipe, acts, spec, input)
+    embeds(key) = [input("$key/$j") for j in 1:count(startswith("$key/"), keys(acts))]
+    joined(xs) = reduce(hcat, cpu.(xs))
+    encode(prefix) = joined(Metalhead.Diffusers.encode_prompt(pipe,
+        input(prefix * "input_ids") .+ 1; attention_mask = input(prefix * "attention_mask")))
+    guided = haskey(acts, "negative_prompt_embeds/1")
+    kwargs = (; height = spec["height"], width = spec["width"],
+        num_inference_steps = spec["num_inference_steps"],
+        guidance_scale = spec["guidance_scale"],
+        cfg_normalization = get(spec, "cfg_normalization", false),
+        cfg_truncation = get(spec, "cfg_truncation", 1.0), latents = input("latents"),
+        negative_prompt_embeds = guided ? embeds("negative_prompt_embeds") : nothing)
+    latents = cpu(pipe(embeds("prompt_embeds"); kwargs..., output_type = :latent))
+    image = cpu(pipe(embeds("prompt_embeds"); kwargs...))
+    return (; prompt_embeds = relerr(encode(""), joined(acts_list(acts, "prompt_embeds"))),
+        negative_prompt_embeds = guided ?
+                                 relerr(encode("negative_"),
+            joined(acts_list(acts, "negative_prompt_embeds"))) : 0.0,
+        latents = relerr(latents, acts["output_latents"]),
+        image = relerr(image, acts["output"]))
+end
+
 """
     check_diffusers_reference(file; eltype = Float32) -> NamedTuple
 
@@ -374,15 +400,25 @@ function check_diffusers_reference(file; eltype = Float32)
     model = create_model(meta["repo"]; pretrained = true, revision = meta["revision"], eltype)
     D = Metalhead.Diffusers
     class = meta["class"]
+    # the difference of the parameter counts, when the reference has PyTorch's
+    counts = haskey(meta, "num_params") ?
+             (; num_params = abs(sum(length, Flux.trainables(model)) - parse(Int, meta["num_params"]))) :
+             (;)
     if startswith(class, "Autoencoder")
         x = Base.eltype(ref["output"]).(reference_input(Tuple(Metalhead.JSON.parse(meta["input_shape"]))))
         latents = D.mode(D.encode(model, x))
         return (; repo = meta["repo"], latents = relerr(latents, ref["latents"]),
-            output = relerr(D.decode(model, latents), ref["output"]))
+            output = relerr(D.decode(model, latents), ref["output"]), counts...)
     elseif class == "Flux2Transformer2DModel"
         inputs = [x isa AbstractArray{Float16} ? eltype.(x) : x
                   for x in (ref["inputs/$i"] for i in 1:5)]
         return (; repo = meta["repo"], output = relerr(model(inputs...), ref["output"]))
+    elseif class == "ZImageTransformer2DModel"
+        half(x) = x isa AbstractArray{Float16} ? eltype.(x) : x
+        y = model(half(ref["inputs/1"]), ref["inputs/2"], half.(acts_list(ref, "inputs/3")))
+        return (; repo = meta["repo"], output = relerr(y, ref["output"]), counts...)
+    elseif class == "ZImagePipeline"
+        return check_z_image_reference(model, ref, meta, eltype)
     end
     steps = parse(Int, meta["num_inference_steps"])
     # the edit of a reference image takes its size
@@ -405,6 +441,30 @@ function check_diffusers_reference(file; eltype = Float32)
         edit_latents = edit.latents, edit_image = edit.image)
 end
 
+# The Z-Image pipeline starts from the embeddings of its prompt, a list of one, of which the
+# reference has the first positions.
+function check_z_image_reference(pipe, ref, meta, eltype)
+    embeds = Metalhead.Diffusers.encode_prompt(pipe, ref["input_ids"] .+ 1;
+        attention_mask = ref["attention_mask"])
+    n = size(ref["prompt_embeds"], 2)
+    kwargs = (; height = parse(Int, meta["height"]), width = parse(Int, meta["width"]),
+        num_inference_steps = parse(Int, meta["num_inference_steps"]),
+        guidance_scale = parse(Float64, meta["guidance_scale"]),
+        latents = eltype.(ref["latents"]))
+    latents = pipe(embeds; kwargs..., output_type = :latent)
+    image = pipe(embeds; kwargs...)
+    return (; repo = meta["repo"], prompt_embeds = relerr(embeds[1][:, 1:n], ref["prompt_embeds"]),
+        latents = relerr(latents, ref["output_latents"]), image = relerr(image, ref["output"]))
+end
+
+"""
+    acts_list(acts, key) -> Vector
+
+A list stored as "<key>/1", "<key>/2", ..., such as the captions of the Z-Image transformer,
+whose lengths differ.
+"""
+acts_list(acts, key) = [acts["$key/$j"] for j in 1:count(startswith("$key/"), keys(acts))]
+
 function greedy_decode(model, ids, n; kwargs...)
     for _ in 1:n
         ids = [ids; argmax(model(ids; kwargs...)[:, end])]
@@ -416,14 +476,17 @@ end
     fixture_inputs(acts) -> (args, kwargs)
 
 The inputs of the model of a fixture: "input" (token ids are made 1-based) or the positional
-"inputs/1", "inputs/2", ..., and the keyword arguments "kwargs/<name>".
+"inputs/1", "inputs/2", ..., a list being "inputs/<i>/1", "inputs/<i>/2", ... (see
+[`acts_list`](@ref)), and the keyword arguments "kwargs/<name>".
 """
 function fixture_inputs(acts)
     args = if haskey(acts, "input")
         x = acts["input"]
         (Base.eltype(x) <: Integer ? x .+ 1 : x,)  # 0-based token ids
     else
-        Tuple(acts["inputs/$i"] for i in 1:count(startswith("inputs/"), keys(acts)))
+        n = maximum(k -> parse(Int, split(k, '/')[2]), filter(startswith("inputs/"), keys(acts)))
+        Tuple(haskey(acts, "inputs/$i") ? acts["inputs/$i"] : acts_list(acts, "inputs/$i")
+        for i in 1:n)
     end
     kwargs = (; (Symbol(chopprefix(k, "kwargs/")) => acts[k]
                  for k in sort!(filter(startswith("kwargs/"), collect(keys(acts)))))...)
