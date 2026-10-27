@@ -4,6 +4,18 @@ All notable changes to Metalhead.jl are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Releases before 0.9.6 are described
 in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
 
+## [Unreleased]
+
+### Added
+
+- Text-to-image generation with Z-Image (`ZImagePipeline`, with `ZImageTransformer2DModel`
+  and `AutoencoderKL`, diffusers' autoencoder of Stable Diffusion and FLUX.1), validated
+  against `Tongyi-MAI/Z-Image-Turbo`. Its sampling loop has diffusers' classifier-free
+  guidance with a negative prompt, `cfg_normalization` and `cfg_truncation`; Z-Image-Turbo
+  samples in 9 steps with `guidance_scale = 0`. Its text encoder is the decoder of the
+  `Qwen3ForCausalLM` checkpoint, as diffusers loads a `Qwen3Model`, whose prompt embeddings
+  are a matrix per prompt, without the padding.
+
 ## [0.10.0]
 
 Breaking: Flux 0.16.14, NNlib 0.9.54 and MLUtils 0.4.9 are now the minimum versions, and the
@@ -84,13 +96,6 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
   loads it once the extension is loaded), and
   `Metalhead.Diffusers.encode_prompt(pipe, prompts)` embeds prompts as diffusers'
   `encode_prompt` does, with the chat template of the text encoder (#348).
-- Text-to-image generation with Z-Image (`ZImagePipeline`, with `ZImageTransformer2DModel`
-  and `AutoencoderKL`, diffusers' autoencoder of Stable Diffusion and FLUX.1), validated
-  against `Tongyi-MAI/Z-Image-Turbo`. Its sampling loop has diffusers' classifier-free
-  guidance with a negative prompt, `cfg_normalization` and `cfg_truncation`; Z-Image-Turbo
-  samples in 9 steps with `guidance_scale = 0`. Its text encoder is the decoder of the
-  `Qwen3ForCausalLM` checkpoint, as diffusers loads a `Qwen3Model`, whose prompt embeddings
-  are a matrix per prompt, without the padding.
 - An extension for HuggingFaceTokenizers.jl (`ext/`): with it loaded, `create_processor`
   returns the processor of a language model, a `Metalhead.TextProcessor`, which encodes
   texts into the 1-based token indices and the attention mask of the models, padded on the
