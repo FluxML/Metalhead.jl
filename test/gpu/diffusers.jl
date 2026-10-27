@@ -34,13 +34,20 @@ end
 @testset "bfloat16" begin
     model = GPU(fixture_model(fixture("vae_flux2_options"); eltype = Float32))
     @test check_half_precision(model, first(gpu_inputs("vae_flux2_options"))...;
-        T = BFloat16, rtol = BF16_RTOL)
+        T = BFloat16, rtol = BF16_RTOL) skip = !BF16_CONV
     pipe = GPU(create_model(fixture("flux2_klein_tiny"); pretrained = true,
         eltype = BFloat16))
     embeds = D.encode_prompt(pipe, rand(1:32, 7, 2); text_encoder_out_layers = (1, 2, 3))
     @test embeds isa CuArray{BFloat16}
-    @test_logs min_level=Base.CoreLogging.Warn begin
-        image = pipe(embeds; height = 16, width = 20, num_inference_steps = 2)
+    if BF16_CONV
+        logs, image = Test.collect_test_logs(; min_level = Base.CoreLogging.Warn) do
+            pipe(embeds; height = 16, width = 20, num_inference_steps = 2)
+        end
         @test image isa CuArray{BFloat16}
+        # deprecations, such as Base's of `disable_sigint` on Julia 1.14, aren't the pipeline's
+        @test all(l -> l.group === :depwarn, logs)
+        edited = pipe(embeds; image = rand(UInt8, 64, 64, 3), height = 16, width = 20,
+            num_inference_steps = 1)
+        @test edited isa CuArray{BFloat16}
     end
 end

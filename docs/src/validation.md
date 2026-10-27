@@ -64,6 +64,12 @@ eltype of its models, so `dump.py` runs a copy of its code with float64 in place
 One of its fixtures has classifier-free guidance with the normalization and truncation
 options, and prompts whose lengths differ.
 
+The FLUX.2 [klein] pipelines also edit random reference images of one to four
+channels (grey, grey and alpha, RGB, RGBA), which they must prepare as diffusers does, bit for
+bit. Images over the area limit of 1024 × 1024 pixels, which diffusers resizes with Pillow,
+are too large to edit with tiny models: for two of them, one RGBA, whose colours Pillow
+resizes premultiplied by its alpha, the fixtures store the images that diffusers prepares.
+
 Fixtures are under 1 MB each. They run without Python and without network access.
 
 ## References
@@ -90,10 +96,11 @@ of `tokenizer_config.json`.
 For FLUX.2 [klein] 4B, the references are the latents and image of a few images through its
 autoencoder, the output of its transformer for random inputs, and an image of 256 × 256 pixels
 generated in 4 steps from a prompt and fixed noise, with the token ids and the prompt
-embeddings. The tests check the three to 1e-3: the autoencoder and the transformer land near
-1e-5, and the latents of the pipeline near 1e-3, as rounding errors grow over the denoising steps, so that PyTorch's own float32 latents
-differ from its float64 ones by 6e-4. In float64, the port and PyTorch generate the same latents
-to 1e-12. The transformer and the pipeline download 8 and 16 GB, and run only with
+embeddings, and an edit of a photo of 200 × 136 pixels in 4 steps (cropped to 192 × 128).
+The tests check the three to 1e-3: the autoencoder and the transformer land near 1e-5, and
+the latents of the pipeline near 1e-3, as rounding errors grow over the denoising steps, so
+that PyTorch's own float32 latents differ from its float64 ones by 6e-4. In float64, the
+port and PyTorch generate the same latents to 1e-12. The transformer and the pipeline download 8 and 16 GB, and run only with
 `METALHEAD_TEST_LARGE=true` as well.
 
 Z-Image-Turbo has the same references: its autoencoder, its transformer on latents of 48

@@ -18,7 +18,7 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
 
 ## [0.10.0]
 
-Breaking: Flux 0.16.14, NNlib 0.9.54 and MLUtils 0.4.9 are now the minimum versions, and the
+Breaking: Flux 0.16.14, NNlib 0.9.55 and MLUtils 0.4.9 are now the minimum versions, and the
 hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and the
 [migration guide](https://fluxml.ai/Metalhead.jl/dev/migration/)).
 
@@ -96,6 +96,13 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
   loads it once the extension is loaded), and
   `Metalhead.Diffusers.encode_prompt(pipe, prompts)` embeds prompts as diffusers'
   `encode_prompt` does, with the chat template of the text encoder (#348).
+- Image editing with FLUX.2 [klein]: `Flux2KleinPipeline` takes reference images, `image`
+  (one image or a vector of them, as processors take images), and generates the image that
+  the prompt asks of them. As diffusers does, it prepares each (an image over 1024 × 1024
+  pixels resized with Pillow's Lanczos filter, the sides cropped to multiples of 16), encodes
+  it with the autoencoder and lets the transformer attend to its tokens; the image takes the
+  size of the first reference by default. Validated against diffusers with tiny pipelines and
+  `black-forest-labs/FLUX.2-klein-4B` (#365).
 - An extension for HuggingFaceTokenizers.jl (`ext/`): with it loaded, `create_processor`
   returns the processor of a language model, a `Metalhead.TextProcessor`, which encodes
   texts into the 1-based token indices and the attention mask of the models, padded on the
@@ -162,7 +169,7 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
 ### Changed
 
 - New dependencies: HuggingFaceApi, SafeTensors, JSON and ConcreteStructs, and the weak
-  dependencies HuggingFaceTokenizers and ImageCore. Flux 0.16.14, NNlib 0.9.54 and MLUtils
+  dependencies HuggingFaceTokenizers and ImageCore. Flux 0.16.14, NNlib 0.9.55 and MLUtils
   0.4.9 are now the minimum versions (#335, #337, #341).
 - Downloads share the cache of Python's `huggingface_hub` (`~/.cache/huggingface/hub`), and
   its `HF_TOKEN`, `HF_HUB_CACHE` and `HF_HUB_OFFLINE` environment variables.
@@ -182,6 +189,8 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
 ### Fixed
 
 - `MobileNetv3` on Julia 1.13 (#303).
+- On CUDA GPUs, the mean pooling of Inception v3 and v4 and Res2Net on feature maps of 1 × 1
+  or 2 × 2, wrong with cuDNN before NNlib 0.9.55.
 
 ## [0.9.7] - 2026-10-23
 

@@ -38,9 +38,9 @@ post_process_instance_segmentation
 post_process_semantic_segmentation
 ```
 
-Image processors take images in one layout, to which an extension for another type of image
-adds a method, and `image_matrix` turns arrays of that layout, such as generated images,
-back into images of colorants:
+Image processors take images in one layout (and so do pipelines, their reference images), to
+which an extension for another type of image adds a method, and `image_matrix` turns arrays
+of that layout, such as generated images, back into images of colorants:
 
 ```@docs
 Metalhead.image_array

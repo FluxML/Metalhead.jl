@@ -6,9 +6,9 @@ using .ParitySetup
 using CUDA, cuDNN
 using Flux: Flux, cpu, gpu_device
 
-export GPU, GPU_RTOL, BF16_RTOL, fixtures_of, is_pipeline, gpu_inputs, check_gpu_fixture,
-       gpu_cpu_error, check_gradient, check_half_precision, check_pipeline_fixture, fixture,
-       fixture_model, IdsTokenizer
+export GPU, GPU_RTOL, BF16_RTOL, BF16_CONV, fixtures_of, is_pipeline, gpu_inputs,
+       check_gpu_fixture, check_gradient, check_half_precision, check_pipeline_fixture,
+       fixture, fixture_model, IdsTokenizer
 
 CUDA.allowscalar(false)
 
@@ -22,6 +22,8 @@ const GPU_RTOL = 1e-2
 # In BFloat16, the tiny random models differ from Float32 by 0.6 to 3% (more for Qwen3.5 and
 # the FLUX.2 transformer, as in PyTorch).
 const BF16_RTOL = 5e-2
+# cuDNN has no BFloat16 convolutions below compute capability 8.0 (the Turing GPUs of CI).
+const BF16_CONV = CUDA.capability(CUDA.device()) >= v"8"
 
 const FIXTURES = joinpath(pkgdir(Metalhead), "test", "fixtures")
 
@@ -80,17 +82,5 @@ function check_gpu_fixture(name)
                0.0
     return (; output = Parity.output_error(cpu(y), acts), features,
         on_gpu = all(a -> a isa CuArray, outputs(y)))
-end
-
-"""
-    gpu_cpu_error(name, imsize) -> Float64
-
-The relative error of the Float32 model of the image fixture `name` on the GPU against the
-CPU, on a random batch of 2 images of `imsize × imsize` pixels.
-"""
-function gpu_cpu_error(name, imsize)
-    x = randn(Float32, imsize, imsize, size(fixture_acts(name)["input"], 3), 2)
-    model = fixture_model(fixture(name); eltype = Float32)
-    return relerr(cpu(GPU(model)(GPU(x))), model(x))
 end
 end
