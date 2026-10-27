@@ -23,6 +23,15 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
   `config.json` without `architectures`, as those of the SigLIP 2 checkpoints of fixed
   resolution, names its model by its `model_type`.
 - A tutorial on zero-shot classification and image-text retrieval with SigLIP and SigLIP 2.
+- Qwen3 MoE (`Qwen3MoeForCausalLM`, Qwen3-30B-A3B) and Qwen3.5 MoE
+  (`Qwen3_5MoeForConditionalGeneration`, Qwen3.5-35B-A3B and Qwen3.6-35B-A3B, and the text
+  model `Qwen3_5MoeForCausalLM`): Qwen3 and Qwen3.5 whose MLPs are sparse mixtures of experts,
+  with a shared expert in Qwen3.5 MoE, validated against the first 4 decoder layers of
+  `Qwen/Qwen3-30B-A3B` and `Qwen/Qwen3.6-35B-A3B` (with its vision encoder, on text and on an
+  image), whose whole checkpoints, of 61 and 72 GB, are too large for the machine of the
+  checks. `porting/dump_reference.py --layers 4 --selective-shards` writes such references,
+  which download only the shards of the layers kept. The Qwen3.5 MoE checkpoints that transformers 5
+  saves, with one MLP per expert rather than Qwen's stacked experts, don't load.
 - Text-to-image generation with Z-Image (`ZImagePipeline`, with `ZImageTransformer2DModel`
   and `AutoencoderKL`, diffusers' autoencoder of Stable Diffusion and FLUX.1), validated
   against `Tongyi-MAI/Z-Image-Turbo`. Its sampling loop has diffusers' classifier-free

@@ -33,10 +33,11 @@ computed in float64.
 import argparse
 import json
 import pathlib
+import re
 import shutil
 
 import torch
-from safetensors.torch import save_file
+from safetensors.torch import load_file, save_file
 
 from common import (build, build_transformers, classifier_name, exact_float64,
                     exact_float64_diffusers, float64_pos_embed, rerandomize, state_dict_f32,
@@ -207,6 +208,8 @@ def dump_transformers(spec, out, args):
     rerandomize(model, seed)
     model.save_pretrained(out)  # config.json, and model.safetensors without the tied lm_head
     (out / "generation_config.json").unlink(missing_ok=True)
+    if spec["model_type"] in STACKED_EXPERTS:
+        stack_experts(out / "model.safetensors")
     model = model.double()
     exact_float64(model)
 
@@ -266,6 +269,32 @@ def dump_transformers(spec, out, args):
     size = sum(f.stat().st_size for f in out.iterdir())
     print(f"{out}: {len(model.state_dict())} tensors, {len(taps)} taps, {size / 1e6:.2f} MB")
     return size <= args.max_bytes or bool(args.out)
+
+
+# The model types whose checkpoints on the Hub store the experts of a layer stacked, as
+# transformers' parameters, where `save_pretrained` writes one MLP per expert.
+STACKED_EXPERTS = ("qwen3_5_moe", "qwen3_5_moe_text")
+
+
+def stack_experts(path):
+    """Rewrite the weights `path` with the experts of each layer stacked, as the Hub
+    checkpoints of `STACKED_EXPERTS` store them and transformers loads them:
+    `experts.gate_up_proj` (num_experts, 2 * intermediate, hidden) and `experts.down_proj`
+    (num_experts, hidden, intermediate)."""
+    pattern = re.compile(r"^(.*\.experts)\.(\d+)\.(gate_proj|up_proj|down_proj)\.weight$")
+    tensors, experts = {}, {}
+    for key, value in load_file(path).items():
+        m = pattern.match(key)
+        if m:
+            experts.setdefault(m[1], {})[int(m[2]), m[3]] = value
+        else:
+            tensors[key] = value
+    for prefix, weights in experts.items():
+        ids = range(1 + max(e for e, _ in weights))
+        tensors[prefix + ".gate_up_proj"] = torch.stack(
+            [torch.cat([weights[e, "gate_proj"], weights[e, "up_proj"]]) for e in ids])
+        tensors[prefix + ".down_proj"] = torch.stack([weights[e, "down_proj"] for e in ids])
+    save_file(tensors, path, metadata={"format": "pt"})
 
 
 def image_inputs(model, x, images, gen):

@@ -157,9 +157,10 @@ end
 The model of the reference `file` of a language model, written by porting/dump_reference.py:
 that of its repository at its commit. A reference of the first layers of a checkpoint
 (`num_hidden_layers` in its metadata, from `dump_reference.py --layers`) gets the model of
-`config.json` with those layers only, whose weights load strictly. The weights of each other
-layer must then have the keys and shapes of the first of those layers of the same type in
-`layer_types`, so that the whole checkpoint would load too.
+`config.json` with those layers only, whose weights load strictly. With `selective_shards`
+set to `"true"`, only their shards are downloaded; other layers are not validated. Otherwise,
+the whole checkpoint is downloaded and each other layer must have the keys and shapes of
+the first of those layers of the same type in `layer_types`.
 """
 function reference_model(file)
     meta = SafeTensors.deserialize(file).metadata
@@ -172,31 +173,47 @@ function reference_model(file)
     nested = haskey(config, "text_config")
     text = nested ? config["text_config"] : config
     n = text["num_hidden_layers"]
+    0 < k <= n || error("reference layers ($k) must be in 1:$n")
     types = get(text, "layer_types", nothing)
     first_layers = Dict{String, Any}("num_hidden_layers" => k)
     types === nothing || (first_layers["layer_types"] = types[1:k])
     kwargs = nested ? (; text_config = Metalhead.nt(merge(text, first_layers))) :
              Metalhead.nt(first_layers)
     model = create_model(repo; pretrained = false, revision, kwargs...)
-    ckpt = Checkpoint(Metalhead.source_weights(source))
     prefix = last(Metalhead.Transformers.decoder(model)) * ".layers."
+    layer_pattern = Regex("^" * replace(prefix, "." => "\\.") * "(\\d+)\\.")
+    selective = get(meta, "selective_shards", "false") == "true"
+    ckpt = if selective
+        index = Metalhead.JSON.parsefile(
+            Metalhead.hf_download(repo, "model.safetensors.index.json"; revision))
+        function kept(key)
+            m = match(layer_pattern, key)
+            return m === nothing ? !startswith(key, "mtp.") : parse(Int, m[1]) < k
+        end
+        shards = sort!(unique([f for (key, f) in index["weight_map"] if kept(key)]))
+        Checkpoint([Metalhead.hf_download(repo, f; revision) for f in shards])
+    else
+        Checkpoint(Metalhead.source_weights(source))
+    end
     function shapes(i)
         layer = "$prefix$i."
         return Dict(chopprefix(key, layer) => Metalhead.torch_shape(ckpt, key)
         for key in keys(ckpt) if startswith(key, layer))
     end
-    for i in k:(n - 1)
-        j = types === nothing ? 0 : findfirst(==(types[i + 1]), types) - 1
-        j < k || error("layer $i is a $(types[i + 1]) layer, unlike the first $k")
-        shapes(i) == shapes(j) ||
-            error("the weights of layer $i differ in keys or shapes from those of layer $j")
+    if !selective
+        for i in k:(n - 1)
+            j = types === nothing ? 0 : findfirst(==(types[i + 1]), types) - 1
+            j < k || error("layer $i is a $(types[i + 1]) layer, unlike the first $k")
+            shapes(i) == shapes(j) ||
+                error("the weights of layer $i differ in keys or shapes from those of layer $j")
+        end
     end
     other_layers = Regex("^" * replace(prefix, "." => "\\.") * "(" * join(k:(n - 1), "|") *
                          ")\\.")
     spec = Metalhead.lookup(only(config["architectures"]))
     Metalhead.load_state!(model, ckpt;
         ignore = [Metalhead.DEFAULT_IGNORE; spec.ignore; other_layers])
-    return model
+    return Flux.testmode!(model)
 end
 
 """
@@ -226,7 +243,8 @@ Compare a vision-language model with the reference outputs of its real checkpoin
 prompt about an image ("image/..." keys, written by porting/dump_reference.py): the relative
 errors of the hidden states and of the logits of the last position, and whether greedy
 decoding reproduces transformers' continuation, from the same `pixel_values` and
-`image_grid_thw`.
+`image_grid_thw`. Pass the `model` of [`reference_model`](@ref) to check both references of
+a checkpoint with one model.
 """
 function check_image_reference(file; model = reference_model(file))
     meta = SafeTensors.deserialize(file).metadata

@@ -221,23 +221,27 @@ function llama_for_causal_lm(; vocab_size = 32000, hidden_size = 4096,
 end
 
 # A `LlamaForCausalLM` whose layers have the self-attention `attention(dense)`, where
-# `dense(in => out, bias)` is a Linear layer initialised like transformers'. The models that
-# transformers derives from Llama's classes (Qwen2, Qwen3) are built with it.
+# `dense(in => out, bias)` is a Linear layer initialised like transformers', and the MLP
+# `mlp(dense, i)` of the layer `i` (from 0), by default a `LlamaMLP`. The models that
+# transformers derives from Llama's classes (Qwen2, Qwen3, Qwen3 MoE) are built with it.
 function llama_like(attention; vocab_size, hidden_size, intermediate_size,
         num_hidden_layers, hidden_act, initializer_range, rms_norm_eps, tie_word_embeddings,
-        rope_parameters, head_dim, mlp_bias = false)
+        rope_parameters, head_dim, mlp_bias = false, mlp = nothing)
     init = normal_init(initializer_range)
     dense(in_out, bias) = init_layer(Dense, in_out; bias, init)
     norm() = RMSNorm(hidden_size; eps = rms_norm_eps)
-    function decoder_layer()
-        mlp = LlamaMLP(dense(hidden_size => intermediate_size, mlp_bias),
+    function llama_mlp()
+        return LlamaMLP(dense(hidden_size => intermediate_size, mlp_bias),
             dense(hidden_size => intermediate_size, mlp_bias),
             dense(intermediate_size => hidden_size, mlp_bias), act_fn(hidden_act))
-        return LlamaDecoderLayer(attention(dense), mlp, norm(), norm())
+    end
+    function decoder_layer(i)
+        ffn = mlp === nothing ? llama_mlp() : mlp(dense, i)
+        return LlamaDecoderLayer(attention(dense), ffn, norm(), norm())
     end
     embed_tokens = init_layer(Embedding, vocab_size => hidden_size; init)
     model = LlamaModel(
-        embed_tokens, [decoder_layer() for _ in 1:num_hidden_layers], norm(),
+        embed_tokens, [decoder_layer(i) for i in 0:(num_hidden_layers - 1)], norm(),
         RotaryEmbedding(head_dim, rope_parameters))
     lm_head = tie_word_embeddings ? TiedLMHead(embed_tokens.weight) :
               dense(hidden_size => vocab_size, false)

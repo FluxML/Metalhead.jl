@@ -10,9 +10,9 @@ For a transformers causal LM, the input is `PROMPTS` tokenized by the repo's tok
 a common length (`input_ids`, 0-based), and the outputs are the hidden states after the final
 norm, the logits of the last position, and the greedy continuation of the first prompt
 (`generated_ids`), in float32, so that the Julia tests need neither Python nor a tokenizer.
-With `--layers k`, the model keeps the first k decoder layers of the checkpoint (and its
-embeddings, final norm, head and vision encoder), for a checkpoint too large to run whole in
-float32; the metadata records `num_hidden_layers`.
+With `--layers N`, the model keeps its first N decoder layers. `--selective-shards` also
+downloads only the shards of the kept weights (see `first_layers`), for a sharded checkpoint
+too large to download whole (Qwen3-30B-A3B); its omitted layers are not validated.
 
 A diffusers component is named `<org>/<repo>/<subfolder>` (e.g. `.../vae`): an autoencoder
 encodes and decodes `reference_input` images, and a FLUX.2 or Z-Image transformer predicts the
@@ -22,7 +22,10 @@ from fixed initial noise. FLUX.2 [klein] also edits the image of `IMAGE_URL` as 
 says. Random inputs are stored rounded to float16, so that both sides use the same values.
 """
 import argparse
+import contextlib
 import json
+import re
+import tempfile
 
 import numpy as np
 import pathlib
@@ -42,18 +45,23 @@ def main():
     p.add_argument("repos", nargs="+", metavar="repo")
     p.add_argument("--revision", default="main")
     p.add_argument("--batch", type=int, default=2)
-    p.add_argument("--layers", type=int, default=None,
-                   help="keep the first LAYERS decoder layers of a language model")
+    p.add_argument("--layers", type=int,
+                   help="a language model cut to its first N decoder layers, for checkpoints "
+                        "too large for the machine (see `first_layers`)")
+    p.add_argument("--selective-shards", action="store_true",
+                   help="with --layers, download only kept-weight shards; skip omitted-layer validation")
     args = p.parse_args()
+    if args.selective_shards and args.layers is None:
+        p.error("--selective-shards needs --layers")
     for repo in args.repos:
-        dump_reference(repo, args.revision, args.batch, args.layers)
+        dump_reference(repo, args.revision, args.batch, args.layers, args.selective_shards)
 
 
 PROMPTS = ["The capital of France is Paris, and the capital of Italy is",
            "def fibonacci(n):\n    if n < 2:\n        return n\n    return"]
 
 
-def dump_reference(repo, revision, batch, layers=None):
+def dump_reference(repo, revision, batch, layers=None, selective_shards=False):
     parts = repo.split("/")
     repo, subfolder = "/".join(parts[:2]), "/".join(parts[2:])
     sha = HfApi().model_info(repo, revision=revision).sha
@@ -67,9 +75,9 @@ def dump_reference(repo, revision, batch, layers=None):
     if config.get("model_type") in ("siglip", "siglip2"):
         return dump_siglip_reference(repo, sha)
     if "model_type" in config:
-        return dump_lm_reference(repo, sha, layers=layers)
+        return dump_lm_reference(repo, sha, layers=layers, selective_shards=selective_shards)
     if layers is not None:
-        raise ValueError("--layers needs a transformers language model")
+        raise SystemExit("--layers needs a transformers language model")
     weights = hf_hub_download(repo, "model.safetensors", revision=sha)
     # the repository's pretrained cfg, as timm uses when loading from the Hub: with the
     # architecture's default cfg, a checkpoint of another tag could lose its classifier
@@ -93,19 +101,22 @@ def dump_reference(repo, revision, batch, layers=None):
     print(f"{out}: {repo}@{sha}, {out.stat().st_size / 1e3:.1f} kB")
 
 
-def dump_lm_reference(repo, sha, max_new_tokens=8, layers=None):
+def dump_lm_reference(repo, sha, max_new_tokens=8, layers=None, selective_shards=False):
     from transformers import (AutoConfig, AutoModelForCausalLM, AutoModelForImageTextToText,
                               AutoTokenizer)
     config = json.loads(pathlib.Path(hf_hub_download(repo, "config.json", revision=sha)).read_text())
     # a vision-language model: AutoModelForCausalLM would build its text model only
     auto = AutoModelForImageTextToText if "vision_config" in config else AutoModelForCausalLM
+    if selective_shards and layers is None:
+        raise ValueError("--selective-shards needs --layers")
     kwargs = {}
-    if layers is not None:
-        # the weights of the other layers are left unused
+    if layers is not None and not selective_shards:
         kwargs["config"] = truncated_config(AutoConfig.from_pretrained(repo, revision=sha), layers)
-    model = auto.from_pretrained(repo, revision=sha, dtype=torch.float32,
-                                 attn_implementation="sdpa",
-                                 experts_implementation="eager", **kwargs).eval()
+    source = first_layers(repo, sha, layers) if selective_shards else contextlib.nullcontext((repo, sha))
+    with source as (source, revision):
+        model = auto.from_pretrained(source, revision=revision, dtype=torch.float32,
+                                     attn_implementation="sdpa",
+                                     experts_implementation="eager", **kwargs).eval()
     tokenizer = AutoTokenizer.from_pretrained(repo, revision=sha)
     ids = [tokenizer(p)["input_ids"] for p in PROMPTS]
     n = min(map(len, ids))
@@ -122,6 +133,8 @@ def dump_lm_reference(repo, sha, max_new_tokens=8, layers=None):
     meta = {"repo": repo, "revision": sha, "prompts": json.dumps(PROMPTS), **versions()}
     if layers is not None:
         meta["num_hidden_layers"] = str(layers)
+        if selective_shards:
+            meta["selective_shards"] = "true"
     tensors = {"input_ids": input_ids, "hidden_states": hidden.contiguous(),
                "last_logits": logits.contiguous(), "generated_ids": generated.contiguous()}
     if "vision_config" in config:
@@ -134,7 +147,7 @@ def dump_lm_reference(repo, sha, max_new_tokens=8, layers=None):
 
 
 def truncated_config(config, layers):
-    """`config` with the first `layers` decoder layers (of its `text_config`, if it has one)."""
+    """`config` with the first `layers` decoder layers (of its `text_config`, if present)."""
     text = getattr(config, "text_config", config)
     if not 0 < layers <= text.num_hidden_layers:
         raise ValueError(f"--layers must be in 1:{text.num_hidden_layers}, got {layers}")
@@ -142,6 +155,53 @@ def truncated_config(config, layers):
         text.layer_types = text.layer_types[:layers]
     text.num_hidden_layers = layers
     return config
+
+
+DECODER_LAYER = re.compile(r"^model\.(?:language_model\.)?layers\.(\d+)\.")
+
+
+@contextlib.contextmanager
+def first_layers(repo, sha, num_hidden_layers):
+    """The source of `from_pretrained` for the checkpoint `repo` cut to its first
+    `num_hidden_layers` decoder layers, and its revision: with `None`, the repository; else a
+    temporary directory with its config.json, whose text model has that many layers, and
+    links to its other small files and to the shards of the weights kept, those of the first
+    layers, the embeddings, the final norm, the head and the vision encoder, which alone are
+    downloaded, and their index. The multi-token prediction weights (`mtp.*`), which
+    transformers doesn't load, are left out. Metalhead's tests load the same weights
+    (`reference_model` in test/parity.jl)."""
+    if num_hidden_layers is None:
+        yield repo, sha
+        return
+    from huggingface_hub import HfApi
+    n = num_hidden_layers
+    index = json.loads(pathlib.Path(
+        hf_hub_download(repo, "model.safetensors.index.json", revision=sha)).read_text())
+
+    def kept(key):
+        m = DECODER_LAYER.match(key)
+        return int(m[1]) < n if m else not key.startswith("mtp.")
+
+    weight_map = {k: v for k, v in index["weight_map"].items() if kept(k)}
+    config = json.loads(pathlib.Path(hf_hub_download(repo, "config.json", revision=sha)).read_text())
+    text = config.get("text_config", config)
+    if not 0 < n <= text["num_hidden_layers"]:
+        raise ValueError(f"--layers must be in 1:{text['num_hidden_layers']}, got {n}")
+    text["num_hidden_layers"] = n
+    if text.get("layer_types"):
+        text["layer_types"] = text["layer_types"][:n]
+    small = [f.rfilename for f in HfApi().model_info(repo, revision=sha).siblings
+             if f.rfilename.endswith((".json", ".txt", ".jinja"))
+             and f.rfilename not in ("config.json", "model.safetensors.index.json")]
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = pathlib.Path(tmp)
+        for f in small + sorted(set(weight_map.values())):
+            (tmp / f).parent.mkdir(parents=True, exist_ok=True)
+            (tmp / f).symlink_to(hf_hub_download(repo, f, revision=sha))
+        (tmp / "config.json").write_text(json.dumps(config, indent=2))
+        (tmp / "model.safetensors.index.json").write_text(
+            json.dumps({"metadata": index.get("metadata", {}), "weight_map": weight_map}))
+        yield str(tmp), None
 
 
 IMAGE_PROMPT = "Describe this image in one sentence."

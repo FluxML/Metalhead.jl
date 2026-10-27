@@ -86,14 +86,25 @@ position and transformers' greedy continuation of the first prompt. The Flux mod
 the hidden states and logits to 1e-4, and reproduce the continuation exactly. The tests need
 neither Python nor a tokenizer.
 
-A checkpoint too large to run in float32 is checked on its first layers. Qwen3.8-27B would
-take 108 GB: its reference, from `dump_reference.py --layers 8`, comes from the weights of
+The smallest checkpoints of Qwen3 MoE and Qwen3.5 MoE, `Qwen/Qwen3-30B-A3B` and
+`Qwen/Qwen3.6-35B-A3B` (61 and 72 GB in bfloat16), are too large to run whole in float32.
+Their references are those of the checkpoint cut to its first 4 decoder layers, with its real
+embeddings, final norm, head and vision encoder: `dump_reference.py --layers 4 --selective-shards`
+and the tests download only the shards of these weights (9 and 11 GB), recorded by
+`selective_shards = "true"` in the reference metadata, and load the kept layers strictly.
+The omitted layers are not validated. Such a model makes no sense of the prompts, but its
+outputs check each module of the port on real weights, the routing of the tokens among the
+experts included. Their tests run only with `METALHEAD_TEST_LARGE=true`, as FLUX.2's below.
+
+Qwen3.8-27B would take 108 GB in float32: its reference, from `dump_reference.py --layers 8`,
+comes from the weights of
 its embeddings, vision encoder, final norm and head and of the first 8 of its 64 decoder
 layers, in float32. The Flux model of the same layers loads them strictly, and the weights
 of each other layer must have the keys and shapes of the first of those layers of its type,
 so that the whole checkpoint loads too. It matches to 2e-6 on text and on an image, and
 generates the same tokens. This test downloads 56 GB, takes 44 GB of memory, and runs only
-with `METALHEAD_TEST_LARGE=true` as well.
+with `METALHEAD_TEST_LARGE=true` as well. Without `--selective-shards`, partial references
+retain these full checkpoint shape checks and also support unsharded checkpoints.
 
 Metalhead ports no tokenizer: HuggingFaceTokenizers.jl runs Hugging Face's tokenizers library
 on the repository's `tokenizer.json` (see [Language models](@ref language_models)). With
