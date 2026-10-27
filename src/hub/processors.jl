@@ -565,12 +565,13 @@ Calling a processor returns what the model takes, a NamedTuple (an array for
 
 ```julia
 using HuggingFaceTokenizers
+using Metalhead.Transformers: post_process_instance_segmentation
 model = create_model("unsloth/sam3.1"; pretrained = true)
 proc = create_processor("unsloth/sam3.1")
+img = rand(UInt8, 640, 480, 3)                       # width × height × channels
 inputs = proc(; images = img, text = "a cat")
 outputs = model(inputs)
-Transformers.post_process_instance_segmentation(proc, outputs;
-    target_sizes = inputs.original_sizes)
+post_process_instance_segmentation(proc, outputs; target_sizes = inputs.original_sizes)
 ```
 
 Images are arrays of size `(width, height, channels)`, of integers from 0 to 255 or of reals

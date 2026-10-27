@@ -13,6 +13,11 @@ article p a { border-bottom: 1px solid rgb(200, 230, 200); }
 article p a:hover, article a:visited:hover { color: rgb(0, 120, 0); }
 article p a:hover { border-bottom: 1px solid rgb(150, 200, 150); }
 
+html.theme--documenter-dark article :is(a, a:visited):not(.docs-heading-anchor) { color: rgb(110, 200, 120); }
+html.theme--documenter-dark article :is(a:hover, a:visited:hover):not(.docs-heading-anchor) { color: rgb(160, 225, 165); }
+html.theme--documenter-dark article p a { border-bottom-color: rgba(110, 200, 120, 0.3); }
+html.theme--documenter-dark article p a:hover { border-bottom-color: rgba(110, 200, 120, 0.7); }
+
 /* Code */
 
 article pre, article :is(p, li, td) > code {
@@ -30,4 +35,71 @@ article pre {
 
 .hljs-number {
   color: rgb(0, 150, 150);
+}
+
+/* Figures: a paragraph holding only an image, optionally followed by a caption in italics */
+
+#documenter-page p:has(> img:only-child) {
+  margin: 1.75rem 0 0.6rem;
+  text-align: center;
+}
+
+#documenter-page p > img:only-child {
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 6px 20px rgba(0, 0, 0, 0.08);
+}
+
+#documenter-page p:has(> img:only-child) + p:has(> em:only-child) {
+  max-width: 42rem;
+  margin: 0 auto 1.75rem;
+  font-size: 0.9em;
+  text-align: center;
+  opacity: 0.75;
+}
+
+html.theme--documenter-dark #documenter-page img {
+  outline: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* A table of images: the gallery of the home page */
+
+#documenter-page table:has(img) {
+  display: table;
+  width: 100%;
+  margin: 1.5rem 0 2rem;
+  table-layout: fixed;
+  border: none;
+}
+
+#documenter-page table:has(img) :is(th, td) {
+  padding: 0.3rem 0.35rem;
+  border: none;
+  background: transparent;
+  font-weight: normal;
+  line-height: 1.4;
+  text-align: center !important;
+  vertical-align: top;
+}
+
+#documenter-page table:has(img) td {
+  font-size: 0.9em;
+}
+
+#documenter-page table:has(img) img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 4px 14px rgba(0, 0, 0, 0.08);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+#documenter-page table:has(img) a:hover img {
+  transform: translateY(-3px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), 0 10px 24px rgba(0, 0, 0, 0.14);
+}
+
+#documenter-page table:has(img) a {
+  border-bottom: none;
 }

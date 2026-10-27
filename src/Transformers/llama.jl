@@ -108,7 +108,8 @@ forward_head(m::LlamaForCausalLM, x; pre_logits::Bool = false) = pre_logits ? x 
                           intermediates_only = false, attention_mask = nothing)
 
 The outputs of the decoder layers of a language model (Llama, Qwen2, Qwen3, Qwen3.5,
-Gemma 3, Granite), each of size `(hidden_size, seq_len, batch_size)`: the `i`-th intermediate
+Gemma 3, Granite) for the token indices `input_ids` of size `(seq_len, batch_size)`, each of
+size `(hidden_size, seq_len, batch_size)`: the `i`-th intermediate
 is transformers' `output_hidden_states[i]`, the output of the `i`-th layer, except that the
 last one is not normed unless `norm = true`. The features are the hidden states after the final
 norm, as [`forward_features`](@ref) returns them. `indices`, `norm`, `stop_early` and

@@ -19,7 +19,7 @@ misnamed field.
 ## Tiny fixtures
 
 For each code path of an architecture (each block type, stem, or optional branch), the port
-has a *fixture* in `test/fixtures/`. It is made from a small version of the timm model:
+has a *fixture* in `test/fixtures/`. It is made from a small version of the model:
 fewer blocks, narrow channels, ten classes, a small input. `porting/dump.py` builds it in
 PyTorch and re-randomises every parameter and batch-norm statistic. This matters because
 default initialisations hide bugs: a layer scale near zero, or a batch norm initialised to
@@ -85,8 +85,8 @@ of `tokenizer_config.json`.
 For FLUX.2 [klein] 4B, the references are the latents and image of a few images through its
 autoencoder, the output of its transformer for random inputs, and an image of 256 × 256 pixels
 generated in 4 steps from a prompt and fixed noise, with the token ids and the prompt
-embeddings. The autoencoder and the transformer match to 1e-5, and the latents of the pipeline
-to 1e-3: rounding errors grow over the denoising steps, so that PyTorch's own float32 latents
+embeddings. The tests check the three to 1e-3: the autoencoder and the transformer land near
+1e-5, and the latents of the pipeline near 1e-3, as rounding errors grow over the denoising steps, so that PyTorch's own float32 latents
 differ from its float64 ones by 6e-4. In float64, the port and PyTorch generate the same latents
 to 1e-12. The transformer and the pipeline download 8 and 16 GB, and run only with
 `METALHEAD_TEST_LARGE=true` as well.
@@ -102,8 +102,8 @@ For timm, `porting/dump_timm_transform.py` stores the output of timm's
 `create_transform(**resolve_data_config({}, pretrained_cfg = cfg))` on PIL images, for 14
 configurations: the six interpolations of Pillow, the `"center"` and `"squash"` crop modes,
 non-square input sizes, a `crop_pct` above 1 (which pads), the ImageNet, Inception and CLIP
-statistics, and `use_test_size`. They run on seven small images (one grayscale, one RGBA),
-and the configuration of `timm/convnext_tiny.fb_in1k` also on an image of 500 × 375 pixels.
+statistics, and `use_test_size`. Thirteen run on seven small images (one grey, one RGBA), and
+the fourteenth, that of `timm/convnext_tiny.fb_in1k`, on an image of 500 × 375 pixels.
 [`Timm.EvalTransform`](@ref Metalhead.Timm.EvalTransform) must give the same `Float32`
 values, **bit for bit**, which takes a port of Pillow's 8-bit resampling: it matches
 `Image.resize` exactly for each of its six filters. With network access, the settings that
@@ -150,10 +150,10 @@ CI runs these tests on a GPU.
 
 ## What this guarantees
 
-- An architecture listed by [`list_models`](@ref) computes what timm computes, in eval mode,
-  for the code paths its fixtures cover. The registry only includes architectures whose
-  options the port implements. Other options raise an error rather than being silently
-  ignored.
+- An architecture listed by [`list_models`](@ref) computes what its Python library (timm,
+  transformers or diffusers) computes, in eval mode, for the code paths its fixtures cover.
+  The registry only includes architectures whose options the port implements. Other options
+  raise an error rather than being silently ignored.
 - Any Hub checkpoint of a registered architecture loads with its exact structure, because
   loading is strict. The checkpoints listed in the [model list](@ref models) were also
   compared with PyTorch outputs.
