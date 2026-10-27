@@ -348,8 +348,8 @@ function siglip_encoder(; hidden_size, intermediate_size, num_hidden_layers,
     hidden_size % num_attention_heads == 0 ||
         error("`hidden_size = $hidden_size` must be divisible by `num_attention_heads = $num_attention_heads`")
     act = act_fn(hidden_act; table = SIGLIP_ACT2FN)
-    dense(io) = Dense(io; init = Flux.glorot_uniform)
-    norm() = LayerNorm(hidden_size; eps = Float32(layer_norm_eps))
+    dense(io) = init_layer(Dense, io; init = Flux.glorot_uniform)
+    norm() = init_layer(LayerNorm, hidden_size; eps = Float32(layer_norm_eps))
     layers = [SiglipEncoderLayer(norm(),
                   SiglipAttention(num_attention_heads, dense(hidden_size => hidden_size),
                       dense(hidden_size => hidden_size), dense(hidden_size => hidden_size),
@@ -361,18 +361,20 @@ function siglip_encoder(; hidden_size, intermediate_size, num_hidden_layers,
 end
 
 function siglip_mlp(act, hidden_size, intermediate_size)
-    return SiglipMLP(act, Dense(hidden_size => intermediate_size; init = Flux.glorot_uniform),
-        Dense(intermediate_size => hidden_size; init = Flux.glorot_uniform))
+    return SiglipMLP(act,
+        init_layer(Dense, hidden_size => intermediate_size; init = Flux.glorot_uniform),
+        init_layer(Dense, intermediate_size => hidden_size; init = Flux.glorot_uniform))
 end
 
 function siglip_pooling_head(; hidden_size, intermediate_size, num_attention_heads,
         hidden_act, layer_norm_eps)
     glorot = Flux.glorot_uniform
     attention = MultiheadAttention(num_attention_heads,
-        glorot(hidden_size, 3hidden_size), zeros(Float32, 3hidden_size),
-        Dense(hidden_size => hidden_size; init = glorot))
-    return SiglipMultiheadAttentionPoolingHead(glorot(hidden_size, 1, 1), attention,
-        LayerNorm(hidden_size; eps = Float32(layer_norm_eps)),
+        init_array(glorot, hidden_size, 3hidden_size),
+        init_array(Flux.zeros32, 3hidden_size),
+        init_layer(Dense, hidden_size => hidden_size; init = glorot))
+    return SiglipMultiheadAttentionPoolingHead(init_array(glorot, hidden_size, 1, 1),
+        attention, init_layer(LayerNorm, hidden_size; eps = Float32(layer_norm_eps)),
         siglip_mlp(act_fn(hidden_act; table = SIGLIP_ACT2FN), hidden_size,
             intermediate_size))
 end
@@ -398,13 +400,14 @@ function siglip_text_model(; vocab_size = 32000, hidden_size = 768,
         layer_norm_eps = 1e-6, attention_dropout = 0.0, projection_size = nothing)
     projection_size = something(projection_size, hidden_size)
     embeddings = SiglipTextEmbeddings(
-        Embedding(vocab_size => hidden_size; init = fan_in_init(hidden_size)),
-        Embedding(max_position_embeddings => hidden_size; init = fan_in_init(hidden_size)))
+        init_layer(Embedding, vocab_size => hidden_size; init = fan_in_init(hidden_size)),
+        init_layer(Embedding, max_position_embeddings => hidden_size;
+            init = fan_in_init(hidden_size)))
     encoder = siglip_encoder(; hidden_size, intermediate_size, num_hidden_layers,
         num_attention_heads, hidden_act, layer_norm_eps, attention_dropout)
     return SiglipTextModel(embeddings, encoder,
-        LayerNorm(hidden_size; eps = Float32(layer_norm_eps)),
-        Dense(hidden_size => projection_size; init = fan_in_init(hidden_size)))
+        init_layer(LayerNorm, hidden_size; eps = Float32(layer_norm_eps)),
+        init_layer(Dense, hidden_size => projection_size; init = fan_in_init(hidden_size)))
 end
 
 function check_vision_use_head(vision_use_head)
@@ -434,15 +437,16 @@ function siglip_vision_model(; hidden_size = 768, intermediate_size = 3072,
     check_vision_use_head(vision_use_head)
     num_positions = (image_size ÷ patch_size)^2
     embeddings = SiglipVisionEmbeddings(
-        Conv((patch_size, patch_size), num_channels => hidden_size; stride = patch_size,
-            init = fan_in_init(num_channels * patch_size^2)),
-        Embedding(num_positions => hidden_size; init = fan_in_init(hidden_size)))
+        init_layer(Conv, (patch_size, patch_size), num_channels => hidden_size;
+            stride = patch_size, init = fan_in_init(num_channels * patch_size^2)),
+        init_layer(Embedding, num_positions => hidden_size;
+            init = fan_in_init(hidden_size)))
     encoder = siglip_encoder(; hidden_size, intermediate_size, num_hidden_layers,
         num_attention_heads, hidden_act, layer_norm_eps, attention_dropout)
     head = siglip_pooling_head(; hidden_size, intermediate_size, num_attention_heads,
         hidden_act, layer_norm_eps)
     return SiglipVisionModel(embeddings, encoder,
-        LayerNorm(hidden_size; eps = Float32(layer_norm_eps)), head)
+        init_layer(LayerNorm, hidden_size; eps = Float32(layer_norm_eps)), head)
 end
 
 # The text and vision models of the `text_config` and `vision_config` of a config, whose
@@ -473,7 +477,8 @@ function siglip_model(; text_config = nothing, vision_config = nothing,
         initializer_factor = 1.0)
     text_model, vision_model = siglip_towers(text_config, vision_config,
         siglip_vision_model)
-    return SiglipModel(text_model, vision_model, zeros(Float32, 1), zeros(Float32, 1))
+    return SiglipModel(text_model, vision_model, init_array(Flux.zeros32, 1),
+        init_array(Flux.zeros32, 1))
 end
 
 register!(ArchSpec(TRANSFORMERS, "SiglipModel", siglip_model; family = "siglip",
