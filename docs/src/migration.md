@@ -81,7 +81,7 @@ the [model list](@ref models).
 | `InceptionResNetv2()` | `create_model("inception_resnet_v2")` |
 | `Xception()` | no exact equivalent with Hub weights; the closest is `create_model("xception41")` |
 | `ConvNeXt(:tiny)` ... `(:large)` | `create_model("convnext_tiny")`, `"convnext_small"`, `"convnext_base"`, `"convnext_large"` |
-| `ConvMixer(:small)`, `ConvMixer(:base)` | `create_model("convmixer_768_32")`, `create_model("convmixer_1536_20")` |
+| `ConvMixer(:small)`, `ConvMixer(:base)` | `create_model("convmixer_768_32")` (with ReLU, where 0.9 used GELU), `create_model("convmixer_1536_20")` |
 | `ConvMixer(:large)` | no exact equivalent; the closest is `create_model("convmixer_1024_20_ks9_p14")` |
 | `MLPMixer(config; patch_size)` | `create_model("mixer_s16_224")`, `"mixer_b16_224"`, `"mixer_l16_224"`, `"mixer_b32_224"`, ... |
 | `ResMLP(config)` | different sizes in timm: `create_model("resmlp_12_224")`, `"resmlp_24_224"`, `"resmlp_36_224"`, `"resmlp_big_24_224"` |

@@ -1,0 +1,17 @@
+[deps]
+CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+Downloads = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
+FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
+Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
+HuggingFaceTokenizers = "a6888d44-1185-43bb-bd0f-7806f9976d18"
+ImageCore = "a09fc81d-aa75-5fe9-8630-4744c3626534"
+ImageIO = "82e4d734-157c-48bb-816b-45c225c6df19"
+ImageTransformations = "02fcd773-0e25-5acc-982a-7f6622650795"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+Metalhead = "dbeba491-748d-5e0e-a39e-b530a07fa0cc"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+cuDNN = "02a925ec-e4fe-4b08-9a7e-0d78e3d38ccd"
+

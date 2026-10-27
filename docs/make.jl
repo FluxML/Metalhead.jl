@@ -1,11 +1,10 @@
 using Documenter, Metalhead
 
-# index.md is the README, without its badges and table of contents (the sidebar has one),
-# and with links into the version being built
+# index.md is the README, without its badges, and with links into the version being built
 readme = replace(read(joinpath(@__DIR__, "..", "README.md"), String),
     r"^\[!\[.*\n"m => "",
-    r"^## Contents\n.*?(?=^## )"ms => "",
-    r"https://fluxml\.ai/Metalhead\.jl/dev/([\w/]+)/" => s"\1.md")
+    r"https://fluxml\.ai/Metalhead\.jl/dev/([\w/]+)/" => s"\1.md",
+    "](docs/src/assets/" => "](assets/")
 open(joinpath(@__DIR__, "src", "index.md"), "w") do io
     write(io, "```@meta\nEditURL = \"../../README.md\"\n```\n\n", readme)
 end
@@ -52,7 +51,7 @@ function write_model_list(path)
                   "`facebook/sam3`. Only the detector of `Sam3VideoModel` is ported, not " *
                   "its tracker.")
     libraries = ["timm" => "Vision models (timm)",
-        "transformers" => "Language and segmentation models (transformers)",
+        "transformers" => "Language, vision-language and segmentation models (transformers)",
         "diffusers" => "Image generation (diffusers)"]
     library(spec) = replace(string(spec.format), " pipeline" => "")
     ArchSpec = Metalhead.ArchSpec
@@ -148,9 +147,12 @@ makedocs(; modules = [Metalhead],
         "Tutorials" => ["Getting started" => "tutorials/quickstart.md",
             "Vision models" => "tutorials/vision.md",
             "Language models" => "tutorials/language_models.md",
+            "Vision-language models" => "tutorials/vision_language.md",
+            "Segmenting objects" => "tutorials/segmentation.md",
             "Text-to-image generation" => "tutorials/text_to_image.md"],
         "Models" => "models.md",
         "Development" => ["How models are validated" => "validation.md",
+            "Scope" => "scope.md",
             "Porting a model" => "contributing.md"],
         "Migrating from 0.9" => "migration.md",
         "API reference" => "api/reference.md"

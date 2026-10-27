@@ -3,9 +3,11 @@
 Metalhead also ports language models from
 [Hugging Face Transformers](https://github.com/huggingface/transformers), starting with the
 Llama, Qwen, Gemma 3 and Granite architectures (`LlamaForCausalLM`, `Qwen2ForCausalLM`,
-`Qwen3ForCausalLM`, `Gemma3ForCausalLM`, `GraniteForCausalLM`, `GraniteMoeForCausalLM`,
-`GraniteMoeSharedForCausalLM` and `GraniteMoeHybridForCausalLM`).
-They load from the Hub like the timm models:
+`Qwen3ForCausalLM`, `Qwen3_5ForCausalLM`, `Gemma3ForCausalLM`, `GraniteForCausalLM`,
+`GraniteMoeForCausalLM`, `GraniteMoeSharedForCausalLM` and `GraniteMoeHybridForCausalLM`),
+and the Qwen3.5 models that also read images, `Qwen3_5ForConditionalGeneration` (see
+[Vision-language models](@ref vision_language)). They load from the Hub like the timm
+models:
 
 ```julia
 using Metalhead
@@ -21,7 +23,8 @@ were validated against.
 
 Metalhead ports no tokenizer: the tokenizer of a repository is a `Tokenizer` of
 [HuggingFaceTokenizers.jl](https://github.com/MurrellGroup/HuggingFaceTokenizers.jl), which
-runs Hugging Face's tokenizers library on the repository's `tokenizer.json`. With it loaded,
+calls Hugging Face's tokenizers library through Python on the repository's
+`tokenizer.json`. Install it with `Pkg.add("HuggingFaceTokenizers")`. With it loaded,
 [`create_processor`](@ref) loads the tokenizer of a model, at the revision of its weights:
 
 ```julia
@@ -54,6 +57,22 @@ too, such as `add_bos_token`, which `create_processor` doesn't.
 There is no key-value cache yet, so each step of this loop runs the model on the whole
 sequence.
 
+The logits of the last position give the probabilities of the next token:
+
+```julia
+using Flux: softmax
+
+ids = encode(tok, "The capital of France is").ids .+ 1
+p = softmax(model(ids)[:, end])
+top = sortperm(p; rev = true)[1:10]
+[(decode(tok, [i - 1]), p[i]) for i in top]   # (" the", 0.262), (" Paris", 0.094), ...
+```
+
+![The ten most probable next tokens of SmolLM2-135M](../assets/next_token.png)
+
+*The ten most probable tokens to follow "The capital of France is", for SmolLM2-135M. Greedy
+decoding takes the first; sampling takes each with its probability.*
+
 ## Batches
 
 Texts of different lengths make a batch padded on the right, with an `attention_mask` that is
@@ -69,7 +88,8 @@ logits = model(input_ids; attention_mask)
 ```
 
 The padding takes no part in the attention of the other tokens, so its token doesn't matter,
-and the logits of each text are those it has alone, at the positions of its tokens.
+and the logits of each text are those it has alone, at the positions of its tokens, up to
+rounding.
 
 ## Inputs and outputs
 
@@ -84,9 +104,10 @@ and the logits of each text are those it has alone, at the positions of its toke
   `(hidden_size, seq_len, batch_size)`, and [`forward_head`](@ref) applies the output
   projection `lm_head` to them.
 - [`forward_intermediates`](@ref) returns the hidden states of the decoder layers, which
-  diffusion models such as FLUX.2 use as text embeddings:
-  `forward_intermediates(model, ids; indices = [9, 18, 27], intermediates_only = true)`. The
-  `i`-th is transformers' `output_hidden_states[i]`.
+  diffusion models such as FLUX.2 use as text embeddings. It takes a matrix of token indices,
+  such as the batch above:
+  `forward_intermediates(model, input_ids; attention_mask, indices = [9, 18, 27], intermediates_only = true)`.
+  The `i`-th is transformers' `output_hidden_states[i]`.
 - The weights are converted to `eltype` (`Float32` by default) when they are loaded, whatever
   their type on the Hub (often `bfloat16`).
 
@@ -104,15 +125,16 @@ create_model("LlamaForCausalLM"; vocab_size = 1000, hidden_size = 64, intermedia
 The rotary embeddings are the default ones, or those scaled as in Llama 3.1 and later
 (`rope_type = "llama3"`) or linearly (`"linear"`). Options that the ports don't implement raise
 an error. These are the other rotary embeddings, such as `"yarn"`, and the sliding-window
-attention of Qwen2 and Qwen3 (`use_sliding_window`), which their released checkpoints leave
-off. Gemma 3 does have sliding-window attention: its layers attend either to all the previous
+attention of Qwen2 and Qwen3 (`use_sliding_window`, for the layers past
+`max_window_layers`), which their released checkpoints leave off. Gemma 3 does have sliding-window attention: its layers attend either to all the previous
 tokens or to the last `sliding_window` of them, as its `layer_types` say. Granite 4.0
 (`GraniteMoeHybridForCausalLM`) loads only without its Mamba layers, as `granite-4.0-350m`
 and `granite-4.0-1b` are; the `-h-` models have them.
 
 transformers derives the Qwen2 and Qwen3 classes from Llama's, and their ports reuse the
-Llama structs: a Qwen model is a `LlamaForCausalLM`, whose Qwen3 attention layers are
-`Qwen3Attention`s. A Gemma 3 model is a `Gemma3ForCausalLM` whose decoder is a `LlamaModel` of
+Llama structs: a Qwen2 or Qwen3 model is a `LlamaForCausalLM`, whose Qwen3 attention layers
+are `Qwen3Attention`s. Qwen3.5 has its own `Qwen3_5ForCausalLM`, whose layers have either a
+gated delta rule (`Qwen3_5GatedDeltaNet`) or attention. A Gemma 3 model is a `Gemma3ForCausalLM` whose decoder is a `LlamaModel` of
 `Gemma3DecoderLayer`s, and the four Granite classes are `GraniteForCausalLM`s.
 
 ## Mixtures of experts

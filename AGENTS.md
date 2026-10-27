@@ -24,7 +24,7 @@ architecture), and getting it wrong would silently change the results.
   templates, decoding strategies, training utilities, augmentation, data loading, task APIs,
   quantization, LoRA.
 
-General-purpose code that parity needs stays internal. The README's "Scope" section has the
+General-purpose code that parity needs stays internal. `docs/src/scope.md` has the
 reasons.
 
 ## Layout
@@ -74,6 +74,8 @@ reasons.
 - `skills/port-hf-model/SKILL.md`: the porting workflow, conventions and numerical pitfalls.
 - `docs/`: Documenter. `docs/make.jl` generates `index.md` (from the README) and `models.md`
   (from the registry), and checks that the migration guide names only ported architectures.
+  `docs/figures/make_figures.jl` makes the figures of `docs/src/assets/` with the real models
+  (FLUX.2 needs a GPU of 16 GB); the docs build doesn't run it.
 
 ## Commands
 

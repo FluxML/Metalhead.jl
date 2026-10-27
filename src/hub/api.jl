@@ -126,7 +126,7 @@ end
 Run `model` up to its last feature map, before pooling and classification (timm's `forward_features`).
 
 This and [`forward_head`](@ref), [`forward_intermediates`](@ref) and [`feature_info`](@ref) are
-the interface of image backbones and classifiers, not of every ported model.
+the interface of image backbones and classifiers; language models have all but `feature_info`.
 """
 function forward_features end
 
@@ -150,7 +150,7 @@ Run `model` and collect the outputs of its stages or blocks, for dense predictio
   - `norm`: apply the final norm of the model to the intermediates, where timm does.
   - `stop_early`: skip the stages after the last selected one.
   - `output_fmt`: `"NCHW"` returns WHCN feature maps (the Julia layout of PyTorch's NCHW);
-    transformers also accept `"NLC"`, for `(C, L, N)` tokens.
+    vision transformers also accept `"NLC"`, for `(C, L, N)` tokens.
 
 Returns `(features, intermediates)`, where `features` is the output of
 [`forward_features`](@ref) (truncated with `stop_early`), or only `intermediates` with

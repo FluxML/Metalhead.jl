@@ -59,17 +59,18 @@ x = transform(img)
 size(x)                        # (224, 224, 3, 1)
 ```
 
-![The example Labrador photograph](../assets/vision-photo.jpg)
-
-The [example photograph](https://commons.wikimedia.org/wiki/File:YellowLabradorLooking_new.jpg)
-is also used by the classification example in the getting started guide.
-
 `input_size` is in PyTorch order: channels, height, width. The transform resizes the shorter
 side of the image to `floor(224 / 0.95) = 235` pixels with Pillow's bicubic filter, crops
 224 × 224 pixels from the centre, scales the values to [0, 1] and normalises each channel
 with `mean` and `std`. The result is the input that timm computes from the same pixels as a
 PIL image, bit for bit, so that scores reproduce those of timm. (A JPEG decoded by ImageIO
 can differ slightly from Pillow's decoding of it.)
+
+![The photograph with the region that the transform keeps outlined, and the input of the model](../assets/transform.jpg)
+
+*The [example photograph](https://commons.wikimedia.org/wiki/File:YellowLabradorLooking_new.jpg),
+with the region that the transform keeps outlined, and the input of the model, `x`, with its
+normalisation undone. The getting started guide classifies the same photograph.*
 
 With ImageCore loaded, the transform turns the matrix of colours into the width × height ×
 channels array that it works on, and the last dimension of `x` is a batch of one image. An
@@ -93,6 +94,11 @@ top5 = sortperm(vec(probabilities); rev = true)[1:5]
 [(; label = imagenet_labels[i], probability = probabilities[i, 1]) for i in top5]
 # Labrador retriever 0.735, Saluki 0.147, golden retriever 0.060, Ibizan hound 0.005, ...
 ```
+
+![The five most probable classes of ResNet-18 for the photograph](../assets/classify.jpg)
+
+*The five most probable of the 1,000 ImageNet classes for the photograph, by
+`timm/resnet18.a1_in1k`.*
 
 Those labels match this checkpoint's ImageNet class order. When using a different dataset
 or checkpoint, use its label order. Softmax scores describe the model's prediction over
@@ -256,6 +262,12 @@ For ResNet-18 and a 224 × 224 input, these maps have shapes 56 × 56 × 64 × b
 28 × 28 × 128 × batch, 14 × 14 × 256 × batch and 7 × 7 × 512 × batch. They are backbone
 features; segmentation or detection needs a task-specific head and training data.
 
+![The four feature maps of ResNet-18 for the photograph](../assets/features.png)
+
+*The four maps of ResNet-18 for the photograph: at each position, the norm of its feature
+vector, from light (small) to dark (large), each map on its own scale. Each map has half the
+width and height of the previous one, and twice its channels.*
+
 Collections of `indices` use 1-based positions in `feature_info`. An integer `k` selects
 the last `k` taps. Use `stop_early = true` to stop at the last requested tap. The
 [getting started guide](@ref quickstart) lists the supported families and their tap conventions.
@@ -285,3 +297,34 @@ For useful pretrained embeddings, load a ViT checkpoint with `pretrained = true`
 its images with its processor, `create_processor(repo)`. DINOv2, CLIP and SigLIP variants
 have different pooling and prefix-token conventions; `forward_head(...; pre_logits = true)`
 applies the model's own pooling to its final features.
+
+### The patch features of DINOv2
+
+DINOv2, trained without labels, gives patch features that tell objects and their parts
+apart. With `dynamic_img_size = true`, a ViT takes images of any size that is a multiple of
+its patch size. Here a photograph of 640 × 480 pixels is resized to 896 × 672, which
+DINOv2's patches of 14 pixels cut into a grid of 64 × 48:
+
+```julia
+using LinearAlgebra: svd
+
+repo = "timm/vit_small_patch14_reg4_dinov2.lvd142m"
+dinov2 = create_model(repo; pretrained = true, dynamic_img_size = true)
+transform = create_processor(repo; input_size = (3, 672, 896))   # channels, height, width
+
+cats = load(download("http://images.cocodataset.org/val2017/000000039769.jpg"))
+y = only(forward_intermediates(dinov2, transform(cats); indices = 1, norm = true,
+    intermediates_only = true))       # 64 × 48 × 384 × 1
+X = reshape(y, :, size(y, 3))         # 3072 patches × 384 features
+X = X .- sum(X; dims = 1) ./ size(X, 1)
+pcs = X * svd(X).V[:, 1:3]            # the first three principal components of each patch
+```
+
+![The photograph of two cats, and the principal components of DINOv2's patch features as colours](../assets/dinov2_pca.jpg)
+
+*The patch features of DINOv2 for a
+[photograph of COCO](http://images.cocodataset.org/val2017/000000039769.jpg). The first
+principal component separates the cats from the background, in black; the first three
+components of the patches of the cats, as red, green and blue, show their parts. The code of
+this figure and the others is in
+[`docs/figures/make_figures.jl`](https://github.com/FluxML/Metalhead.jl/blob/master/docs/figures/make_figures.jl).*

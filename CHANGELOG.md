@@ -131,6 +131,9 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
   [migration guide](https://fluxml.ai/Metalhead.jl/dev/migration/) from 0.9 (#307).
 - A tutorial on vision models covering image preprocessing, classification, transfer learning,
   multi-scale features and vision transformer tokens.
+- Tutorials on vision-language models and segmentation, a gallery and figures of the outputs
+  of the models in the documentation, made by `docs/figures/make_figures.jl`, and a shorter
+  README.
 
 ### Changed
 
