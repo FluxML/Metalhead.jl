@@ -1,6 +1,6 @@
 ---
 name: port-hf-model
-description: Port a timm, transformers or diffusers model from the Hugging Face Hub to Metalhead.jl (Flux), validated numerically against PyTorch. Use when asked to port, add or fix a model in src/Timm/, src/Transformers/ (e.g. a language model such as Llama, Qwen or Mistral) or src/Diffusers/ (a diffusion or flow-matching model, autoencoder, scheduler or text-to-image pipeline such as FLUX.2), to write or debug a parity fixture (porting/dump.py, test/fixtures/), or to compare a Flux model with its PyTorch original.
+description: Port a timm, transformers or diffusers model from the Hugging Face Hub to Metalhead.jl (Flux), validated numerically against PyTorch. Use when asked to port, add or fix a model in src/Timm/, src/Transformers/ (e.g. a language model such as Llama, Qwen or Mistral), src/Diffusers/ (a diffusion or flow-matching model, autoencoder, scheduler or text-to-image pipeline such as FLUX.2) or src/SentenceTransformers/ (an embedding model's modules.json), to write or debug a parity fixture (porting/dump.py, test/fixtures/), or to compare a Flux model with its PyTorch original.
 ---
 
 # Porting a timm, transformers or diffusers model to Metalhead
@@ -708,3 +708,35 @@ above, with these differences.
   to tell that from a port error, run both pipelines in float64 with the same embeddings and
   noise. Tests of multi-gigabyte references run only with `TEST_LARGE`
   (`METALHEAD_TEST_LARGE=true`).
+
+## sentence-transformers models
+
+`src/SentenceTransformers/` ports the modules of a `modules.json` over the transformers
+models; read `model.jl` and `transformer.jl` first, and
+`porting/.venv/lib/python3.*/site-packages/sentence_transformers/` (`base/modules/`,
+`sentence_transformer/modules/`, `sentence_transformer/model.py`).
+
+- **A new transformers model for embeddings.** The Transformer module builds transformers'
+  `AutoModel` of the `model_type` of config.json: add it to `AUTO_MODELS`
+  (`transformer.jl`) with the registered architecture whose base model it is, and a method
+  of `base_model` if that architecture has a head (the base model and transformers'
+  `base_model_prefix`). A headless architecture is its own base model, with no prefix; give
+  it one if its checkpoints are saved under the prefix of a model with a head (BERT's
+  `bert.`). Its forward takes `(input_ids; attention_mask)` and returns the last hidden
+  states. Check the config keys that the embedding variant adds (EmbeddingGemma's
+  `use_bidirectional_attention`): a key the port doesn't declare is dropped silently.
+- **A new module or setting.** Each module reads its configuration with `read_settings`
+  (unknown keys warn) and rejects unsupported values with `unsupported`, naming the file.
+  sentence-transformers 5 saves `max_seq_length` in tokenizer_config.json
+  (`model_max_length`) and bakes `do_lower_case` into the tokenizer's normalizer; older
+  repositories have them in sentence_bert_config.json, and legacy keys elsewhere
+  (`pooling_mode_*_tokens`): cover both in fixtures (`"legacy_configs": true`).
+- **Fixtures** (`porting/dump_sentence_transformers.py`): a spec builds a tiny
+  transformers model, a tokenizer of numbered words and the modules, saves them with
+  sentence-transformers' `save`, loads them back and records `encode` and the outputs of the
+  model. The Julia tests stand in for the tokenizer with `WordsTokenizer`
+  (`test/models/sentence_transformers.jl`); with `METALHEAD_TEST_NETWORK`, the fixture's
+  tokenizer.json checks the real one.
+- **References.** `uv run dump_reference.py <org>/<repo>` of a repository with a modules.json
+  stores the embeddings of `EMBEDDING_CALLS` and their inputs, in float32; add the
+  `repo => sha` to the references of `SentenceTransformer` (`model.jl`).

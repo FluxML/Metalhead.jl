@@ -137,6 +137,20 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
   it with the autoencoder and lets the transformer attend to its tokens; the image takes the
   size of the first reference by default. Validated against diffusers with tiny pipelines and
   `black-forest-labs/FLUX.2-klein-4B` (#365).
+- Text embeddings of [sentence-transformers](https://github.com/huggingface/sentence-transformers)
+  models, in `Metalhead.SentenceTransformers`, validated against `Qwen/Qwen3-Embedding-0.6B`.
+  `create_model` builds a `SentenceTransformer` from a repository with a `modules.json`,
+  whatever its `config.json` names: the modules of its pipeline (`Transformer`, which holds
+  the base model of a ported transformers architecture and its tokenizer; `Pooling`, with
+  every pooling mode, the left padding and `include_prompt`; `Dense`; `Normalize`) and the
+  prompts, similarity function and `truncate_dim` of its
+  `config_sentence_transformers.json`, read strictly, as are the `max_seq_length` and
+  `do_lower_case` of `sentence_bert_config.json`, in the formats of sentence-transformers
+  before and after 5. `encode(model, texts)` (a method of HuggingFaceTokenizers' `encode`),
+  `encode_query`, `encode_document` and `similarity`, exported, compute and compare
+  embeddings as sentence-transformers does, and `model(inputs)` takes the inputs of
+  `Metalhead.SentenceTransformers.preprocess`. `create_processor` of such a repository is an
+  error, as the model prepares its inputs.
 - An extension for HuggingFaceTokenizers.jl (`ext/`): with it loaded, `create_processor`
   returns the processor of a language model, a `Metalhead.TextProcessor`, which encodes
   texts into the 1-based token indices and the attention mask of the models, padded on the
@@ -207,6 +221,8 @@ hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and t
   0.4.9 are now the minimum versions (#335, #337, #341).
 - Downloads share the cache of Python's `huggingface_hub` (`~/.cache/huggingface/hub`), and
   its `HF_TOKEN`, `HF_HUB_CACHE` and `HF_HUB_OFFLINE` environment variables.
+- `create_model` and `create_processor` look for a `modules.json` before the `config.json`
+  of a repository, which costs a request to the Hub for a repository without one.
 
 ### Deprecated
 
