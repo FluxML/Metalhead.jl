@@ -237,6 +237,7 @@ with_tokenizer(p, tokenizer) = D.Flux2KleinPipeline(p.scheduler, p.vae, p.text_e
     if Base.get_extension(Metalhead, :MetalheadHuggingFaceTokenizersExt) === nothing
         mktempdir() do dir
             cp(fixture("flux2_klein_tiny"), dir; force = true)
+            chmod(dir, 0o755; recursive = true)  # a copy of a read-only artifact
             mkdir(joinpath(dir, "tokenizer"))
             write(joinpath(dir, "tokenizer", "tokenizer.json"), "{}")
             index = JSON.parsefile(joinpath(dir, "model_index.json"))

@@ -7,11 +7,11 @@ using Metalhead: ProcessorFiles, model_source, load_tokenizer, encode_ids, token
                  load_tokenizer_or_defer, resolve_tokenizer
 
 include(joinpath(@__DIR__, "..", "processors_setup.jl"))
-
-const REFERENCES = joinpath(pkgdir(Metalhead), "test", "references")
+include(joinpath(@__DIR__, "..", "data.jl"))
+using .TestData: test_data
 
 files(name; subfolder = "") = ProcessorFiles(model_source(name, nothing, subfolder))
-reference_file(name) = joinpath(REFERENCES, name * ".safetensors")
+reference_file(name) = test_data("references/$name.safetensors")
 reference(name) = Metalhead.Checkpoint(reference_file(name))
 metadata(name) = SafeTensors.deserialize(reference_file(name)).metadata
 
@@ -271,7 +271,7 @@ if TEST_NETWORK
     # SAM 3's CLIP tokenizer, as porting/dump_processor.py called transformers': the token ids
     # of each text, and batches padded on the right to the longest and to 12 tokens
     @testset "SAM 3" begin
-        file = joinpath(REFERENCES, "processors", "sam3.safetensors")
+        file = test_data("references/processors/sam3.safetensors")
         ref = Metalhead.Checkpoint(file)
         texts = JSON.parse(SafeTensors.deserialize(file).metadata["tokenizer/texts"])
         tok = load_tokenizer(files("unsloth/sam3.1"))

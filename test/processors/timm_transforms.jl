@@ -2,10 +2,11 @@ using Metalhead, Test
 using JSON: JSON
 using SafeTensors: SafeTensors
 using Metalhead.Timm: pil_resize, PIL_RESAMPLING, EvalTransform
+include(joinpath(@__DIR__, "..", "data.jl"))
+using .TestData: test_data
 
 # Written by porting/dump_timm_transform.py
-const FILE = joinpath(pkgdir(Metalhead), "test", "references",
-    "timm_transforms.safetensors")
+const FILE = test_data("references/timm_transforms.safetensors")
 const META = SafeTensors.deserialize(FILE).metadata
 const REF = Metalhead.Checkpoint(FILE)
 const CASES = filter(startswith("transform/"), collect(keys(META)))

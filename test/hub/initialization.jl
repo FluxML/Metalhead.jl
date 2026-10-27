@@ -2,8 +2,8 @@ using Metalhead, Flux, Test
 using Metalhead: Random, Checkpoint, torch_params, source_weights, model_source,
                  source_config, identify, lookup, model_args, weights_name,
                  init_layer, init_array, build_pretrained, weight_init_context
-
-const FIXTURES = joinpath(pkgdir(Metalhead), "test", "fixtures")
+include(joinpath(@__DIR__, "..", "data.jl"))
+using .TestData: fixture
 
 @testset "pretrained precision and weights" begin
     # Cover Flux layers, custom parameters, normalization, stacked experts and tied weights.
@@ -12,7 +12,7 @@ const FIXTURES = joinpath(pkgdir(Metalhead), "test", "fixtures")
         "granitemoe_tiny", "qwen3_5_tiny", "sam3_tiny", "vae_flux2_options",
         "transformer_flux2_options", "autoencoder_kl_tiny", "autoencoder_kl_options",
         "transformer_z_image_tiny", "transformer_z_image_options")
-        dir = joinpath(FIXTURES, name)
+        dir = fixture(name)
         source = model_source(dir, nothing)
         config = source_config(source)
         format, architecture = identify(config)
@@ -40,7 +40,7 @@ const FIXTURES = joinpath(pkgdir(Metalhead), "test", "fixtures")
 end
 
 @testset "random construction" begin
-    dir = joinpath(FIXTURES, "llama_options")
+    dir = fixture("llama_options")
     for T in (Float16, Flux.BFloat16, Float32, Float64)
         Random.seed!(366)
         expected = Metalhead.ELTYPE_CONVERTERS[T](create_model(dir; pretrained = false))
@@ -56,7 +56,7 @@ end
 @testset "replacement classifiers" begin
     for (name, key) in (("resnet_basic", "fc"), ("convnext_linear_mlp", "head"),
         ("efficientnet_cc_tf_same", "classifier"), ("gmlp", "head"))
-        dir = joinpath(FIXTURES, name)
+        dir = fixture(name)
         reference = Dict(p.key => p.array for p in first(torch_params(create_model(dir))))
         for T in (Float16, Flux.BFloat16, Float32, Float64)
             model = create_model(dir; num_classes = 3, eltype = T)

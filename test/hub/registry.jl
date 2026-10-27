@@ -3,8 +3,10 @@ using Flux
 using Metalhead: AbstractConfigFormat, ArchSpec, REGISTRY, register!, lookup, identify,
                  model_source, model_args, skip_prefix
 using Metalhead.Timm: TIMM
+include(joinpath(@__DIR__, "..", "data.jl"))
+using .TestData: fixture
 
-const FIXTURE = joinpath(pkgdir(Metalhead), "test", "fixtures", "resnet_basic")
+const FIXTURE = fixture("resnet_basic")
 
 @testset "names" begin
     @test_throws "org/name" create_model("resnet50.a1_in1k")
@@ -68,7 +70,7 @@ end
 
 @testset "diffusers formats" begin
     using Metalhead.Diffusers: DIFFUSERS, DIFFUSERS_PIPELINE
-    dir = joinpath(pkgdir(Metalhead), "test", "fixtures", "flux2_klein_tiny")
+    dir = fixture("flux2_klein_tiny")
     @test string(DIFFUSERS) == "diffusers" && string(DIFFUSERS_PIPELINE) == "diffusers pipeline"
     s = model_source(dir, nothing)
     @test identify(Metalhead.source_config(s)) == (DIFFUSERS_PIPELINE, "Flux2KleinPipeline")

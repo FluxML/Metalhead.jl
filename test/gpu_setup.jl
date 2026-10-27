@@ -25,8 +25,6 @@ const BF16_RTOL = 5e-2
 # cuDNN has no BFloat16 convolutions below compute capability 8.0 (the Turing GPUs of CI).
 const BF16_CONV = CUDA.capability(CUDA.device()) >= v"8"
 
-const FIXTURES = joinpath(pkgdir(Metalhead), "test", "fixtures")
-
 is_pipeline(name) = isfile(joinpath(fixture(name), "model_index.json"))
 
 """
@@ -37,7 +35,7 @@ config format that `create_model` identifies), pipelines included; not those of 
 (test/fixtures/processors), which have no config.json.
 """
 function fixtures_of(library::Symbol)
-    return filter(readdir(FIXTURES)) do name
+    return filter(test_data_names("fixtures")) do name
         file = is_pipeline(name) ? "model_index.json" : "config.json"
         config = joinpath(fixture(name), file)
         isfile(config) || return false

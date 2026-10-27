@@ -81,7 +81,14 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
    (several minutes) once, at the end. Don't edit `src/` while a test run is going. On a
    machine with an NVIDIA GPU, also run `["gpu"]` with `METALHEAD_TEST_GPU=true`: it runs
    every fixture on the GPU, where scalar indexing is an error.
-9. **Document.** Name a new family in the table of the README's "Models" section, and record
+9. **Publish the test data.** Fixtures and reference files don't stay in git (the package
+   would grow with every port): `julia porting/publish.jl` uploads each new or changed one in
+   `test/fixtures/` and `test/references/` to the Hub dataset `FluxML/metalhead-test-data`,
+   as a lazy artifact bound in `test/Artifacts.toml`, and removes the local copy; the tests
+   then use the artifact. Commit `test/Artifacts.toml`. Uploading needs write access to the
+   dataset (`hf auth login`). Without it, commit the fixtures and references themselves:
+   after the merge, a workflow publishes them and opens a "Publish test data" pull request.
+10. **Document.** Name a new family in the table of the README's "Models" section, and record
    the port under `[Unreleased]` in `CHANGELOG.md`.
 
 ## Iterating quickly
@@ -96,7 +103,7 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
   using Metalhead
   isdefined(Main, :Revise)  # decides `includet` or `include` below
   includet(joinpath(pkgdir(Metalhead), "test", "parity.jl"))  # once per session
-  fixture(name) = joinpath(pkgdir(Metalhead), "test", "fixtures", name)
+  include(joinpath(pkgdir(Metalhead), "test", "data.jl")); using .TestData: fixture
   r = Parity.check_fixture(fixture("<name>")); println(r.pass, " ", r.output)
   ```
   - The tool says it loads Revise, but that needs Revise in the default Julia environment,

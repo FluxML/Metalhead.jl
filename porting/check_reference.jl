@@ -2,14 +2,19 @@
 #
 #   julia --project=.. check_reference.jl ../test/references/<org>--<repo>.safetensors ...
 #
+# A file that isn't in test/references is the published one (test/data.jl).
+#
 # Metalhead shares the Hub cache of Python's huggingface_hub, so the checkpoint that
 # dump_reference.py downloaded loads with no network access.
 using Metalhead, SafeTensors
 include(joinpath(@__DIR__, "..", "test", "parity.jl"))
 using .Parity
+include(joinpath(@__DIR__, "..", "test", "data.jl"))
+using .TestData: reference
 
 pass = true
-for file in ARGS
+for arg in ARGS
+    file = isfile(arg) ? arg : reference(basename(arg))
     meta = SafeTensors.deserialize(file).metadata
     ref = Metalhead.Checkpoint(file)
     if startswith(get(meta, "class", ""), "CLIP")

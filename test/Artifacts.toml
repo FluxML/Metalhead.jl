@@ -1,0 +1,1583 @@
+["fixtures/autoencoder_kl_options"]
+git-tree-sha1 = "3e984c4ec3c776276e1817fbe8cf965daa6235f9"
+lazy = true
+
+    [["fixtures/autoencoder_kl_options".download]]
+    sha256 = "e196308ce7f5b5eed1041630a123d2df45eb2702a799ff38a0cc7cf187c95b6f"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/autoencoder_kl_options/e196308ce7f5b5eed1041630a123d2df45eb2702a799ff38a0cc7cf187c95b6f.tar.gz"
+
+["fixtures/autoencoder_kl_tiny"]
+git-tree-sha1 = "2e8011c0d0e9ff46ddfd5db4e974ba490b4b6019"
+lazy = true
+
+    [["fixtures/autoencoder_kl_tiny".download]]
+    sha256 = "edd144f937ed8760dfc1c7b0ce15173306db5cbd6bc92f3aa5bb59defb8179fa"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/autoencoder_kl_tiny/edd144f937ed8760dfc1c7b0ce15173306db5cbd6bc92f3aa5bb59defb8179fa.tar.gz"
+
+["fixtures/convmixer"]
+git-tree-sha1 = "5bba2088d524279f8515a4eb58bf5e68ebd365fb"
+lazy = true
+
+    [["fixtures/convmixer".download]]
+    sha256 = "740a9f344e4d617ccd024777ff111dafbf8312e8ac2089723a2c25132d8a7ba8"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/convmixer/740a9f344e4d617ccd024777ff111dafbf8312e8ac2089723a2c25132d8a7ba8.tar.gz"
+
+["fixtures/convmixer_even_kernel"]
+git-tree-sha1 = "6b6acc7d511f06252e3bb4adbba3ec59510bcc4f"
+lazy = true
+
+    [["fixtures/convmixer_even_kernel".download]]
+    sha256 = "5f62a159b785d774cf4c6b7342f754273fa1cb2b32a34287658ad6f549d1c194"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/convmixer_even_kernel/5f62a159b785d774cf4c6b7342f754273fa1cb2b32a34287658ad6f549d1c194.tar.gz"
+
+["fixtures/convnext_conv_mlp"]
+git-tree-sha1 = "64784a17c08a7c2f80969334d094f0d443aeaecf"
+lazy = true
+
+    [["fixtures/convnext_conv_mlp".download]]
+    sha256 = "db5aec855903dd4d791d21c97a598ac9866c150cd9e8308a1c98b5ca47468a2d"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/convnext_conv_mlp/db5aec855903dd4d791d21c97a598ac9866c150cd9e8308a1c98b5ca47468a2d.tar.gz"
+
+["fixtures/convnext_linear_mlp"]
+git-tree-sha1 = "773a3b08c26c30cdd3d59cf1aeccebab4797944a"
+lazy = true
+
+    [["fixtures/convnext_linear_mlp".download]]
+    sha256 = "6ea0b25056bef616ed937dc5d0af9fff989b7605290ad804ebf3b1fc2d3ce71b"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/convnext_linear_mlp/6ea0b25056bef616ed937dc5d0af9fff989b7605290ad804ebf3b1fc2d3ce71b.tar.gz"
+
+["fixtures/densenet_basic"]
+git-tree-sha1 = "bf2ea33ce533771c86ddae50fc2483acdfcbba01"
+lazy = true
+
+    [["fixtures/densenet_basic".download]]
+    sha256 = "dcedfb467e88572717c11ca6695cf08281baa91fd73753b4ee5024e86f713473"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/densenet_basic/dcedfb467e88572717c11ca6695cf08281baa91fd73753b4ee5024e86f713473.tar.gz"
+
+["fixtures/densenet_blur"]
+git-tree-sha1 = "3d177c4a8b82453b037d2e0f21dfd6b602b57771"
+lazy = true
+
+    [["fixtures/densenet_blur".download]]
+    sha256 = "1b229042663efea43fc1324e65f8855d446402089c7f1a733f6f7f2381bd45fd"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/densenet_blur/1b229042663efea43fc1324e65f8855d446402089c7f1a733f6f7f2381bd45fd.tar.gz"
+
+["fixtures/densenet_tiered"]
+git-tree-sha1 = "9a1b500d4d7cf39ca76ddcaaaeae3606af21cefe"
+lazy = true
+
+    [["fixtures/densenet_tiered".download]]
+    sha256 = "d81920a891deafbe1d7ba8930bb2e9002e037c3ca1eab37a2738c45d4f6932be"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/densenet_tiered/d81920a891deafbe1d7ba8930bb2e9002e037c3ca1eab37a2738c45d4f6932be.tar.gz"
+
+["fixtures/densenet_tiered_narrow"]
+git-tree-sha1 = "797d22a311ed8e6e598b8f84565b2f0feaceace0"
+lazy = true
+
+    [["fixtures/densenet_tiered_narrow".download]]
+    sha256 = "e70c61b342395c5e58ee1522e46ebbbac72e8072e1d919dbe08d9ab4074a05ab"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/densenet_tiered_narrow/e70c61b342395c5e58ee1522e46ebbbac72e8072e1d919dbe08d9ab4074a05ab.tar.gz"
+
+["fixtures/ecaresnet"]
+git-tree-sha1 = "50c5df17ad2770c4002d00cb6a0c96ac889110c9"
+lazy = true
+
+    [["fixtures/ecaresnet".download]]
+    sha256 = "82aa4be3b3e895f0ce577a9a9e428dea39b799badc785a0133e6816d352420e6"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/ecaresnet/82aa4be3b3e895f0ce577a9a9e428dea39b799badc785a0133e6816d352420e6.tar.gz"
+
+["fixtures/efficientnet_cc_os16"]
+git-tree-sha1 = "1bdd62a659e4668029c8b7b06b0b148ef50529de"
+lazy = true
+
+    [["fixtures/efficientnet_cc_os16".download]]
+    sha256 = "9c3f637511c48671c60a97c86836401f109964e2e9114f289276b49b8f7cc75e"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/efficientnet_cc_os16/9c3f637511c48671c60a97c86836401f109964e2e9114f289276b49b8f7cc75e.tar.gz"
+
+["fixtures/efficientnet_cc_tf_same"]
+git-tree-sha1 = "f4b5fa32888cadd0ed9c4e92897fbd59c4f3660a"
+lazy = true
+
+    [["fixtures/efficientnet_cc_tf_same".download]]
+    sha256 = "d05bd285f1265b9cd25207c50d44f3f7093bf301af9193a2ee0ab92f201c2237"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/efficientnet_cc_tf_same/d05bd285f1265b9cd25207c50d44f3f7093bf301af9193a2ee0ab92f201c2237.tar.gz"
+
+["fixtures/efficientnet_edge"]
+git-tree-sha1 = "a94d28a06b060cd059aeced1468ef78ab9f0de9c"
+lazy = true
+
+    [["fixtures/efficientnet_edge".download]]
+    sha256 = "30985078fe63d487866ae92df68bcb069220dbaf516cabc29f61355ac2765568"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/efficientnet_edge/30985078fe63d487866ae92df68bcb069220dbaf516cabc29f61355ac2765568.tar.gz"
+
+["fixtures/efficientnet_grouped_os16"]
+git-tree-sha1 = "8d081dc9360120e3252832550d9d408f1166755a"
+lazy = true
+
+    [["fixtures/efficientnet_grouped_os16".download]]
+    sha256 = "2e563b6acfc4579262b5fc0835a53cae5d210ef554446820c937c97b6b5cb382"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/efficientnet_grouped_os16/2e563b6acfc4579262b5fc0835a53cae5d210ef554446820c937c97b6b5cb382.tar.gz"
+
+["fixtures/efficientnet_tf_same"]
+git-tree-sha1 = "36bd8f0d8d8c0e0914987e776555ebf69fb8f315"
+lazy = true
+
+    [["fixtures/efficientnet_tf_same".download]]
+    sha256 = "f999eca48e08068304c8e3bbdafc913000d1b3f34ea20ec22a81a360b476c91e"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/efficientnet_tf_same/f999eca48e08068304c8e3bbdafc913000d1b3f34ea20ec22a81a360b476c91e.tar.gz"
+
+["fixtures/efficientnetv2_base_tf"]
+git-tree-sha1 = "356300126e3f25d758c8a436df9f6e0a407438ed"
+lazy = true
+
+    [["fixtures/efficientnetv2_base_tf".download]]
+    sha256 = "79c79c4e44050318447e162264804154368710bfb46889b3acd194c687ac1f40"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/efficientnetv2_base_tf/79c79c4e44050318447e162264804154368710bfb46889b3acd194c687ac1f40.tar.gz"
+
+["fixtures/fbnetv3"]
+git-tree-sha1 = "11b6dd31d3310e51fafd27571a17e4d6b3602bbb"
+lazy = true
+
+    [["fixtures/fbnetv3".download]]
+    sha256 = "720646da7b724ee22fd988da1a056cb83fa7b83169e55588591e709d0e4e24e8"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/fbnetv3/720646da7b724ee22fd988da1a056cb83fa7b83169e55588591e709d0e4e24e8.tar.gz"
+
+["fixtures/flux2_klein_cfg"]
+git-tree-sha1 = "497070f14b4d27a9abb1979cf9bab772bd1c8867"
+lazy = true
+
+    [["fixtures/flux2_klein_cfg".download]]
+    sha256 = "d5c860aa66897230e108e86792833d431805316a8bbfdedca84ee7b0953c845f"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/flux2_klein_cfg/d5c860aa66897230e108e86792833d431805316a8bbfdedca84ee7b0953c845f.tar.gz"
+
+["fixtures/flux2_klein_tiny"]
+git-tree-sha1 = "99cc4b826ef1f626c3e4dd3f793f902c0918c478"
+lazy = true
+
+    [["fixtures/flux2_klein_tiny".download]]
+    sha256 = "cdb9217a5dfbb2a380c86e5027b767a581f7bc387f0ecfc58369fc4093be61ea"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/flux2_klein_tiny/cdb9217a5dfbb2a380c86e5027b767a581f7bc387f0ecfc58369fc4093be61ea.tar.gz"
+
+["fixtures/gemma3_options"]
+git-tree-sha1 = "ded83e9fe98877ed2b2262ec06a45659b719167a"
+lazy = true
+
+    [["fixtures/gemma3_options".download]]
+    sha256 = "fe7dae842b0168452cd05756cc79f7f7a65476f376fe531c333159053baf66ca"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/gemma3_options/fe7dae842b0168452cd05756cc79f7f7a65476f376fe531c333159053baf66ca.tar.gz"
+
+["fixtures/gemma3_tiny"]
+git-tree-sha1 = "61049cd69ec33bcb555dd602e35c0d19c740ae0e"
+lazy = true
+
+    [["fixtures/gemma3_tiny".download]]
+    sha256 = "47fb885d696d7203a431a6afd706f6b7598dc93743f7845111ba03f5a4eaa3cf"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/gemma3_tiny/47fb885d696d7203a431a6afd706f6b7598dc93743f7845111ba03f5a4eaa3cf.tar.gz"
+
+["fixtures/gmixer"]
+git-tree-sha1 = "43ca2e823c97bc289d2ff10a7225651ff6962108"
+lazy = true
+
+    [["fixtures/gmixer".download]]
+    sha256 = "0e347866d63a0f13a02ee4e6134deb4b02f120055dc48d15fce7f9b2ac6eb954"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/gmixer/0e347866d63a0f13a02ee4e6134deb4b02f120055dc48d15fce7f9b2ac6eb954.tar.gz"
+
+["fixtures/gmlp"]
+git-tree-sha1 = "4f6c8a18b92fb53bcaa38d4fa73e103491f43465"
+lazy = true
+
+    [["fixtures/gmlp".download]]
+    sha256 = "ad7d417ef20cf83f42fb54ff968638fae62e48900107bd8431965621cb981293"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/gmlp/ad7d417ef20cf83f42fb54ff968638fae62e48900107bd8431965621cb981293.tar.gz"
+
+["fixtures/granite_options"]
+git-tree-sha1 = "e4e7396c47ff9015db5af57a9d0d05e006182479"
+lazy = true
+
+    [["fixtures/granite_options".download]]
+    sha256 = "03837af747f8111cc342e2de155cbe22f5c3c5bde9c4b69410d103f6a3ad221e"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/granite_options/03837af747f8111cc342e2de155cbe22f5c3c5bde9c4b69410d103f6a3ad221e.tar.gz"
+
+["fixtures/granite_tiny"]
+git-tree-sha1 = "e937f17111866be805e8fd973c3f1fd0c430c236"
+lazy = true
+
+    [["fixtures/granite_tiny".download]]
+    sha256 = "76637ff105f9d4eec8bbe0a396b2b838f1dec3822c981529744f9cb2294a17b6"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/granite_tiny/76637ff105f9d4eec8bbe0a396b2b838f1dec3822c981529744f9cb2294a17b6.tar.gz"
+
+["fixtures/granitemoe_options"]
+git-tree-sha1 = "ca54efbae0cbd0396c01b8684a5dea526559b82c"
+lazy = true
+
+    [["fixtures/granitemoe_options".download]]
+    sha256 = "75c41ba72ab1f304ec6210b2a0e8a22e91fc80d17d4f3b088698495b35365f18"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/granitemoe_options/75c41ba72ab1f304ec6210b2a0e8a22e91fc80d17d4f3b088698495b35365f18.tar.gz"
+
+["fixtures/granitemoe_tiny"]
+git-tree-sha1 = "3ab6c516f862acc9b1a9a4fbbfab35e698a3eced"
+lazy = true
+
+    [["fixtures/granitemoe_tiny".download]]
+    sha256 = "ac0077c4eb3bf9251bde49b1104db2c149d936d216ca833adb687eda73350a6b"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/granitemoe_tiny/ac0077c4eb3bf9251bde49b1104db2c149d936d216ca833adb687eda73350a6b.tar.gz"
+
+["fixtures/granitemoehybrid_options"]
+git-tree-sha1 = "ec37f08453569f41a1d8611a117d6f9b83c90520"
+lazy = true
+
+    [["fixtures/granitemoehybrid_options".download]]
+    sha256 = "a95cd1df400d9b89ee5d41c4e072edee818c49ce6e86bfa65300739831cda6d5"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/granitemoehybrid_options/a95cd1df400d9b89ee5d41c4e072edee818c49ce6e86bfa65300739831cda6d5.tar.gz"
+
+["fixtures/granitemoehybrid_tiny"]
+git-tree-sha1 = "90ff26beeadfe0d8082a45f529ce90331d9c8a2d"
+lazy = true
+
+    [["fixtures/granitemoehybrid_tiny".download]]
+    sha256 = "707fd96a40e2a3e3d2cd3b3ba783f0f5b7ce9a40cba0dbee177ea2ca81aae596"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/granitemoehybrid_tiny/707fd96a40e2a3e3d2cd3b3ba783f0f5b7ce9a40cba0dbee177ea2ca81aae596.tar.gz"
+
+["fixtures/granitemoeshared_tiny"]
+git-tree-sha1 = "944d309e77ca36682b759511669b0dae8560d6bf"
+lazy = true
+
+    [["fixtures/granitemoeshared_tiny".download]]
+    sha256 = "f35f3d797995b13e5d8d5884c322895c04cd2dbbd70108453fb954bb26de78d2"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/granitemoeshared_tiny/f35f3d797995b13e5d8d5884c322895c04cd2dbbd70108453fb954bb26de78d2.tar.gz"
+
+["fixtures/inception_resnet_v2"]
+git-tree-sha1 = "a6295fe6aecb5e19cc8655b6fc0de5c52f7594f0"
+lazy = true
+
+    [["fixtures/inception_resnet_v2".download]]
+    sha256 = "1dd82c0121536d1d776a33bd17fb5725538991b69668949e58b6ed3f1909e5b5"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/inception_resnet_v2/1dd82c0121536d1d776a33bd17fb5725538991b69668949e58b6ed3f1909e5b5.tar.gz"
+
+["fixtures/inception_v3"]
+git-tree-sha1 = "3cb1cc2129a869ae4309662b74e2591133e4e800"
+lazy = true
+
+    [["fixtures/inception_v3".download]]
+    sha256 = "f156bcc197b42753488919e1a5f1702c12d045ed637ca5369b840523ef172408"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/inception_v3/f156bcc197b42753488919e1a5f1702c12d045ed637ca5369b840523ef172408.tar.gz"
+
+["fixtures/inception_v4"]
+git-tree-sha1 = "6e48ec7461dbc423fa730809c00be4477e2a57f3"
+lazy = true
+
+    [["fixtures/inception_v4".download]]
+    sha256 = "a544c0e95ad596447e107474ffedc0803e388e30898ebf5f96e2e4163a4bfa5b"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/inception_v4/a544c0e95ad596447e107474ffedc0803e388e30898ebf5f96e2e4163a4bfa5b.tar.gz"
+
+["fixtures/lcnet"]
+git-tree-sha1 = "779bae4f7dc37a8d3a198a93b11248151f469d67"
+lazy = true
+
+    [["fixtures/lcnet".download]]
+    sha256 = "6a5c1863fdcdf23876c9abccaed03074ad326c833f1f15af305d1a47136e2dc1"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/lcnet/6a5c1863fdcdf23876c9abccaed03074ad326c833f1f15af305d1a47136e2dc1.tar.gz"
+
+["fixtures/llama_options"]
+git-tree-sha1 = "4b8097f5b8a041252b62152bca1db42b44aa91eb"
+lazy = true
+
+    [["fixtures/llama_options".download]]
+    sha256 = "9864682778e64fd78857e4753379a43438a56a1c13266d4699bc34037b4a47a0"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/llama_options/9864682778e64fd78857e4753379a43438a56a1c13266d4699bc34037b4a47a0.tar.gz"
+
+["fixtures/llama_rope"]
+git-tree-sha1 = "de7d2c0768a17310363ed1eb0a857acc7c627208"
+lazy = true
+
+    [["fixtures/llama_rope".download]]
+    sha256 = "fb6c003b5f117cbfed1d87ee5cd63df8dd3a843f3975c90a73be69a741eba2d6"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/llama_rope/fb6c003b5f117cbfed1d87ee5cd63df8dd3a843f3975c90a73be69a741eba2d6.tar.gz"
+
+["fixtures/llama_tiny"]
+git-tree-sha1 = "947dbd6fc4f7e4a37a44f7b36f1792aed8537430"
+lazy = true
+
+    [["fixtures/llama_tiny".download]]
+    sha256 = "b63617a53ca661c6447e471ab80cb3bcf5f901d5c8cd976478565bc7605462a2"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/llama_tiny/b63617a53ca661c6447e471ab80cb3bcf5f901d5c8cd976478565bc7605462a2.tar.gz"
+
+["fixtures/mixer"]
+git-tree-sha1 = "a81d5cbbd786227aad684482c8777d924aaac966"
+lazy = true
+
+    [["fixtures/mixer".download]]
+    sha256 = "8da6b25a55996b6066269f4a4eafa1538b12e1db4406d4888784efa9a607f38f"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/mixer/8da6b25a55996b6066269f4a4eafa1538b12e1db4406d4888784efa9a607f38f.tar.gz"
+
+["fixtures/mixnet_s"]
+git-tree-sha1 = "00a0531577d07eef24905248ec1132d4c6ac40b1"
+lazy = true
+
+    [["fixtures/mixnet_s".download]]
+    sha256 = "1cfe9b41d55341406283944682595097b2cfe6b5f27dc7bec64977bf10187c90"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/mixnet_s/1cfe9b41d55341406283944682595097b2cfe6b5f27dc7bec64977bf10187c90.tar.gz"
+
+["fixtures/mixnet_tf_same"]
+git-tree-sha1 = "4c946ff037e80eeb5f9aee221ca7ae4d42f6efe5"
+lazy = true
+
+    [["fixtures/mixnet_tf_same".download]]
+    sha256 = "c8b8aeab03aee94ca73398b71982fa62c0c53408111217833bd2bbce01bacf3f"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/mixnet_tf_same/c8b8aeab03aee94ca73398b71982fa62c0c53408111217833bd2bbce01bacf3f.tar.gz"
+
+["fixtures/mnasnet_a1"]
+git-tree-sha1 = "af41c42bf11769b7f4a1d512bd0ea676cf6a9729"
+lazy = true
+
+    [["fixtures/mnasnet_a1".download]]
+    sha256 = "a5d1e1cfbdeebd5f1dac493acb205304a2fbccbcbd8661962c1b917e05ad1b79"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/mnasnet_a1/a5d1e1cfbdeebd5f1dac493acb205304a2fbccbcbd8661962c1b917e05ad1b79.tar.gz"
+
+["fixtures/mobilenet_edgetpu_v2"]
+git-tree-sha1 = "509d3fb83cb0d3bc37b0ae9b6da0b16bb67f397e"
+lazy = true
+
+    [["fixtures/mobilenet_edgetpu_v2".download]]
+    sha256 = "934fa5c223310b71448889642e1ccd43d1dd3fe74b8fc6b6dfcc32d1fb78155f"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/mobilenet_edgetpu_v2/934fa5c223310b71448889642e1ccd43d1dd3fe74b8fc6b6dfcc32d1fb78155f.tar.gz"
+
+["fixtures/mobilenetv1_head"]
+git-tree-sha1 = "4d4458a4de05e5d2b667b7aaee7c9d94fbe38790"
+lazy = true
+
+    [["fixtures/mobilenetv1_head".download]]
+    sha256 = "490e9da7da13725890dc52528d168280b1c2e22cf10b59730f1c0d3757108f3e"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/mobilenetv1_head/490e9da7da13725890dc52528d168280b1c2e22cf10b59730f1c0d3757108f3e.tar.gz"
+
+["fixtures/mobilenetv1_nohead"]
+git-tree-sha1 = "54f1b9ca822b5295b9b6d7733e6012593399c530"
+lazy = true
+
+    [["fixtures/mobilenetv1_nohead".download]]
+    sha256 = "077bc8fc3d596a631fa3d7bad712a03108b9ba7ffa5ead86b42c9ad13c4de553"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/mobilenetv1_nohead/077bc8fc3d596a631fa3d7bad712a03108b9ba7ffa5ead86b42c9ad13c4de553.tar.gz"
+
+["fixtures/mobilenetv3_large"]
+git-tree-sha1 = "ff160d7b3f10e9065c509587a4a3ed301ba5b054"
+lazy = true
+
+    [["fixtures/mobilenetv3_large".download]]
+    sha256 = "d69485c7258229e307b479a9f0b2af9696e4092a2519f12d2b945e3af3ba2e0d"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/mobilenetv3_large/d69485c7258229e307b479a9f0b2af9696e4092a2519f12d2b945e3af3ba2e0d.tar.gz"
+
+["fixtures/mobilenetv3_rw"]
+git-tree-sha1 = "bacf7132028d72a56ab274545c64ec4779e96f2f"
+lazy = true
+
+    [["fixtures/mobilenetv3_rw".download]]
+    sha256 = "5f2a93c8a8ccc6e5608d16c9fff35cb4eb525ce56db2d0c434631a036d7cdf60"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/mobilenetv3_rw/5f2a93c8a8ccc6e5608d16c9fff35cb4eb525ce56db2d0c434631a036d7cdf60.tar.gz"
+
+["fixtures/mobilenetv3_small_head_norm"]
+git-tree-sha1 = "59cba693ad485b0ae407f9224435264e6abb63b9"
+lazy = true
+
+    [["fixtures/mobilenetv3_small_head_norm".download]]
+    sha256 = "c7a441fe20a62c4f4ce7212c58a1033a2682eef1cb4d19eb70494c9ab974004b"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/mobilenetv3_small_head_norm/c7a441fe20a62c4f4ce7212c58a1033a2682eef1cb4d19eb70494c9ab974004b.tar.gz"
+
+["fixtures/mobilenetv3_tf_large"]
+git-tree-sha1 = "932582c958faeee99017fe1155f66e6fbedc65d0"
+lazy = true
+
+    [["fixtures/mobilenetv3_tf_large".download]]
+    sha256 = "d8ad2eada445f4d719a90fc1bdea95e83c05ea4d17ea5cbfa2fd4e17d8115d7e"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/mobilenetv3_tf_large/d8ad2eada445f4d719a90fc1bdea95e83c05ea4d17ea5cbfa2fd4e17d8115d7e.tar.gz"
+
+["fixtures/mobilenetv3_tf_small_minimal"]
+git-tree-sha1 = "d9de3f897ed8827aedb4338fb8a506724bda6f5e"
+lazy = true
+
+    [["fixtures/mobilenetv3_tf_small_minimal".download]]
+    sha256 = "5a7984ae791527cff8e601fdcfd795b744e2ab4de1a7f7095ce64b5438b27549"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/mobilenetv3_tf_small_minimal/5a7984ae791527cff8e601fdcfd795b744e2ab4de1a7f7095ce64b5438b27549.tar.gz"
+
+["fixtures/mobilenetv4_conv_aa_large"]
+git-tree-sha1 = "4a1977c8cc495d0c06d56bdc12c82d74e9a1fe32"
+lazy = true
+
+    [["fixtures/mobilenetv4_conv_aa_large".download]]
+    sha256 = "37046b46829a1be4b3f900bd597ddf5280147885436fbb562b720573fed6feff"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/mobilenetv4_conv_aa_large/37046b46829a1be4b3f900bd597ddf5280147885436fbb562b720573fed6feff.tar.gz"
+
+["fixtures/mobilenetv4_conv_blur_medium"]
+git-tree-sha1 = "1c4dc6d031eeb679756b17eb04aa106639180bd4"
+lazy = true
+
+    [["fixtures/mobilenetv4_conv_blur_medium".download]]
+    sha256 = "10f907a1c5a4a5b70b09e81c06cadbbd93a72249971f626afcc89e7c2d1a9386"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/mobilenetv4_conv_blur_medium/10f907a1c5a4a5b70b09e81c06cadbbd93a72249971f626afcc89e7c2d1a9386.tar.gz"
+
+["fixtures/mobilenetv4_conv_small"]
+git-tree-sha1 = "4bddca63b8889b5cb420c2a299bb9c8534ed03f8"
+lazy = true
+
+    [["fixtures/mobilenetv4_conv_small".download]]
+    sha256 = "a5c255708142ab7d48f53a900103782c525b8f5a615bbf655319d1c6ceca9080"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/mobilenetv4_conv_small/a5c255708142ab7d48f53a900103782c525b8f5a615bbf655319d1c6ceca9080.tar.gz"
+
+["fixtures/mobilenetv4_hybrid_large"]
+git-tree-sha1 = "a87812bc0bb9ac50f37ae19616ba0d01558fccbc"
+lazy = true
+
+    [["fixtures/mobilenetv4_hybrid_large".download]]
+    sha256 = "7de0e12d2ddafa261ddfbee7f5aba2a3cdb37a9d219e572414c0edff50fef4d0"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/mobilenetv4_hybrid_large/7de0e12d2ddafa261ddfbee7f5aba2a3cdb37a9d219e572414c0edff50fef4d0.tar.gz"
+
+["fixtures/mobilenetv4_hybrid_medium"]
+git-tree-sha1 = "2ce9e22ecce56e34e190cf34fd0f102463a1d12d"
+lazy = true
+
+    [["fixtures/mobilenetv4_hybrid_medium".download]]
+    sha256 = "bbffc01ff22c3b1c80e85e78f0c3c4a71f7cf23b2933cffb706a0031329e12ef"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/mobilenetv4_hybrid_medium/bbffc01ff22c3b1c80e85e78f0c3c4a71f7cf23b2933cffb706a0031329e12ef.tar.gz"
+
+["fixtures/qwen2_options"]
+git-tree-sha1 = "6f03745cd9313e77153c908398e3240de321656e"
+lazy = true
+
+    [["fixtures/qwen2_options".download]]
+    sha256 = "98165d949828d2843f6ae96d80bd7bd132e88b6d9468a917311969f4ba4e08de"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/qwen2_options/98165d949828d2843f6ae96d80bd7bd132e88b6d9468a917311969f4ba4e08de.tar.gz"
+
+["fixtures/qwen2_tiny"]
+git-tree-sha1 = "70d42c8bdb99ddaa95eb77d92ad2f716caa2521f"
+lazy = true
+
+    [["fixtures/qwen2_tiny".download]]
+    sha256 = "f644bfaaf401fc10436a4dd3216a3c9f353df6b92b6e0900c7a0bd1aa8f49c6f"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/qwen2_tiny/f644bfaaf401fc10436a4dd3216a3c9f353df6b92b6e0900c7a0bd1aa8f49c6f.tar.gz"
+
+["fixtures/qwen3_5_moe_text_tiny"]
+git-tree-sha1 = "425bab7e0793ed1db07bc1bd8760d653dd35b8dd"
+lazy = true
+
+    [["fixtures/qwen3_5_moe_text_tiny".download]]
+    sha256 = "e6808628f66f8803c4f1849b94a23e473675ff4038c3963c3c7467f8c95d6258"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/qwen3_5_moe_text_tiny/e6808628f66f8803c4f1849b94a23e473675ff4038c3963c3c7467f8c95d6258.tar.gz"
+
+["fixtures/qwen3_5_moe_tiny"]
+git-tree-sha1 = "8e8a3e91624ef04ab95f179af4f7f87bb2b7ba3f"
+lazy = true
+
+    [["fixtures/qwen3_5_moe_tiny".download]]
+    sha256 = "ce89245ce132be01e8f34c83b5c053a43b847f82d909d188444dfb663f71501c"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/qwen3_5_moe_tiny/ce89245ce132be01e8f34c83b5c053a43b847f82d909d188444dfb663f71501c.tar.gz"
+
+["fixtures/qwen3_5_text_options"]
+git-tree-sha1 = "0344e7b2b39c262645d44e53015b58413754bc2d"
+lazy = true
+
+    [["fixtures/qwen3_5_text_options".download]]
+    sha256 = "e7263a12782ff0a0bdd5b5002ecda3b8280c63c112cea64e22298a4a226c4d7e"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/qwen3_5_text_options/e7263a12782ff0a0bdd5b5002ecda3b8280c63c112cea64e22298a4a226c4d7e.tar.gz"
+
+["fixtures/qwen3_5_text_padded"]
+git-tree-sha1 = "ef6c162dd868ebe193d1a06dc5200c606a3030e1"
+lazy = true
+
+    [["fixtures/qwen3_5_text_padded".download]]
+    sha256 = "90205bf5cb8f8ae7de210ffd7e9d28fa0c732ffd9260f14dcb6e1902c3b8d4be"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/qwen3_5_text_padded/90205bf5cb8f8ae7de210ffd7e9d28fa0c732ffd9260f14dcb6e1902c3b8d4be.tar.gz"
+
+["fixtures/qwen3_5_text_tiny"]
+git-tree-sha1 = "0a7168b8387bbb48a7d4ae97036fbb3f2a18277f"
+lazy = true
+
+    [["fixtures/qwen3_5_text_tiny".download]]
+    sha256 = "17146b2f6774f7425dd86059b8da56b483c16034da151a3a67a70b931e489692"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/qwen3_5_text_tiny/17146b2f6774f7425dd86059b8da56b483c16034da151a3a67a70b931e489692.tar.gz"
+
+["fixtures/qwen3_5_tiny"]
+git-tree-sha1 = "7c465bd3f4e6b97821858b83f1eca9d2a75ac34a"
+lazy = true
+
+    [["fixtures/qwen3_5_tiny".download]]
+    sha256 = "c3cded2e93beb661834cba9192538cc8792923f2e60f4fa5c2f4106c7fc2ebba"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/qwen3_5_tiny/c3cded2e93beb661834cba9192538cc8792923f2e60f4fa5c2f4106c7fc2ebba.tar.gz"
+
+["fixtures/qwen3_5_vision_options"]
+git-tree-sha1 = "8595ec826317ddf537a550116645994d3931ecba"
+lazy = true
+
+    [["fixtures/qwen3_5_vision_options".download]]
+    sha256 = "b51fa73941a033c40f90592cb772d46f5aa980f9409e88a0e3811ec23e483c31"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/qwen3_5_vision_options/b51fa73941a033c40f90592cb772d46f5aa980f9409e88a0e3811ec23e483c31.tar.gz"
+
+["fixtures/qwen3_5_vision_tiny"]
+git-tree-sha1 = "e2e1d8dadd58bff0be887aac7f15e22b0fc8f2f5"
+lazy = true
+
+    [["fixtures/qwen3_5_vision_tiny".download]]
+    sha256 = "e15ca82bce8577822272bf48a52fbc4e042c6702f2d1d69f733a65e7e39494b2"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/qwen3_5_vision_tiny/e15ca82bce8577822272bf48a52fbc4e042c6702f2d1d69f733a65e7e39494b2.tar.gz"
+
+["fixtures/qwen3_moe_options"]
+git-tree-sha1 = "b39e9f23ed725c2a933da213b70452aa94d40e68"
+lazy = true
+
+    [["fixtures/qwen3_moe_options".download]]
+    sha256 = "cf867e7838d6bf57e531d90c0aa8d691858d59096e12a3476187b233f5ebade8"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/qwen3_moe_options/cf867e7838d6bf57e531d90c0aa8d691858d59096e12a3476187b233f5ebade8.tar.gz"
+
+["fixtures/qwen3_moe_tiny"]
+git-tree-sha1 = "afa7b70b2d358b2118a27f51e43827ab724c304b"
+lazy = true
+
+    [["fixtures/qwen3_moe_tiny".download]]
+    sha256 = "d7ca0e00e5358f3c689c9eaea9aaa611d7fdaf98405dae12dc47b7fac45f2f90"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/qwen3_moe_tiny/d7ca0e00e5358f3c689c9eaea9aaa611d7fdaf98405dae12dc47b7fac45f2f90.tar.gz"
+
+["fixtures/qwen3_options"]
+git-tree-sha1 = "c50aa0cef9fd2fb65182fd697a67a6e653fe0d19"
+lazy = true
+
+    [["fixtures/qwen3_options".download]]
+    sha256 = "040154c426beefb70962380fe9940e39ce96333c4fa292b513bf350d3598a7cf"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/qwen3_options/040154c426beefb70962380fe9940e39ce96333c4fa292b513bf350d3598a7cf.tar.gz"
+
+["fixtures/qwen3_padded"]
+git-tree-sha1 = "2ebf2fe00622b6df4b6205b45bd45f1da4ceabac"
+lazy = true
+
+    [["fixtures/qwen3_padded".download]]
+    sha256 = "fa128799f597a15e80145dc1c927dffd29ff69f4c570ca240daeadd896ce203d"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/qwen3_padded/fa128799f597a15e80145dc1c927dffd29ff69f4c570ca240daeadd896ce203d.tar.gz"
+
+["fixtures/qwen3_tiny"]
+git-tree-sha1 = "c4985bce279d9f24a74955710bc04d3634667fe9"
+lazy = true
+
+    [["fixtures/qwen3_tiny".download]]
+    sha256 = "272c378f239c0b2d4f78c097f6d81e95d0e18ec07e4feac12983efd0e04ffca5"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/qwen3_tiny/272c378f239c0b2d4f78c097f6d81e95d0e18ec07e4feac12983efd0e04ffca5.tar.gz"
+
+["fixtures/res2net"]
+git-tree-sha1 = "c8ffbe022f093d7d27ffbf23df86ddbfe3af620d"
+lazy = true
+
+    [["fixtures/res2net".download]]
+    sha256 = "0da7b39c85334a36accb883bc336dee5075174a7277f3f4f4e5098acb5faf049"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/res2net/0da7b39c85334a36accb883bc336dee5075174a7277f3f4f4e5098acb5faf049.tar.gz"
+
+["fixtures/res2next_deep"]
+git-tree-sha1 = "9d6e00d6aa7ff617300cff1a03199303ff07884f"
+lazy = true
+
+    [["fixtures/res2next_deep".download]]
+    sha256 = "be5f14ada950555b0a0848198b760b62c3b3fc9b32bbd8ff01ebc173142e3766"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/res2next_deep/be5f14ada950555b0a0848198b760b62c3b3fc9b32bbd8ff01ebc173142e3766.tar.gz"
+
+["fixtures/resmlp"]
+git-tree-sha1 = "15f73b3880e13daef7d7225205a118a89ef07247"
+lazy = true
+
+    [["fixtures/resmlp".download]]
+    sha256 = "9ae4723311b20809a148d0f4d99b2d445082f9c393ed82c43f4dddfa29e17377"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/resmlp/9ae4723311b20809a148d0f4d99b2d445082f9c393ed82c43f4dddfa29e17377.tar.gz"
+
+["fixtures/resnet_basic"]
+git-tree-sha1 = "63524cc62a4ace8569f226d52b2b2fa406079ee5"
+lazy = true
+
+    [["fixtures/resnet_basic".download]]
+    sha256 = "76bc1c02f5b4b23f17c841ada1f9ff6fd8191cdce3488a8ed1928c3564a0c5a7"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/resnet_basic/76bc1c02f5b4b23f17c841ada1f9ff6fd8191cdce3488a8ed1928c3564a0c5a7.tar.gz"
+
+["fixtures/resnet_bottleneck"]
+git-tree-sha1 = "7cb516d8c663bbe728ec6819d02f7a61e7e7fafb"
+lazy = true
+
+    [["fixtures/resnet_bottleneck".download]]
+    sha256 = "14166ee52d47eac35a79aa60144e2bf7cec26b78d4213b1a22eafb8b62dd012e"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/resnet_bottleneck/14166ee52d47eac35a79aa60144e2bf7cec26b78d4213b1a22eafb8b62dd012e.tar.gz"
+
+["fixtures/resnet_deep_avgdown"]
+git-tree-sha1 = "b81497fafe2b2f3f4e636e4ba8f5ce49819382a8"
+lazy = true
+
+    [["fixtures/resnet_deep_avgdown".download]]
+    sha256 = "b32e87e3b2401ef383bd53b42c6a6cc1a1ffa3464772d179cde934a2ef1042f0"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/resnet_deep_avgdown/b32e87e3b2401ef383bd53b42c6a6cc1a1ffa3464772d179cde934a2ef1042f0.tar.gz"
+
+["fixtures/resnet_tiered"]
+git-tree-sha1 = "c3a49948febc85e29836bc245012dc11a7bc5a4b"
+lazy = true
+
+    [["fixtures/resnet_tiered".download]]
+    sha256 = "17e0f278f15db3b292a1564fabbc0ddcf6e716f535f9a0e96badc550fbd838ce"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/resnet_tiered/17e0f278f15db3b292a1564fabbc0ddcf6e716f535f9a0e96badc550fbd838ce.tar.gz"
+
+["fixtures/resnext"]
+git-tree-sha1 = "b5d7d06b0c026fc59c9122ecf7ee1009c4de963c"
+lazy = true
+
+    [["fixtures/resnext".download]]
+    sha256 = "760d2a75a406fdbcf94dfe56ae3ba198b45b8a5e1377e0d8b474d929a82f76a0"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/resnext/760d2a75a406fdbcf94dfe56ae3ba198b45b8a5e1377e0d8b474d929a82f76a0.tar.gz"
+
+["fixtures/sam3_boxes"]
+git-tree-sha1 = "f1886dc5374e3f69d6e3c827cadf7d0286f7cffb"
+lazy = true
+
+    [["fixtures/sam3_boxes".download]]
+    sha256 = "b36961203258d68d40bf33b753d5caf4b6bb5988e90526b5c3bc872f85eea5fc"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/sam3_boxes/b36961203258d68d40bf33b753d5caf4b6bb5988e90526b5c3bc872f85eea5fc.tar.gz"
+
+["fixtures/sam3_options"]
+git-tree-sha1 = "0cc2f7311c84df519594e18d3723c4f47586ec33"
+lazy = true
+
+    [["fixtures/sam3_options".download]]
+    sha256 = "5ef156cd8de680667357691107a4d34f846452f4840657db3e03add0aada2da6"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/sam3_options/5ef156cd8de680667357691107a4d34f846452f4840657db3e03add0aada2da6.tar.gz"
+
+["fixtures/sam3_tiny"]
+git-tree-sha1 = "c35a225f6d0b53b5d14c1d9c5e0d3db4c3238f1c"
+lazy = true
+
+    [["fixtures/sam3_tiny".download]]
+    sha256 = "2ccba9194a6fb3643ec777b6156694771d69cf18e372381e80e481fd09ad8fab"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/sam3_tiny/2ccba9194a6fb3643ec777b6156694771d69cf18e372381e80e481fd09ad8fab.tar.gz"
+
+["fixtures/senet"]
+git-tree-sha1 = "eb2f0cc34f6be50c2a5fd24a3e05776e957c8f72"
+lazy = true
+
+    [["fixtures/senet".download]]
+    sha256 = "a49ec1319c941d68cdd48303c9ec751ad785cde2ea863f2de0161a55be64b1a1"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/senet/a49ec1319c941d68cdd48303c9ec751ad785cde2ea863f2de0161a55be64b1a1.tar.gz"
+
+["fixtures/seresnet_basic"]
+git-tree-sha1 = "8a1a88ce082d46b3e9a370685fa736340c39dd29"
+lazy = true
+
+    [["fixtures/seresnet_basic".download]]
+    sha256 = "ffad719cb75f6532ebf9a4ac86eb9b2acc65ec14c89e10066c1c27e5dfc2e985"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/seresnet_basic/ffad719cb75f6532ebf9a4ac86eb9b2acc65ec14c89e10066c1c27e5dfc2e985.tar.gz"
+
+["fixtures/siglip2_options"]
+git-tree-sha1 = "2541212b55ee1598f0fc145f6f21e1eafcb5adf8"
+lazy = true
+
+    [["fixtures/siglip2_options".download]]
+    sha256 = "0b331829e1e04675329409b0b3593b3e91d945f5a800f9a7efe0a92efc25eb3e"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/siglip2_options/0b331829e1e04675329409b0b3593b3e91d945f5a800f9a7efe0a92efc25eb3e.tar.gz"
+
+["fixtures/siglip2_tiny"]
+git-tree-sha1 = "ad8ca260dc0b0a320798e339243c96a0c5e2e94f"
+lazy = true
+
+    [["fixtures/siglip2_tiny".download]]
+    sha256 = "786c58c753f6bdfb13937338f32cf657f06715dff76e112e2b4671f3d05f542b"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/siglip2_tiny/786c58c753f6bdfb13937338f32cf657f06715dff76e112e2b4671f3d05f542b.tar.gz"
+
+["fixtures/siglip_options"]
+git-tree-sha1 = "fb3ec88b503da8302762c3ca4734fa7570718c14"
+lazy = true
+
+    [["fixtures/siglip_options".download]]
+    sha256 = "d3c9111943ed0e8c7213636da86972a3f20d6aa8a77bf1716c276c39e718b067"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/siglip_options/d3c9111943ed0e8c7213636da86972a3f20d6aa8a77bf1716c276c39e718b067.tar.gz"
+
+["fixtures/siglip_tiny"]
+git-tree-sha1 = "a7fd69c0880e36df683d0c47c91fcdd1754f0c02"
+lazy = true
+
+    [["fixtures/siglip_tiny".download]]
+    sha256 = "08695f4ee859d15e7b098b443f4cc2cbcd15eb4446c0eeb27bfe2b91ce721c94"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/siglip_tiny/08695f4ee859d15e7b098b443f4cc2cbcd15eb4446c0eeb27bfe2b91ce721c94.tar.gz"
+
+["fixtures/transformer_flux2_options"]
+git-tree-sha1 = "58a92442ba3c4e09ed72824f97a32fc779b29e9b"
+lazy = true
+
+    [["fixtures/transformer_flux2_options".download]]
+    sha256 = "0b237eb49cfd5fd00c4fea7495b1c0fc0f6df98bc99bba126895932363e5e4bd"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/transformer_flux2_options/0b237eb49cfd5fd00c4fea7495b1c0fc0f6df98bc99bba126895932363e5e4bd.tar.gz"
+
+["fixtures/transformer_flux2_tiny"]
+git-tree-sha1 = "372b6a2504b2d9d7dcedbb249d8f17836f616942"
+lazy = true
+
+    [["fixtures/transformer_flux2_tiny".download]]
+    sha256 = "9c8cca01c6569b2080392af57ef85f4624d76101ac51c5f2e64705a5977370c9"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/transformer_flux2_tiny/9c8cca01c6569b2080392af57ef85f4624d76101ac51c5f2e64705a5977370c9.tar.gz"
+
+["fixtures/transformer_z_image_options"]
+git-tree-sha1 = "4173746d0cce8097d43fe6830b7cf10b9c34ef51"
+lazy = true
+
+    [["fixtures/transformer_z_image_options".download]]
+    sha256 = "ddcd970b3efc4121207898d5bc9ebb4dc00a8264b30514d482753799be6d6569"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/transformer_z_image_options/ddcd970b3efc4121207898d5bc9ebb4dc00a8264b30514d482753799be6d6569.tar.gz"
+
+["fixtures/transformer_z_image_tiny"]
+git-tree-sha1 = "76576c071be698493800cb39ef317149391df0c9"
+lazy = true
+
+    [["fixtures/transformer_z_image_tiny".download]]
+    sha256 = "a9c2e1203912dd79d684ca613598d4a4c16f4435b57502beeb57aa9bdef7f6f2"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/transformer_z_image_tiny/a9c2e1203912dd79d684ca613598d4a4c16f4435b57502beeb57aa9bdef7f6f2.tar.gz"
+
+["fixtures/vae_flux2_options"]
+git-tree-sha1 = "03c1ff9920c6aa196fcf88a3ae6628895d9fca58"
+lazy = true
+
+    [["fixtures/vae_flux2_options".download]]
+    sha256 = "273b20bc9770b283107c12452bdeaddc2500b2f249453bf91c25bb2cfdedcf8f"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/vae_flux2_options/273b20bc9770b283107c12452bdeaddc2500b2f249453bf91c25bb2cfdedcf8f.tar.gz"
+
+["fixtures/vae_flux2_tiny"]
+git-tree-sha1 = "e9681959a95d7741f40cc0841ab955434d650785"
+lazy = true
+
+    [["fixtures/vae_flux2_tiny".download]]
+    sha256 = "ad38e6ca3e44a9e55e95bcf0b078c0b2e59cb0bd942c9573691d7da14b0ccbc9"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/vae_flux2_tiny/ad38e6ca3e44a9e55e95bcf0b078c0b2e59cb0bd942c9573691d7da14b0ccbc9.tar.gz"
+
+["fixtures/vgg_adaptive_w"]
+git-tree-sha1 = "c2c837b2d9dd5a80ea4284d0c437be3b440ba9cf"
+lazy = true
+
+    [["fixtures/vgg_adaptive_w".download]]
+    sha256 = "6dae0ed821fcdac55c642963ebc9be94aec3ee15ea7704162454f18c4deb28ba"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/vgg_adaptive_w/6dae0ed821fcdac55c642963ebc9be94aec3ee15ea7704162454f18c4deb28ba.tar.gz"
+
+["fixtures/vgg_bn_adaptive_h"]
+git-tree-sha1 = "861a15e0557764b00d6622b0939d644d809d9e15"
+lazy = true
+
+    [["fixtures/vgg_bn_adaptive_h".download]]
+    sha256 = "92325341f2f484bcf18486a7045656160c1fd357a717d19e503c5f4f9080a4fa"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/vgg_bn_adaptive_h/92325341f2f484bcf18486a7045656160c1fd357a717d19e503c5f4f9080a4fa.tar.gz"
+
+["fixtures/vgg_plain"]
+git-tree-sha1 = "b7382d90b0647c7381787f8e80bb29f818e48f67"
+lazy = true
+
+    [["fixtures/vgg_plain".download]]
+    sha256 = "3753c4338f8197e10347f58e167da7b473ce4b46ea7762a92ef5b11eb13bdd2b"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/vgg_plain/3753c4338f8197e10347f58e167da7b473ce4b46ea7762a92ef5b11eb13bdd2b.tar.gz"
+
+["fixtures/vit_avgmax"]
+git-tree-sha1 = "ea6eb681a3a381fb23a8c9c64e1ca7c1f3609b7b"
+lazy = true
+
+    [["fixtures/vit_avgmax".download]]
+    sha256 = "9c9b4adacc2ad48d20d5a2a3870f8f06122e01455c2d3763908da97906213195"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/vit_avgmax/9c9b4adacc2ad48d20d5a2a3870f8f06122e01455c2d3763908da97906213195.tar.gz"
+
+["fixtures/vit_clip"]
+git-tree-sha1 = "e126c5bf75a7cc119137fc709c440f6710eb8609"
+lazy = true
+
+    [["fixtures/vit_clip".download]]
+    sha256 = "80439cf70716114ec7f914872cd3aaf2f0dcd910f947afabaaa1f9b4d292e20c"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/vit_clip/80439cf70716114ec7f914872cd3aaf2f0dcd910f947afabaaa1f9b4d292e20c.tar.gz"
+
+["fixtures/vit_dinov2"]
+git-tree-sha1 = "0d28f1194694a2e73271897d45eb72e0b1823690"
+lazy = true
+
+    [["fixtures/vit_dinov2".download]]
+    sha256 = "ae15dd913e20ee726a6510437337192df9fe1cc5aa1885b3ee5a01122961d966"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/vit_dinov2/ae15dd913e20ee726a6510437337192df9fe1cc5aa1885b3ee5a01122961d966.tar.gz"
+
+["fixtures/vit_dinov2_reg"]
+git-tree-sha1 = "5096a2c19530ec044105fa7b4ea627c3ba03935f"
+lazy = true
+
+    [["fixtures/vit_dinov2_reg".download]]
+    sha256 = "cd8a058f026db2f9c369ee83ea2a27f95b4f57d823c4eccb51a21b0851388ccb"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/vit_dinov2_reg/cd8a058f026db2f9c369ee83ea2a27f95b4f57d823c4eccb51a21b0851388ccb.tar.gz"
+
+["fixtures/vit_dynamic"]
+git-tree-sha1 = "eed9042e7dd5fef27c9946d5782dccd866e3156a"
+lazy = true
+
+    [["fixtures/vit_dynamic".download]]
+    sha256 = "f53f64aa62e636fb245d6037d8fb455f434031dc19311f847369448ea1c5566e"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/vit_dynamic/f53f64aa62e636fb245d6037d8fb455f434031dc19311f847369448ea1c5566e.tar.gz"
+
+["fixtures/vit_dynamic_reg"]
+git-tree-sha1 = "8532ea3af5b52bd1dd7c5b19f7e975ff841ad98e"
+lazy = true
+
+    [["fixtures/vit_dynamic_reg".download]]
+    sha256 = "51088f1c7aec79ba36a755e65e67b85c510f292c9813f440cfc49c34d8069021"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/vit_dynamic_reg/51088f1c7aec79ba36a755e65e67b85c510f292c9813f440cfc49c34d8069021.tar.gz"
+
+["fixtures/vit_max_nopos"]
+git-tree-sha1 = "e5da9deea778983ddb5e89790a64f532424ce10f"
+lazy = true
+
+    [["fixtures/vit_max_nopos".download]]
+    sha256 = "e177b443531ff502854c87757bd573361d00ae4dff934718fe0cdf7a1723c8e6"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/vit_max_nopos/e177b443531ff502854c87757bd573361d00ae4dff934718fe0cdf7a1723c8e6.tar.gz"
+
+["fixtures/vit_options"]
+git-tree-sha1 = "4bf5eb501df94e6c3de38d58023e9674e6ebcaed"
+lazy = true
+
+    [["fixtures/vit_options".download]]
+    sha256 = "c270c8ef4381bd9f5b9a6db0bc71ac3723bd85616fd31dcdbf7c27f987f33099"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/vit_options/c270c8ef4381bd9f5b9a6db0bc71ac3723bd85616fd31dcdbf7c27f987f33099.tar.gz"
+
+["fixtures/vit_siglip"]
+git-tree-sha1 = "a63478db8d19a9d9b51ca53991ce6108506aef07"
+lazy = true
+
+    [["fixtures/vit_siglip".download]]
+    sha256 = "5587f183c526bde3ad6790ce7555d7144021fdb1a18b03fad1d4c352e8f4356c"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/vit_siglip/5587f183c526bde3ad6790ce7555d7144021fdb1a18b03fad1d4c352e8f4356c.tar.gz"
+
+["fixtures/vit_siglip_gap"]
+git-tree-sha1 = "0fbcfe35003edb6f28c3d0c4d86fc8fe85c28704"
+lazy = true
+
+    [["fixtures/vit_siglip_gap".download]]
+    sha256 = "0d9fdccad47eea4ac2cdc4f3f9bfe564d19e535d9e9f9ccde16c40a0dd7d325e"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/vit_siglip_gap/0d9fdccad47eea4ac2cdc4f3f9bfe564d19e535d9e9f9ccde16c40a0dd7d325e.tar.gz"
+
+["fixtures/vit_tiny"]
+git-tree-sha1 = "4237f27375fb5fd6313ea6a72e7ac18fa218f7b1"
+lazy = true
+
+    [["fixtures/vit_tiny".download]]
+    sha256 = "38e14f05ceb25b567fa3263edb727f191fac558a13cca3f3b569bacb94914276"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/vit_tiny/38e14f05ceb25b567fa3263edb727f191fac558a13cca3f3b569bacb94914276.tar.gz"
+
+["fixtures/xception41p"]
+git-tree-sha1 = "86247acedc05b2e85e139f905bb2e8fb4e5bd612"
+lazy = true
+
+    [["fixtures/xception41p".download]]
+    sha256 = "cb04acbe75a6ca32d9fd18412400162e189bea986db774e192fc2c72bfd7f932"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/xception41p/cb04acbe75a6ca32d9fd18412400162e189bea986db774e192fc2c72bfd7f932.tar.gz"
+
+["fixtures/xception65p"]
+git-tree-sha1 = "59310c55fe6e701c5d3c86209bcea26bc0a5dc62"
+lazy = true
+
+    [["fixtures/xception65p".download]]
+    sha256 = "963fd3ed5fe046447c09199d58b799d2b9a48fef517fb23289cd537105a5ad00"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/xception65p/963fd3ed5fe046447c09199d58b799d2b9a48fef517fb23289cd537105a5ad00.tar.gz"
+
+["fixtures/xception_aligned"]
+git-tree-sha1 = "49aeefb2d1c636dc45035878840715c3ab7cbba9"
+lazy = true
+
+    [["fixtures/xception_aligned".download]]
+    sha256 = "0a43e1be4c603dccc8dea3e4a4f7a0c80b569213d6693afd744975f289fc6c1c"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/xception_aligned/0a43e1be4c603dccc8dea3e4a4f7a0c80b569213d6693afd744975f289fc6c1c.tar.gz"
+
+["fixtures/xception_aligned_dilated"]
+git-tree-sha1 = "a3e266335f0b6452526f5012f3ea492d62a7b1d0"
+lazy = true
+
+    [["fixtures/xception_aligned_dilated".download]]
+    sha256 = "35041d9012fddc1cbcdf2bc4a45230d9bcfacb28d1661d2cd28074ebd6c09116"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/xception_aligned_dilated/35041d9012fddc1cbcdf2bc4a45230d9bcfacb28d1661d2cd28074ebd6c09116.tar.gz"
+
+["fixtures/z_image_cfg"]
+git-tree-sha1 = "bfe25247d9d7f3754c05b17658baab59cde06d00"
+lazy = true
+
+    [["fixtures/z_image_cfg".download]]
+    sha256 = "93c36894a0bfac31fb65494b86a62c8773c1437b1cf0e8526166f42b826c5a66"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/z_image_cfg/93c36894a0bfac31fb65494b86a62c8773c1437b1cf0e8526166f42b826c5a66.tar.gz"
+
+["fixtures/z_image_tiny"]
+git-tree-sha1 = "0106965fe95ecc008ad73e0149fb318f90b7975f"
+lazy = true
+
+    [["fixtures/z_image_tiny".download]]
+    sha256 = "8798e506085ed853807d25ac73e95a648557712dedb114041f7026b5d6d176ec"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/z_image_tiny/8798e506085ed853807d25ac73e95a648557712dedb114041f7026b5d6d176ec.tar.gz"
+
+["references/HuggingFaceTB--SmolLM2-135M.safetensors"]
+git-tree-sha1 = "4e8716dbfd0e0e1eeefebc1b96655e7370532324"
+lazy = true
+
+    [["references/HuggingFaceTB--SmolLM2-135M.safetensors".download]]
+    sha256 = "09166b7485e5fc8322c7259b0ce09da4c2b41cdd44e2d8f59888c65571df4ebc"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/HuggingFaceTB--SmolLM2-135M/09166b7485e5fc8322c7259b0ce09da4c2b41cdd44e2d8f59888c65571df4ebc.tar.gz"
+
+["references/Qwen--Qwen2.5-0.5B.safetensors"]
+git-tree-sha1 = "cd87245410a92dc6dbab2cd990c1fb7f3d5ea81d"
+lazy = true
+
+    [["references/Qwen--Qwen2.5-0.5B.safetensors".download]]
+    sha256 = "0e78de64f32928f63683aa03d737baa3927cb89d7cb890b94c673f8f8e5e6fec"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/Qwen--Qwen2.5-0.5B/0e78de64f32928f63683aa03d737baa3927cb89d7cb890b94c673f8f8e5e6fec.tar.gz"
+
+["references/Qwen--Qwen3-0.6B.safetensors"]
+git-tree-sha1 = "e8336b94b2082b19224da58676da5cb4e3553c35"
+lazy = true
+
+    [["references/Qwen--Qwen3-0.6B.safetensors".download]]
+    sha256 = "67e6540eff142ab3e64ab80cbd4e768c77f058b24cfd74b307c0b98743aee9dc"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/Qwen--Qwen3-0.6B/67e6540eff142ab3e64ab80cbd4e768c77f058b24cfd74b307c0b98743aee9dc.tar.gz"
+
+["references/Qwen--Qwen3-30B-A3B.safetensors"]
+git-tree-sha1 = "a4dd0cbe8b364db887522b74381e419413f598ca"
+lazy = true
+
+    [["references/Qwen--Qwen3-30B-A3B.safetensors".download]]
+    sha256 = "c7d840662d6c1278bd1e31566c314259e5b3257ae52858acbeb4fefe50d7d0a3"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/Qwen--Qwen3-30B-A3B/c7d840662d6c1278bd1e31566c314259e5b3257ae52858acbeb4fefe50d7d0a3.tar.gz"
+
+["references/Qwen--Qwen3.5-0.8B.safetensors"]
+git-tree-sha1 = "24e8889fd63cf1bf98c551797f3fa346826af65b"
+lazy = true
+
+    [["references/Qwen--Qwen3.5-0.8B.safetensors".download]]
+    sha256 = "b3a5e2895cbd00fe1225d190100da38f0bd918cfd208cf0e723f7bca453de6cf"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/Qwen--Qwen3.5-0.8B/b3a5e2895cbd00fe1225d190100da38f0bd918cfd208cf0e723f7bca453de6cf.tar.gz"
+
+["references/Qwen--Qwen3.6-35B-A3B.safetensors"]
+git-tree-sha1 = "edbcbd8ccd179c6c383f6a0c7a891dc936b64ce8"
+lazy = true
+
+    [["references/Qwen--Qwen3.6-35B-A3B.safetensors".download]]
+    sha256 = "5df1b52bbc69e5717097b362e3056f35a65a3a1f79525ab8e1748fb28d17938f"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/Qwen--Qwen3.6-35B-A3B/5df1b52bbc69e5717097b362e3056f35a65a3a1f79525ab8e1748fb28d17938f.tar.gz"
+
+["references/Qwen--Qwen3.8-27B.safetensors"]
+git-tree-sha1 = "77487b3ad7637a628c41d66a4a0593c20e9e2f29"
+lazy = true
+
+    [["references/Qwen--Qwen3.8-27B.safetensors".download]]
+    sha256 = "991938e893a99ba1c10575e0f8c60c946f8be133000227602e0ce53851b90963"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/Qwen--Qwen3.8-27B/991938e893a99ba1c10575e0f8c60c946f8be133000227602e0ce53851b90963.tar.gz"
+
+["references/Tongyi-MAI--Z-Image-Turbo--transformer.safetensors"]
+git-tree-sha1 = "8f06a777d7aa862758aea2253d89a291b1f6bb52"
+lazy = true
+
+    [["references/Tongyi-MAI--Z-Image-Turbo--transformer.safetensors".download]]
+    sha256 = "0e2bc5963de6df2a62ec9933f894d671e64e7c475d774d2cfdc113ed90239279"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/Tongyi-MAI--Z-Image-Turbo--transformer/0e2bc5963de6df2a62ec9933f894d671e64e7c475d774d2cfdc113ed90239279.tar.gz"
+
+["references/Tongyi-MAI--Z-Image-Turbo--vae.safetensors"]
+git-tree-sha1 = "f3e149e4352279ad80c3c9a83dfa59f7a3039df5"
+lazy = true
+
+    [["references/Tongyi-MAI--Z-Image-Turbo--vae.safetensors".download]]
+    sha256 = "168eae3048fd0e948c321dd9ac1d7afa7249b975ef2da372352cd1db5c80c061"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/Tongyi-MAI--Z-Image-Turbo--vae/168eae3048fd0e948c321dd9ac1d7afa7249b975ef2da372352cd1db5c80c061.tar.gz"
+
+["references/Tongyi-MAI--Z-Image-Turbo.safetensors"]
+git-tree-sha1 = "bc8ebea06c1c4bcd1da5d62b06ad97e6ff36e913"
+lazy = true
+
+    [["references/Tongyi-MAI--Z-Image-Turbo.safetensors".download]]
+    sha256 = "1e5a024395e300553e45fcd1be9c4fbd5f21578ff9acfd24338e637d482d5076"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/Tongyi-MAI--Z-Image-Turbo/1e5a024395e300553e45fcd1be9c4fbd5f21578ff9acfd24338e637d482d5076.tar.gz"
+
+["references/black-forest-labs--FLUX.2-klein-4B--transformer.safetensors"]
+git-tree-sha1 = "bcf92c2154bef02487b43cf6837ba0401a757227"
+lazy = true
+
+    [["references/black-forest-labs--FLUX.2-klein-4B--transformer.safetensors".download]]
+    sha256 = "65209cf2e2ffceaee9fdcc5c6cbe3a838bae571213f646056597c192ac24165a"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/black-forest-labs--FLUX.2-klein-4B--transformer/65209cf2e2ffceaee9fdcc5c6cbe3a838bae571213f646056597c192ac24165a.tar.gz"
+
+["references/black-forest-labs--FLUX.2-klein-4B--vae.safetensors"]
+git-tree-sha1 = "6c39117aabf54bfbc7d5b6dad6a79ea236cdefc3"
+lazy = true
+
+    [["references/black-forest-labs--FLUX.2-klein-4B--vae.safetensors".download]]
+    sha256 = "ee6714046f051510ff4fef4c85c208865e14cdc90184a37309cf3833bc32f348"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/black-forest-labs--FLUX.2-klein-4B--vae/ee6714046f051510ff4fef4c85c208865e14cdc90184a37309cf3833bc32f348.tar.gz"
+
+["references/black-forest-labs--FLUX.2-klein-4B.safetensors"]
+git-tree-sha1 = "c14d66a723036df40003da2f17fc7ac591058ad3"
+lazy = true
+
+    [["references/black-forest-labs--FLUX.2-klein-4B.safetensors".download]]
+    sha256 = "6d9fcc1ebb093c355d770306cd3b80b766cb2673afd178437625308854e00370"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/black-forest-labs--FLUX.2-klein-4B/6d9fcc1ebb093c355d770306cd3b80b766cb2673afd178437625308854e00370.tar.gz"
+
+["references/google--siglip-base-patch16-224.safetensors"]
+git-tree-sha1 = "bb74d74db9834a8b8e5383bc4b4ea8b848bd3ff3"
+lazy = true
+
+    [["references/google--siglip-base-patch16-224.safetensors".download]]
+    sha256 = "9e37f462793fd84138c2c5b8cad81960f56f0785cd9d7372d04889a061e0c6b0"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/google--siglip-base-patch16-224/9e37f462793fd84138c2c5b8cad81960f56f0785cd9d7372d04889a061e0c6b0.tar.gz"
+
+["references/google--siglip2-base-patch16-224.safetensors"]
+git-tree-sha1 = "1840fc015346241482e08370d0def077259445f1"
+lazy = true
+
+    [["references/google--siglip2-base-patch16-224.safetensors".download]]
+    sha256 = "268211ed813cb8ab39cddbb052f1fa65b464d018f9f758aa9b80061c5dd2779e"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/google--siglip2-base-patch16-224/268211ed813cb8ab39cddbb052f1fa65b464d018f9f758aa9b80061c5dd2779e.tar.gz"
+
+["references/google--siglip2-base-patch16-naflex.safetensors"]
+git-tree-sha1 = "a39fa3efcf73b1d3a44116aaacea21a308fe6723"
+lazy = true
+
+    [["references/google--siglip2-base-patch16-naflex.safetensors".download]]
+    sha256 = "70572d77be282c8779066f95ae6dd6aa1e8b1e41f64941e8cb9c1ba16d40c099"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/google--siglip2-base-patch16-naflex/70572d77be282c8779066f95ae6dd6aa1e8b1e41f64941e8cb9c1ba16d40c099.tar.gz"
+
+["references/ibm-granite--granite-3.1-1b-a400m-base.safetensors"]
+git-tree-sha1 = "2ce84fbaa02f0d137da48b90414d7f9df65d3ff5"
+lazy = true
+
+    [["references/ibm-granite--granite-3.1-1b-a400m-base.safetensors".download]]
+    sha256 = "ebec464a31d02e351fc528d7b294ccd89bee64fd0463a8ff4db614785fc6eed6"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/ibm-granite--granite-3.1-1b-a400m-base/ebec464a31d02e351fc528d7b294ccd89bee64fd0463a8ff4db614785fc6eed6.tar.gz"
+
+["references/ibm-granite--granite-3.3-2b-base.safetensors"]
+git-tree-sha1 = "8174d235f471575164664672bfb136112c625627"
+lazy = true
+
+    [["references/ibm-granite--granite-3.3-2b-base.safetensors".download]]
+    sha256 = "6ba0429eddec5931cfe056cbb6b3ad0d29d397beeed11892024c50bc134a19c8"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/ibm-granite--granite-3.3-2b-base/6ba0429eddec5931cfe056cbb6b3ad0d29d397beeed11892024c50bc134a19c8.tar.gz"
+
+["references/ibm-granite--granite-4.0-350m-base.safetensors"]
+git-tree-sha1 = "36f6f5f86ed8c5e11d0311a471409040b141c075"
+lazy = true
+
+    [["references/ibm-granite--granite-4.0-350m-base.safetensors".download]]
+    sha256 = "87508af5bdef6214d4a40a254fc98587ba582f4ee5bf2cdaf12b8f7bc73ed36a"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/ibm-granite--granite-4.0-350m-base/87508af5bdef6214d4a40a254fc98587ba582f4ee5bf2cdaf12b8f7bc73ed36a.tar.gz"
+
+["references/ibm-research--moe-7b-1b-active-shared-experts.safetensors"]
+git-tree-sha1 = "f1496162a422c19d2caa40898a4d556d6dd70c8a"
+lazy = true
+
+    [["references/ibm-research--moe-7b-1b-active-shared-experts.safetensors".download]]
+    sha256 = "f24e13a6bb52df4394dff280ec9ca5240263d6b2bbea452091f1de2c695a3136"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/ibm-research--moe-7b-1b-active-shared-experts/f24e13a6bb52df4394dff280ec9ca5240263d6b2bbea452091f1de2c695a3136.tar.gz"
+
+["references/jetjodh--sam3.safetensors"]
+git-tree-sha1 = "f4c274771edb19f1f89b309b9e1d94dcca557af3"
+lazy = true
+
+    [["references/jetjodh--sam3.safetensors".download]]
+    sha256 = "474fbf8975f0031436387ca0c290333dc295913c9d617799ed29fcee7ea7affd"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/jetjodh--sam3/474fbf8975f0031436387ca0c290333dc295913c9d617799ed29fcee7ea7affd.tar.gz"
+
+["references/processors/qwen3_vl.safetensors"]
+git-tree-sha1 = "4f6b8bae4a31b265b58a596f3899065c225421ca"
+lazy = true
+
+    [["references/processors/qwen3_vl.safetensors".download]]
+    sha256 = "3990ae5cd89edd3f5aea84b0868a2a83c457f29f31c193afe60cec003f81b13f"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/processors/qwen3_vl/3990ae5cd89edd3f5aea84b0868a2a83c457f29f31c193afe60cec003f81b13f.tar.gz"
+
+["references/processors/sam3.safetensors"]
+git-tree-sha1 = "c151b91df5f2c699831060a24a82bdc19bd2a4c0"
+lazy = true
+
+    [["references/processors/sam3.safetensors".download]]
+    sha256 = "0036fb540f814b5baa2456bbece9fca3eb76c8c12a775e81024d01c8c1274c7b"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/processors/sam3/0036fb540f814b5baa2456bbece9fca3eb76c8c12a775e81024d01c8c1274c7b.tar.gz"
+
+["references/processors/siglip.safetensors"]
+git-tree-sha1 = "628a03f5b92dd5c30a9c22ae56d055aeeeebb5b4"
+lazy = true
+
+    [["references/processors/siglip.safetensors".download]]
+    sha256 = "77eb64f4f64df40b3e7d9c484ff6a31a610d0ceaafd599f5032b1a24263c984e"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/processors/siglip/77eb64f4f64df40b3e7d9c484ff6a31a610d0ceaafd599f5032b1a24263c984e.tar.gz"
+
+["references/processors/siglip2.safetensors"]
+git-tree-sha1 = "0c5646c82f3e6fe02b32b7d422c1f938b5a63989"
+lazy = true
+
+    [["references/processors/siglip2.safetensors".download]]
+    sha256 = "5631cabdedc025a2d3c97e6c20c4dde9611ae70bf565e2db3ce19d63ae6371d3"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/processors/siglip2/5631cabdedc025a2d3c97e6c20c4dde9611ae70bf565e2db3ce19d63ae6371d3.tar.gz"
+
+["references/timm--convmixer_768_32.in1k.safetensors"]
+git-tree-sha1 = "d0c06ace55b9cd489ffc54e6bb9e61daaeb276d4"
+lazy = true
+
+    [["references/timm--convmixer_768_32.in1k.safetensors".download]]
+    sha256 = "9367a2c827676bad8a34e3622d7a576d002d2611c318099cca2509ad5598c3ab"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--convmixer_768_32.in1k/9367a2c827676bad8a34e3622d7a576d002d2611c318099cca2509ad5598c3ab.tar.gz"
+
+["references/timm--convnext_atto.d2_in1k.safetensors"]
+git-tree-sha1 = "8454c387e0f285f94ca2e742a7b452a98158ffce"
+lazy = true
+
+    [["references/timm--convnext_atto.d2_in1k.safetensors".download]]
+    sha256 = "d92e07c3e1ab27e5717f7f415c5ad5285dff9e36a4890e688cfdcc7f42bec9a7"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--convnext_atto.d2_in1k/d92e07c3e1ab27e5717f7f415c5ad5285dff9e36a4890e688cfdcc7f42bec9a7.tar.gz"
+
+["references/timm--convnext_tiny.fb_in1k.safetensors"]
+git-tree-sha1 = "7b606a87ffb4dd52f00b888b3875115d115e6a7c"
+lazy = true
+
+    [["references/timm--convnext_tiny.fb_in1k.safetensors".download]]
+    sha256 = "ca2ed40fc709cfd1b651246ed0d5d85ec7b67698b973ba54eb73547dda3c53cf"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--convnext_tiny.fb_in1k/ca2ed40fc709cfd1b651246ed0d5d85ec7b67698b973ba54eb73547dda3c53cf.tar.gz"
+
+["references/timm--densenet121.tv_in1k.safetensors"]
+git-tree-sha1 = "e81ce9e22c6fb22b50d580d7fcb630e9c30afbbc"
+lazy = true
+
+    [["references/timm--densenet121.tv_in1k.safetensors".download]]
+    sha256 = "337d41cd66c3a83d4328bfc20d677a8c6ebf900245ff6732be15fd9114db50da"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--densenet121.tv_in1k/337d41cd66c3a83d4328bfc20d677a8c6ebf900245ff6732be15fd9114db50da.tar.gz"
+
+["references/timm--densenetblur121d.ra_in1k.safetensors"]
+git-tree-sha1 = "2a1eab3103df909b42470da75715460b18539900"
+lazy = true
+
+    [["references/timm--densenetblur121d.ra_in1k.safetensors".download]]
+    sha256 = "0cdea4293bc9b48e01a63dbf28a61cab83d8c589a6ef63372f585d17094de4b4"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--densenetblur121d.ra_in1k/0cdea4293bc9b48e01a63dbf28a61cab83d8c589a6ef63372f585d17094de4b4.tar.gz"
+
+["references/timm--ecaresnet26t.ra2_in1k.safetensors"]
+git-tree-sha1 = "8a319aa3e10969039aed7bf1c6e2b56cd6b18a38"
+lazy = true
+
+    [["references/timm--ecaresnet26t.ra2_in1k.safetensors".download]]
+    sha256 = "aa17da2769796852e2fa9764624ad52619d0e689642b6f1c3a060a6270c2a338"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--ecaresnet26t.ra2_in1k/aa17da2769796852e2fa9764624ad52619d0e689642b6f1c3a060a6270c2a338.tar.gz"
+
+["references/timm--efficientnet_b0.ra_in1k.safetensors"]
+git-tree-sha1 = "b6af2e85c1204c7aaf28c0df28fddaafc0d956a9"
+lazy = true
+
+    [["references/timm--efficientnet_b0.ra_in1k.safetensors".download]]
+    sha256 = "dfa32a259160ba9491541c09ab7d08baf98d022a6a39a921e6a04a4908bb2c63"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--efficientnet_b0.ra_in1k/dfa32a259160ba9491541c09ab7d08baf98d022a6a39a921e6a04a4908bb2c63.tar.gz"
+
+["references/timm--fbnetc_100.rmsp_in1k.safetensors"]
+git-tree-sha1 = "4725bc147374240e07f325c459d7ecffd94f6930"
+lazy = true
+
+    [["references/timm--fbnetc_100.rmsp_in1k.safetensors".download]]
+    sha256 = "40ba3041f743644610fba7012b9f8fe5cdd9718c1f43706e6546102a6ed4593f"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--fbnetc_100.rmsp_in1k/40ba3041f743644610fba7012b9f8fe5cdd9718c1f43706e6546102a6ed4593f.tar.gz"
+
+["references/timm--fbnetv3_b.ra2_in1k.safetensors"]
+git-tree-sha1 = "05b2e2dbc056a4bc0bcf52da4e00f82e7d024aa6"
+lazy = true
+
+    [["references/timm--fbnetv3_b.ra2_in1k.safetensors".download]]
+    sha256 = "c17ce6533dfce800a02a50373ef77a46913967a32bf1bb4cc75c5a0dce1429d6"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--fbnetv3_b.ra2_in1k/c17ce6533dfce800a02a50373ef77a46913967a32bf1bb4cc75c5a0dce1429d6.tar.gz"
+
+["references/timm--gmlp_s16_224.ra3_in1k.safetensors"]
+git-tree-sha1 = "5a817da373e665916907c22ef18997216a900102"
+lazy = true
+
+    [["references/timm--gmlp_s16_224.ra3_in1k.safetensors".download]]
+    sha256 = "94428e8ae128618bd8ffb02978d5194e57adb1f8bcc5599918c90380b8774b1d"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--gmlp_s16_224.ra3_in1k/94428e8ae128618bd8ffb02978d5194e57adb1f8bcc5599918c90380b8774b1d.tar.gz"
+
+["references/timm--inception_resnet_v2.tf_in1k.safetensors"]
+git-tree-sha1 = "0f41b848c51bbfbcef58c050c2e0f642dc91782a"
+lazy = true
+
+    [["references/timm--inception_resnet_v2.tf_in1k.safetensors".download]]
+    sha256 = "df68a572226cecc8ad2bd200ae35816d139c26c7c0368c6abee173c419bb983e"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--inception_resnet_v2.tf_in1k/df68a572226cecc8ad2bd200ae35816d139c26c7c0368c6abee173c419bb983e.tar.gz"
+
+["references/timm--inception_v3.tv_in1k.safetensors"]
+git-tree-sha1 = "120fbd3bce4e77832b0bd744cbaea20f474bbe4f"
+lazy = true
+
+    [["references/timm--inception_v3.tv_in1k.safetensors".download]]
+    sha256 = "dd50ccc49492bfe1133eeb305b3dbf6a7abe2a2da2d57add78cfbd98907af69c"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--inception_v3.tv_in1k/dd50ccc49492bfe1133eeb305b3dbf6a7abe2a2da2d57add78cfbd98907af69c.tar.gz"
+
+["references/timm--inception_v4.tf_in1k.safetensors"]
+git-tree-sha1 = "d0ad37b4c44eb99063259a719ac41202f6ffdcf3"
+lazy = true
+
+    [["references/timm--inception_v4.tf_in1k.safetensors".download]]
+    sha256 = "854a83cde21733a20aa1bb60ea01d0dc50514d998c71dc85c43c82eb077a3080"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--inception_v4.tf_in1k/854a83cde21733a20aa1bb60ea01d0dc50514d998c71dc85c43c82eb077a3080.tar.gz"
+
+["references/timm--lcnet_050.ra2_in1k.safetensors"]
+git-tree-sha1 = "4fb6619a2a9c9f38394aae3bfd146379e3e72def"
+lazy = true
+
+    [["references/timm--lcnet_050.ra2_in1k.safetensors".download]]
+    sha256 = "fffa743a171dea040ba3d139ff53350c65c1e0c523c4a47630024f0d7a4ba6e4"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--lcnet_050.ra2_in1k/fffa743a171dea040ba3d139ff53350c65c1e0c523c4a47630024f0d7a4ba6e4.tar.gz"
+
+["references/timm--mixer_b16_224.goog_in21k_ft_in1k.safetensors"]
+git-tree-sha1 = "cfcf11e34a6803959f6ea5c9a85d6ec56456d91b"
+lazy = true
+
+    [["references/timm--mixer_b16_224.goog_in21k_ft_in1k.safetensors".download]]
+    sha256 = "6a6b6f1c8fe074befd8f4da4ab3969c60478f761cdee2ae377c92dd542dc89f8"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--mixer_b16_224.goog_in21k_ft_in1k/6a6b6f1c8fe074befd8f4da4ab3969c60478f761cdee2ae377c92dd542dc89f8.tar.gz"
+
+["references/timm--mixnet_s.ft_in1k.safetensors"]
+git-tree-sha1 = "ca255942e4df4d1fbf7ca8445f7ac90ca31c58e0"
+lazy = true
+
+    [["references/timm--mixnet_s.ft_in1k.safetensors".download]]
+    sha256 = "ce8d1e79234b065ac4b9ba1ab0faaf2814ec3421aec66ece6a4e50b0d56670ee"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--mixnet_s.ft_in1k/ce8d1e79234b065ac4b9ba1ab0faaf2814ec3421aec66ece6a4e50b0d56670ee.tar.gz"
+
+["references/timm--mnasnet_100.rmsp_in1k.safetensors"]
+git-tree-sha1 = "e9d232dd3cc318709935cce062f329ab85749a02"
+lazy = true
+
+    [["references/timm--mnasnet_100.rmsp_in1k.safetensors".download]]
+    sha256 = "d57e98e380e5e20ff09ed8f9ac6b65b269fad8b31222d800243bf6dd1ff33d5c"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--mnasnet_100.rmsp_in1k/d57e98e380e5e20ff09ed8f9ac6b65b269fad8b31222d800243bf6dd1ff33d5c.tar.gz"
+
+["references/timm--mobilenet_edgetpu_v2_m.ra4_e3600_r224_in1k.safetensors"]
+git-tree-sha1 = "037ce561f7c6e19b1c44479c440206b2670acfd5"
+lazy = true
+
+    [["references/timm--mobilenet_edgetpu_v2_m.ra4_e3600_r224_in1k.safetensors".download]]
+    sha256 = "0b6b2c5ea60256cdcb96ce6560fbf107b3cdf65d35a2ebdec8cee3051795068d"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--mobilenet_edgetpu_v2_m.ra4_e3600_r224_in1k/0b6b2c5ea60256cdcb96ce6560fbf107b3cdf65d35a2ebdec8cee3051795068d.tar.gz"
+
+["references/timm--mobilenetv1_100.ra4_e3600_r224_in1k.safetensors"]
+git-tree-sha1 = "3b427d3f48ffedee3edc399cce5f9a169533e1a5"
+lazy = true
+
+    [["references/timm--mobilenetv1_100.ra4_e3600_r224_in1k.safetensors".download]]
+    sha256 = "27224f91a29a2a7237dd657be3e16e59a73dc60ba02739b1c00d811c40b4bd19"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--mobilenetv1_100.ra4_e3600_r224_in1k/27224f91a29a2a7237dd657be3e16e59a73dc60ba02739b1c00d811c40b4bd19.tar.gz"
+
+["references/timm--mobilenetv2_100.ra_in1k.safetensors"]
+git-tree-sha1 = "35c4516a58314b9bde010d23e68b4069b0cc6a49"
+lazy = true
+
+    [["references/timm--mobilenetv2_100.ra_in1k.safetensors".download]]
+    sha256 = "f08a1d06f86f4dece2cad3c1c2c8f5a272b7b13c5f5c017f63b9568410acdc81"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--mobilenetv2_100.ra_in1k/f08a1d06f86f4dece2cad3c1c2c8f5a272b7b13c5f5c017f63b9568410acdc81.tar.gz"
+
+["references/timm--mobilenetv3_large_100.ra_in1k.safetensors"]
+git-tree-sha1 = "27662b5a9ccd3b8b466e8901eb1ce2e685b649e9"
+lazy = true
+
+    [["references/timm--mobilenetv3_large_100.ra_in1k.safetensors".download]]
+    sha256 = "e44e4cd98186be9e143ad2053378ba806d2e4931f0ebc1102f6b60e7d23b3217"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--mobilenetv3_large_100.ra_in1k/e44e4cd98186be9e143ad2053378ba806d2e4931f0ebc1102f6b60e7d23b3217.tar.gz"
+
+["references/timm--mobilenetv3_rw.rmsp_in1k.safetensors"]
+git-tree-sha1 = "8e13e996534d1e82f4bb829521bf603542470f57"
+lazy = true
+
+    [["references/timm--mobilenetv3_rw.rmsp_in1k.safetensors".download]]
+    sha256 = "f1ee8c298122898eeb44f888a040a991a938acad98d230b18200d49fe70f2503"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--mobilenetv3_rw.rmsp_in1k/f1ee8c298122898eeb44f888a040a991a938acad98d230b18200d49fe70f2503.tar.gz"
+
+["references/timm--mobilenetv3_small_100.lamb_in1k.safetensors"]
+git-tree-sha1 = "e5291b164c99e5b8aaf737e224d14e3157c77c07"
+lazy = true
+
+    [["references/timm--mobilenetv3_small_100.lamb_in1k.safetensors".download]]
+    sha256 = "f4ee2b8a8f25976c226c67d275e1d160293c20b6c463b9cc7fb51dbf323e6ad9"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--mobilenetv3_small_100.lamb_in1k/f4ee2b8a8f25976c226c67d275e1d160293c20b6c463b9cc7fb51dbf323e6ad9.tar.gz"
+
+["references/timm--mobilenetv4_conv_blur_medium.e500_r224_in1k.safetensors"]
+git-tree-sha1 = "5de497ca8095597a479b181a686487637f450e76"
+lazy = true
+
+    [["references/timm--mobilenetv4_conv_blur_medium.e500_r224_in1k.safetensors".download]]
+    sha256 = "179a316c7a39810f6226a86388602666a13b0babccb697b331f18c654da2bfb7"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--mobilenetv4_conv_blur_medium.e500_r224_in1k/179a316c7a39810f6226a86388602666a13b0babccb697b331f18c654da2bfb7.tar.gz"
+
+["references/timm--mobilenetv4_conv_medium.e500_r224_in1k.safetensors"]
+git-tree-sha1 = "10affe8b1c6676a8864dec893684a3d50f29f582"
+lazy = true
+
+    [["references/timm--mobilenetv4_conv_medium.e500_r224_in1k.safetensors".download]]
+    sha256 = "bab6f6a82f49d552f7b4d8781a1d9334e7b52922149f2ae0660074c5c8d8cffd"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--mobilenetv4_conv_medium.e500_r224_in1k/bab6f6a82f49d552f7b4d8781a1d9334e7b52922149f2ae0660074c5c8d8cffd.tar.gz"
+
+["references/timm--mobilenetv4_conv_small.e2400_r224_in1k.safetensors"]
+git-tree-sha1 = "c4d31d0de785d72928b727dbd41b1c41d4390447"
+lazy = true
+
+    [["references/timm--mobilenetv4_conv_small.e2400_r224_in1k.safetensors".download]]
+    sha256 = "efcd5c22e088d1283b4f7f0271c1f717cc8dbaf4936940a25cab52793558fbab"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--mobilenetv4_conv_small.e2400_r224_in1k/efcd5c22e088d1283b4f7f0271c1f717cc8dbaf4936940a25cab52793558fbab.tar.gz"
+
+["references/timm--mobilenetv4_conv_small_050.e3000_r224_in1k.safetensors"]
+git-tree-sha1 = "946bb6fcc93c372e8e19c65c572db3e4a4e813a5"
+lazy = true
+
+    [["references/timm--mobilenetv4_conv_small_050.e3000_r224_in1k.safetensors".download]]
+    sha256 = "f617c4dab44a6e6ef7bbc5d21c773eb0600df36dcf2b2b5c078d2f93094041f6"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--mobilenetv4_conv_small_050.e3000_r224_in1k/f617c4dab44a6e6ef7bbc5d21c773eb0600df36dcf2b2b5c078d2f93094041f6.tar.gz"
+
+["references/timm--mobilenetv4_hybrid_large.e600_r384_in1k.safetensors"]
+git-tree-sha1 = "b4b3afe1cfd260d02113780b2ac8a71d1190239d"
+lazy = true
+
+    [["references/timm--mobilenetv4_hybrid_large.e600_r384_in1k.safetensors".download]]
+    sha256 = "14c366b5df7991ab5f89c3c8688e33e04563eb2d8e8c555e6162c87e62551f94"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--mobilenetv4_hybrid_large.e600_r384_in1k/14c366b5df7991ab5f89c3c8688e33e04563eb2d8e8c555e6162c87e62551f94.tar.gz"
+
+["references/timm--mobilenetv4_hybrid_medium.e500_r224_in1k.safetensors"]
+git-tree-sha1 = "a33eb8d200b7413cdddc865f322111211e955dbb"
+lazy = true
+
+    [["references/timm--mobilenetv4_hybrid_medium.e500_r224_in1k.safetensors".download]]
+    sha256 = "e44b84b38fc7a2a810fd3d48149d25f1f1c9694fc4e917ab05cbb54c8c0fbc6a"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--mobilenetv4_hybrid_medium.e500_r224_in1k/e44b84b38fc7a2a810fd3d48149d25f1f1c9694fc4e917ab05cbb54c8c0fbc6a.tar.gz"
+
+["references/timm--res2net50_26w_4s.in1k.safetensors"]
+git-tree-sha1 = "53ffcf5cd4c0c5a7a9f631406af078cc416d0ca6"
+lazy = true
+
+    [["references/timm--res2net50_26w_4s.in1k.safetensors".download]]
+    sha256 = "3410593979d93256e8eb21654b2d973686be1e1e4bb485841211541e69634e67"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--res2net50_26w_4s.in1k/3410593979d93256e8eb21654b2d973686be1e1e4bb485841211541e69634e67.tar.gz"
+
+["references/timm--resmlp_12_224.fb_in1k.safetensors"]
+git-tree-sha1 = "716d0dd9ae55918dc0c91b31b23efe223d090b98"
+lazy = true
+
+    [["references/timm--resmlp_12_224.fb_in1k.safetensors".download]]
+    sha256 = "c68db77df7d6d400a27bdd434e7b5bd5c551fe8f776743175062769ced1d2a2c"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--resmlp_12_224.fb_in1k/c68db77df7d6d400a27bdd434e7b5bd5c551fe8f776743175062769ced1d2a2c.tar.gz"
+
+["references/timm--resnet18.a1_in1k.safetensors"]
+git-tree-sha1 = "02de2c6430fe0aa8b1ff73ead06b9735563e453e"
+lazy = true
+
+    [["references/timm--resnet18.a1_in1k.safetensors".download]]
+    sha256 = "9fca371ad1edf91d9d81b14e6fa63c6d422c7f563a7a44f27876981c2a7f7522"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--resnet18.a1_in1k/9fca371ad1edf91d9d81b14e6fa63c6d422c7f563a7a44f27876981c2a7f7522.tar.gz"
+
+["references/timm--resnet26t.ra2_in1k.safetensors"]
+git-tree-sha1 = "df96a23fd83b0283c253049abbb5fe61c103515c"
+lazy = true
+
+    [["references/timm--resnet26t.ra2_in1k.safetensors".download]]
+    sha256 = "9959d520d9750e1e03983c6b3d613d92b2e504829ae06f588f9f59642257161c"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--resnet26t.ra2_in1k/9959d520d9750e1e03983c6b3d613d92b2e504829ae06f588f9f59642257161c.tar.gz"
+
+["references/timm--resnet50.tv2_in1k.safetensors"]
+git-tree-sha1 = "38c552cdcab6ea422fc3cae7e56c2e31d783fcdf"
+lazy = true
+
+    [["references/timm--resnet50.tv2_in1k.safetensors".download]]
+    sha256 = "dfd83914f2320e925da9467cda8ef9037e83dd53bd0ce743c7e83f8e6f391b44"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--resnet50.tv2_in1k/dfd83914f2320e925da9467cda8ef9037e83dd53bd0ce743c7e83f8e6f391b44.tar.gz"
+
+["references/timm--resnet50d.ra2_in1k.safetensors"]
+git-tree-sha1 = "baeb00e30a64a7587c5a706036e21c9781c6c045"
+lazy = true
+
+    [["references/timm--resnet50d.ra2_in1k.safetensors".download]]
+    sha256 = "a0620bf04eb4192fa1e11d4181be687f9b1badd256502df40c72ceed330eda39"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--resnet50d.ra2_in1k/a0620bf04eb4192fa1e11d4181be687f9b1badd256502df40c72ceed330eda39.tar.gz"
+
+["references/timm--resnext50_32x4d.a1h_in1k.safetensors"]
+git-tree-sha1 = "105ecaca39d19ad7f736e4ea67f829cb01c5ce1e"
+lazy = true
+
+    [["references/timm--resnext50_32x4d.a1h_in1k.safetensors".download]]
+    sha256 = "cf91c671910d2db8d03ebe212b5192ac5e9a32991f5714d56d4a406c2c6fd737"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--resnext50_32x4d.a1h_in1k/cf91c671910d2db8d03ebe212b5192ac5e9a32991f5714d56d4a406c2c6fd737.tar.gz"
+
+["references/timm--seresnext26d_32x4d.bt_in1k.safetensors"]
+git-tree-sha1 = "5e83e36251531f492670858c815030376112e053"
+lazy = true
+
+    [["references/timm--seresnext26d_32x4d.bt_in1k.safetensors".download]]
+    sha256 = "7d8e9f3884e90b15de4de1972c0a617f98fac73b9a0baf7d635e5af16d41c1b5"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--seresnext26d_32x4d.bt_in1k/7d8e9f3884e90b15de4de1972c0a617f98fac73b9a0baf7d635e5af16d41c1b5.tar.gz"
+
+["references/timm--test_efficientnet.r160_in1k.safetensors"]
+git-tree-sha1 = "590a06c8fe81d6c67daeeb82409922833680c169"
+lazy = true
+
+    [["references/timm--test_efficientnet.r160_in1k.safetensors".download]]
+    sha256 = "5cb933a153b66ed2e41a21fd2e3d89ea0a2f49b648985dca5a15ee07b0b89d12"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--test_efficientnet.r160_in1k/5cb933a153b66ed2e41a21fd2e3d89ea0a2f49b648985dca5a15ee07b0b89d12.tar.gz"
+
+["references/timm--tf_efficientnet_b0.ns_jft_in1k.safetensors"]
+git-tree-sha1 = "f79a8b19c4012bbd024cd6333e960a5063bfe42b"
+lazy = true
+
+    [["references/timm--tf_efficientnet_b0.ns_jft_in1k.safetensors".download]]
+    sha256 = "e5684aa86e9ecbffe8d1f929be368c2317862e11179d32c944f15784a3c06ac7"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--tf_efficientnet_b0.ns_jft_in1k/e5684aa86e9ecbffe8d1f929be368c2317862e11179d32c944f15784a3c06ac7.tar.gz"
+
+["references/timm--tf_efficientnet_cc_b0_4e.in1k.safetensors"]
+git-tree-sha1 = "fb78cf39f35e3fbe1686ac215b6beec981d68a27"
+lazy = true
+
+    [["references/timm--tf_efficientnet_cc_b0_4e.in1k.safetensors".download]]
+    sha256 = "72bc2cb25adcb95c8f48a08ec2007314bb1f29cfb2aecdabd738b020f4545d50"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--tf_efficientnet_cc_b0_4e.in1k/72bc2cb25adcb95c8f48a08ec2007314bb1f29cfb2aecdabd738b020f4545d50.tar.gz"
+
+["references/timm--tf_efficientnetv2_b0.in1k.safetensors"]
+git-tree-sha1 = "eda093bd9d4adecd9660129a5d93b699a39bed28"
+lazy = true
+
+    [["references/timm--tf_efficientnetv2_b0.in1k.safetensors".download]]
+    sha256 = "77dd30cb5f7ffbce27030c0f4e3a44877f5889d404a1fb2317c2ca1e80c31431"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--tf_efficientnetv2_b0.in1k/77dd30cb5f7ffbce27030c0f4e3a44877f5889d404a1fb2317c2ca1e80c31431.tar.gz"
+
+["references/timm--tf_mixnet_s.in1k.safetensors"]
+git-tree-sha1 = "a4712ee444e32435d212019ccb3e3a40d45ac031"
+lazy = true
+
+    [["references/timm--tf_mixnet_s.in1k.safetensors".download]]
+    sha256 = "01cf4a4185cd7ce0bb44e48b16b40907975d341f16110937eaf883171401328a"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--tf_mixnet_s.in1k/01cf4a4185cd7ce0bb44e48b16b40907975d341f16110937eaf883171401328a.tar.gz"
+
+["references/timm--tf_mobilenetv3_large_100.in1k.safetensors"]
+git-tree-sha1 = "814b52b959b91130765e0eaf185c2ec5bc20f45b"
+lazy = true
+
+    [["references/timm--tf_mobilenetv3_large_100.in1k.safetensors".download]]
+    sha256 = "c116f1fb4815842e4cd0d0cb2f8f4d13921b920683c0390b3a2f6e485527aeab"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--tf_mobilenetv3_large_100.in1k/c116f1fb4815842e4cd0d0cb2f8f4d13921b920683c0390b3a2f6e485527aeab.tar.gz"
+
+["references/timm--tf_mobilenetv3_small_minimal_100.in1k.safetensors"]
+git-tree-sha1 = "a1d3ed8862f4413b489e459fb835fd60ec6d9ff2"
+lazy = true
+
+    [["references/timm--tf_mobilenetv3_small_minimal_100.in1k.safetensors".download]]
+    sha256 = "c832aa8126260a8092cd468c3b35ba8256edb01422293c223875ae111628ed0d"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--tf_mobilenetv3_small_minimal_100.in1k/c832aa8126260a8092cd468c3b35ba8256edb01422293c223875ae111628ed0d.tar.gz"
+
+["references/timm--vgg11.tv_in1k.safetensors"]
+git-tree-sha1 = "f16223600910298b23e5bbfe7fb0209afd13f379"
+lazy = true
+
+    [["references/timm--vgg11.tv_in1k.safetensors".download]]
+    sha256 = "72b53a0847c5430ced88f98b38123ba0804a4ac58217fb301a82219fc9bc583b"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--vgg11.tv_in1k/72b53a0847c5430ced88f98b38123ba0804a4ac58217fb301a82219fc9bc583b.tar.gz"
+
+["references/timm--vgg11_bn.tv_in1k.safetensors"]
+git-tree-sha1 = "7927c426df8fa2757ca1726706fe14351236fdc7"
+lazy = true
+
+    [["references/timm--vgg11_bn.tv_in1k.safetensors".download]]
+    sha256 = "c5bad4538cede3fa3c722f80dafb516a38389c6d4904e4f81a7490da7413c177"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--vgg11_bn.tv_in1k/c5bad4538cede3fa3c722f80dafb516a38389c6d4904e4f81a7490da7413c177.tar.gz"
+
+["references/timm--vit_base_patch16_224.augreg2_in21k_ft_in1k.safetensors"]
+git-tree-sha1 = "c5efeefd16455b0b376e1123083d4b5bc45f05a8"
+lazy = true
+
+    [["references/timm--vit_base_patch16_224.augreg2_in21k_ft_in1k.safetensors".download]]
+    sha256 = "0155c5228538e5cd8714dc4bdbc45cc46b579afa763bd7486176fbef74017918"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--vit_base_patch16_224.augreg2_in21k_ft_in1k/0155c5228538e5cd8714dc4bdbc45cc46b579afa763bd7486176fbef74017918.tar.gz"
+
+["references/timm--vit_base_patch16_clip_224.laion2b.safetensors"]
+git-tree-sha1 = "842549981242e64187f805488e3052101296eac2"
+lazy = true
+
+    [["references/timm--vit_base_patch16_clip_224.laion2b.safetensors".download]]
+    sha256 = "c9499a687288462f0b5d08fcb205a4224b899b9219eeb03b7ed321eea5a1144a"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--vit_base_patch16_clip_224.laion2b/c9499a687288462f0b5d08fcb205a4224b899b9219eeb03b7ed321eea5a1144a.tar.gz"
+
+["references/timm--vit_base_patch16_siglip_224.v2_webli.safetensors"]
+git-tree-sha1 = "a91246c9be89c7727d0de56d1d239f9c77481b22"
+lazy = true
+
+    [["references/timm--vit_base_patch16_siglip_224.v2_webli.safetensors".download]]
+    sha256 = "50b3b9881dfccf05544f78b2c5a13c04cd151756867c62086e2acc9b2686a407"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--vit_base_patch16_siglip_224.v2_webli/50b3b9881dfccf05544f78b2c5a13c04cd151756867c62086e2acc9b2686a407.tar.gz"
+
+["references/timm--vit_base_patch32_clip_quickgelu_224.metaclip_400m.safetensors"]
+git-tree-sha1 = "9a616a1a8ede4148c7e5dfaa00ed3284353a7a17"
+lazy = true
+
+    [["references/timm--vit_base_patch32_clip_quickgelu_224.metaclip_400m.safetensors".download]]
+    sha256 = "a03463348b2104e7c424fcb4c00f9fdef0bf8e229a3336e875987869345cd2e6"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--vit_base_patch32_clip_quickgelu_224.metaclip_400m/a03463348b2104e7c424fcb4c00f9fdef0bf8e229a3336e875987869345cd2e6.tar.gz"
+
+["references/timm--vit_small_patch14_dinov2.lvd142m.safetensors"]
+git-tree-sha1 = "afb78458bc1170f9ab809f3d84d5d2c4a6d8891d"
+lazy = true
+
+    [["references/timm--vit_small_patch14_dinov2.lvd142m.safetensors".download]]
+    sha256 = "abf690d783026e8dd2cee38a16bb9a2f37b583ac71eee432d8655d3ed07516dc"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--vit_small_patch14_dinov2.lvd142m/abf690d783026e8dd2cee38a16bb9a2f37b583ac71eee432d8655d3ed07516dc.tar.gz"
+
+["references/timm--vit_small_patch14_reg4_dinov2.lvd142m.safetensors"]
+git-tree-sha1 = "f79094f5cd681ff5e767546ceefc09cd8067ced4"
+lazy = true
+
+    [["references/timm--vit_small_patch14_reg4_dinov2.lvd142m.safetensors".download]]
+    sha256 = "0e9e76e795009f561324da1cf85eeadd3c848c57d28fd43c9275ccdc372d167c"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--vit_small_patch14_reg4_dinov2.lvd142m/0e9e76e795009f561324da1cf85eeadd3c848c57d28fd43c9275ccdc372d167c.tar.gz"
+
+["references/timm--vit_tiny_patch16_224.augreg_in21k_ft_in1k.safetensors"]
+git-tree-sha1 = "3499e569b3c6bd4a7e41a13dd380516d6a8a8509"
+lazy = true
+
+    [["references/timm--vit_tiny_patch16_224.augreg_in21k_ft_in1k.safetensors".download]]
+    sha256 = "6fe77ccf0e1e878a71cf5726e1e3cb5e4cb2bb84c477859ec0c7bd2ecc375a11"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--vit_tiny_patch16_224.augreg_in21k_ft_in1k/6fe77ccf0e1e878a71cf5726e1e3cb5e4cb2bb84c477859ec0c7bd2ecc375a11.tar.gz"
+
+["references/timm--wide_resnet50_2.tv2_in1k.safetensors"]
+git-tree-sha1 = "1ae5189c3f919ba3e0124cf6a201d366b0d4c34e"
+lazy = true
+
+    [["references/timm--wide_resnet50_2.tv2_in1k.safetensors".download]]
+    sha256 = "500c78d08ac5c0bbbeedecf33f17ea512e8f2b67299bdff586e9d73a33542e59"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--wide_resnet50_2.tv2_in1k/500c78d08ac5c0bbbeedecf33f17ea512e8f2b67299bdff586e9d73a33542e59.tar.gz"
+
+["references/timm--xception41.tf_in1k.safetensors"]
+git-tree-sha1 = "25ab7db0e7b10dbd986be7fa8113f270d8c0df60"
+lazy = true
+
+    [["references/timm--xception41.tf_in1k.safetensors".download]]
+    sha256 = "e0130b0f8bfeb567bde338ffc1f007e3097a0a57065d7a28397e1301676c2477"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--xception41.tf_in1k/e0130b0f8bfeb567bde338ffc1f007e3097a0a57065d7a28397e1301676c2477.tar.gz"
+
+["references/timm--xception41p.ra3_in1k.safetensors"]
+git-tree-sha1 = "8eb7e1bc26e922810e1cdc6da5e2b34ca186b2ef"
+lazy = true
+
+    [["references/timm--xception41p.ra3_in1k.safetensors".download]]
+    sha256 = "17f9e1d9d773a563fefddb9d15b8abb14fc5094317f7545a02932e4499fc0908"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm--xception41p.ra3_in1k/17f9e1d9d773a563fefddb9d15b8abb14fc5094317f7545a02932e4499fc0908.tar.gz"
+
+["references/timm_transforms.safetensors"]
+git-tree-sha1 = "7ab41ae164dbfe2784ab65d54783de120369dd80"
+lazy = true
+
+    [["references/timm_transforms.safetensors".download]]
+    sha256 = "18a39ae6eb681e6c2843cd78a82b016a79adfc36cea407d30fe76183a097979f"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/timm_transforms/18a39ae6eb681e6c2843cd78a82b016a79adfc36cea407d30fe76183a097979f.tar.gz"
+
+["references/unsloth--Llama-3.2-1B.safetensors"]
+git-tree-sha1 = "8364df59209cc91c1ce5f009d0a18cd631b57c9f"
+lazy = true
+
+    [["references/unsloth--Llama-3.2-1B.safetensors".download]]
+    sha256 = "06acd93b590a0c06211ed285227bdbf8b36c0dcb211597e646258940b1506a62"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/unsloth--Llama-3.2-1B/06acd93b590a0c06211ed285227bdbf8b36c0dcb211597e646258940b1506a62.tar.gz"
+
+["references/unsloth--gemma-3-270m.safetensors"]
+git-tree-sha1 = "b0975bce54d653c5aaef8e2c205a8b765ac53b84"
+lazy = true
+
+    [["references/unsloth--gemma-3-270m.safetensors".download]]
+    sha256 = "9143a27405b440f3f76ff93e761292a5237c2a05cef96ba91594b41c0d7e4fb5"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/unsloth--gemma-3-270m/9143a27405b440f3f76ff93e761292a5237c2a05cef96ba91594b41c0d7e4fb5.tar.gz"
+
+["references/unsloth--sam3.1.safetensors"]
+git-tree-sha1 = "7cc4545b2847a447b8d24799f3afbef8b6c26026"
+lazy = true
+
+    [["references/unsloth--sam3.1.safetensors".download]]
+    sha256 = "7a8b8895ec74c389596ed7de92d2377c941f3f3978e70664f1c006372b8714ef"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/references/unsloth--sam3.1/7a8b8895ec74c389596ed7de92d2377c941f3f3978e70664f1c006372b8714ef.tar.gz"

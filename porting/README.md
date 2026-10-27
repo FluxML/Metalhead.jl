@@ -32,7 +32,16 @@ uv run dump.py specs/st_qwen3_lasttoken.json     # a sentence-transformers model
 uv run dump_reference.py Qwen/Qwen3-Embedding-0.6B   # with a modules.json: its `encode`
 julia --project=.. check_reference.jl ../test/references/timm--resnet18.a1_in1k.safetensors
 julia --project=.. -e 'using Pkg; Pkg.test(test_args = ["models/resnet"])'   # one family's tests
+julia publish.jl                                 # upload the new test data, bind test/Artifacts.toml
 ```
+
+The fixtures and references don't stay in git: `publish.jl` uploads each new or changed one to
+the Hub dataset `FluxML/metalhead-test-data` as a lazy artifact (a tarball named by its
+sha256), binds it in `test/Artifacts.toml` and removes the local copy. The tests download an
+artifact on first use (`test/data.jl`) and use a copy in `test/` instead while it isn't
+published. Without write access to the dataset, commit the data: once the pull request is
+merged, `.github/workflows/publish-test-data.yml` publishes it and opens a pull request that
+removes it.
 
 Optional keys of a spec, for models too large for a fixture of 1 MB:
 

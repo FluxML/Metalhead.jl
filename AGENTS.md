@@ -88,11 +88,18 @@ reasons.
   (helpers in `test/gpu_setup.jl`). `test/processors/` checks the processors, with the
   configuration files of real repositories in `test/fixtures/processors/` and references in
   `test/references/` (helpers in `test/processors_setup.jl`).
+- Test data: the fixtures and the reference `.safetensors` don't stay in git, which would
+  ship them to every user. `porting/publish.jl` uploads each to the Hub dataset
+  `FluxML/metalhead-test-data` as a lazy artifact of `test/Artifacts.toml`; tests reach
+  them through `test/data.jl` (`fixture`, `reference`, `test_data`), which downloads one on
+  first use, and prefers an unpublished copy in `test/`. Data that a pull request commits
+  instead is published after the merge by `.github/workflows/publish-test-data.yml`, which
+  opens a "Publish test data" pull request: merge it before a release.
 - `porting/`: the Python (uv) project that writes the fixtures and references
   (`dump_processor.py` and `dump_timm_transform.py` those of processors, through the full
   upstream path; `dump_sentence_transformers.py` the tiny sentence-transformers models,
-  saved as sentence-transformers saves them, with a tokenizer of numbered words). The
-  package and its tests never run Python.
+  saved as sentence-transformers saves them, with a tokenizer of numbered words), and
+  `publish.jl`, which publishes them. The package and its tests never run Python.
 - `skills/port-hf-model/SKILL.md`: the porting workflow, conventions and numerical pitfalls.
 - `docs/`: Documenter. `docs/make.jl` generates `index.md` (from the README) and `models.md`
   (from the registry), and checks that the migration guide names only ported architectures.
@@ -116,7 +123,7 @@ persistent Julia session and `include` `test/parity.jl` (`includet` with Revise;
 ## Conventions
 
 - To add, fix or debug a ported model, follow `skills/port-hf-model/SKILL.md`. A port is done
-  when its fixtures, parameter counts and references pass.
+  when its fixtures, parameter counts and references pass, and are published.
 - Weight keys come from struct field names: keep them equal to the torch attribute names.
 - Code style is in `.JuliaFormatter.toml` (SciML style, 92 columns).
 - Record user-visible changes under `[Unreleased]` in `CHANGELOG.md`.
