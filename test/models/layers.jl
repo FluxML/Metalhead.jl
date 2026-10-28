@@ -27,6 +27,25 @@ using Metalhead, Test
           ["conv.weight", "bn.weight", "bn.bias", "bn.running_mean", "bn.running_var"]
 end
 
+@testset "CondConv display" begin
+    using Metalhead.Timm: CondConv2d
+
+    for layer in (CondConv2d(4, 6, 3; num_experts = 3),
+        CondConv2d(4, 6, (3, 5); num_experts = 2, stride = (2, 1),
+            dilation = (1, 2), padding = "same", groups = 2, bias = true))
+        for rendered in (repr(layer), repr(MIME"text/plain"(), layer))
+            @test ncodeunits(rendered) < 512
+            @test occursin("num_experts=$(size(layer.weight, 2))", rendered)
+        end
+    end
+
+    model = create_model("efficientnet_cc_b0_4e")
+    for rendered in (repr(model), repr(MIME"text/plain"(), model))
+        @test ncodeunits(rendered) < 100_000
+        @test occursin("CondConv2d(", rendered)
+    end
+end
+
 @testset "attention dropout" begin
     using Metalhead.Timm: attention_fdrop
     using Flux

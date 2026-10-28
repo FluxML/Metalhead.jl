@@ -29,8 +29,12 @@ a tokenizer, which takes prompt embeddings only. `is_distilled` checkpoints (FLU
 `gpu(pipeline)` and `bf16(pipeline)` move and convert every component but the tokenizer.
 
 ```julia
-using Metalhead, HuggingFaceTokenizers
+using Metalhead, Flux, HuggingFaceTokenizers
+using CUDA, cuDNN
+
 pipe = create_model("black-forest-labs/FLUX.2-klein-4B"; eltype = BFloat16)
+pipe = gpu(pipe)
+
 image = pipe("A cat holding a sign that says hello world"; num_inference_steps = 4)
 edited = pipe("Make the sign say goodbye"; image = image[:, :, :, 1], num_inference_steps = 4)
 ```

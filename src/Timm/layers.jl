@@ -142,6 +142,16 @@ the flattened kernel of expert `e`. The samples are convolved at once, as one gr
 end
 Flux.@layer CondConv2d trainable=(weight, bias)
 
+function Base.show(io::IO, m::CondConv2d)
+    print(io, "CondConv2d(", m.kernel_size, ", num_experts=", size(m.weight, 2))
+    all(==(1), m.stride) || print(io, ", stride=", m.stride)
+    all(==(1), m.dilation) || print(io, ", dilation=", m.dilation)
+    m.pad === nothing && print(io, ", padding=\"same\"")
+    m.groups == 1 || print(io, ", groups=", m.groups)
+    m.bias === false || print(io, ", bias=true")
+    return print(io, ")")
+end
+
 function CondConv2d(in_chs, out_chs, kernel_size; num_experts, stride = 1, dilation = 1,
         padding = "", groups = 1, bias = false)
     k, s, d = (reverse(to_2tuple(v)) for v in (kernel_size, stride, dilation))
