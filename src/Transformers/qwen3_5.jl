@@ -26,21 +26,26 @@ Flux.@layer Qwen3_5TextRotaryEmbedding
 function rotary_tables(m::Qwen3_5TextRotaryEmbedding, x, position_ids)
     return ChainRulesCore.ignore_derivatives() do
         n, b = size(x, 2), size(x, 3)
-        pos = position_ids === nothing ? repeat(reshape(0:(n - 1), 1, n, 1), 3) :
-              Array(position_ids)
+        if position_ids === nothing
+            rotary = RotaryEmbedding(m.rotary_dim, (; rope_type = "default", m.rope_theta))
+            c, s = rotary_tables(rotary, x, n)
+            return reshape(c, :, 1, n, 1), reshape(s, :, 1, n, 1)
+        end
+        pos = position_ids
         size(pos, 1) == 4 && (pos = pos[2:4, :, :])
         size(pos, 1) == 3 && size(pos, 2) == n && size(pos, 3) in (1, b) ||
             error("`position_ids` must have size (3, $n, $b), got $(size(pos))")
-        freqs = inv_freq((; rope_type = "default", m.rope_theta), m.rotary_dim)
+        pos = Flux.get_device(x)(pos)
+        freqs = inv_freq((; rope_type = "default", m.rope_theta), m.rotary_dim, x)
         section = m.mrope_section
-        function row(j)
-            return j % 3 == 1 && j < 3 * section[2] ? 2 :
-                   j % 3 == 2 && j < 3 * section[3] ? 3 : 1
-        end
-        angles = [freqs[j + 1] * pos[row(j), t, i]
-                  for j in 0:(length(freqs) - 1), _ in 1:1, t in 1:n, i in 1:size(pos, 3)]
+        j = 0:(length(freqs) - 1)
+        rows = similar(x, Int, length(freqs))
+        rows .= 1 .+ ((j .% 3 .== 1) .& (j .< 3 * section[2])) .+
+                2 .* ((j .% 3 .== 2) .& (j .< 3 * section[3]))
+        angles = reshape(freqs, :, 1, 1, 1) .*
+                 reshape(pos[rows, :, :], :, 1, n, size(pos, 3))
         T = eltype(x)
-        return to_device_of(x, T.(cos.(angles))), to_device_of(x, T.(sin.(angles)))
+        return T.(cos.(angles)), T.(sin.(angles))
     end
 end
 
@@ -242,7 +247,9 @@ end
 function causal_log_mask(x, C)
     return ChainRulesCore.ignore_derivatives() do
         T = eltype(x)
-        to_device_of(x, [j <= i ? zero(T) : T(-Inf) for j in 1:C, i in 1:C])
+        mask = similar(x, C, C)
+        mask .= ifelse.((1:C) .<= (1:C)', zero(T), T(-Inf))
+        return mask
     end
 end
 
@@ -267,7 +274,9 @@ end
 
 function identity_matrix(x, C)
     return ChainRulesCore.ignore_derivatives() do
-        to_device_of(x, [eltype(x)(i == j) for i in 1:C, j in 1:C])
+        mask = similar(x, C, C)
+        mask .= (1:C) .== (1:C)'
+        return mask
     end
 end
 
@@ -275,9 +284,10 @@ end
 # of size 2s, else 0.
 function block_mask(x, C, s)
     return ChainRulesCore.ignore_derivatives() do
-        mask = [(i - 1) ÷ 2s == (j - 1) ÷ 2s && iseven((i - 1) ÷ s) &&
-                isodd((j - 1) ÷ s) for i in 1:C, j in 1:C]
-        to_device_of(x, eltype(x).(mask))
+        i, j = 0:(C - 1), (0:(C - 1))'
+        mask = similar(x, C, C)
+        mask .= (i .÷ 2s .== j .÷ 2s) .& iseven.(i .÷ s) .& isodd.(j .÷ s)
+        return mask
     end
 end
 

@@ -40,8 +40,8 @@ end
 
 transformers' rotary embedding, with the `rope_parameters` of `rope_parameters_of`: the
 default one, or `rope_type = "linear"` or `"llama3"` (Llama 3.1 and later), which scale its
-frequencies. Its `inv_freq` buffer is not persistent, so it has no `state_dict` entry: the
-tables are computed on each call instead.
+frequencies. Its `inv_freq` buffer is not persistent, so it has no `state_dict` entry. The
+tables are computed on the input's device.
 """
 @concrete struct RotaryEmbedding
     head_dim
@@ -54,18 +54,19 @@ Flux.@layer RotaryEmbedding
 # `original_max_position_embeddings / low_freq_factor`, keeps those below
 # `original_max_position_embeddings / high_freq_factor` and interpolates in between, as
 # `_compute_llama3_parameters` does.
-function inv_freq(p, head_dim)
-    freqs = Float64(p.rope_theta) .^ (-(0:2:(head_dim - 2)) ./ head_dim)
+function inv_freq(p, head_dim, x)
+    freqs = similar(x, Float64, head_dim ÷ 2)
+    freqs .= Float64(p.rope_theta) .^ (.-(0:2:(head_dim - 2)) ./ head_dim)
     p.rope_type == "linear" && return freqs ./ p.factor
     p.rope_type == "llama3" || return freqs
     old_context_len = p.original_max_position_embeddings
-    return map(freqs) do f
+    factor, low, high = p.factor, p.low_freq_factor, p.high_freq_factor
+    return map!(freqs, freqs) do f
         wavelen = 2π / f
-        wavelen < old_context_len / p.high_freq_factor && return f
-        wavelen > old_context_len / p.low_freq_factor && return f / p.factor
-        smooth = (old_context_len / wavelen - p.low_freq_factor) /
-                 (p.high_freq_factor - p.low_freq_factor)
-        return (1 - smooth) * f / p.factor + smooth * f
+        wavelen < old_context_len / high && return f
+        wavelen > old_context_len / low && return f / factor
+        smooth = (old_context_len / wavelen - low) / (high - low)
+        return (1 - smooth) * f / factor + smooth * f
     end
 end
 
@@ -75,9 +76,9 @@ end
 # k and k + head_dim ÷ 2 is transformers' `rotate_half`.
 function rotary_tables(m::RotaryEmbedding, x, n)
     return ChainRulesCore.ignore_derivatives() do
-        angles = inv_freq(m.rope_parameters, m.head_dim) .* (0:(n - 1))'
+        angles = inv_freq(m.rope_parameters, m.head_dim, x) .* (0:(n - 1))'
         T = eltype(x)
-        return to_device_of(x, T.(cos.(angles))), to_device_of(x, T.(sin.(angles)))
+        return T.(cos.(angles)), T.(sin.(angles))
     end
 end
 

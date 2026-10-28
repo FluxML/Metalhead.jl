@@ -18,10 +18,16 @@ function check_output_fmt(output_fmt, allowed = ("NCHW",))
 end
 ChainRulesCore.@non_differentiable check_output_fmt(::Any...)
 
-# The outputs of `stages` applied in turn to `x`, as a tuple, stopping after `stop` stages.
+# The outputs of `stages` applied in turn to `x`, stopping after `stop` stages.
 function stage_outputs(stages, x, stop = length(stages))
     layers = stages isa NamedTuple ? values(stages) : stages
     return stop == 0 ? () : Flux.activations(Chain(layers[1:stop]...), x)
+end
+
+function stage_outputs(stages::AbstractVector, x, stop = length(stages))
+    stop == 0 && return ()
+    # Include x in the sequence: accumulate's rule does not differentiate `init`.
+    return accumulate((y, layer) -> layer(y), vcat([x], stages[1:stop]))[2:end]
 end
 
 function sequential_intermediates(stages, x, ends; indices = nothing, norm::Bool = false,
