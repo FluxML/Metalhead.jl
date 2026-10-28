@@ -160,16 +160,24 @@ Flux.@layer Flux2PosEmbed
 # of size `(n_axes, seq_len)` for the `pos_embed` of a transformer, one column for each token:
 # the angles of the frequencies of each axis, concatenated, as diffusers'
 # `repeat_interleave_real` pairs the features. Computed in Float64 (as diffusers does) on the
-# CPU.
+# input's device.
 function rotary_tables(m, ids, x)
     return ChainRulesCore.ignore_derivatives() do
-        pos = Float64.(Array(ids))
+        pos = Flux.get_device(x) == Flux.get_device(ids) ? ids :
+              copyto!(similar(x, eltype(ids), size(ids)), ids)
         size(pos, 1) == length(m.axes_dim) ||
             error("the position ids have $(size(pos, 1)) coordinates; `axes_dims_rope` has $(length(m.axes_dim))")
-        angles = reduce(vcat,
-            [[m.theta^(-2(i - 1) / d) for i in 1:(d ÷ 2)] .* pos[a:a, :]
-             for (a, d) in enumerate(m.axes_dim)])
-        return to_device_of(x, cos.(angles)), to_device_of(x, sin.(angles))
+        angles = similar(x, Float64, sum(m.axes_dim) ÷ 2, size(pos, 2))
+        offset = 0
+        for (a, d) in enumerate(m.axes_dim)
+            rows = (offset + 1):(offset + d ÷ 2)
+            axis_angles = view(angles, rows, :)
+            axis_angles .= m.theta .^ (.-2 .* (0:(d ÷ 2 - 1)) ./ d) .*
+                           Float64.(view(pos, a:a, :))
+            offset += d ÷ 2
+        end
+        T = eltype(x)
+        return T.(cos.(angles)), T.(sin.(angles))
     end
 end
 

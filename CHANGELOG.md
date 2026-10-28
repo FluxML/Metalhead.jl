@@ -81,6 +81,10 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
 
 ### Fixed
 
+- Rotary tables and Qwen3.5 chunk masks are generated on the input's device, avoiding CPU
+  table construction and transfers on each forward pass. Differentiating
+  `forward_intermediates` through vector-backed stages no longer compiles a separate tuple
+  of blocks for every model depth (#342).
 - Documentation: the FLUX.2 pipeline docstring includes its Flux/CUDA imports and GPU
   transfer, the contributing guide asks agents to read the porting skill explicitly (#342),
   and the README introduces capabilities before the model list.
