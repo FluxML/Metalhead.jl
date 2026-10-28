@@ -167,12 +167,12 @@ lazy = true
     url = "https://huggingface.co/FluxML/resnext50_32x4d/resolve/c8f6368d2511ca58e7f65c368de28ad7dffb61b2/resnext50_32x4d-IMAGENET1K_V2.tar.gz"
 
 [squeezenet]
-git-tree-sha1 = "e2eeee109fda46470d657b13669cca09d5ef2f8c"
+git-tree-sha1 = "d14ca24d0d0448396dd3490c953db5cebcf66056"
 lazy = true
 
     [[squeezenet.download]]
-    sha256 = "aebfa06f44767e5ff728b7b67b2d01352b4618bd5d305c26e603aabcd5ba593d"
-    url = "https://huggingface.co/FluxML/squeezenet/resolve/01ef4221df5260bd992c669ab587eed74df0c39f/squeezenet.tar.gz"
+    sha256 = "fe0189de7cfc35f648a0b86a72c306542b65d2cafcf7c4045748097bd294b4ea"
+    url = "https://huggingface.co/FluxML/squeezenet/resolve/ea60ebf20e438593cd39adbc7b8fb7a4c906999b/squeezenet-weights.tar.gz"
 
 [vgg11]
 git-tree-sha1 = "78ffe7d74c475cc28175f9e23a545ce2f17b1520"

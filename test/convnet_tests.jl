@@ -252,10 +252,21 @@ end
 end
 
 @testitem "SqueezeNet" setup=[TestModels] begin
+    using Flux
+
     m = SqueezeNet() |> gpu
     @test size(m(x_224)) == (1000, 1)
     if SqueezeNet in PRETRAINED_MODELS
-        @test acctest(SqueezeNet(; pretrain = true))
+        pretrained = SqueezeNet(; pretrain = true)
+        weights = Metalhead.loadweights("squeezenet")
+        @test weights isa AbstractVector{<:AbstractArray}
+        @test length(weights) == 52
+        @test sum(length, weights) == 1_235_496
+        @test Flux.trainables(pretrained) == weights
+        Flux.testmode!(pretrained)
+        scores = vec(Flux.cpu(gpu(pretrained)(TEST_X)))
+        @test all(isfinite, scores)
+        @test "monarch" in TEST_LBLS[partialsortperm(scores, 1:5; rev = true)]
     else
         @test_throws ArgumentError SqueezeNet(pretrain = true)
     end

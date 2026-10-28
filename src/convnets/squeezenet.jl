@@ -89,3 +89,8 @@ function Flux.loadmodel!(model::SqueezeNet, w)
     Flux.loadmodel!(model.layers[1], w.layers[1])
     Flux.loadmodel!(model.layers[2], w.layers[2])
 end
+
+function Flux.loadmodel!(model::SqueezeNet, weights::AbstractVector{<:AbstractArray})
+    Flux.loadmodel!(Flux.trainables(model), weights)
+    return model
+end
