@@ -81,6 +81,8 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
 
 ### Fixed
 
+- Fix the deprecated `SqueezeNet(; pretrain = true)` with current Flux by loading plain
+  weight arrays instead of deserializing an old Flux model (#384).
 - Rotary tables and Qwen3.5 chunk masks are generated on the input's device, avoiding CPU
   table construction and transfers on each forward pass. Differentiating
   `forward_intermediates` through vector-backed stages no longer compiles a separate tuple

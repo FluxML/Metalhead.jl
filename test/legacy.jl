@@ -63,3 +63,20 @@ end
     @test :ResNet in legacy
     @test setdiff(legacy, keys(Metalhead.LEGACY_REPLACEMENTS)) == []
 end
+
+if parse(Bool, get(ENV, "METALHEAD_TEST_NETWORK", "false"))
+    @testset "SqueezeNet pretrained weights" begin
+        model = @test_logs deprecated(SqueezeNet) SqueezeNet(; pretrain = true)
+        weights = Metalhead.loadweights("squeezenet")
+        @test weights isa AbstractVector{<:AbstractArray}
+        @test length(weights) == 52
+        @test sum(length, weights) == 1_235_496
+        @test Flux.trainables(model) == weights
+        Flux.testmode!(model)
+        x = reshape(sin.(Float32.(1:(224 * 224 * 3))), 224, 224, 3, 1)
+        scores = model(x)
+        @test size(scores) == (1000, 1)
+        @test all(isfinite, scores)
+        @test maximum(scores) ≈ 8.499564f0 rtol = 1.0e-5
+    end
+end
