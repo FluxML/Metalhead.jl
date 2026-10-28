@@ -36,15 +36,16 @@ uv sync
 The repository includes a [Claude Code](https://claude.com/claude-code) skill,
 [`port-hf-model`](https://github.com/FluxML/Metalhead.jl/blob/master/skills/port-hf-model/SKILL.md).
 It describes the workflow below, the conventions, and the numerical pitfalls met in earlier
-ports. Start Claude Code in the repository and ask for the port, for example:
+ports. Start Claude Code in the repository and ask it to read the skill before porting, for
+example:
 
 ```
-Port timm's RegNet family to Metalhead.
+Read skills/port-hf-model/SKILL.md and follow its workflow to port timm's RegNet family
+to Metalhead.
 ```
 
-The skill is loaded automatically. Review the result like any pull request: the port is done
-when its tests pass, and the tests compare against PyTorch rather than relying on the agent's
-claims.
+Review the result like any pull request: the port is done when its tests pass, and the tests
+compare against PyTorch rather than relying on the agent's claims.
 
 ## The workflow
 

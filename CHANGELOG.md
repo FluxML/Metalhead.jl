@@ -81,6 +81,11 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
 
 ### Fixed
 
+- Documentation: the FLUX.2 pipeline docstring includes its Flux/CUDA imports and GPU
+  transfer, the contributing guide asks agents to read the porting skill explicitly (#342),
+  and the README introduces capabilities before the model list.
+- Printing CondConv models shows compact layer summaries instead of dumping the expert
+  weights (#342).
 - Pretrained models allocate their weights directly in the requested `eltype`, without
   random initialization or a temporary Float32 model. Mixed precision normalization and
   random initialization of replacement classifiers are preserved (#366).
