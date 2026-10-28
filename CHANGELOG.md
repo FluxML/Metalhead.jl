@@ -8,6 +8,13 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
 
 ### Added
 
+- The decode and auxiliary heads of UperNet (`Metalhead.Transformers.UperNetHead` and
+  `UperNetFCNHead`), ported from transformers' `UperNetForSemanticSegmentation` with its
+  module names: the pyramid pooling module, the feature pyramid network with its
+  concatenation and `fpn_bottleneck`, and the auxiliary FCN head, on the feature maps of a
+  backbone. The heads of `openmmlab/upernet-convnext-tiny` load strictly by name and match
+  transformers on the features of its backbone. Its backbone and image processor come
+  next (#380).
 - The text encoders BERT, XLM-RoBERTa and ModernBERT (`BertModel`, `XLMRobertaModel` and
   `ModernBertModel`, with `BertForSequenceClassification`,
   `XLMRobertaForSequenceClassification`, `ModernBertForSequenceClassification` and

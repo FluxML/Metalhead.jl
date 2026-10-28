@@ -1,0 +1,17 @@
+{
+  "model_type": "upernet",
+  "hidden_size": 6,
+  "pool_scales": [
+    1,
+    2
+  ],
+  "auxiliary_in_channels": 6,
+  "auxiliary_channels": 6,
+  "auxiliary_num_convs": 0,
+  "num_labels": 3,
+  "in_channels": [
+    5,
+    7,
+    6
+  ]
+}
