@@ -6,8 +6,8 @@
 #
 # Don't commit the `[sources]` entry that `Pkg.develop` writes into Project.toml.
 #
-# The weights download to the Hugging Face cache. DINOv2, SAM 3.1 and FLUX.2 [klein] run on
-# the GPU when CUDA finds one; FLUX.2 [klein] 4B needs 16 GB of it.
+# The weights download to the Hugging Face cache. DINOv2, SAM 3.1, Qwen3.5 and FLUX.2 [klein]
+# run on the GPU when CUDA finds one; FLUX.2 [klein] 4B needs 16 GB of it.
 
 using Metalhead, Flux, HuggingFaceTokenizers, CUDA, cuDNN
 using Metalhead.Diffusers: encode_prompt, compute_empirical_mu, set_timesteps
@@ -23,6 +23,7 @@ const INK2 = colorant"#52514e"
 const BLUE = colorant"#2a78d6"
 const INSTANCE_COLORS = [colorant"#2a78d6", colorant"#eb6834", colorant"#1baf7a"]
 const OTHER = colorant"#8a8984"
+const TILE = colorant"#eef2f7"
 const RAMP = parse.(RGB{N0f8},
     ["#cde2fb", "#b7d3f6", "#9ec5f4", "#86b6ef", "#6da7ec", "#5598e7", "#3987e5",
         "#2a78d6", "#256abf", "#1c5cab", "#184f95", "#104281", "#0d366b"])
@@ -39,6 +40,8 @@ const THEME = Theme(; backgroundcolor = SURFACE, textcolor = INK, fontsize = 15,
 const URLS = Dict(
     "labrador.jpg" => "https://upload.wikimedia.org/wikipedia/commons/2/26/YellowLabradorLooking_new.jpg",
     "cats.jpg" => "http://images.cocodataset.org/val2017/000000039769.jpg",
+    "bee.jpg" => "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/bee.jpg",
+    "beach.jpg" => "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen-VL/assets/demo.jpeg",
     "imagenet_classes.txt" => "https://raw.githubusercontent.com/pytorch/hub/master/imagenet_classes.txt")
 
 function cached(name)
@@ -49,6 +52,8 @@ end
 
 labrador() = load(cached("labrador.jpg"))
 cats() = load(cached("cats.jpg"))
+bee() = load(cached("bee.jpg"))
+beach() = load(cached("beach.jpg"))
 
 # A width × height × 3 array as an image, a height × width matrix of colours
 as_image(x) = Metalhead.image_matrix(clamp.(x, 0, 1))
@@ -267,6 +272,70 @@ function chip!(ax, x, y, str, color; scale, xmax, fontsize = 14, pad = 4)
     return nothing
 end
 
+# A figure of 800 × 600 pixels, and an axis over it in pixel units, y downwards, tinted to
+# stand out as a tile among photographs
+function canvas()
+    fig = Figure(; size = (800, 600), figure_padding = 0)
+    ax = Axis(fig[1, 1]; yreversed = true, limits = (0, 800, 0, 600),
+        backgroundcolor = TILE)
+    hidedecorations!(ax)
+    hidespines!(ax)
+    return fig, ax
+end
+
+# The rectangle of top left corner (x, y), y downwards, with corners of radius r
+function rounded_rect(x, y, w, h, r)
+    corner(cx, cy, a) = [Point2f(cx + r * cos(t), cy + r * sin(t))
+                         for t in range(a, a + π / 2; length = 8)]
+    return vcat(corner(x + w - r, y + r, -π / 2), corner(x + w - r, y + h - r, 0),
+        corner(x + r, y + h - r, π / 2), corner(x + r, y + r, π))
+end
+
+text_width(str, fontsize) = Makie.text_bb(str, Makie.defaultfont(), fontsize).widths[1]
+
+# The lines of `str`, broken between words to fit `width`
+function wrap(str, width, fontsize)
+    lines = String[]
+    for word in split(str)
+        if !isempty(lines) && text_width(lines[end] * " " * word, fontsize) <= width
+            lines[end] *= " " * word
+        else
+            push!(lines, word)
+        end
+    end
+    return lines
+end
+
+# A speech bubble of `str` whose top left corner, or top right one with `right`, is (x, y),
+# in pixel units; returns the y of its bottom
+function bubble!(ax, x, y, str, color, textcolor; fontsize, maxwidth, pad = 14,
+        right = false)
+    lines = wrap(str, maxwidth - 2pad, fontsize)
+    w = maximum(l -> text_width(l, fontsize), lines) + 2pad
+    # the height of a line, which text_bb measures without its newlines
+    line = Makie.text_bb("A", Makie.defaultfont(), fontsize).widths[2]
+    h = line * (1 + 1.25 * (length(lines) - 1)) + 2pad
+    right && (x -= w)
+    poly!(ax, rounded_rect(x, y, w, h, 16); color)
+    text!(ax, x + pad, y + pad; text = join(lines, "\n"), color = textcolor, fontsize,
+        lineheight = 1.25, align = (:left, :top))
+    return y + h
+end
+
+# Horizontal bars of `values`, the first in BLUE, from x0 for the largest to x1, with the
+# values at their ends; one bar for each y of `ys`
+function bars!(ax, ys, values, x0, x1; height = 32, fontsize = 28, format = "%.1f%%",
+        scale = 100)
+    for (k, (y, v)) in enumerate(zip(ys, values))
+        len = (x1 - x0) * v / maximum(values)
+        poly!(ax, Rect2f(x0, y - height / 2, len, height);
+            color = k == 1 ? BLUE : RAMP[3])
+        text!(ax, x0 + len + 10, y; text = Printf.format(Printf.Format(format), scale * v),
+            fontsize, align = (:left, :center))
+    end
+    return nothing
+end
+
 function draw_objects!(ax, objects, name; scale, fontsize = 14, linewidth = 2)
     w, h = size(objects.masks)
     colors = [i <= length(INSTANCE_COLORS) ? INSTANCE_COLORS[i] : OTHER
@@ -343,6 +412,67 @@ function next_token()
         yticklabelfont = MONO)
     resize_to_layout!(fig)
     save_asset("next_token.png", fig)
+
+    prompt = "The capital of France is the city of"
+    p = softmax(model(tok(prompt))[:, end])
+    top = sortperm(p; rev = true)[1:4]
+    foreach(i -> @printf("  %-14s %.4f\n", repr(decode(tok, i)), p[i]), top)
+    fig, ax = canvas()
+    text!(ax, [48, 48], [64, 120];
+        text = ["The capital of France",
+            rich("is the city of", rich(decode(tok, top[1]); color = BLUE))],
+        font = MONO, fontsize = 40, align = (:left, :center))
+    ys = range(250; step = 86, length = 4)
+    text!(ax, fill(290, 4), ys; text = [repr(decode(tok, i)) for i in top], font = MONO,
+        fontsize = 32, align = (:right, :center))
+    bars!(ax, ys, p[top], 310, 650; height = 40, fontsize = 30)
+    save_asset("showcase-text.png", fig; px_per_unit = 1)
+    return nothing
+end
+
+function zero_shot()
+    repo = "google/siglip2-base-patch16-naflex"
+    model = create_model(repo)
+    proc = create_processor(repo)
+    img = thumbnail(bee())
+    labels = ["a $insect on a pink flower"
+              for insect in ("bumblebee", "honeybee", "wasp", "butterfly")]
+    inputs = proc(; images = img, text = ["This is a photo of $l." for l in labels])
+    probs = vec(sigmoid.(model(inputs).logits_per_image))
+    order = sortperm(probs; rev = true)
+    foreach(i -> @printf("  %-14s %.4f\n", labels[i], probs[i]), order)
+    thumb = Figure(; size = (800, 600), figure_padding = 0)
+    ax = image_axis(thumb[1, 1], img)
+    for (k, i) in enumerate(order)
+        chip!(ax, 24, 64 + 52 * (k - 1), @sprintf("%s %.1f%%", labels[i], 100 * probs[i]),
+            k == 1 ? BLUE : OTHER; scale = 1, xmax = 800, fontsize = 26, pad = 7)
+    end
+    save_asset("showcase-zero-shot.jpg", thumb; px_per_unit = 1)
+    return nothing
+end
+
+function embeddings()
+    model = create_model("Qwen/Qwen3-Embedding-0.6B")
+    query = "How do plants make food?"
+    documents = ["Leaves turn sunlight into sugar.", "Factories make food in cans.",
+        "The bus leaves at noon."]
+    s = vec(similarity(model, encode_query(model, [query]),
+        encode_document(model, documents)))
+    order = sortperm(s; rev = true)
+    foreach(i -> @printf("  %.4f  %s\n", s[i], documents[i]), order)
+    fig, ax = canvas()
+    poly!(ax, rounded_rect(40, 32, 720, 84, 42); color = :white, strokecolor = INK2,
+        strokewidth = 2)
+    arc = range(0, 2π; length = 60)
+    lines!(ax, 92 .+ 15cos.(arc), 70 .+ 15sin.(arc); color = INK2, linewidth = 4)
+    lines!(ax, [103, 116], [81, 94]; color = INK2, linewidth = 5)
+    text!(ax, 136, 74; text = query, fontsize = 38, align = (:left, :center))
+    ys = range(184; step = 140, length = 3)
+    text!(ax, fill(56, 3), ys; text = documents[order], fontsize = 36,
+        align = (:left, :center))
+    bars!(ax, ys .+ 50, s[order], 56, 620; height = 24, fontsize = 30, format = "%.2f",
+        scale = 1)
+    save_asset("showcase-embed.png", fig; px_per_unit = 1)
     return nothing
 end
 
@@ -352,12 +482,46 @@ const FLUX2_PROMPTS = [
                    "shallow depth of field",
     "library" => "An isometric illustration of a tiny cozy library with warm lights",
     "ramen" => "A bowl of ramen on a wooden table, studio food photography"]
-const FLUX2_SHOWCASE = "spiderweb"
 
 const FLUX2 = Ref{Any}(nothing)
 
-# The photograph that the vision-language tutorial asks about
-vision_language() = (save_asset("cats.jpg", cats()); nothing)
+# Greedy decoding of the answer of Qwen3.5 to a question about an image
+function answer(model, proc, img, question; device = cpu_device(), max_tokens = 100)
+    text = "<|im_start|>user\n<|vision_start|><|image_pad|><|vision_end|>" * question *
+           "<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n"
+    (; input_ids, pixel_values, image_grid_thw) = proc(; images = img, text)
+    pixel_values = device(pixel_values)
+    im_end = only(proc(; text = "<|im_end|>").input_ids)
+    n = length(input_ids)
+    for _ in 1:max_tokens
+        logits = model(device(input_ids); pixel_values, image_grid_thw)
+        next = argmax(cpu(logits[:, end]))
+        next == im_end && break
+        push!(input_ids, next)
+    end
+    return strip(decode(proc, input_ids[(n + 1):end]))
+end
+
+# The photograph that the vision-language tutorial asks about, and a question about another
+function vision_language()
+    save_asset("cats.jpg", cats())
+    repo = "Qwen/Qwen3.5-0.8B"
+    device = gpu_device()
+    model = device(create_model(repo))
+    proc = create_processor(repo)
+    img = thumbnail(beach())
+    question = "In one sentence, what is the dog doing?"
+    reply = answer(model, proc, img, question; device)
+    println("  ", question, "\n  ", reply)
+    thumb = Figure(; size = (800, 600), figure_padding = 0)
+    ax = image_axis(thumb[1, 1], img)
+    y = bubble!(ax, 776, 24, question, BLUE, :white; fontsize = 28, maxwidth = 560,
+        right = true)
+    bubble!(ax, 24, y + 14, reply, RGBAf(1, 1, 1, 0.92), INK; fontsize = 28,
+        maxwidth = 600)
+    save_asset("showcase-ask.jpg", thumb; px_per_unit = 1)
+    return nothing
+end
 
 function flux2_pipeline()
     if FLUX2[] === nothing
@@ -373,10 +537,7 @@ function flux2_gallery()
         t = @elapsed image = pipe(prompt; width = 1024, height = 768,
             num_inference_steps = 4, rng = Xoshiro(seed))
         @printf("  %-10s seed %d, %.1f s, %s: %s\n", name, seed, t, size(image), prompt)
-        img = as_image(cpu(image)[:, :, :, 1])
-        name == FLUX2_SHOWCASE &&
-            save_asset("showcase-generate.jpg", imresize(img, (600, 800)))
-        return img
+        return as_image(cpu(image)[:, :, :, 1])
     end
     w, gap = 796, 8
     h = 3w ÷ 4
@@ -421,6 +582,27 @@ function flux2_steps()
     return nothing
 end
 
+# An image and its edit, the left half of one and the right half of the other
+function flux2_edit()
+    pipe = flux2_pipeline()
+    prompt = "A photo of a red fox sitting in fresh snow, looking at the camera"
+    edit = "Make it night, under the northern lights"
+    image = pipe(prompt; width = 1024, height = 768, num_inference_steps = 4,
+        rng = Xoshiro(1))
+    edited = pipe(edit; image = cpu(image)[:, :, :, 1], num_inference_steps = 4,
+        rng = Xoshiro(1))
+    before, after = (imresize(as_image(cpu(x)[:, :, :, 1]), (600, 800))
+                     for x in (image, edited))
+    thumb = Figure(; size = (800, 600), figure_padding = 0)
+    ax = image_axis(thumb[1, 1], hcat(before[:, 1:400], after[:, 401:800]))
+    lines!(ax, [400, 400], [0, 600]; color = :white, linewidth = 4)
+    chip!(ax, 24, 576, "generate", OTHER; scale = 1, xmax = 800, fontsize = 26, pad = 7)
+    chip!(ax, 424, 576, "edit: “$(first(split(edit, ','))), …”", BLUE; scale = 1,
+        xmax = 776, fontsize = 26, pad = 7)
+    save_asset("showcase-generate.jpg", thumb; px_per_unit = 1)
+    return nothing
+end
+
 const FIGURES = [
     "classify" => classify,
     "transform" => transform_figure,
@@ -428,9 +610,12 @@ const FIGURES = [
     "dinov2_pca" => dinov2_pca,
     "sam3" => sam3,
     "next_token" => next_token,
+    "zero_shot" => zero_shot,
+    "embeddings" => embeddings,
     "vision_language" => vision_language,
     "flux2_gallery" => flux2_gallery,
-    "flux2_steps" => flux2_steps]
+    "flux2_steps" => flux2_steps,
+    "flux2_edit" => flux2_edit]
 
 function main(names = ARGS)
     CairoMakie.activate!()
