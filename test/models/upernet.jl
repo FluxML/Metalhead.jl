@@ -33,7 +33,7 @@ function upernet_heads(config, in_channels; eltype = Float32)
 end
 
 function fixture_heads(dir; eltype = Float64)
-    config = JSON.parsefile(joinpath(dir, "config.json"))
+    config = JSON.parsefile(joinpath(dir, "heads_config.json"))
     heads = upernet_heads(config, config["in_channels"]; eltype)
     load_state!(heads, Checkpoint(joinpath(dir, "model.safetensors")))
     return Flux.testmode!(heads)

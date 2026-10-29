@@ -467,7 +467,7 @@ def dump_upernet_heads(spec, out, args):
     `decode_head` (UperNetHead) and `auxiliary_head` (UperNetFCNHead) with the fields "config"
     of an UperNetConfig, on random feature maps of a backbone with "in_channels", of the
     sizes "feature_sizes" ([height, width], fine to coarse) and a batch of "batch". The fixture
-    has no backbone, so its config.json holds the config of the heads and "in_channels", and
+    has no backbone, so its heads_config.json holds the config of the heads and "in_channels", and
     its model.safetensors the keys "decode_head.*" and "auxiliary_head.*" of the checkpoints of
     UperNetForSemanticSegmentation. The inputs are the vector of feature maps ("inputs/1/<j>"),
     the outputs "output/logits" and "output/auxiliary_logits", before their resizing to the
@@ -486,7 +486,7 @@ def dump_upernet_heads(spec, out, args):
     rerandomize(model, seed)
     out.mkdir(parents=True, exist_ok=True)
     save_file(state_dict_f32(model), out / "model.safetensors")
-    write_json(out / "config.json", {"model_type": "upernet", **spec["config"],
+    write_json(out / "heads_config.json", {"model_type": "upernet", **spec["config"],
                                      "in_channels": in_channels})
     model = model.double()
 
