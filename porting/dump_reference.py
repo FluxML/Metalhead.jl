@@ -108,6 +108,8 @@ def dump_reference(repo, revision, batch, layers=None, selective_shards=False, e
         return dump_clip_reference(repo, sha, config)
     if config.get("model_type") in ("bert", "xlm-roberta", "modernbert"):
         return dump_encoder_reference(repo, sha)
+    if config.get("model_type") == "upernet":
+        return dump_upernet_reference(repo, sha)
     if "model_type" in config:
         return dump_lm_reference(repo, sha, layers=layers, selective_shards=selective_shards)
     if layers is not None:
@@ -558,6 +560,31 @@ def dump_encoder_reference(repo, sha):
     save_reference(path, tensors, meta)
     shown = tensors["logits"].flatten().tolist() if classifier else tuple(tensors["hidden_states"].shape)
     print(f"{path}: {repo}@{sha}, {path.stat().st_size / 1e3:.1f} kB, {shown}")
+
+
+def dump_upernet_reference(repo, sha, size=(128, 160)):
+    """The heads of an UperNet (`UperNetForSemanticSegmentation`) on the feature maps of its
+    backbone for `reference_input` images of `size` (height, width), not square: the maps
+    ("features/<j>", fine to coarse, rounded to float16, as the heads then take them), and
+    the outputs of `decode_head` ("logits") and `auxiliary_head` ("auxiliary_logits") on them,
+    in float32, before transformers resizes them to the images. The coarsest map (4 x 5 of
+    ConvNeXt's) is smaller than the largest pool scale and not a multiple of the others, which
+    checks the overlapping bins of adaptive pooling."""
+    from transformers import UperNetForSemanticSegmentation
+    model = UperNetForSemanticSegmentation.from_pretrained(repo, revision=sha,
+                                                           dtype=torch.float32).eval()
+    x = reference_input([1, 3, *size])
+    with torch.no_grad():
+        features = [f.half().float() for f in model.backbone(x).feature_maps]
+        logits = model.decode_head(features)
+        auxiliary_logits = model.auxiliary_head(features)
+    tensors = {**{f"features/{j + 1}": f for j, f in enumerate(features)},
+               "logits": logits, "auxiliary_logits": auxiliary_logits}
+    out = reference_path(repo)
+    meta = {"repo": repo, "revision": sha, "class": type(model).__name__,
+            "input_shape": json.dumps([1, 3, *size]), **versions()}
+    save_file({k: v.contiguous() for k, v in tensors.items()}, out, metadata=meta)
+    print(f"{out}: {repo}@{sha}, {out.stat().st_size / 1e3:.1f} kB")
 
 
 def save_reference(path, tensors, meta):
