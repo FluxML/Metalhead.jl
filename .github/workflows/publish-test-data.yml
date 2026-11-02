@@ -32,7 +32,7 @@ jobs:
       - uses: julia-actions/setup-julia@v3
         with:
           version: '1'
-      - uses: astral-sh/setup-uv@v10.3.0
+      - uses: astral-sh/setup-uv@v10.3.3
       - name: Publish
         run: julia porting/publish.jl
         env:
