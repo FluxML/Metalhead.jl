@@ -13,7 +13,9 @@ temporal, height and width positions of a multimodal rotary embedding (Qwen3.5).
 A vision encoder (Qwen3_5VisionModel) has "grid_thw" instead of "input_shape": the
 (t, h, w) grids of patches of its images (see `dump_transformers_vision`). A Sam3Model has
 "inputs", the sizes of its images and prompts (see `dump_sam3`), and so do SiglipModel,
-Siglip2Model (see `dump_siglip`) and the CLIP models (see `dump_clip`). The text encoders BERT,
+Siglip2Model (see `dump_siglip`) and the CLIP models (see `dump_clip`). An "UperNetHead" spec
+describes the decode and auxiliary heads of UperNet on random feature maps (see
+`dump_upernet_heads`). The text encoders BERT,
 XLM-RoBERTa and ModernBERT, and their heads, are dumped by `dump_encoder`.
 
 A spec with "library": "diffusers" describes a diffusers model, "architecture" (the class, e.g.
@@ -208,6 +210,8 @@ def dump_transformers(spec, out, args):
         return dump_transformers_vision(spec, out, args)
     if spec["architecture"] == "Sam3Model":
         return dump_sam3(spec, out, args)
+    if spec["architecture"] == "UperNetHead":
+        return dump_upernet_heads(spec, out, args)
     if spec["architecture"] in ("SiglipModel", "Siglip2Model"):
         return dump_siglip(spec, out, args)
     if spec["architecture"].startswith("CLIP"):
@@ -449,6 +453,64 @@ def dump_transformers_vision(spec, out, args):
     acts = {"inputs/1": pixel_values, "inputs/2": grid_thw,
             "output/last_hidden_state": outputs.last_hidden_state.contiguous(),
             "output/pooler_output": outputs.pooler_output.contiguous(), **taps}
+    meta = {"spec": json.dumps(spec), "call_order": json.dumps(order),
+            "num_params": str(sum(p.numel() for p in model.parameters())), **versions()}
+    save_file(acts, out / "acts.safetensors", metadata=meta)
+
+    size = sum(f.stat().st_size for f in out.iterdir())
+    print(f"{out}: {len(model.state_dict())} tensors, {len(taps)} taps, {size / 1e6:.2f} MB")
+    return size <= args.max_bytes or bool(args.out)
+
+
+def dump_upernet_heads(spec, out, args):
+    """Write the fixture of the heads of transformers' UperNetForSemanticSegmentation, its
+    `decode_head` (UperNetHead) and `auxiliary_head` (UperNetFCNHead) with the fields "config"
+    of an UperNetConfig, on random feature maps of a backbone with "in_channels", of the
+    sizes "feature_sizes" ([height, width], fine to coarse) and a batch of "batch". The fixture
+    has no backbone, so its heads_config.json holds the config of the heads and "in_channels", and
+    its model.safetensors the keys "decode_head.*" and "auxiliary_head.*" of the checkpoints of
+    UperNetForSemanticSegmentation. The inputs are the vector of feature maps ("inputs/1/<j>"),
+    the outputs "output/logits" and "output/auxiliary_logits", before their resizing to the
+    images."""
+    from transformers import UperNetConfig
+    from transformers.models.upernet.modeling_upernet import UperNetFCNHead, UperNetHead
+
+    seed = spec.get("seed", 0)
+    torch.manual_seed(seed)
+    config = UperNetConfig(**spec["config"])
+    in_channels = spec["in_channels"]
+    model = torch.nn.Module()
+    model.decode_head = UperNetHead(config, in_channels)
+    model.auxiliary_head = UperNetFCNHead(config, in_channels)
+    model.eval()
+    rerandomize(model, seed)
+    out.mkdir(parents=True, exist_ok=True)
+    save_file(state_dict_f32(model), out / "model.safetensors")
+    write_json(out / "heads_config.json", {"model_type": "upernet", **spec["config"],
+                                     "in_channels": in_channels})
+    model = model.double()
+
+    tap_dtype = getattr(torch, args.tap_dtype or ("float32" if args.all_taps else "float16"))
+    taps, order = {}, []
+    names = {n for n, m in model.named_modules()
+             if n and any(True for _ in m.parameters())
+             and (args.all_taps or n.count(".") <= spec.get("tap_depth", 1))}
+    # the pyramid pooling module returns the list of the outputs of its blocks, whose taps
+    # these are; the Julia port holds it as a vector of blocks, with no module of its own
+    names.discard("decode_head.psp_modules")
+    gen = torch.Generator().manual_seed(seed + 1)
+    features = [torch.randn(spec["batch"], c, h, w, generator=gen, dtype=torch.float64)
+                for c, (h, w) in zip(in_channels, spec["feature_sizes"])]
+    with torch.no_grad():
+        handles = tap_hooks(model, names, taps, order, tap_dtype)
+        logits = model.decode_head(features)
+        auxiliary_logits = model.auxiliary_head(features)
+        for h in handles:
+            h.remove()
+
+    acts = {**{f"inputs/1/{j + 1}": f for j, f in enumerate(features)},
+            "output/logits": logits.contiguous(),
+            "output/auxiliary_logits": auxiliary_logits.contiguous(), **taps}
     meta = {"spec": json.dumps(spec), "call_order": json.dumps(order),
             "num_params": str(sum(p.numel() for p in model.parameters())), **versions()}
     save_file(acts, out / "acts.safetensors", metadata=meta)

@@ -196,6 +196,7 @@ makedocs(; modules = [Metalhead],
         "API reference" => ["Overview" => "api/reference.md", "CLIP" => "api/clip.md",
             "BERT, XLM-RoBERTa and ModernBERT" => "api/bert.md",
             "SAM 3" => "api/sam3.md", "SigLIP and SigLIP 2" => "api/siglip.md",
+            "UperNet" => "api/upernet.md",
             "Sentence transformers" => "api/sentence_transformers.md"]
     ],
     warnonly = [:example_block, :missing_docs],

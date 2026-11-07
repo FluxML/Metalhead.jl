@@ -1,0 +1,1 @@
+{"library": "transformers", "architecture": "UperNetHead", "config": {"hidden_size": 6, "pool_scales": [1, 2], "auxiliary_in_channels": 6, "auxiliary_channels": 6, "auxiliary_num_convs": 0, "num_labels": 3}, "in_channels": [5, 7, 6], "feature_sizes": [[12, 16], [6, 8], [3, 4]], "batch": 2, "tap_depth": 2, "seed": 1}
