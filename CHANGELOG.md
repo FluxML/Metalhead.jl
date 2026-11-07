@@ -80,7 +80,7 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
   `FluxML/metalhead-test-data`, which the tests download on first use (#372).
 - The experts of the sparse mixtures of experts (Granite MoE, Qwen3 MoE, Qwen3.5 MoE) are
   computed with `NNlib.grouped_mul`, which no longer pads every expert to the size of the
-  largest one. NNlib 0.9.56 is now the minimum version.
+  largest one. NNlib 0.9.56 is now the minimum version (#389).
 
 ### Fixed
 
