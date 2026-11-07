@@ -158,9 +158,9 @@ with `subfolder` too:
 vae = create_model("black-forest-labs/FLUX.2-klein-4B"; subfolder = "vae")
 ```
 
-Images are WHCN arrays, as for the vision models. See the docstrings of
-[`Metalhead.Diffusers.Flux2KleinPipeline`](@ref) and its components in the
-[API reference](@ref) for their inputs and outputs.
+Images are WHCN arrays, as for the vision models. See the docstring of
+[`Metalhead.Diffusers.Flux2KleinPipeline`](@ref) in the [API reference](@ref) for its inputs
+and outputs.
 
 ## Precision
 

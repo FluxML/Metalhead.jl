@@ -74,10 +74,11 @@ take `truncate_dim`, which `create_model(repo; truncate_dim = 256)` sets for eve
 
 ## Inputs and outputs
 
-- `model(inputs)` applies the modules in order and returns the inputs with their outputs, the
-  `token_embeddings` of size `(hidden_size, seq_len, batch)` and the `sentence_embedding` of
-  size `(dim, batch)`, as sentence-transformers' `forward`. It is an ordinary Flux model,
-  which can be fine-tuned.
+- `model(features)` takes a NamedTuple with the token indices `input_ids` (from 1) and, for a
+  padded batch, their `attention_mask`, of size `(seq_len, batch)`. It applies the modules in
+  order and returns the features with their outputs, the `token_embeddings` of size
+  `(hidden_size, seq_len, batch)` and the `sentence_embedding` of size `(dim, batch)`, as
+  sentence-transformers' `forward`. It is an ordinary Flux model, which can be fine-tuned.
 - `encode` returns a matrix of size `(dim, length(texts))` on the CPU, or a vector for a single
   string.
 - The weights are loaded in `Float32` by default (`eltype` of `create_model`), where

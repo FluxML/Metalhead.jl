@@ -197,7 +197,7 @@ makedocs(; modules = [Metalhead],
             "BERT, XLM-RoBERTa and ModernBERT" => "api/bert.md",
             "SAM 3" => "api/sam3.md", "SigLIP and SigLIP 2" => "api/siglip.md",
             "Sentence transformers" => "api/sentence_transformers.md",
-            "Porting" => "api/porting.md"]
+            "Porting" => "api/porting.md", "Internals" => "api/internals.md"]
     ],
     checkdocs = :public,
     # The exports of the legacy API, removed in 0.11, are not in the reference: drop
