@@ -1,5 +1,14 @@
 # API reference
 
+```@docs
+Metalhead
+```
+
+Everything on the pages of this reference is public, exported or declared with `public` on
+Julia 1.11 and later, except the [Internals](@ref internals) and [Porting](@ref porting_api)
+pages and the sections called Internals. The fields of model structs mirror PyTorch's and are
+not public, but for the documented `generation_config` of the language models.
+
 ## Models
 
 `create_model` and `list_models` apply to every ported model. The other functions are the
@@ -50,40 +59,34 @@ Metalhead.image_matrix
 ## timm
 
 ```@docs
+Metalhead.Timm
 Metalhead.Timm.pretrained_cfg
 ```
 
 ## transformers
 
 ```@docs
+Metalhead.Transformers
 Metalhead.Transformers.KVCache
 Metalhead.Transformers.last_tokens
+Metalhead.Transformers.get_text_features
+Metalhead.Transformers.get_image_features
 Metalhead.Transformers.Qwen3_5ForConditionalGeneration
 Metalhead.Transformers.Qwen3_5VisionModel
 ```
 
-The models and processors of CLIP, of the text encoders BERT, XLM-RoBERTa and ModernBERT (and
-their builders), of SAM 3, and of SigLIP and SigLIP 2, have their own API references:
+The models and processors of CLIP, of the text encoders BERT, XLM-RoBERTa and ModernBERT, of
+SAM 3, and of SigLIP and SigLIP 2, have their own API references:
 [CLIP](clip.md), [BERT, XLM-RoBERTa and ModernBERT](bert.md), [SAM 3](sam3.md), and
 [SigLIP and SigLIP 2](siglip.md).
 
 ## diffusers
 
 ```@docs
+Metalhead.Diffusers
 Metalhead.Diffusers.Flux2KleinPipeline
 Metalhead.Diffusers.encode_prompt
-Metalhead.Diffusers.Flux2Transformer2DModel
 Metalhead.Diffusers.ZImagePipeline
-Metalhead.Diffusers.ZImageTransformer2DModel
-Metalhead.Diffusers.encode
-Metalhead.Diffusers.decode
-Metalhead.Diffusers.DiagonalGaussianDistribution
-Metalhead.Diffusers.mode
-Metalhead.Diffusers.sample
-Metalhead.Diffusers.FlowMatchEulerDiscreteScheduler
-Metalhead.Diffusers.set_timesteps
-Metalhead.Diffusers.step
-Metalhead.Diffusers.compute_empirical_mu
 ```
 
 ## sentence-transformers
@@ -91,73 +94,13 @@ Metalhead.Diffusers.compute_empirical_mu
 `create_model` builds a `SentenceTransformer` from a repository with a `modules.json`. Its
 classes and functions have their own [API reference](sentence_transformers.md).
 
-## Builders
-
-`create_model` calls these with the architecture's default arguments, merged with the
-checkpoint's configuration and your keyword arguments. The timm builders take timm's keyword
-arguments, the transformers builders the fields of the model's `config.json`, and the
-diffusers builders the arguments of the model's constructor.
-
-```@autodocs
-Modules = [Metalhead.Timm, Metalhead.Transformers]
-Order = [:function]
-Filter = f -> !(f in (Metalhead.Timm.pretrained_cfg, Metalhead.Timm.pil_resize,
-    Metalhead.Transformers.last_tokens, generate,
-    post_process_object_detection, post_process_instance_segmentation,
-    post_process_semantic_segmentation, Metalhead.Transformers.clip_model,
-    Metalhead.Transformers.clip_text_model, Metalhead.Transformers.clip_vision_model,
-    Metalhead.Transformers.clip_text_model_with_projection,
-    Metalhead.Transformers.clip_vision_model_with_projection,
-    Metalhead.Transformers.bert_model,
-    Metalhead.Transformers.bert_for_sequence_classification,
-    Metalhead.Transformers.xlm_roberta_model,
-    Metalhead.Transformers.xlm_roberta_for_sequence_classification,
-    Metalhead.Transformers.modernbert_model, Metalhead.Transformers.modernbert_for_masked_lm,
-    Metalhead.Transformers.modernbert_for_sequence_classification))
-```
-
 ```@docs
-Metalhead.Diffusers.autoencoder_kl_flux2
-Metalhead.Diffusers.flux2_transformer_2d_model
-Metalhead.Diffusers.autoencoder_kl
-Metalhead.Diffusers.z_image_transformer_2d_model
-```
-
-## Porting internals
-
-These are used by the ported models and the porting tools. Using the models doesn't need them.
-
-```@docs
-Metalhead.Timm
-Metalhead.Timm.EfficientNetBuilder
-Metalhead.Timm.MixedConv2d
-Metalhead.Timm.CondConv2d
-Metalhead.Transformers
-Metalhead.Transformers.MultiheadAttention
-Metalhead.Diffusers
-Metalhead.Diffusers.timestep_embedding
-Metalhead.Diffusers.AdaLayerNormContinuous
 Metalhead.SentenceTransformers
-Metalhead.ArchSpec
-Metalhead.AbstractConfigFormat
-Metalhead.architecture_of
-Metalhead.model_args
-Metalhead.skip_prefix
-Metalhead.checkpoint_prefix
-Metalhead.weights_name
-Metalhead.instantiate
-Metalhead.AbstractProcessor
-Metalhead.AbstractImageProcessor
-Metalhead.@processor
-Metalhead.register_processor!
-Metalhead.ignored_keys
-Metalhead.legacy_keys
-Metalhead.standardize_settings
-Metalhead.instantiate_processor
-Metalhead.check_inputs
-Metalhead.Timm.pil_resize
-Metalhead.Checkpoint
-Metalhead.load_state!
-Metalhead.torch_params
-Metalhead.TorchParam
 ```
+
+## Internals
+
+The [Internals](@ref internals) page documents what is not public: the builders, the
+components of the pipelines and the helpers of the ported models, which may change without
+notice. The [Porting](@ref porting_api) page documents how a library registers its
+architectures, also internal.

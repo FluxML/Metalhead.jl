@@ -92,7 +92,10 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
    dataset (`hf auth login`). Without it, commit the fixtures and references themselves:
    after the merge, a workflow publishes them and opens a "Publish test data" pull request.
 10. **Document.** Name a new family in the table of the README's "Models" section, and record
-   the port under `[Unreleased]` in `CHANGELOG.md`.
+   the port under `[Unreleased]` in `CHANGELOG.md`. Give the user-facing names it adds (model
+   and processor types) a docstring, an entry in `docs/src/api/` and a place in the `public`
+   declaration at the end of their module; `test/hub/public.jl` checks the docstring. The
+   builders stay internal: list them under "Internals".
 
 ## Iterating quickly
 

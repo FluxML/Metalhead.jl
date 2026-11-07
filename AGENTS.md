@@ -132,4 +132,12 @@ persistent Julia session and `include` `test/parity.jl` (`includet` with Revise;
   when its fixtures, parameter counts and references pass, and are published.
 - Weight keys come from struct field names: keep them equal to the torch attribute names.
 - Code style is in `.JuliaFormatter.toml` (SciML style, 92 columns).
+- Public API: what a user touches after `create_model` (the call interface of the models, the
+  processors, the pipelines) is documented in `docs/src/api/` outside the Internals and
+  Porting pages and the "Internals" sections of the library pages, and exported or declared
+  `public` at the end of its module (guarded: `public` is a syntax error before Julia 1.11).
+  Whatever mirrors upstream's internals or keyword arguments stays internal: the builders,
+  the porting API, the fields of model structs. A new user-facing name gets a docstring, an
+  `@docs` entry and its `public` declaration; `test/hub/public.jl` and the docs build
+  (`checkdocs = :public`) check them.
 - Record user-visible changes under `[Unreleased]` in `CHANGELOG.md`.

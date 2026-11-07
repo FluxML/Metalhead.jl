@@ -69,4 +69,23 @@ include("bert.jl")
 include("xlm_roberta.jl")
 include("modernbert.jl")
 
+# `public` is a syntax error before Julia 1.11.
+VERSION >= v"1.11.0-DEV.469" && eval(Expr(:public,
+    :generate, :GenerationConfig, :KVCache, :last_tokens, :get_text_features,
+    :get_image_features,
+    # models
+    :TextEncoder, :BertModel, :BertForSequenceClassification,
+    :XLMRobertaModel, :XLMRobertaForSequenceClassification,
+    :ModernBertModel, :ModernBertForMaskedLM, :ModernBertForSequenceClassification,
+    :CLIPModel, :CLIPTextModel, :CLIPVisionModel, :CLIPTextModelWithProjection,
+    :CLIPVisionModelWithProjection,
+    :SiglipModel, :Siglip2Model, :SiglipTextModel, :SiglipVisionModel,
+    :Siglip2VisionModel,
+    :Sam3Model, :Sam3VideoModel, :Sam3VisionModel,
+    :Qwen3_5ForConditionalGeneration, :Qwen3_5VisionModel,
+    # processors
+    :CLIPProcessor, :CLIPImageProcessor, :SiglipProcessor, :SiglipImageProcessor,
+    :Siglip2Processor, :Siglip2ImageProcessor, :Sam3Processor, :Sam3ImageProcessor,
+    :Qwen3VLProcessor, :Qwen2VLImageProcessor))
+
 end # module

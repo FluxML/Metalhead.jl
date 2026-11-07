@@ -868,7 +868,7 @@ batch) that the text prompts `input_ids` (seq_len, batch), 1-based token indices
 the right after the ones of `attention_mask`, describe; with `input_boxes`
 (4, num_boxes, batch), boxes (cx, cy, w, h) normalized to the image, also those like the
 boxes labelled 1 in `input_boxes_labels` (num_boxes, batch) and unlike those labelled 0,
--10 marking padding (by default, all are positive). The output of
+-10 marking padding (by default, all are positive). The output of the internal
 [`get_vision_features`](@ref Metalhead.Transformers.get_vision_features) can replace the
 images, and that of [`get_text_features`](@ref Metalhead.Transformers.get_text_features)
 the token indices.

@@ -196,8 +196,12 @@ makedocs(; modules = [Metalhead],
         "API reference" => ["Overview" => "api/reference.md", "CLIP" => "api/clip.md",
             "BERT, XLM-RoBERTa and ModernBERT" => "api/bert.md",
             "SAM 3" => "api/sam3.md", "SigLIP and SigLIP 2" => "api/siglip.md",
-            "Sentence transformers" => "api/sentence_transformers.md"]
+            "Sentence transformers" => "api/sentence_transformers.md",
+            "Porting" => "api/porting.md", "Internals" => "api/internals.md"]
     ],
+    checkdocs = :public,
+    # The exports of the legacy API, removed in 0.11, are not in the reference: drop
+    # :missing_docs then, so that a public name missing from it fails the build.
     warnonly = [:example_block, :missing_docs],
     format = Documenter.HTML(canonical = "https://fluxml.ai/Metalhead.jl/stable/",
         assets = ["assets/flux.css"],

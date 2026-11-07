@@ -32,7 +32,7 @@ sentence-transformers' `SentenceTransformer`, with the settings of its
 The keyword arguments of `create_model` override these settings, e.g.
 `create_model(repo; truncate_dim = 256)`, and `prompts` adds to the model's.
 
-`model(features)` applies the modules to the NamedTuple of `features` that
+`model(features)` applies the modules to the NamedTuple of `features` that the internal
 [`Metalhead.SentenceTransformers.preprocess`](@ref) makes of texts, with token indices
 `input_ids` and their `attention_mask` (from 1, of size `(seq_len, batch)`), and returns
 them with the outputs of each module: `token_embeddings` and `sentence_embedding`, of size

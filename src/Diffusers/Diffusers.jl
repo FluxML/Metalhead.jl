@@ -43,4 +43,8 @@ include("scheduler.jl")
 include("pipeline_flux2_klein.jl")
 include("pipeline_z_image.jl")
 
+# `public` is a syntax error before Julia 1.11.
+VERSION >= v"1.11.0-DEV.469" &&
+    eval(Expr(:public, :Flux2KleinPipeline, :ZImagePipeline, :encode_prompt))
+
 end # module

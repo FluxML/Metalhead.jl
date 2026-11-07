@@ -51,9 +51,10 @@ Metalhead.Transformers.ModernBertForMaskedLM
 Metalhead.Transformers.ModernBertForSequenceClassification
 ```
 
-## Builders
+## Internals
 
-`create_model` calls these with the fields of the repository's `config.json`.
+Not public: `create_model` calls these builders with the fields of the repository's
+`config.json`.
 
 ```@docs
 Metalhead.Transformers.bert_model

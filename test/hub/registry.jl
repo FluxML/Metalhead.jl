@@ -141,3 +141,28 @@ toy(; width = 2) = Dense(width => width)
     end
     @test "toy" ∉ list_models()
 end
+
+# The example of docs/src/api/porting.md.
+struct DocsToyFormat <: AbstractConfigFormat end
+function Metalhead.architecture_of(::DocsToyFormat, config)
+    return get(config, "toy_architecture", nothing)
+end
+toy_mlp(; in = 3, out = 2) = (; fc = Dense(in => out))
+
+@testset "the example of the porting page" begin
+    register!(ArchSpec(DocsToyFormat(), "toy_mlp", toy_mlp; family = "toy"))
+    try
+        @test "toy_mlp" in list_models()
+        @test create_model("toy_mlp"; in = 5).fc isa Dense
+        mktempdir() do dir
+            write(joinpath(dir, "config.json"), """{"toy_architecture": "toy_mlp"}""")
+            Metalhead.SafeTensors.serialize(joinpath(dir, "model.safetensors"),
+                Dict("fc.weight" => Float32[1 2 3; 4 5 6], "fc.bias" => Float32[7, 8]))
+            model = create_model(dir; pretrained = true)
+            @test model.fc.weight == Float32[1 2 3; 4 5 6]
+            @test model.fc.bias == Float32[7, 8]
+        end
+    finally
+        delete!(REGISTRY, "toy_mlp")
+    end
+end

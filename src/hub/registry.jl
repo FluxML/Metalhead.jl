@@ -122,6 +122,14 @@ end
 # Architecture names are unique across formats, so that `create_model("name")` is unambiguous.
 const REGISTRY = Dict{String, ArchSpec}()
 
+"""
+    register!(spec::ArchSpec) -> ArchSpec
+
+Add the architecture `spec` to the registry that [`create_model`](@ref) and
+[`list_models`](@ref) read, and return it. Registering a name again replaces its spec, unless
+the name belongs to another [`AbstractConfigFormat`](@ref), which is an error: architecture
+names are unique across libraries.
+"""
 function register!(spec::ArchSpec)
     old = get(REGISTRY, spec.name, nothing)
     old === nothing || old.format == spec.format ||

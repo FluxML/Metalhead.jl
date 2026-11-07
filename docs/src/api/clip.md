@@ -13,9 +13,17 @@ Metalhead.Transformers.CLIPTextModelWithProjection
 Metalhead.Transformers.CLIPVisionModelWithProjection
 ```
 
-## Builders
+## Processors
 
-`create_model` calls these with the fields of the `config.json` of a checkpoint.
+```@docs
+Metalhead.Transformers.CLIPProcessor
+Metalhead.Transformers.CLIPImageProcessor
+```
+
+## Internals
+
+Not public: `create_model` calls these builders with the fields of the `config.json` of a
+checkpoint.
 
 ```@docs
 Metalhead.Transformers.clip_model
@@ -23,11 +31,4 @@ Metalhead.Transformers.clip_text_model
 Metalhead.Transformers.clip_vision_model
 Metalhead.Transformers.clip_text_model_with_projection
 Metalhead.Transformers.clip_vision_model_with_projection
-```
-
-## Processors
-
-```@docs
-Metalhead.Transformers.CLIPProcessor
-Metalhead.Transformers.CLIPImageProcessor
 ```

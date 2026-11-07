@@ -17,7 +17,7 @@ besides the model, such as its preprocessing, but not general-purpose machinery:
 [Scope](@ref scope). The registry and `create_model` are not specific to timm: a library
 other than timm gets its own module, `src/<Name>/`, and a
 [`Metalhead.AbstractConfigFormat`](@ref) saying how its `config.json` names an architecture,
-like `src/Timm/config.jl`.
+like `src/Timm/config.jl`. The [Porting](@ref porting_api) page documents the registry (internal, not public API).
 
 ## Setup
 
