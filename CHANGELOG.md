@@ -17,7 +17,7 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
   uses the key-value cache of the models that have one. Validated against transformers'
   `generate` on tiny models and on the reference checkpoints.
 - The public API is declared: what you touch after `create_model` is exported or, on Julia
-  1.11 and later, `public`: the model and processor types, `KVCache`,
+  1.11 and later, `public`: the model and processor types, `KVCache`, `GenerationConfig`,
   `Timm.pretrained_cfg`, the Diffusers pipelines and `encode_prompt`, and the
   sentence-transformers methods. So `?Metalhead.Timm.pretrained_cfg` no longer warns that the
   binding may be internal. The builders, the fields of model structs and the porting API

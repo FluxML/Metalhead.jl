@@ -71,7 +71,8 @@ include("modernbert.jl")
 
 # `public` is a syntax error before Julia 1.11.
 VERSION >= v"1.11.0-DEV.469" && eval(Expr(:public,
-    :KVCache, :last_tokens, :get_text_features, :get_image_features,
+    :generate, :GenerationConfig, :KVCache, :last_tokens, :get_text_features,
+    :get_image_features,
     # models
     :TextEncoder, :BertModel, :BertForSequenceClassification,
     :XLMRobertaModel, :XLMRobertaForSequenceClassification,

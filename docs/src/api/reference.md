@@ -6,7 +6,8 @@ Metalhead
 
 Everything outside the [Internals](@ref internals) of this page and of the other pages of the
 reference is public: exported, or declared with `public` on Julia 1.11 and later. The fields
-of model structs mirror PyTorch's and are not public.
+of model structs mirror PyTorch's and are not public, but for the documented
+`generation_config` of the language models.
 
 ## Models
 
