@@ -33,10 +33,11 @@ is_pipeline(name) = isfile(joinpath(fixture(name), "model_index.json"))
 The fixtures of `library` (`:Timm`, `:Transformers`, `:Diffusers` or
 `:SentenceTransformers`, the module of the config format that `create_model` identifies),
 pipelines included; not those without a configuration file (test/fixtures/processors,
-st_pooling).
+st_pooling), nor those of `generate` (generate_*), whose outputs are tokens.
 """
 function fixtures_of(library::Symbol)
     return filter(test_data_names("fixtures")) do name
+        startswith(name, "generate_") && return false
         dir = fixture(name)
         any(f -> isfile(joinpath(dir, f)), Metalhead.CONFIG_FILES) || return false
         config = Metalhead.source_config(Metalhead.model_source(dir, nothing))

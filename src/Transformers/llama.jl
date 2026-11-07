@@ -156,6 +156,7 @@ end
 @concrete struct LlamaForCausalLM <: CausalLM
     model
     lm_head
+    generation_config
 end
 Flux.@layer LlamaForCausalLM
 
@@ -195,8 +196,10 @@ end
     llama_for_causal_lm(; vocab_size = 32000, hidden_size = 4096, num_hidden_layers = 32, kwargs...)
 
 Port of transformers' `LlamaForCausalLM`, built from the fields of its `LlamaConfig` (the
-`config.json` of a checkpoint), with the same names and defaults. `create_model` ignores the
-other keys of `config.json`, such as the token ids and generation settings, as transformers does.
+`config.json` of a checkpoint), with the same names and defaults. `create_model` reads the
+generation settings of the checkpoint into its `generation_config` (see
+[`GenerationConfig`](@ref Metalhead.Transformers.GenerationConfig)), and ignores the other
+keys of `config.json`, as transformers does.
 The rotary embedding is the default one or, with `rope_scaling` or `rope_parameters`, one
 with `rope_type = "linear"` or `"llama3"` (Llama 3.1 and later); other types error.
 
@@ -262,7 +265,7 @@ function llama_like(attention; vocab_size, hidden_size, intermediate_size,
         RotaryEmbedding(head_dim, rope_parameters))
     lm_head = tie_word_embeddings ? TiedLMHead(embed_tokens.weight) :
               dense(hidden_size => vocab_size, false)
-    return LlamaForCausalLM(model, lm_head)
+    return LlamaForCausalLM(model, lm_head, GenerationConfig())
 end
 
 register!(ArchSpec(TRANSFORMERS, "LlamaForCausalLM", llama_for_causal_lm;

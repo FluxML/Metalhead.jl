@@ -101,6 +101,7 @@ end
     model
     lm_head
     final_logit_softcapping
+    generation_config
 end
 Flux.@layer Gemma3ForCausalLM
 
@@ -179,7 +180,7 @@ function gemma3_for_causal_lm(; vocab_size = 262_208, hidden_size = 2304,
               dense(hidden_size => vocab_size, false)
     softcap = final_logit_softcapping === nothing ? nothing :
               Float64(final_logit_softcapping)
-    return Gemma3ForCausalLM(model, lm_head, softcap)
+    return Gemma3ForCausalLM(model, lm_head, softcap, GenerationConfig())
 end
 
 # `layer_types` as Symbols, computed from `sliding_window_pattern` as `Gemma3TextConfig`

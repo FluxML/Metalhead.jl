@@ -262,6 +262,7 @@ TEST_NETWORK && @testset "references" begin
             @test r.hidden_states <= 1e-4
             @test r.last_logits <= 1e-4
             @test r.generated
+            @test get(r, :generate, true)
         end
     end
 end
