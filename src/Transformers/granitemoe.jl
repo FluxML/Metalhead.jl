@@ -68,9 +68,10 @@ Flux.@layer GraniteMoeSharedMLP
 end
 Flux.@layer GraniteMoeDecoderLayer
 
-function (m::GraniteMoeDecoderLayer)(x, position_embeddings, kv_lengths = nothing)
+function (m::GraniteMoeDecoderLayer)(x, position_embeddings, kv_lengths = nothing,
+        cache = nothing)
     r = eltype(x)(m.residual_multiplier)
-    x = x .+ m.self_attn(m.input_layernorm(x), position_embeddings, kv_lengths) .* r
+    x = x .+ m.self_attn(m.input_layernorm(x), position_embeddings, kv_lengths, cache) .* r
     return x .+ feedforward(m, m.post_attention_layernorm(x)) .* r
 end
 

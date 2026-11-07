@@ -16,17 +16,16 @@
 end
 Flux.@layer Qwen3Attention
 
-function (m::Qwen3Attention)(x, position_embeddings, kv_lengths = nothing)
+function (m::Qwen3Attention)(x, position_embeddings, kv_lengths = nothing, cache = nothing)
     _, n, b = size(x)
     cos, sin = position_embeddings
+    offset = rotary_offset(cache)
     q = m.q_norm(reshape(m.q_proj(x), m.head_dim, :, n, b))
     k = m.k_norm(reshape(m.k_proj(x), m.head_dim, :, n, b))
     v = reshape(m.v_proj(x), m.head_dim, :, n, b)
-    q = NNlib.apply_rotary_embedding(q, cos, sin)
-    k = NNlib.apply_rotary_embedding(k, cos, sin)
-    y = NNlib.scaled_dot_product_attention(q, k, v;
-        fdrop = attention_fdrop(m.attention_dropout, q),
-        is_causal = true, kv_lengths)
+    q = NNlib.apply_rotary_embedding(q, cos, sin; offset)
+    k = NNlib.apply_rotary_embedding(k, cos, sin; offset)
+    y = attend(q, k, v, kv_lengths, cache; fdrop = attention_fdrop(m.attention_dropout, q))
     return m.o_proj(reshape(y, :, n, b))
 end
 

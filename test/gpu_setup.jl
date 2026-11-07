@@ -104,11 +104,13 @@ function check_gpu_st_fixture(name)
         haskey(acts, key("prompt_length")) &&
             (inputs = merge(inputs, (; prompt_length = acts[key("prompt_length")][])))
         y, g = model(inputs), gpu_model(map(to_gpu, inputs))
-        tokens = Bool.(mask)
+        valid = vec(mask) .!= 0
+        # Julia 1.10 can't index the trailing dimensions with a matrix mask
+        tokens(x) = reshape(x, size(x, 1), :)[:, valid]
         return (;
             sentence_embedding = relerr(cpu(g.sentence_embedding), y.sentence_embedding),
-            token_embeddings = relerr(cpu(g.token_embeddings)[:, tokens],
-                y.token_embeddings[:, tokens]),
+            token_embeddings = relerr(tokens(cpu(g.token_embeddings)),
+                tokens(y.token_embeddings)),
             on_gpu = g.sentence_embedding isa CuArray && g.token_embeddings isa CuArray)
     end
 end

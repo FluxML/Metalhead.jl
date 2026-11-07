@@ -58,8 +58,8 @@ The tokenizer is that of `tokenizer.json`, with the padding token (`pad_token`) 
 `tokenizer_config.json`. transformers reads the other settings of `tokenizer_config.json`
 too, such as `add_bos_token`, which `create_processor` doesn't.
 
-There is no key-value cache yet, so each step of this loop runs the model on the whole
-sequence.
+Each step of this loop runs the model on the whole sequence so far. A
+[key-value cache](@ref kv_cache) runs it on the new token only.
 
 The logits of the last position give the probabilities of the next token:
 
@@ -92,6 +92,46 @@ The padding takes no part in the attention of the other tokens, so its token doe
 and the logits of each text are those it has alone, at the positions of its tokens, up to
 rounding. The processor pads with the padding token of the tokenizer, or, for a tokenizer
 without one, such as SmolLM2's, with the token index 1.
+
+## [Key-value cache](@id kv_cache)
+
+A [`KVCache`](@ref Metalhead.Transformers.KVCache) keeps the keys and values of the tokens
+the model has seen, so that each step of a generation loop computes the new token only. It
+is allocated for a batch size and a maximum length, and `model(ids; cache)` returns the
+logits and the cache, which it updates in place. The loop above becomes:
+
+```julia
+using Metalhead.Transformers: KVCache, last_tokens
+
+ids = tok(prompt).input_ids
+cache = KVCache(model, 1, 64)                     # one sequence of up to 64 tokens
+logits, _ = model(ids; cache)                     # the prompt
+for _ in 1:8
+    push!(ids, argmax(logits[:, end]))
+    logits, _ = model(ids[end:end]; cache)        # the new token alone
+end
+```
+
+Its logits are those of a forward pass over the whole sequence, up to rounding. Sequences of
+different lengths go in one batch, padded on the right as above. The first call, the
+prefill, takes the `attention_mask` and gives each sequence its length in `cache.lengths`;
+the next token of each is predicted at its last token, not at the last position, which is
+padding for the shorter ones (`last_tokens` picks them). Each later step adds the same
+number of tokens to every sequence, whatever its length:
+
+```julia
+inputs = tok(["The capital of France is", "Hello"])
+cache = KVCache(model, 2, 64)
+logits, _ = model(inputs; cache)                  # the prefill of both texts
+next = argmax.(eachcol(last_tokens(logits, cache.lengths)))
+logits, _ = model(reshape(next, 1, :); cache)     # one more token for each text
+```
+
+A step can add several tokens, such as the chunks of a long prompt. The cache is for
+inference, not for gradients, and `empty!(cache)` makes it ready for new sequences. Llama,
+Qwen2, Qwen3, Qwen3 MoE and Granite have one; Gemma 3 and Qwen3.5 raise a "not supported yet"
+error. Sampling, beam search and other decoding strategies are left to your loop (see the
+[scope](@ref scope)).
 
 ## Inputs and outputs
 

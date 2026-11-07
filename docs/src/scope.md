@@ -27,7 +27,9 @@ In scope:
   `sentence_bert_config.json`, and the prompts and similarity function of
   `config_sentence_transformers.json`. Metalhead reads them strictly and computes the
   embeddings as sentence-transformers' `encode` does.
-- The key-value cache of language models (not implemented yet).
+- The key-value cache of language models, for the user's own generation loop. It is
+  implemented for the models whose layers are all full attention (Llama, Qwen2, Qwen3,
+  Granite and their mixtures of experts), not yet for Gemma 3 and Qwen3.5.
 
 Out of scope, for other packages:
 
