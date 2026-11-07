@@ -4,6 +4,7 @@ using .GPUSetup
 using Flux: BFloat16
 using CUDA: CUDA
 using Metalhead.Transformers: KVCache, last_tokens
+using Random: Xoshiro
 
 @testset "fixtures" begin
     @testset "$name" for name in fixtures_of(:Transformers)
@@ -96,4 +97,28 @@ end
             end
         end
     end
+end
+
+# `generate` gives the tokens of the CPU, greedily and sampling with the same `rng`, past the
+# first size of the cache too; the inputs may be on either device.
+@testset "generate" begin
+    for name in ["generate_qwen3", "generate_gemma3"]
+        cpu_model = fixture_model(fixture(name); eltype = Float32)
+        model = GPU(cpu_model)
+        acts = Metalhead.Checkpoint(joinpath(fixture(name), "acts.safetensors"))
+        ids, mask = acts["input_ids"] .+ 1, acts["attention_mask"]
+        for kwargs in ((;), (; max_new_tokens = 300, eos_token_id = nothing),
+            (; do_sample = true, temperature = 0.7, top_k = 10, top_p = 0.9),
+            (; do_sample = true, top_k = 0, top_p = 0.8, min_p = 0.05))
+            run(m, ids, mask) = generate(m, ids; attention_mask = mask, rng = Xoshiro(1),
+                kwargs...)
+            @test run(model, ids, mask) == run(cpu_model, ids, mask)
+        end
+        @test generate(model, GPU(ids); attention_mask = GPU(mask)) ==
+              generate(cpu_model, ids; attention_mask = mask)
+    end
+    half = GPU(fixture_model(fixture("generate_qwen3"); eltype = BFloat16))
+    ids, mask = [3 4; 5 6; 7 1], [1 1; 1 1; 1 0]
+    tokens = generate(half, ids; attention_mask = mask, do_sample = true)
+    @test tokens isa Matrix{Int} && size(tokens, 2) == 2 && all(in(1:64), tokens)
 end

@@ -70,6 +70,7 @@ end
     model
     lm_head
     logits_scaling
+    generation_config
 end
 Flux.@layer GraniteForCausalLM
 
@@ -149,7 +150,7 @@ function granite_like(decoder_layer; vocab_size, hidden_size, num_hidden_layers,
         rotary_emb, Float64(embedding_multiplier))
     lm_head = tie_word_embeddings ? TiedLMHead(embed_tokens.weight) :
               dense(hidden_size => vocab_size, false)
-    return GraniteForCausalLM(model, lm_head, Float64(logits_scaling))
+    return GraniteForCausalLM(model, lm_head, Float64(logits_scaling), GenerationConfig())
 end
 
 register!(ArchSpec(TRANSFORMERS, "GraniteForCausalLM", granite_for_causal_lm;

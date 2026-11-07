@@ -77,6 +77,9 @@ tok = create_processor("HuggingFaceTB/SmolLM2-135M")
 
 logits = model(tok("The capital of France is the city of"))
 HFT.decode(tok, argmax(logits[:, end]))   # " Paris"
+
+prompt = tok("The capital of France is Paris, and the capital of Italy is")
+HFT.decode(tok, generate(model, prompt; max_new_tokens = 8))   # " Rome.\n\nThe capital of the"
 ```
 
 Embed queries and documents, to retrieve the documents that answer a query:

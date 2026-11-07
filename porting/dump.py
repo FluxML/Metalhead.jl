@@ -214,6 +214,9 @@ def dump_transformers(spec, out, args):
         return dump_clip(spec, out, args)
     if spec.get("model_type") in ENCODER_TYPES:
         return dump_encoder(spec, out, args)
+    if "generate" in spec:
+        from dump_generation import dump_generation
+        return dump_generation(spec, out, args)
     seed = spec.get("seed", 0)
     torch.manual_seed(seed)
     model = build(spec).eval()

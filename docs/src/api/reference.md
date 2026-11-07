@@ -3,7 +3,7 @@
 ## Models
 
 `create_model` and `list_models` apply to every ported model. The other functions are the
-interface of image backbones and classifiers, and of language models.
+interface of image backbones and classifiers, and of language models, which `generate` text.
 
 ```@docs
 create_model
@@ -12,6 +12,8 @@ forward_features
 forward_head
 forward_intermediates
 feature_info
+generate
+Metalhead.Transformers.GenerationConfig
 ```
 
 ## Processors
@@ -100,7 +102,7 @@ diffusers builders the arguments of the model's constructor.
 Modules = [Metalhead.Timm, Metalhead.Transformers]
 Order = [:function]
 Filter = f -> !(f in (Metalhead.Timm.pretrained_cfg, Metalhead.Timm.pil_resize,
-    Metalhead.Transformers.last_tokens,
+    Metalhead.Transformers.last_tokens, generate,
     post_process_object_detection, post_process_instance_segmentation,
     post_process_semantic_segmentation, Metalhead.Transformers.clip_model,
     Metalhead.Transformers.clip_text_model, Metalhead.Transformers.clip_vision_model,

@@ -8,6 +8,14 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
 
 ### Added
 
+- `generate(model, input_ids)`, transformers' `generate` for the language models: greedy
+  decoding or multinomial sampling (temperature, top-k, top-p, min-p), with the repetition
+  penalty, the minimum length and the end-of-text tokens, and the settings of the
+  checkpoint's `generation_config.json`, which `create_model` reads into the new
+  `generation_config` field of each language model (a `GenerationConfig`); keyword arguments
+  change them. It returns the new tokens of each sequence of a batch padded on the right, and
+  uses the key-value cache of the models that have one. Validated against transformers'
+  `generate` on tiny models and on the reference checkpoints.
 - `Metalhead.Transformers.KVCache`, a key-value cache for the language models whose layers
   are all full attention (Llama, Qwen2, Qwen3, Qwen3 MoE and Granite, with its mixtures of
   experts), for your own generation loop: `model(input_ids; cache)` runs the model on the
