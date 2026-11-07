@@ -1,3 +1,11 @@
+"""
+    Metalhead
+
+Flux ports of the models of the Hugging Face Hub: the vision models of timm, the language,
+text, vision-language and segmentation models of transformers, the text-to-image pipelines
+of diffusers and the text embeddings of sentence-transformers. [`create_model`](@ref) builds
+a model, with its weights, and [`create_processor`](@ref) its pre- and post-processing.
+"""
 module Metalhead
 
 using Flux
@@ -44,5 +52,13 @@ export create_model, create_processor, list_models, forward_features, forward_he
        forward_intermediates, feature_info, post_process_object_detection,
        post_process_instance_segmentation, post_process_semantic_segmentation,
        encode_query, encode_document, similarity, generate
+
+# `public` is a syntax error before Julia 1.11.
+VERSION >= v"1.11.0-DEV.469" && eval(Expr(:public,
+    :Timm, :Transformers, :Diffusers, :SentenceTransformers,
+    :TextProcessor, :image_array, :image_matrix,
+    # the porting API, docs/src/api/porting.md
+    :ArchSpec, :register!, :AbstractConfigFormat, :architecture_of, :model_args,
+    :skip_prefix, :weights_name, :instantiate, :Checkpoint, :load_state!))
 
 end # module

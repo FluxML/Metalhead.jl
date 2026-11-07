@@ -1,5 +1,13 @@
 # API reference
 
+```@docs
+Metalhead
+```
+
+The names documented here are public, exported or declared with `public` (on Julia 1.11 and
+later), but for the [Porting internals](@ref) at the end. The [Porting API](@ref porting_api)
+is public too, and may change in minor releases.
+
 ## Models
 
 `create_model` and `list_models` apply to every ported model. The other functions are the
@@ -50,12 +58,14 @@ Metalhead.image_matrix
 ## timm
 
 ```@docs
+Metalhead.Timm
 Metalhead.Timm.pretrained_cfg
 ```
 
 ## transformers
 
 ```@docs
+Metalhead.Transformers
 Metalhead.Transformers.KVCache
 Metalhead.Transformers.last_tokens
 Metalhead.Transformers.Qwen3_5ForConditionalGeneration
@@ -70,6 +80,7 @@ their builders), of SAM 3, and of SigLIP and SigLIP 2, have their own API refere
 ## diffusers
 
 ```@docs
+Metalhead.Diffusers
 Metalhead.Diffusers.Flux2KleinPipeline
 Metalhead.Diffusers.encode_prompt
 Metalhead.Diffusers.Flux2Transformer2DModel
@@ -91,6 +102,10 @@ Metalhead.Diffusers.compute_empirical_mu
 `create_model` builds a `SentenceTransformer` from a repository with a `modules.json`. Its
 classes and functions have their own [API reference](sentence_transformers.md).
 
+```@docs
+Metalhead.SentenceTransformers
+```
+
 ## Builders
 
 `create_model` calls these with the architecture's default arguments, merged with the
@@ -101,6 +116,7 @@ diffusers builders the arguments of the model's constructor.
 ```@autodocs
 Modules = [Metalhead.Timm, Metalhead.Transformers]
 Order = [:function]
+Private = false
 Filter = f -> !(f in (Metalhead.Timm.pretrained_cfg, Metalhead.Timm.pil_resize,
     Metalhead.Transformers.last_tokens, generate,
     post_process_object_detection, post_process_instance_segmentation,
@@ -125,27 +141,22 @@ Metalhead.Diffusers.z_image_transformer_2d_model
 
 ## Porting internals
 
-These are used by the ported models and the porting tools. Using the models doesn't need them.
+These are used by the ported models and the porting tools. Using the models doesn't need them,
+and they are not public: they may change in any release. The [Porting API](@ref porting_api)
+is the public part.
 
 ```@docs
-Metalhead.Timm
 Metalhead.Timm.EfficientNetBuilder
 Metalhead.Timm.MixedConv2d
 Metalhead.Timm.CondConv2d
-Metalhead.Transformers
 Metalhead.Transformers.MultiheadAttention
-Metalhead.Diffusers
 Metalhead.Diffusers.timestep_embedding
 Metalhead.Diffusers.AdaLayerNormContinuous
-Metalhead.SentenceTransformers
-Metalhead.ArchSpec
-Metalhead.AbstractConfigFormat
-Metalhead.architecture_of
-Metalhead.model_args
-Metalhead.skip_prefix
+Metalhead.Timm.create_conv2d
+Metalhead.Timm.decode_arch_def
+Metalhead.Transformers.chunk_gated_delta_rule
+Metalhead.Transformers.moe_experts
 Metalhead.checkpoint_prefix
-Metalhead.weights_name
-Metalhead.instantiate
 Metalhead.AbstractProcessor
 Metalhead.AbstractImageProcessor
 Metalhead.@processor
@@ -156,8 +167,6 @@ Metalhead.standardize_settings
 Metalhead.instantiate_processor
 Metalhead.check_inputs
 Metalhead.Timm.pil_resize
-Metalhead.Checkpoint
-Metalhead.load_state!
 Metalhead.torch_params
 Metalhead.TorchParam
 ```

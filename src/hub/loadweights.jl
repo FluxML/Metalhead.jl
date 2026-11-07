@@ -123,12 +123,15 @@ function closest(key, candidates)
 end
 
 """
-    load_state!(model, ckpt::Checkpoint; prefix = "", ignore = DEFAULT_IGNORE, skip = nothing, strict = true)
+    load_state!(model, ckpt::Checkpoint; prefix = "", ignore = [r"num_batches_tracked\$"],
+                skip = nothing, strict = true) -> NamedTuple
 
 Copy the tensors of `ckpt` into `model`, matching PyTorch `state_dict` keys derived from the
-model structure (see [`torch_params`](@ref)). Keys matching a regex in `ignore` may be absent
-from the model; parameters whose key starts with `skip` keep their current values.
-With `strict = true`, missing keys, unused checkpoint keys and shape mismatches throw.
+model structure (see [`torch_params`](@ref)) and nested under `prefix`. Keys matching a regex
+in `ignore` may be absent from the model; parameters whose key starts with `skip` keep their
+current values. With `strict = true`, missing keys, unused checkpoint keys and shape
+mismatches throw. Returns the number of tensors `loaded` and the lists of `missing`,
+`unexpected` and `mismatched` keys.
 """
 function load_state!(
         model, ckpt::Checkpoint; prefix::AbstractString = "", ignore = DEFAULT_IGNORE,

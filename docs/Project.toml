@@ -4,7 +4,7 @@ Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
 Metalhead = "dbeba491-748d-5e0e-a39e-b530a07fa0cc"
 
 [compat]
-Documenter = "1"
+Documenter = "1.9"
 Flux = "0.16"
 Metalhead = "0.10"
 julia = "1.10"

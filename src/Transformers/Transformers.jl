@@ -69,4 +69,39 @@ include("bert.jl")
 include("xlm_roberta.jl")
 include("modernbert.jl")
 
+# `public` is a syntax error before Julia 1.11.
+VERSION >= v"1.11.0-DEV.469" && eval(Expr(:public,
+    :KVCache, :last_tokens, :get_text_features, :get_image_features, :get_vision_features,
+    :qwen3_5_decode,
+    # models
+    :TextEncoder, :BertModel, :BertForSequenceClassification,
+    :XLMRobertaModel, :XLMRobertaForSequenceClassification,
+    :ModernBertModel, :ModernBertForMaskedLM, :ModernBertForSequenceClassification,
+    :CLIPModel, :CLIPTextModel, :CLIPVisionModel, :CLIPTextModelWithProjection,
+    :CLIPVisionModelWithProjection,
+    :SiglipModel, :Siglip2Model, :SiglipTextModel, :SiglipVisionModel,
+    :Siglip2VisionModel,
+    :Sam3Model, :Sam3VideoModel, :Sam3VisionModel,
+    :Qwen3_5ForConditionalGeneration, :Qwen3_5VisionModel,
+    # processors
+    :CLIPProcessor, :CLIPImageProcessor, :SiglipProcessor, :SiglipImageProcessor,
+    :Siglip2Processor, :Siglip2ImageProcessor, :Sam3Processor, :Sam3ImageProcessor,
+    :Qwen3VLProcessor, :Qwen2VLImageProcessor,
+    # builders: `create_model` calls them with the fields of `config.json`
+    :bert_model, :bert_for_sequence_classification,
+    :xlm_roberta_model, :xlm_roberta_for_sequence_classification,
+    :modernbert_model, :modernbert_for_masked_lm, :modernbert_for_sequence_classification,
+    :clip_model, :clip_text_model, :clip_vision_model, :clip_text_model_with_projection,
+    :clip_vision_model_with_projection,
+    :siglip_model, :siglip2_model, :siglip_text_model, :siglip_vision_model,
+    :siglip2_vision_model,
+    :sam3_model, :sam3_video_model, :sam3_vision_model, :sam3_vit_model,
+    :llama_for_causal_lm, :qwen2_for_causal_lm, :qwen3_for_causal_lm,
+    :qwen3_moe_for_causal_lm, :gemma3_for_causal_lm, :granite_for_causal_lm,
+    :granitemoe_for_causal_lm, :granitemoeshared_for_causal_lm,
+    :granitemoehybrid_for_causal_lm,
+    :qwen3_5_text_model, :qwen3_5_for_causal_lm, :qwen3_5_for_conditional_generation,
+    :qwen3_5_vision_model, :qwen3_5_moe_text_model, :qwen3_5_moe_for_causal_lm,
+    :qwen3_5_moe_for_conditional_generation))
+
 end # module

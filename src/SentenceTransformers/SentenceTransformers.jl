@@ -33,4 +33,9 @@ include("dense.jl")
 include("normalize.jl")
 include("model.jl")
 
+# `public` is a syntax error before Julia 1.11.
+VERSION >= v"1.11.0-DEV.469" && eval(Expr(:public,
+    :SentenceTransformer, :encode, :encode_query, :encode_document, :similarity,
+    :preprocess, :Transformer, :Pooling, :Dense, :Normalize))
+
 end # module
