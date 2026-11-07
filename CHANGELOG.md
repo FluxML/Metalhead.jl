@@ -99,7 +99,7 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
   a 1000-class classifier, `laion2b_ft_in12k_in1k`; was the headless `laion2b`) and
   `vit_base_patch32_clip_quickgelu_224` (`laion400m_e32`, was `metaclip_400m`). The weights
   of 0.9 are `timm/resnet50.tv2_in1k` and `timm/wide_resnet50_2.tv2_in1k`, as in the
-  [migration guide](https://fluxml.ai/Metalhead.jl/dev/migration/).
+  [migration guide](https://fluxml.ai/Metalhead.jl/dev/migration/) (#391).
 
 ### Fixed
 
