@@ -79,7 +79,7 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
   (2.6 MB now): the fixtures and reference outputs are lazy artifacts on the Hub dataset
   `FluxML/metalhead-test-data`, which the tests download on first use (#372).
 - NNlib 0.9.57 is now the minimum version: the SwiGLU of FLUX.2 and of the SiLU-gated MLPs of
-  the language models is `NNlib.swiglu`.
+  the language models is `NNlib.swiglu` (#388).
 
 ### Fixed
 
