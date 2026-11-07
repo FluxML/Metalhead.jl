@@ -246,6 +246,22 @@ lazy = true
     sha256 = "47fb885d696d7203a431a6afd706f6b7598dc93743f7845111ba03f5a4eaa3cf"
     url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/gemma3_tiny/47fb885d696d7203a431a6afd706f6b7598dc93743f7845111ba03f5a4eaa3cf.tar.gz"
 
+["fixtures/generate_gemma3"]
+git-tree-sha1 = "211ffead5c30853188c528e0778fcb4044ff38c7"
+lazy = true
+
+    [["fixtures/generate_gemma3".download]]
+    sha256 = "2eec66b0a9cbe130ceb05ce9e4a3ec5d823bf22fa857d25426ff0c7079891bdc"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/generate_gemma3/2eec66b0a9cbe130ceb05ce9e4a3ec5d823bf22fa857d25426ff0c7079891bdc.tar.gz"
+
+["fixtures/generate_qwen3"]
+git-tree-sha1 = "2b71651cca8590a2a87926c3ecea6a0a51adba57"
+lazy = true
+
+    [["fixtures/generate_qwen3".download]]
+    sha256 = "762193f1f4515336c9230e294a0768f312595b4c75a7131bdd13ec3d53634f47"
+    url = "https://huggingface.co/datasets/FluxML/metalhead-test-data/resolve/main/fixtures/generate_qwen3/762193f1f4515336c9230e294a0768f312595b4c75a7131bdd13ec3d53634f47.tar.gz"
+
 ["fixtures/gmixer"]
 git-tree-sha1 = "43ca2e823c97bc289d2ff10a7225651ff6962108"
 lazy = true
