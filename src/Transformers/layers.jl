@@ -182,13 +182,14 @@ function check_full_attention(name; num_hidden_layers, use_sliding_window, slidi
 end
 
 # `act(gate) .* up`, for the halves `gate` and `up` of the first dimension of `h`, as
-# `act(gate) * up` with `gate, up = h.chunk(2, dim=-1)`.
+# `act(gate) * up` with `gate, up = h.chunk(2, dim=-1)`. SiLU is NNlib's `swiglu`.
 function gated(act, h)
     m = size(h, 1) ÷ 2
     halves = reshape(h, m, 2, :)
     y = act.(view(halves, :, 1, :)) .* view(halves, :, 2, :)
     return reshape(y, m, size(h)[2:end]...)
 end
+gated(::typeof(swish), h) = NNlib.swiglu(h)
 
 # The grouping by expert of the (k, n) experts `index` of n tokens, copied to the CPU: the
 # token of each of the k * n entries in the order of their experts (stable), the rank in

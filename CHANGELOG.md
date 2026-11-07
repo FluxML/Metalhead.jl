@@ -81,6 +81,8 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
 - The experts of the sparse mixtures of experts (Granite MoE, Qwen3 MoE, Qwen3.5 MoE) are
   computed with `NNlib.grouped_mul`, which no longer pads every expert to the size of the
   largest one. NNlib 0.9.56 is now the minimum version (#389).
+- NNlib 0.9.57 is now the minimum version: the SwiGLU of FLUX.2 and of the SiLU-gated MLPs of
+  the language models is `NNlib.swiglu` (#388).
 
 ### Fixed
 
