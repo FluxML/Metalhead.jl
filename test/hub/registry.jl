@@ -3,6 +3,7 @@ using Flux
 using Metalhead: AbstractConfigFormat, ArchSpec, REGISTRY, register!, lookup, identify,
                  model_source, model_args, skip_prefix
 using Metalhead.Timm: TIMM
+using Metalhead.Transformers: TRANSFORMERS
 include(joinpath(@__DIR__, "..", "data.jl"))
 using .TestData: fixture
 
@@ -100,6 +101,31 @@ end
 
     cfg = Metalhead.Timm.pretrained_cfg(FIXTURE)
     @test cfg.input_size == (3, 32, 32) && cfg.classifier == "fc"
+end
+
+@testset "transformers format" begin
+    spec = lookup("Qwen3_5ForConditionalGeneration")
+    config = Dict("model_type" => "qwen3_5", "tie_word_embeddings" => true,
+        "unused" => 1, "text_config" => Dict("hidden_size" => 8, "num_hidden_layers" => 4,
+            "rope_parameters" =>
+                Dict("rope_theta" => 1.0e4, "mrope_interleaved" => true)),
+        "vision_config" => Dict("depth" => 2))
+    args = model_args(TRANSFORMERS, spec, config, (;))
+    @test args.tie_word_embeddings && !haskey(args, :unused)
+    @test args.text_config.hidden_size == 8 && args.vision_config.depth == 2
+
+    # a keyword overrides a field, a sub-config is merged into that of the config, and any
+    # other nested field is replaced
+    args = model_args(TRANSFORMERS, spec, config,
+        (; tie_word_embeddings = false, vision_config = (; depth = 1, hidden_size = 4),
+            text_config = (; num_hidden_layers = 2,
+                rope_parameters = (; rope_theta = 1.0e6))))
+    @test !args.tie_word_embeddings
+    @test args.vision_config == (; depth = 1, hidden_size = 4)
+    @test args.text_config.hidden_size == 8 && args.text_config.num_hidden_layers == 2
+    @test args.text_config.rope_parameters == (; rope_theta = 1.0e6)
+    @test model_args(TRANSFORMERS, spec, config, (; text_config = nothing)).text_config ===
+          nothing
 end
 
 # A second library only has to say how its config.json names an architecture.

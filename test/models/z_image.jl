@@ -186,6 +186,22 @@ end
     @test size(pipe(embeds; height = 12, width = 16, num_inference_steps = 1,
         negative_prompt_embeds = [randn(Float32, 16, 2), randn(Float32, 16, 3)])) ==
           (16, 12, 3, 2)
+
+    # several images per prompt are those of the prompts repeated in a row, as in diffusers,
+    # also for the negative prompts of guidance
+    negative = [randn(Float32, 16, 2), randn(Float32, 16, 3)]
+    repeated = [1, 1, 1, 2, 2, 2]
+    kwargs = (; height = 12, width = 16, num_inference_steps = 2,
+        latents = randn(Float32, 8, 6, 4, 6))
+    images = pipe(embeds; num_images_per_prompt = 3, guidance_scale = 0, kwargs...)
+    @test size(images) == (16, 12, 3, 6)
+    @test images ≈ pipe(embeds[repeated]; guidance_scale = 0, kwargs...)
+    @test pipe(embeds; num_images_per_prompt = 3, negative_prompt_embeds = negative,
+        kwargs...) ≈ pipe(embeds[repeated]; negative_prompt_embeds = negative[repeated],
+        kwargs...)
+    @test_throws "latents" pipe(embeds; guidance_scale = 0, kwargs...)
+    @test_throws "positive" pipe(embeds; num_images_per_prompt = 0, guidance_scale = 0,
+        kwargs...)
 end
 
 # Tokenizes the chat prompts of a pipeline into the small vocabulary of the fixtures, with

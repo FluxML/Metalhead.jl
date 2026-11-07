@@ -64,13 +64,17 @@ The keyword arguments of the pipeline are those of diffusers' `Flux2KleinPipelin
   of 16.
 - `image`: reference images, to edit (see [Image editing](@ref image_editing) below).
 - `num_inference_steps`, and `guidance_scale` for the base checkpoints.
-- `latents`: the initial noise, of size `(width ÷ 16, height ÷ 16, 128, batch)`. By default it is
+- `num_images_per_prompt`: the number of images of each prompt, one after the other in the
+  batch.
+- `latents`: the initial noise, of size
+  `(width ÷ 16, height ÷ 16, 128, batch * num_images_per_prompt)`. By default it is
   drawn from `rng` (`Random.default_rng()`), so that `rng = Xoshiro(0)` makes an image
   reproducible. diffusers draws its noise with PyTorch's generator, so the same seed gives
   different images in the two libraries; the same `latents` give the same image.
 - `output_type = :latent` returns the denoised latents of the autoencoder instead of the image.
 
-A vector of prompts makes a batch of images.
+A vector of prompts makes a batch of images, and `num_images_per_prompt = 4` four images of
+each of them.
 
 These four images of 1024 × 768 pixels took 1.6 seconds each on an RTX 5090:
 

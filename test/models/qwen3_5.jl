@@ -207,6 +207,20 @@ end
                                  0 1 2 3 4 5 3 4 5 6 7]
     @test_throws "image tokens" model(ids[1:10, :]; pixel_values, image_grid_thw)
     @test_throws "image_grid_thw" model(ids; pixel_values)
+
+    # a sub-config in the keywords is merged into that of the checkpoint, whose other fields
+    # stay: only the layers change, not the sizes
+    dir = fixture("qwen3_5_tiny")
+    small = create_model(dir; pretrained = false, eltype = Float32,
+        text_config = (; num_hidden_layers = 2, layer_types = nothing),
+        vision_config = (; depth = 1))
+    @test length(small.model.language_model.layers) == 2
+    @test length(model.model.language_model.layers) == 4
+    @test length(small.model.visual.blocks) == 1
+    @test size(small.model.language_model.embed_tokens.weight) ==
+          size(model.model.language_model.embed_tokens.weight)
+    @test_throws "`layer_types` has 4 entries" create_model(dir; pretrained = false,
+        text_config = (; num_hidden_layers = 2))
 end
 
 @testset "processor inputs" begin

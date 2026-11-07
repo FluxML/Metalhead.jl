@@ -21,7 +21,22 @@ function architecture_of(::TransformersFormat, config)
     return only(archs)
 end
 
-# The keys of config.json that the builder declares as keywords, as transformers ignores the others.
+# The keys of config.json that the builder declares as keywords, as transformers ignores the
+# others, overridden by `kwargs`.
 function model_args(::TransformersFormat, spec, config, kwargs)
-    return merge(spec.defaults, declared_args(spec.build, config), kwargs)
+    return merge(spec.defaults, merge_configs(declared_args(spec.build, config), kwargs))
+end
+
+# `overrides` over `config`, where an override of a sub-config (`text_config`, ...) is merged
+# into the sub-config of `config` instead of replacing it, so that its other fields keep the
+# values of the checkpoint rather than fall back to those of the config class.
+function merge_configs(config::NamedTuple, overrides::NamedTuple)
+    merged = merge(config, overrides)
+    for key in keys(overrides)
+        endswith(string(key), "_config") || continue
+        old, new = get(config, key, nothing), overrides[key]
+        old isa NamedTuple && new isa NamedTuple || continue
+        merged = merge(merged, NamedTuple{(key,)}((merge_configs(old, new),)))
+    end
+    return merged
 end
