@@ -124,6 +124,10 @@ end
     features, _ = forward_features(model, ids; cache)
     @test relerr(features, forward_features(model, ids)) <= RTOL
 
+    # the head on the last tokens only, as `last_tokens` of the logits
+    @test relerr(forward_head(model, last_tokens(features, [6, 4])),
+        last_tokens(model(ids; attention_mask = mask), [6, 4])) <= RTOL
+
     # an empty cache starts again
     empty!(cache)
     @test cache.lengths == [0, 0]
