@@ -3,11 +3,8 @@
 # the fused projections. Validated against test/fixtures/transformer_flux2_* and
 # test/references/black-forest-labs--FLUX.2-klein-4B--transformer.
 
-# diffusers' `Flux2SwiGLU`: the SiLU of the first half of the features times the second half.
-function swiglu(x)
-    half = size(x, 1) ÷ 2
-    return swish(x[1:half, :, :]) .* x[(half + 1):end, :, :]
-end
+# diffusers' `Flux2SwiGLU` is `NNlib.swiglu`: the SiLU of the first half of the features
+# times the second half.
 
 @concrete struct Flux2FeedForward
     linear_in
@@ -19,7 +16,7 @@ Flux.@layer Flux2FeedForward
 function flux2_feed_forward(dim; mult, bias)
     inner = floor(Int, dim * mult)
     return Flux2FeedForward(init_layer(Dense, dim => 2inner; bias),
-        swiglu, init_layer(Dense, inner => dim; bias))
+        NNlib.swiglu, init_layer(Dense, inner => dim; bias))
 end
 
 (m::Flux2FeedForward)(x) = m.linear_out(m.act_fn(m.linear_in(x)))
@@ -83,8 +80,9 @@ function flux2_parallel_self_attention(dim; heads, head_dim, eps, bias, mlp_rati
     inner = heads * head_dim
     mlp_hidden = floor(Int, dim * mlp_ratio)
     return Flux2ParallelSelfAttention(head_dim, inner,
-        init_layer(Dense, dim => 3inner + 2mlp_hidden; bias), swiglu, RMSNorm(head_dim; eps),
-        RMSNorm(head_dim; eps), init_layer(Dense, inner + mlp_hidden => dim; bias))
+        init_layer(Dense, dim => 3inner + 2mlp_hidden; bias), NNlib.swiglu,
+        RMSNorm(head_dim; eps), RMSNorm(head_dim; eps),
+        init_layer(Dense, inner + mlp_hidden => dim; bias))
 end
 
 function (m::Flux2ParallelSelfAttention)(x, (cos, sin))
