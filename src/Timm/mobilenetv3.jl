@@ -373,15 +373,18 @@ const MOBILENETV3_REFERENCES = Dict(
         "timm/mobilenetv4_conv_small_050.e3000_r224_in1k" => "0ca27fbda87631d17b5a3d348af8e6b150dd9282"
     ],
     "mobilenetv4_conv_medium" => [
+        "timm/mobilenetv4_conv_medium.e500_r256_in1k" => "ad66898c045c1b5223ea3f2c0830b74cf2e75bac",
         "timm/mobilenetv4_conv_medium.e500_r224_in1k" => "02a09fbfb82b289e871ba8255f9da58c056fb13b"
     ],
     "mobilenetv4_conv_blur_medium" => [
         "timm/mobilenetv4_conv_blur_medium.e500_r224_in1k" => "cba2cf973d7f50e3c7467ec018605e4c834bf5d7"
     ],
     "mobilenetv4_hybrid_medium" => [
+        "timm/mobilenetv4_hybrid_medium.e200_r256_in12k_ft_in1k" => "2a891cc71e181a52a79288441f3ba2d135ed7d6c",
         "timm/mobilenetv4_hybrid_medium.e500_r224_in1k" => "1c009cc8df7c61fdf96c43b2fa60d8ccc4c5ec8f"
     ],
     "mobilenetv4_hybrid_large" => [
+        "timm/mobilenetv4_hybrid_large.ix_e600_r384_in1k" => "aef254fe36033a5d470fcb88ffdc4fe9d1e6c982",
         "timm/mobilenetv4_hybrid_large.e600_r384_in1k" => "ae042c0e5f824262508e6f973bb53b55e51cd876"
     ],
     "fbnetv3_b" => [

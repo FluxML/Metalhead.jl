@@ -41,6 +41,8 @@ The pretrained weights of 0.9 came from torchvision. timm hosts the same weights
 `<model>.tv_in1k` (torchvision's `IMAGENET1K_V1`) and `<model>.tv2_in1k` (`IMAGENET1K_V2`).
 The table gives the repository with the version that `pretrain = true` loaded, whose weights
 `create_model` loads. For ResNet-50, the outputs of the two models are bitwise identical.
+A bare name, `create_model("resnet50"; pretrained = true)`, loads timm's default checkpoint
+(`a1_in1k` for ResNet-50), not these weights: name the repository to get them.
 
 | 0.9 | 0.10 |
 |:--|:--|

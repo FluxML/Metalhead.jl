@@ -162,8 +162,10 @@ function feature_info(m::DenseNet)
 end
 
 const DENSENET_REFERENCES = Dict(
-    "densenet121" =>
-        ["timm/densenet121.tv_in1k" => "f0d0f2698a02cb133b09d48396db6e1e46fe9f3b"],
+    "densenet121" => [
+        "timm/densenet121.ra_in1k" => "92007b6200e0b4a4fe68cb4e3947022a928aaaae",
+        "timm/densenet121.tv_in1k" => "f0d0f2698a02cb133b09d48396db6e1e46fe9f3b"
+    ],
     "densenetblur121d" =>
         ["timm/densenetblur121d.ra_in1k" => "3ba62c856db54283ec4884b6b622d9897eddccb5"]
 )

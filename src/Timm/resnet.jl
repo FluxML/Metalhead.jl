@@ -255,13 +255,18 @@ const RESNET_REFERENCES = Dict(
     "resnet18" => ["timm/resnet18.a1_in1k" => "491b427b45c94c7fb0e78b5474cc919aff584bbf"],
     "resnet26t" =>
         ["timm/resnet26t.ra2_in1k" => "3dbfc891fe1d40740d8d5586227bd64c3664383c"],
-    "resnet50" => ["timm/resnet50.tv2_in1k" => "10eea9779fc8a753af919714889bd7f60fba412d"],
+    "resnet50" => [
+        "timm/resnet50.a1_in1k" => "767268603ca0cb0bfe326fa87277f19c419566ef",
+        "timm/resnet50.tv2_in1k" => "10eea9779fc8a753af919714889bd7f60fba412d"
+    ],
     "resnet50d" =>
         ["timm/resnet50d.ra2_in1k" => "ea1a9b5ed97c7ca1b1401a81bbf9a19c9044797b"],
     "resnext50_32x4d" =>
         ["timm/resnext50_32x4d.a1h_in1k" => "cc736cb0940158d05966023116d90fca4c38dae3"],
-    "wide_resnet50_2" =>
-        ["timm/wide_resnet50_2.tv2_in1k" => "ffb9dc0ac74364ad268e066aa4aea75089bf383d"],
+    "wide_resnet50_2" => [
+        "timm/wide_resnet50_2.racm_in1k" => "30f73aceaaa1911830a9795b83ab1908dba18719",
+        "timm/wide_resnet50_2.tv2_in1k" => "ffb9dc0ac74364ad268e066aa4aea75089bf383d"
+    ],
     "seresnext26d_32x4d" =>
         ["timm/seresnext26d_32x4d.bt_in1k" => "1214c4b9e7470f613b1ffb1f3c0243ce2736b925"],
     "ecaresnet26t" =>

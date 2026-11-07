@@ -149,8 +149,10 @@ end
 const CONVNEXT_REFERENCES = Dict(
     "convnext_atto" =>
         ["timm/convnext_atto.d2_in1k" => "435c0a8d02d5b872e90c8cde36887465982cb399"],
-    "convnext_tiny" =>
-        ["timm/convnext_tiny.fb_in1k" => "b43a6303c9fcf176d2d707478a128c2c91e93528"]
+    "convnext_tiny" => [
+        "timm/convnext_tiny.in12k_ft_in1k" => "aa096f03029c7f0ec052013f64c819b34f8ad790",
+        "timm/convnext_tiny.fb_in1k" => "b43a6303c9fcf176d2d707478a128c2c91e93528"
+    ]
 )
 
 for (name, args) in [
