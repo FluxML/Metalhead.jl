@@ -1,4 +1,12 @@
+```@meta
+CollapsedDocStrings = true
+```
+
 # Sentence transformers
+
+```@index
+Pages = ["sentence_transformers.md"]
+```
 
 See the [text embeddings tutorial](@ref embeddings) for using the models.
 

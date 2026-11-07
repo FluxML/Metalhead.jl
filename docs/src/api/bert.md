@@ -1,4 +1,12 @@
+```@meta
+CollapsedDocStrings = true
+```
+
 # BERT, XLM-RoBERTa and ModernBERT
+
+```@index
+Pages = ["bert.md"]
+```
 
 The text encoders of transformers: [`BertModel`](@ref Metalhead.Transformers.BertModel)
 (MiniLM, the BGE and GTE embedding models, ...),

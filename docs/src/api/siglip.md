@@ -1,4 +1,12 @@
+```@meta
+CollapsedDocStrings = true
+```
+
 # SigLIP and SigLIP 2
+
+```@index
+Pages = ["siglip.md"]
+```
 
 See the [zero-shot classification tutorial](@ref zero_shot) for using the models and their
 processors together.

@@ -1,4 +1,12 @@
+```@meta
+CollapsedDocStrings = true
+```
+
 # SAM 3
+
+```@index
+Pages = ["sam3.md"]
+```
 
 See the [segmentation tutorial](@ref segmentation) for using the model and its processor
 together.
