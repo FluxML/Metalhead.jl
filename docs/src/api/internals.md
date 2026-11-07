@@ -1,5 +1,9 @@
 # [Internals](@id internals)
 
+```@index
+Pages = ["internals.md"]
+```
+
 Nothing on this page is public API: none of it is exported or declared `public`, and it may
 change without notice, in any release, as timm, transformers and diffusers do. Using the
 models doesn't need it. The CLIP, BERT and sentence-transformers pages have their own

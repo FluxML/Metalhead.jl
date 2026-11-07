@@ -1,5 +1,9 @@
 # Sentence transformers
 
+```@index
+Pages = ["sentence_transformers.md"]
+```
+
 See the [text embeddings tutorial](@ref embeddings) for using the models.
 
 `create_model` builds a `SentenceTransformer` from a repository with a `modules.json`.

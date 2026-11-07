@@ -1,5 +1,9 @@
 # API reference
 
+```@index
+Pages = ["reference.md"]
+```
+
 ```@docs
 Metalhead
 ```

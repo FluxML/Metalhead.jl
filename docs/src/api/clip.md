@@ -1,5 +1,9 @@
 # CLIP
 
+```@index
+Pages = ["clip.md"]
+```
+
 See the [zero-shot classification tutorial](@ref zero_shot) for using the model and its
 processor together.
 

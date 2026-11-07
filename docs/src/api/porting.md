@@ -1,5 +1,9 @@
 # [Porting](@id porting_api)
 
+```@index
+Pages = ["porting.md"]
+```
+
 This page is for contributors, and for a package that registers architectures of its own. It
 is not public API: the names below are neither exported nor declared `public`, and they may
 change without notice, in any release.
