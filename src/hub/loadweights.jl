@@ -124,18 +124,21 @@ end
 
 """
     load_state!(model, ckpt::Checkpoint; prefix = "", ignore = [r"num_batches_tracked\$"],
-                skip = nothing, strict = true) -> NamedTuple
+                skip = nothing, strict = true, filter_fn = nothing) -> NamedTuple
 
 Copy the tensors of `ckpt` into `model`, matching PyTorch `state_dict` keys derived from the
 model structure (see [`torch_params`](@ref)) and nested under `prefix`. Keys matching a regex
 in `ignore` may be absent from the model; parameters whose key starts with `skip` keep their
 current values. With `strict = true`, missing keys, unused checkpoint keys and shape
-mismatches throw. Returns the number of tensors `loaded` and the lists of `missing`,
+mismatches throw. `filter_fn(param, x)` (see [`checkpoint_tensor`](@ref)) replaces each
+tensor `x` read for the [`TorchParam`](@ref) `param`, in the layout of its array, before its
+shape is checked. Returns the number of tensors `loaded` and the lists of `missing`,
 `unexpected` and `mismatched` keys.
 """
 function load_state!(
         model, ckpt::Checkpoint; prefix::AbstractString = "", ignore = DEFAULT_IGNORE,
-        skip::Union{Nothing, AbstractString} = nothing, strict::Bool = true)
+        skip::Union{Nothing, AbstractString} = nothing, strict::Bool = true,
+        filter_fn = nothing)
     params, aliases = torch_params(model; prefix)
     skipped(k) = skip !== nothing && (k == skip || startswith(k, skip * "."))
     used = Set{String}()
@@ -148,6 +151,7 @@ function load_state!(
             continue
         end
         x = transform(Val(p.kind), ckpt[p.key])
+        filter_fn === nothing || (x = filter_fn(p, x))
         push!(used, p.key)
         if size(x) != size(p.array)
             push!(mismatched,

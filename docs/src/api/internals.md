@@ -79,6 +79,8 @@ Metalhead.Timm.pil_resize
 
 ```@docs
 Metalhead.checkpoint_prefix
+Metalhead.checkpoint_tensor
+Metalhead.load_checkpoint!
 Metalhead.AbstractProcessor
 Metalhead.AbstractImageProcessor
 Metalhead.@processor

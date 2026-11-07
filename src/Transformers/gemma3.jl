@@ -225,5 +225,5 @@ end
 string_keys(d) = Dict{String, Any}(string(k) => v for (k, v) in pairs(d))
 
 register!(ArchSpec(TRANSFORMERS, "Gemma3ForCausalLM", gemma3_for_causal_lm;
-    family = "gemma3",
+    family = "gemma3", ignore = ROTARY_INV_FREQ_IGNORE,
     references = ["unsloth/gemma-3-270m" => "edcf1fe394ee1168e7c5538afd104cfb1f7947e6"]))

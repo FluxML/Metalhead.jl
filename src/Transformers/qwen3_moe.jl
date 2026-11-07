@@ -142,5 +142,5 @@ function qwen3_moe_for_causal_lm(; vocab_size = 151_936, hidden_size = 2048,
 end
 
 register!(ArchSpec(TRANSFORMERS, "Qwen3MoeForCausalLM", qwen3_moe_for_causal_lm;
-    family = "qwen",
+    family = "qwen", ignore = ROTARY_INV_FREQ_IGNORE,
     references = ["Qwen/Qwen3-30B-A3B" => "ad44e777bcd18fa416d9da3bd8f70d33ebb85d39"]))

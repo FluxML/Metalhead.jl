@@ -154,6 +154,6 @@ function granite_like(decoder_layer; vocab_size, hidden_size, num_hidden_layers,
 end
 
 register!(ArchSpec(TRANSFORMERS, "GraniteForCausalLM", granite_for_causal_lm;
-    family = "granite",
+    family = "granite", ignore = ROTARY_INV_FREQ_IGNORE,
     references = [
         "ibm-granite/granite-3.3-2b-base" => "c15dc681f4b2aeb4e576cdaae5434edfc17ed14d"]))
