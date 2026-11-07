@@ -33,20 +33,24 @@ end
 end
 
 @testset "experts" begin
-    # each token goes through its experts, weighted; expert 4 gets no token
+    # each token goes through its experts, weighted; expert 4 gets no token, and with the
+    # second routing experts 1 and 2 get none and expert 4 gets every token
     hidden, intermediate, num_experts, n = 5, 3, 4, 6
     gate_up = randn(hidden, 2 * intermediate, num_experts)
     down = randn(intermediate, hidden, num_experts)
     x = randn(hidden, n)
-    index = [1 3 2 2 1 3; 2 1 3 1 3 2]
     weights = rand(2, n)
-    y = Metalhead.Transformers.moe_experts(gate_up, down, swish, x, index, weights)
     function expert(e, v)
         h = gate_up[:, :, e]' * v
         return down[:, :, e]' * (swish.(h[1:intermediate]) .* h[(intermediate + 1):end])
     end
-    @test y ≈ reduce(hcat,
-        [sum(weights[j, t] * expert(index[j, t], x[:, t]) for j in 1:2) for t in 1:n])
+    for index in ([1 3 2 2 1 3; 2 1 3 1 3 2], repeat([3, 4], 1, n))
+        y = Metalhead.Transformers.moe_experts(gate_up, down, swish, x, index, weights)
+        @test y ≈ reduce(hcat,
+            [sum(weights[j, t] * expert(index[j, t], x[:, t]) for j in 1:2) for t in 1:n])
+    end
+    @test_throws "expert 5" Metalhead.Transformers.moe_experts(
+        gate_up, down, swish, x, fill(5, 2, n), weights)
 end
 
 @testset "config" begin

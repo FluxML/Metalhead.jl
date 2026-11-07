@@ -191,30 +191,28 @@ function gated(act, h)
 end
 gated(::typeof(swish), h) = NNlib.swiglu(h)
 
-# The tokens of each expert, for the experts `index` (k, n) of the tokens, copied to the
-# CPU: a matrix (capacity, num_experts) whose column `e` holds the tokens routed to `e`, in
-# order, padded with token 1 to the largest number of tokens of an expert, and the matrix
-# (k, n) of the positions in it of the tokens' experts.
-function expert_slots(index, num_experts)
-    index = Array(index)
+# The grouping by expert of the (k, n) experts `index` of n tokens, copied to the CPU: the
+# token of each of the k * n entries in the order of their experts (stable), the rank in
+# that order of each entry, and `ends`, the cumulative numbers of entries per expert.
+function expert_groups(index, num_experts)
     k = size(index, 1)
-    counts = zeros(Int, num_experts)
+    index = vec(Array(index))
+    ends = zeros(Int, num_experts)
     for e in index
         1 <= e <= num_experts || error("expert $e is not in 1:$num_experts")
-        counts[e] += 1
+        ends[e] += 1
     end
-    capacity = maximum(counts; init = 0)
-    token = ones(Int, capacity, num_experts)
-    slot = similar(index, Int)
-    fill!(counts, 0)
+    cumsum!(ends, ends)
+    next = [0; ends[1:(end - 1)]]
+    token = similar(index, Int)
+    rank = similar(index, Int)
     for (i, e) in enumerate(index)
-        c = counts[e] += 1
-        token[c, e] = (i - 1) ÷ k + 1
-        slot[i] = (e - 1) * capacity + c
+        rank[i] = next[e] += 1
+        token[rank[i]] = (i - 1) ÷ k + 1
     end
-    return token, slot
+    return token, rank, ends
 end
-ChainRulesCore.@non_differentiable expert_slots(::Any...)
+ChainRulesCore.@non_differentiable expert_groups(::Any...)
 
 """
     moe_experts(gate_up, down, act, x, top_k_index, top_k_weights)
@@ -226,19 +224,19 @@ weights of the experts are torch's `gate_up_proj` (num_experts, 2 * intermediate
 and `down_proj` (num_experts, hidden, intermediate), so `gate_up` has size
 (hidden, 2 * intermediate, num_experts) and `down` (intermediate, hidden, num_experts).
 
-The tokens are grouped by expert and padded to the largest group, so that each projection is
-one `batched_mul`, and each token gathers back the outputs of its experts. Unlike a scatter,
-this needs no atomic additions, which are nondeterministic, and slow in `BFloat16` on GPUs
-before sm_90.
+The k * n pairs of a token and an expert are sorted by expert, so that each projection is
+one `NNlib.grouped_mul` over the groups of different sizes, without padding. Each token then
+gathers back the outputs of its experts. Unlike a scatter, this needs no atomic additions,
+which are nondeterministic, and slow in `BFloat16` on GPUs before sm_90.
 """
 function moe_experts(gate_up, down, act, x, top_k_index, top_k_weights)
-    hidden, n = size(x)
-    k = size(top_k_index, 1)
-    token, slot = expert_slots(top_k_index, size(gate_up, 3))
+    k, n = size(top_k_index)
+    token, rank, ends = expert_groups(top_k_index, size(gate_up, 3))
     xs = NNlib.gather(x, device_indices(x, token))
-    h = gated(act, batched_mul(batched_transpose(gate_up), xs))
-    y = reshape(batched_mul(batched_transpose(down), h), hidden, :)
-    ys = NNlib.gather(y, device_indices(x, slot)) .* reshape(top_k_weights, 1, k, n)
+    h = gated(act, grouped_mul(batched_transpose(gate_up), xs, ends))
+    y = grouped_mul(batched_transpose(down), h, ends)
+    ys = reshape(NNlib.gather(y, device_indices(x, rank)), :, k, n) .*
+         reshape(top_k_weights, 1, k, n)
     return dropdims(sum(ys; dims = 2); dims = 2)
 end
 
