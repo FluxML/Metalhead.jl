@@ -1,0 +1,11 @@
+{
+  "do_sample": false,
+  "eos_token_id": [
+    7,
+    39
+  ],
+  "max_new_tokens": 10,
+  "pad_token_id": 1,
+  "repetition_penalty": 1.2,
+  "transformers_version": "5.22.2"
+}

@@ -215,6 +215,9 @@ function reference_model(file)
     spec = Metalhead.lookup(only(config["architectures"]))
     Metalhead.load_state!(model, ckpt;
         ignore = [Metalhead.DEFAULT_IGNORE; spec.ignore; other_layers])
+    # the generation config of the checkpoint, as transformers' reference
+    T = Metalhead.Transformers
+    model = T.with_generation_config(model, T.generation_config(source, config; pretrained = true))
     return Flux.testmode!(model)
 end
 
@@ -224,7 +227,8 @@ end
 Compare a causal language model with the reference outputs of its real checkpoint, written by
 porting/dump_reference.py: the relative errors of the hidden states and of the logits of the
 last position, and whether greedy decoding reproduces transformers' continuation of the first
-prompt, also with a key-value cache (`missing` for a model without one).
+prompt (`generated`), and so does `generate` with the settings of the checkpoint (`generate`,
+with the key-value cache of the models that have one).
 """
 function check_lm_reference(file; model = reference_model(file))
     meta = SafeTensors.deserialize(file).metadata
@@ -233,13 +237,14 @@ function check_lm_reference(file; model = reference_model(file))
     hidden = forward_features(model, ids)
     logits = forward_head(model, hidden[:, end, :])
     expected = vec(ref["generated_ids"]) .+ 1
-    generated = greedy_decode(model, ids[:, 1], length(expected) - size(ids, 1))
-    cached = Metalhead.Transformers.cacheable(model) ?
-             cached_decode(model, ids[:, 1], length(expected) - size(ids, 1)) == expected :
-             missing
+    n = length(expected) - size(ids, 1)
+    generated = greedy_decode(model, ids[:, 1], n)
+    # as transformers' reference: the settings of the checkpoint, greedily
+    generate = [ids[:, 1]; Metalhead.generate(model, ids[:, 1]; do_sample = false,
+        max_new_tokens = n)]
     return (; repo = meta["repo"], hidden_states = relerr(hidden, ref["hidden_states"]),
         last_logits = relerr(logits, ref["last_logits"]), generated = generated == expected,
-        cached)
+        generate = generate == expected)
 end
 
 """
@@ -647,17 +652,6 @@ acts_list(acts, key) = [acts["$key/$j"] for j in 1:count(startswith("$key/"), ke
 function greedy_decode(model, ids, n; kwargs...)
     for _ in 1:n
         ids = [ids; argmax(model(ids; kwargs...)[:, end])]
-    end
-    return ids
-end
-
-# the same with a key-value cache: the prompt, then one token at a time
-function cached_decode(model, ids, n)
-    cache = Metalhead.Transformers.KVCache(model, 1, length(ids) + n)
-    logits, _ = model(ids; cache)
-    for _ in 1:n
-        ids = [ids; argmax(logits[:, end])]
-        logits, _ = model(ids[end:end]; cache)
     end
     return ids
 end

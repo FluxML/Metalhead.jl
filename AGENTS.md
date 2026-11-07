@@ -23,9 +23,11 @@ results.
 - In: architectures and weights, the feature interface, the processors (the inference pre-
   and post-processing a checkpoint sets), the schedulers and sampling loops of ported
   pipelines, the pooling, projections, normalization and prompts of sentence-transformers
-  models, the key-value cache.
+  models, `generate` (greedy decoding and sampling with the settings of the checkpoint's
+  generation_config.json) and the key-value cache.
 - Out: tokenization algorithms (HuggingFaceTokenizers.jl, through an extension), chat
-  templates, decoding strategies, training utilities, augmentation, data loading, task APIs,
+  templates, the other decoding strategies (beam search, assisted decoding, streaming, ...),
+  training utilities, augmentation, data loading, task APIs,
   quantization, LoRA, sentence-transformers' evaluation and similarity utilities.
 
 General-purpose code that parity needs stays internal. `docs/src/scope.md` has the
@@ -53,7 +55,8 @@ reasons.
 - `src/Transformers/`: one file per transformers model, and `config.jl`, its
   `AbstractConfigFormat`. Blocks that models share (RMSNorm, the rotary tables, the tied
   output head) go in `layers.jl`; `kvcache.jl` is the key-value cache of the language
-  models. Processors go next to their models, one file per upstream
+  models, and `generation.jl` their `generate`, with `GenerationConfig` (the
+  `generation_config` field of each `CausalLM`, which `create_model` reads). Processors go next to their models, one file per upstream
   class under transformers' file names (`image_processing_sam3.jl`, `processing_sam3.jl`);
   `image_processing_backends.jl` has the operations of the torchvision backend that image
   processors share. Tokenizers aren't ported.
@@ -99,7 +102,9 @@ reasons.
 - `porting/`: the Python (uv) project that writes the fixtures and references
   (`dump_processor.py` and `dump_timm_transform.py` those of processors, through the full
   upstream path; `dump_sentence_transformers.py` the tiny sentence-transformers models,
-  saved as sentence-transformers saves them, with a tokenizer of numbered words), and
+  saved as sentence-transformers saves them, with a tokenizer of numbered words;
+  `dump_generation.py` the fixtures of `generate`, a tiny language model with its
+  generation_config.json and transformers' `generate` of random prompts), and
   `publish.jl`, which publishes them. The package and its tests never run Python.
 - `skills/port-hf-model/SKILL.md`: the porting workflow, conventions and numerical pitfalls.
 - `docs/`: Documenter. `docs/make.jl` generates `index.md` (from the README) and `models.md`

@@ -410,6 +410,7 @@ end
 @concrete struct Qwen3_5ForCausalLM <: CausalLM
     model
     lm_head
+    generation_config
 end
 Flux.@layer Qwen3_5ForCausalLM
 
@@ -580,7 +581,7 @@ function qwen3_5_causal_lm(model; tie_word_embeddings, initializer_range)
     lm_head = tie_word_embeddings ? TiedLMHead(weight) :
               init_layer(Dense, size(weight, 1) => size(weight, 2); bias = false,
         init = normal_init(initializer_range))
-    return Qwen3_5ForCausalLM(model, lm_head)
+    return Qwen3_5ForCausalLM(model, lm_head, GenerationConfig())
 end
 
 # `layer_types`, computed as `Qwen3_5TextConfig` does when the config has none: every
@@ -742,6 +743,7 @@ end
 @concrete struct Qwen3_5ForConditionalGeneration <: CausalLM
     model
     lm_head
+    generation_config
 end
 Flux.@layer Qwen3_5ForConditionalGeneration
 
@@ -844,7 +846,7 @@ function qwen3_5_vision_language(text_model; text_config, vision_config, image_t
               init_layer(Dense, size(weight, 1) => size(weight, 2); bias = false,
         init = normal_init(get(something(text_config, (;)), :initializer_range, 0.02)))
     return Qwen3_5ForConditionalGeneration(
-        Qwen3_5Model(visual, language_model, image_token_id), lm_head)
+        Qwen3_5Model(visual, language_model, image_token_id), lm_head, GenerationConfig())
 end
 
 register!(ArchSpec(TRANSFORMERS, "Qwen3_5ForConditionalGeneration",

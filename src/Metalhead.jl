@@ -38,10 +38,11 @@ include("Diffusers/Diffusers.jl")
 include("SentenceTransformers/SentenceTransformers.jl")
 
 using .SentenceTransformers: encode_query, encode_document, similarity
+using .Transformers: generate
 
 export create_model, create_processor, list_models, forward_features, forward_head,
        forward_intermediates, feature_info, post_process_object_detection,
        post_process_instance_segmentation, post_process_semantic_segmentation,
-       encode_query, encode_document, similarity
+       encode_query, encode_document, similarity, generate
 
 end # module

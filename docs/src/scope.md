@@ -27,16 +27,23 @@ In scope:
   `sentence_bert_config.json`, and the prompts and similarity function of
   `config_sentence_transformers.json`. Metalhead reads them strictly and computes the
   embeddings as sentence-transformers' `encode` does.
-- The key-value cache of language models, for the user's own generation loop. It is
-  implemented for the models whose layers are all full attention (Llama, Qwen2, Qwen3,
-  Granite and their mixtures of experts), not yet for Gemma 3 and Qwen3.5.
+- The generation of language models: `generate`, transformers' greedy decoding and
+  multinomial sampling, with the settings of the checkpoint's `generation_config.json` (the
+  temperature, top-k, top-p and min-p of sampling, the repetition penalty, the minimum length
+  and the end-of-text tokens), which change the text silently if they are wrong; and the
+  key-value cache, which `generate` uses and which serves the user's own loop too. The cache
+  is implemented for the models whose layers are all full attention (Llama, Qwen2, Qwen3,
+  Granite and their mixtures of experts), not yet for Gemma 3 and Qwen3.5, whose `generate`
+  runs the model on the whole sequence at each step.
 
 Out of scope, for other packages:
 
 - Tokenization algorithms. HuggingFaceTokenizers.jl tokenizes, and Metalhead uses it through
   an extension.
-- Chat templates, and decoding strategies such as beam search, logits processors and
-  streaming.
+- Chat templates, and the other decoding strategies and logits processors of transformers,
+  such as beam search, contrastive search, assisted decoding, `no_repeat_ngram_size`,
+  `suppress_tokens`, stop strings and streaming. A `generation_config.json` that sets one is
+  an error.
 - Training: optimizers, learning-rate schedules, losses, weight averaging and training loops,
   which Flux, Optimisers.jl and ParameterSchedulers.jl provide. The models are ordinary
   differentiable Flux models.

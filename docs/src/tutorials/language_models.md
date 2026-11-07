@@ -36,11 +36,8 @@ using HuggingFaceTokenizers
 tok = create_processor("HuggingFaceTB/SmolLM2-135M")
 
 prompt = "The capital of France is Paris, and the capital of Italy is"
-ids = tok(prompt).input_ids                       # the token indices of the prompt
-for _ in 1:8                                      # greedy decoding
-    push!(ids, argmax(model(ids)[:, end]))
-end
-println(decode(tok, ids))
+new = generate(model, tok(prompt); max_new_tokens = 8)   # the token indices of 8 new tokens
+println(prompt, decode(tok, new))
 ```
 
 ```
@@ -58,8 +55,35 @@ The tokenizer is that of `tokenizer.json`, with the padding token (`pad_token`) 
 `tokenizer_config.json`. transformers reads the other settings of `tokenizer_config.json`
 too, such as `add_bos_token`, which `create_processor` doesn't.
 
+[`generate`](@ref) is transformers' `generate`, which decodes greedily or samples with the
+settings of the checkpoint's `generation_config.json`, `model.generation_config`:
+
+```julia
+model.generation_config     # GenerationConfig(bos_token_id = 0, eos_token_id = (0,))
+qwen = create_model("Qwen/Qwen3-0.6B")
+qwen.generation_config      # GenerationConfig(do_sample = true, temperature = 0.6, top_k = 20,
+                            #   top_p = 0.95, bos_token_id = 151643, ...)
+```
+
+SmolLM2 decodes greedily, until its end-of-text token or `max_new_tokens`. Qwen3 samples, from
+the 20 most likely tokens and of those the most likely of cumulative probability 0.95, after
+dividing the logits by a temperature of 0.6. Keyword arguments change the settings, with the
+names of transformers: `do_sample = false` decodes greedily, `temperature`, `top_k`, `top_p`,
+`min_p`, `repetition_penalty`, `min_new_tokens`, `eos_token_id`, ... and `rng` is the random
+number generator of sampling. `generate` returns the new tokens only, and for a batch, a
+matrix whose sequences are padded after their end-of-text token (see below).
+
+Without `generate`, a loop runs the model and picks the next token, here greedily:
+
+```julia
+ids = tok(prompt).input_ids
+for _ in 1:8
+    ids = [ids; argmax(model(ids)[:, end])]       # not push!: on Julia 1.10, it errors here
+end
+```
+
 Each step of this loop runs the model on the whole sequence so far. A
-[key-value cache](@ref kv_cache) runs it on the new token only.
+[key-value cache](@ref kv_cache), which `generate` uses, runs it on the new token only.
 
 The logits of the last position give the probabilities of the next token:
 
@@ -93,12 +117,26 @@ and the logits of each text are those it has alone, at the positions of its toke
 rounding. The processor pads with the padding token of the tokenizer, or, for a tokenizer
 without one, such as SmolLM2's, with the token index 1.
 
+`generate` continues each text of a batch after its last token, and returns a matrix of the
+new tokens, `n × batch_size`. A sequence that ends, with an end-of-text token, before
+`max_new_tokens` is followed by padding tokens until the others end too:
+
+```julia
+new = generate(model, inputs; max_new_tokens = 8)
+[decode(tok, c) for c in eachcol(new)]   # decode skips the end-of-text and padding tokens
+```
+
+transformers pads the prompts of `generate` on the left; with the same tokens, the outputs
+are the same, except with a repetition penalty, which transformers applies to the padding
+tokens too, and which `generate` applies to the tokens of each sequence only.
+
 ## [Key-value cache](@id kv_cache)
 
 A [`KVCache`](@ref Metalhead.Transformers.KVCache) keeps the keys and values of the tokens
 the model has seen, so that each step of a generation loop computes the new token only. It
 is allocated for a batch size and a maximum length, and `model(ids; cache)` returns the
-logits and the cache, which it updates in place. The loop above becomes:
+logits and the cache, which it updates in place. `generate` uses it, and so can your own
+loop; the loop above becomes:
 
 ```julia
 using Metalhead.Transformers: KVCache, last_tokens
@@ -107,7 +145,7 @@ ids = tok(prompt).input_ids
 cache = KVCache(model, 1, 64)                     # one sequence of up to 64 tokens
 logits, _ = model(ids; cache)                     # the prompt
 for _ in 1:8
-    push!(ids, argmax(logits[:, end]))
+    ids = [ids; argmax(logits[:, end])]
     logits, _ = model(ids[end:end]; cache)        # the new token alone
 end
 ```
@@ -130,7 +168,8 @@ logits, _ = model(reshape(next, 1, :); cache)     # one more token for each text
 A step can add several tokens, such as the chunks of a long prompt. The cache is for
 inference, not for gradients, and `empty!(cache)` makes it ready for new sequences. Llama,
 Qwen2, Qwen3, Qwen3 MoE and Granite have one; Gemma 3 and Qwen3.5 raise a "not supported yet"
-error. Sampling, beam search and other decoding strategies are left to your loop (see the
+error, and their `generate` runs the model on the whole sequence at each step. Beam search
+and the other decoding strategies of transformers are left to your loop (see the
 [scope](@ref scope)).
 
 ## Inputs and outputs
