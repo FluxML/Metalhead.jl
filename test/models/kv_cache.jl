@@ -93,7 +93,8 @@ alone(model, ids) = model(ids)
         for b in 1:3
             sequence = prompts[1:lengths[b], b]
             for _ in 1:7
-                push!(sequence, argmax(model(sequence)[:, end]))
+                # not push!: on Julia 1.10 the model's reshape makes `sequence` unresizable
+                sequence = [sequence; argmax(model(sequence)[:, end])]
             end
             @test sequence[(lengths[b] + 1):end] == getindex.(generated, b)
         end
