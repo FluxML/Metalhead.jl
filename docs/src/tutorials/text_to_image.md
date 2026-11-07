@@ -155,12 +155,7 @@ loading it again. A pipeline has no processor of its own: it prepares its inputs
 with `subfolder` too:
 
 ```julia
-using Metalhead: Diffusers   # HuggingFaceTokenizers exports an `encode` and a `decode` too
-
 vae = create_model("black-forest-labs/FLUX.2-klein-4B"; subfolder = "vae")
-x = rand(Float32, 256, 256, 3, 1) .* 2 .- 1    # an image with values in [-1, 1]
-latents = Diffusers.mode(Diffusers.encode(vae, x))   # 32 × 32 × 32 × 1
-y = Diffusers.decode(vae, latents)                   # 256 × 256 × 3 × 1
 ```
 
 Images are WHCN arrays, as for the vision models. See the docstrings of

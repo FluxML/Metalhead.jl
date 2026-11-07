@@ -16,13 +16,14 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
   change them. It returns the new tokens of each sequence of a batch padded on the right, and
   uses the key-value cache of the models that have one. Validated against transformers'
   `generate` on tiny models and on the reference checkpoints.
-- The public API is declared. The names of the API reference are exported or, on Julia 1.11
-  and later, `public`: `Metalhead.Timm.pretrained_cfg`, the processors, the models and
-  builders, the Diffusers pipelines and the sentence-transformers methods among them, so
-  `?Metalhead.Timm.pretrained_cfg` no longer warns that the binding may be internal. The
-  porting API (`ArchSpec`, `register!`, `AbstractConfigFormat` and its methods, `Checkpoint`
-  and `load_state!`) is public too, documented on a new page of the API reference (and
-  `register!` now has a docstring), but may change in minor releases (#394).
+- The public API is declared: what you touch after `create_model` is exported or, on Julia
+  1.11 and later, `public`: the model and processor types, `KVCache`,
+  `Timm.pretrained_cfg`, the Diffusers pipelines and `encode_prompt`, and the
+  sentence-transformers methods. So `?Metalhead.Timm.pretrained_cfg` no longer warns that the
+  binding may be internal. The builders, the fields of model structs and the porting API
+  (`ArchSpec`, `register!`, `AbstractConfigFormat`, `Checkpoint`, `load_state!`) mirror
+  upstream's internals and stay internal, so that they can change with it. The porting API is
+  documented on a new page of the API reference, and `register!` has a docstring (#394).
 - `Metalhead.Transformers.KVCache`, a key-value cache for the language models whose layers
   are all full attention (Llama, Qwen2, Qwen3, Qwen3 MoE and Granite, with its mixtures of
   experts), for your own generation loop: `model(input_ids; cache)` runs the model on the

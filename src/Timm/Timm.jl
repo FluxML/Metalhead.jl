@@ -46,10 +46,6 @@ include("efficientnet.jl")
 include("mobilenetv3.jl")
 
 # `public` is a syntax error before Julia 1.11.
-VERSION >= v"1.11.0-DEV.469" && eval(Expr(:public,
-    :EvalTransform, :pretrained_cfg,
-    # builders: `create_model` calls them with timm's keyword arguments
-    :convmixer, :convnext, :densenet, :efficientnet, :inception_resnet_v2, :inception_v3,
-    :inception_v4, :mlp_mixer, :mobilenetv3, :resnet, :vgg, :vit, :xception_aligned))
+VERSION >= v"1.11.0-DEV.469" && eval(Expr(:public, :EvalTransform, :pretrained_cfg))
 
 end # module

@@ -12,6 +12,13 @@ Metalhead.SentenceTransformers.encode
 Metalhead.SentenceTransformers.encode_query
 Metalhead.SentenceTransformers.encode_document
 Metalhead.SentenceTransformers.similarity
+```
+
+## Internals
+
+Not public: the modules of a `SentenceTransformer`, and the preparation of its inputs.
+
+```@docs
 Metalhead.SentenceTransformers.preprocess
 Metalhead.SentenceTransformers.Transformer
 Metalhead.SentenceTransformers.Pooling

@@ -1,4 +1,8 @@
-# [Porting API](@id porting_api)
+# [Porting](@id porting_api)
+
+This page is for contributors, and for a package that registers architectures of its own. It
+is not public API: the names below are neither exported nor declared `public`, and they may
+change without notice, in any release.
 
 Metalhead's libraries (timm, transformers, diffusers and sentence-transformers) plug into
 [`create_model`](@ref) through a registry. An
@@ -7,12 +11,8 @@ a repository names an architecture and its arguments, an
 [`ArchSpec`](@ref Metalhead.ArchSpec) is a ported architecture in one format, and
 [`register!`](@ref Metalhead.register!) adds it to the registry that `create_model` and
 [`list_models`](@ref) read. `src/Timm/config.jl` is the template of a format, and
-[Porting a model](@ref contributing) the workflow.
-
-This API is public, and Metalhead is 0.x: it may change in a minor release, which the
-[changelog](https://github.com/FluxML/Metalhead.jl/blob/master/CHANGELOG.md) then lists. The
-interface of processors (`register_processor!` and the others of [Porting internals](@ref))
-is not public yet.
+[Porting a model](@ref contributing) the workflow. The processors have their own interface
+(`register_processor!` and the others), listed in the [Internals](@ref internals).
 
 ```julia
 using Metalhead, Flux

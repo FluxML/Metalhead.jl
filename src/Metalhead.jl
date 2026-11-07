@@ -56,9 +56,6 @@ export create_model, create_processor, list_models, forward_features, forward_he
 # `public` is a syntax error before Julia 1.11.
 VERSION >= v"1.11.0-DEV.469" && eval(Expr(:public,
     :Timm, :Transformers, :Diffusers, :SentenceTransformers,
-    :TextProcessor, :image_array, :image_matrix,
-    # the porting API, docs/src/api/porting.md
-    :ArchSpec, :register!, :AbstractConfigFormat, :architecture_of, :model_args,
-    :skip_prefix, :weights_name, :instantiate, :Checkpoint, :load_state!))
+    :TextProcessor, :image_array, :image_matrix))
 
 end # module

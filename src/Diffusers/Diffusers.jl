@@ -44,13 +44,7 @@ include("pipeline_flux2_klein.jl")
 include("pipeline_z_image.jl")
 
 # `public` is a syntax error before Julia 1.11.
-VERSION >= v"1.11.0-DEV.469" && eval(Expr(:public,
-    :Flux2KleinPipeline, :ZImagePipeline, :encode_prompt,
-    :Flux2Transformer2DModel, :ZImageTransformer2DModel,
-    :FlowMatchEulerDiscreteScheduler, :set_timesteps, :step, :compute_empirical_mu,
-    :DiagonalGaussianDistribution, :encode, :decode, :mode, :sample,
-    # builders: `create_model` calls them with the arguments of the constructor
-    :autoencoder_kl, :autoencoder_kl_flux2, :flux2_transformer_2d_model,
-    :z_image_transformer_2d_model))
+VERSION >= v"1.11.0-DEV.469" &&
+    eval(Expr(:public, :Flux2KleinPipeline, :ZImagePipeline, :encode_prompt))
 
 end # module

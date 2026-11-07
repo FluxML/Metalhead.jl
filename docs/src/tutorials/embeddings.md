@@ -74,9 +74,6 @@ take `truncate_dim`, which `create_model(repo; truncate_dim = 256)` sets for eve
 
 ## Inputs and outputs
 
-- `Metalhead.SentenceTransformers.preprocess(model, texts; prompt)` returns the inputs of the
-  model: the token indices `input_ids` (from 1) and the `attention_mask`, of size
-  `(seq_len, batch)`, padded on the right.
 - `model(inputs)` applies the modules in order and returns the inputs with their outputs, the
   `token_embeddings` of size `(hidden_size, seq_len, batch)` and the `sentence_embedding` of
   size `(dim, batch)`, as sentence-transformers' `forward`. It is an ordinary Flux model,

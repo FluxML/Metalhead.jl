@@ -11,7 +11,8 @@ using Metalhead: Timm, Transformers, Diffusers, SentenceTransformers
         end
     end
 
-    # What the README, the tutorials and the API reference use or document.
+    # What the README, the tutorials and the API reference use or document, outside the
+    # internals.
     const USED = Dict(
         Metalhead => [:create_model, :create_processor, :list_models, :forward_features,
             :forward_head, :forward_intermediates, :feature_info,
@@ -19,17 +20,14 @@ using Metalhead: Timm, Transformers, Diffusers, SentenceTransformers
             :post_process_semantic_segmentation, :encode_query, :encode_document,
             :similarity, :Timm, :Transformers, :Diffusers, :SentenceTransformers,
             :TextProcessor, :image_array, :image_matrix],
-        Timm => [:EvalTransform, :pretrained_cfg, :resnet, :vit],
+        Timm => [:EvalTransform, :pretrained_cfg],
         Transformers => [:KVCache, :last_tokens, :get_text_features, :get_image_features,
             :CLIPModel, :CLIPProcessor, :SiglipModel, :SiglipProcessor, :Siglip2Model,
             :Siglip2Processor, :Sam3Model, :Sam3Processor, :Qwen3VLProcessor,
-            :Qwen3_5ForConditionalGeneration, :bert_model, :llama_for_causal_lm],
-        Diffusers => [:Flux2KleinPipeline, :ZImagePipeline, :encode_prompt, :encode,
-            :decode, :mode, :sample, :FlowMatchEulerDiscreteScheduler, :set_timesteps,
-            :step],
+            :Qwen3_5ForConditionalGeneration, :BertModel, :TextEncoder],
+        Diffusers => [:Flux2KleinPipeline, :ZImagePipeline, :encode_prompt],
         SentenceTransformers => [:SentenceTransformer, :encode, :encode_query,
-            :encode_document, :similarity, :preprocess, :Transformer, :Pooling, :Dense,
-            :Normalize])
+            :encode_document, :similarity])
 
     @testset "the documented API is public" begin
         for (m, names) in USED, name in names
@@ -40,18 +38,22 @@ using Metalhead: Timm, Transformers, Diffusers, SentenceTransformers
         @test !Base.isexported(Timm, :pretrained_cfg)
     end
 
-    @testset "the porting API is public" begin
-        for name in (:ArchSpec, :register!, :AbstractConfigFormat, :architecture_of,
-            :model_args, :skip_prefix, :weights_name, :instantiate, :Checkpoint,
-            :load_state!)
-            @test Base.ispublic(Metalhead, name)
-            @test Base.Docs.hasdoc(Metalhead, name)
-        end
-    end
-
+    # What mirrors upstream's internals or keyword arguments, or only serves the porting.
     @testset "internals are not public" begin
-        for name in (:REGISTRY, :lookup, :direct_weight_init)
-            @test !Base.ispublic(Metalhead, name)
+        INTERNAL = Dict(
+            Metalhead => [:ArchSpec, :register!, :AbstractConfigFormat, :architecture_of,
+                :model_args, :skip_prefix, :weights_name, :instantiate, :Checkpoint,
+                :load_state!, :checkpoint_prefix, :AbstractProcessor, :REGISTRY, :lookup],
+            Timm => [:resnet, :vit, :efficientnet, :pil_resize, :create_conv2d],
+            Transformers => [:bert_model, :llama_for_causal_lm, :clip_model, :sam3_model,
+                :get_vision_features, :qwen3_5_decode, :MultiheadAttention],
+            Diffusers => [:encode, :decode, :mode, :sample, :step, :set_timesteps,
+                :FlowMatchEulerDiscreteScheduler, :DiagonalGaussianDistribution,
+                :Flux2Transformer2DModel, :autoencoder_kl, :flux2_transformer_2d_model],
+            SentenceTransformers => [:preprocess, :Transformer, :Pooling, :Dense,
+                :Normalize])
+        for (m, names) in INTERNAL, name in names
+            @test !Base.ispublic(m, name)
         end
     end
 else
