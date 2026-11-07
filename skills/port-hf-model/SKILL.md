@@ -55,8 +55,11 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
 5. **Parameter counts.** Run `uv run param_counts.py <family> <arch> ...` for every registered
    architecture. It writes `test/references/param_counts/<family>.json`. Run this before the
    tests: until then, `check_param_counts` raises a KeyError.
-6. **References.** Pick one or two pretrained repos (prefer small ones, and `tv_in1k`/`tv2_in1k`
-   when they replace a legacy Metalhead model), then run
+6. **References.** The first reference is the default checkpoint of the bare architecture, so
+   it must be timm's: `timm.get_pretrained_cfg("<arch>").hf_hub_id` (when that repo is named
+   after another variant, as the QuickGELU CLIP tags are, take the repo of the architecture
+   with the same weights). Add one or two more repos (prefer small ones, and
+   `tv_in1k`/`tv2_in1k` when they replace a legacy Metalhead model), then run
    `uv run dump_reference.py timm/<repo> timm/<other> ...`.
    Add the printed `repo => sha` to the architecture's `references`. Then run
    `julia --project=.. check_reference.jl ../test/references/timm--<repo>.safetensors ...`

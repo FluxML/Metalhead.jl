@@ -239,10 +239,14 @@ const VIT_REFERENCES = Dict(
         ["timm/vit_small_patch14_dinov2.lvd142m" => "4610ca143709d58a633b6397a74412c2c3842454"],
     "vit_small_patch14_reg4_dinov2" =>
         ["timm/vit_small_patch14_reg4_dinov2.lvd142m" => "c04b5193082a8d5b0c4856c7937384a48136c5de"],
-    "vit_base_patch16_clip_224" =>
-        ["timm/vit_base_patch16_clip_224.laion2b" => "fbadfdd1c0e903c58855b70ae04740b22da9d305"],
-    "vit_base_patch32_clip_quickgelu_224" =>
-        ["timm/vit_base_patch32_clip_quickgelu_224.metaclip_400m" => "a6964321961725c5a073f3b658b0cd32a8ec1a96"],
+    "vit_base_patch16_clip_224" => [
+        "timm/vit_base_patch16_clip_224.laion2b_ft_in12k_in1k" => "06346c6e9051d137049cc36c5a25fc382887d6dc",
+        "timm/vit_base_patch16_clip_224.laion2b" => "fbadfdd1c0e903c58855b70ae04740b22da9d305"
+    ],
+    "vit_base_patch32_clip_quickgelu_224" => [
+        "timm/vit_base_patch32_clip_quickgelu_224.laion400m_e32" => "13c7a7ab5f2eafeda99e47a14de8b8ad20ea1d83",
+        "timm/vit_base_patch32_clip_quickgelu_224.metaclip_400m" => "a6964321961725c5a073f3b658b0cd32a8ec1a96"
+    ],
     "vit_base_patch16_siglip_224" =>
         ["timm/vit_base_patch16_siglip_224.v2_webli" => "4c3661e5ac879a276ddc5ddc6d3f0ecc78fd5d82"]
 )

@@ -90,6 +90,16 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
   largest one. NNlib 0.9.56 is now the minimum version (#389).
 - NNlib 0.9.57 is now the minimum version: the SwiGLU of FLUX.2 and of the SiLU-gated MLPs of
   the language models is `NNlib.swiglu` (#388).
+- `create_model(name; pretrained = true)` of a bare timm architecture loads the checkpoint that
+  `timm.create_model(name, pretrained=True)` loads. Nine architectures defaulted to another
+  one, which stays validated and available by its repository: `resnet50` (now `a1_in1k`, was
+  `tv2_in1k`), `wide_resnet50_2` (`racm_in1k`, was `tv2_in1k`), `densenet121` (`ra_in1k`, was
+  `tv_in1k`), `convnext_tiny` (`in12k_ft_in1k`, was `fb_in1k`), `mobilenetv4_conv_medium`,
+  `mobilenetv4_hybrid_medium`, `mobilenetv4_hybrid_large`, `vit_base_patch16_clip_224` (now
+  a 1000-class classifier, `laion2b_ft_in12k_in1k`; was the headless `laion2b`) and
+  `vit_base_patch32_clip_quickgelu_224` (`laion400m_e32`, was `metaclip_400m`). The weights
+  of 0.9 are `timm/resnet50.tv2_in1k` and `timm/wide_resnet50_2.tv2_in1k`, as in the
+  [migration guide](https://fluxml.ai/Metalhead.jl/dev/migration/).
 
 ### Fixed
 

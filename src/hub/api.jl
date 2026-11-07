@@ -105,7 +105,8 @@ directory containing a `config.json` and `model.safetensors`.
 A repository or a directory names a checkpoint, whose weights are loaded: `pretrained`
 defaults to `true` for them. A bare architecture names the architecture alone, whose
 weights are random and for which nothing is downloaded: `pretrained` defaults to `false`,
-and `pretrained = true` loads the weights of its default validated checkpoint.
+and `pretrained = true` loads the weights of its default validated checkpoint, which for a timm
+architecture is the one `timm.create_model(name, pretrained=True)` loads.
 `pretrained = false` builds the architecture of a repository or directory with random
 weights, downloading only its `config.json`. `revision` selects a branch, tag or commit of
 the repository; validated checkpoints default to the commit they were validated at.
