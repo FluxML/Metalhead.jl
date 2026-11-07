@@ -146,7 +146,7 @@ Qwen3.5 MoE reuses. A Gemma 3 model is a `Gemma3ForCausalLM` whose decoder is a 
 In Granite MoE (`GraniteMoeForCausalLM`, and `GraniteMoeSharedForCausalLM` with a shared
 expert), the MLP of each layer is a sparse mixture of experts: a router picks the
 `num_experts_per_tok` experts of each token, whose outputs are summed with the router's
-weights. Each projection of the experts is one `batched_mul` over the tokens grouped by
+weights. Each projection of the experts is one `NNlib.grouped_mul` over the tokens grouped by
 expert, so the experts compute only for their own tokens, as in transformers. Grouping the
 tokens by expert copies the experts of each token to the CPU, once per layer on a GPU. The
 load-balancing loss of training is not implemented.
