@@ -22,7 +22,7 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
   `?Metalhead.Timm.pretrained_cfg` no longer warns that the binding may be internal. The
   porting API (`ArchSpec`, `register!`, `AbstractConfigFormat` and its methods, `Checkpoint`
   and `load_state!`) is public too, documented on a new page of the API reference (and
-  `register!` now has a docstring), but may change in minor releases.
+  `register!` now has a docstring), but may change in minor releases (#394).
 - `Metalhead.Transformers.KVCache`, a key-value cache for the language models whose layers
   are all full attention (Llama, Qwen2, Qwen3, Qwen3 MoE and Granite, with its mixtures of
   experts), for your own generation loop: `model(input_ids; cache)` runs the model on the
