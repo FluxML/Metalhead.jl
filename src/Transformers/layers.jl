@@ -122,6 +122,61 @@ function kv_lengths_of(attention_mask, input_ids)
 end
 ChainRulesCore.@non_differentiable kv_lengths_of(::Any...)
 
+# The cache of one layer for a call of a model with a `KVCache` (kvcache.jl): its buffers
+# of keys and values, the number of tokens `start` cached before the call and `stop` valid
+# after it in each sequence (on the host), and the rotary `offset` of the new tokens, an
+# integer if all the sequences have the same `start`, else an array on the device of the
+# model.
+struct LayerCache{A, O}
+    keys::A
+    values::A
+    start::Vector{Int}
+    stop::Vector{Int}
+    offset::O
+end
+
+isuniform(c::LayerCache) = c.offset isa Integer
+isprefill(c::LayerCache) = isuniform(c) && iszero(c.offset)
+
+rotary_offset(::Nothing) = 0
+rotary_offset(c::LayerCache) = c.offset
+
+# Write the new keys and values (head_dim, kv_heads, n, batch_size) after the cached ones:
+# one slice of the buffers if the sequences have the same length, else one slice for each.
+function store!(c::LayerCache, k, v)
+    n = size(k, 3)
+    if isuniform(c)
+        rows = (c.offset + 1):(c.offset + n)
+        copyto!(view(c.keys, :, :, rows, :), k)
+        copyto!(view(c.values, :, :, rows, :), v)
+    else
+        for (b, s) in enumerate(c.start)
+            rows = (s + 1):(s + n)
+            copyto!(view(c.keys, :, :, rows, b), view(k, :, :, :, b))
+            copyto!(view(c.values, :, :, rows, b), view(v, :, :, :, b))
+        end
+    end
+    return nothing
+end
+
+# Causal self-attention, with the keys of the padding of a batch masked by `kv_lengths`.
+# With a `LayerCache`, the new keys and values are stored and the queries, which follow
+# the cached tokens of their sequence, attend to the buffers: `q_offset` and `kv_lengths`
+# are what `is_causal = :bottom_right` sets, and NNlib (since 0.9.56) drops a causal mask
+# that excludes no key, as for a step of one token. The first call of an empty cache is the
+# call without one: it attends to the new keys, not to the whole buffer.
+function attend(q, k, v, kv_lengths, ::Nothing; kwargs...)
+    return NNlib.scaled_dot_product_attention(q, k, v; is_causal = true, kv_lengths,
+        kwargs...)
+end
+
+function attend(q, k, v, kv_lengths, cache::LayerCache; kwargs...)
+    store!(cache, k, v)
+    isprefill(cache) && return attend(q, k, v, kv_lengths, nothing; kwargs...)
+    return NNlib.scaled_dot_product_attention(q, cache.keys, cache.values;
+        is_causal = true, q_offset = cache.start, kv_lengths = cache.stop, kwargs...)
+end
+
 # transformers' `rope_parameters`, from it or from the older `rope_theta` and `rope_scaling`
 # keys of config.json, as in `RotaryEmbeddingConfigMixin.convert_rope_params_to_dict`.
 function rope_parameters_of(name; rope_theta, rope_scaling, rope_parameters,

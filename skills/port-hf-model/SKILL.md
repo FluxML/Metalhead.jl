@@ -469,6 +469,15 @@ first. The workflow is the one above, with these differences.
   returns zeros there, and NNlib NaNs unless `sliding_window_q_lengths` gives it the
   matching `q_lengths`. Give a padded fixture such queries (Gemma 3's `lengths = [9, 7, 2]`
   with a window of 4).
+- **Key-value cache** (`kvcache.jl`, `LayerCache` and `attend` in `layers.jl`). A decoder
+  whose layers are all full attention takes a `KVCache` if its attention layers and decoder
+  layers accept a fourth argument `cache = nothing`: rotate the queries and keys with
+  `offset = rotary_offset(cache)` and call `attend(q, k, v, kv_lengths, cache; kwargs...)`
+  in place of `NNlib.scaled_dot_product_attention`, then add the attention type to
+  `CachedAttention`. A layer with sliding-window attention or a recurrent state needs more
+  (keep a window of keys, carry the state): `check_cacheable` raises "not supported yet" for
+  it until it has that. Test it by comparing the cached steps with the full forward pass
+  (`test/models/kv_cache.jl`).
 - **Mixtures of experts** (Granite MoE, Qwen3 MoE). transformers 5 stores the experts of a
   layer as stacked 3D parameters (`experts.gate_up_proj`, `experts.down_proj`) and renames or
   merges the checkpoint's keys when loading (`conversion_mapping.py`); `save_pretrained`

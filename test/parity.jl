@@ -224,7 +224,7 @@ end
 Compare a causal language model with the reference outputs of its real checkpoint, written by
 porting/dump_reference.py: the relative errors of the hidden states and of the logits of the
 last position, and whether greedy decoding reproduces transformers' continuation of the first
-prompt.
+prompt, also with a key-value cache (`missing` for a model without one).
 """
 function check_lm_reference(file; model = reference_model(file))
     meta = SafeTensors.deserialize(file).metadata
@@ -234,8 +234,12 @@ function check_lm_reference(file; model = reference_model(file))
     logits = forward_head(model, hidden[:, end, :])
     expected = vec(ref["generated_ids"]) .+ 1
     generated = greedy_decode(model, ids[:, 1], length(expected) - size(ids, 1))
+    cached = Metalhead.Transformers.cacheable(model) ?
+             cached_decode(model, ids[:, 1], length(expected) - size(ids, 1)) == expected :
+             missing
     return (; repo = meta["repo"], hidden_states = relerr(hidden, ref["hidden_states"]),
-        last_logits = relerr(logits, ref["last_logits"]), generated = generated == expected)
+        last_logits = relerr(logits, ref["last_logits"]), generated = generated == expected,
+        cached)
 end
 
 """
@@ -643,6 +647,17 @@ acts_list(acts, key) = [acts["$key/$j"] for j in 1:count(startswith("$key/"), ke
 function greedy_decode(model, ids, n; kwargs...)
     for _ in 1:n
         ids = [ids; argmax(model(ids; kwargs...)[:, end])]
+    end
+    return ids
+end
+
+# the same with a key-value cache: the prompt, then one token at a time
+function cached_decode(model, ids, n)
+    cache = Metalhead.Transformers.KVCache(model, 1, length(ids) + n)
+    logits, _ = model(ids; cache)
+    for _ in 1:n
+        ids = [ids; argmax(logits[:, end])]
+        logits, _ = model(ids[end:end]; cache)
     end
     return ids
 end

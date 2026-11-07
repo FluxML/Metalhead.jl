@@ -8,6 +8,13 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
 
 ### Added
 
+- `Metalhead.Transformers.KVCache`, a key-value cache for the language models whose layers
+  are all full attention (Llama, Qwen2, Qwen3, Qwen3 MoE and Granite, with its mixtures of
+  experts), for your own generation loop: `model(input_ids; cache)` runs the model on the
+  new tokens after the cached ones and returns `(logits, cache)`. A batch of sequences of
+  different lengths is prefilled padded on the right, with its `attention_mask`, and
+  `last_tokens` picks the logits of each sequence's last token. Gemma 3 and Qwen3.5 raise a
+  "not supported yet" error.
 - The text encoders BERT, XLM-RoBERTa and ModernBERT (`BertModel`, `XLMRobertaModel` and
   `ModernBertModel`, with `BertForSequenceClassification`,
   `XLMRobertaForSequenceClassification`, `ModernBertForSequenceClassification` and

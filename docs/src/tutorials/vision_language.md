@@ -78,10 +78,11 @@ Between the two cats, there is a **white remote control** lying on the pink couc
 So, the answer is: **A white remote control**.
 ```
 
-There is no key-value cache yet, so each step runs the model on the whole sequence: the 97
-steps of this answer take 6 seconds on an RTX 5090, and a few minutes on a CPU. Asked to
-`"Describe this image."`, the model starts with "This image captures a serene and cozy scene
-of two cats lounging on a bright pink couch, surrounded by their favorite remote controls."
+There is no key-value cache for Qwen3.5 yet, so each step runs the model on the whole
+sequence: the 97 steps of this answer take 6 seconds on an RTX 5090, and a few minutes on a
+CPU. Asked to `"Describe this image."`, the model starts with "This image captures a serene
+and cozy scene of two cats lounging on a bright pink couch, surrounded by their favorite
+remote controls."
 
 A vector of prompts makes a batch, padded on the right with an `attention_mask`, which the
 model takes as it is. See [`Qwen3VLProcessor`](@ref Metalhead.Transformers.Qwen3VLProcessor)

@@ -15,19 +15,20 @@
 end
 Flux.@layer GraniteAttention
 
-function (m::GraniteAttention)(x, position_embeddings, kv_lengths = nothing)
+function (m::GraniteAttention)(x, position_embeddings, kv_lengths = nothing,
+        cache = nothing)
     _, n, b = size(x)
     q = reshape(m.q_proj(x), m.head_dim, :, n, b)
     k = reshape(m.k_proj(x), m.head_dim, :, n, b)
     v = reshape(m.v_proj(x), m.head_dim, :, n, b)
     if position_embeddings !== nothing
         cos, sin = position_embeddings
-        q = NNlib.apply_rotary_embedding(q, cos, sin)
-        k = NNlib.apply_rotary_embedding(k, cos, sin)
+        offset = rotary_offset(cache)
+        q = NNlib.apply_rotary_embedding(q, cos, sin; offset)
+        k = NNlib.apply_rotary_embedding(k, cos, sin; offset)
     end
-    y = NNlib.scaled_dot_product_attention(q, k, v;
-        fdrop = attention_fdrop(m.attention_dropout, q),
-        scale = m.scaling, is_causal = true, kv_lengths)
+    y = attend(q, k, v, kv_lengths, cache;
+        fdrop = attention_fdrop(m.attention_dropout, q), scale = m.scaling)
     return m.o_proj(reshape(y, :, n, b))
 end
 
@@ -41,9 +42,10 @@ end
 end
 Flux.@layer GraniteDecoderLayer
 
-function (m::GraniteDecoderLayer)(x, position_embeddings, kv_lengths = nothing)
+function (m::GraniteDecoderLayer)(x, position_embeddings, kv_lengths = nothing,
+        cache = nothing)
     r = eltype(x)(m.residual_multiplier)
-    x = x .+ m.self_attn(m.input_layernorm(x), position_embeddings, kv_lengths) .* r
+    x = x .+ m.self_attn(m.input_layernorm(x), position_embeddings, kv_lengths, cache) .* r
     return x .+ m.mlp(m.post_attention_layernorm(x)) .* r
 end
 
@@ -58,11 +60,9 @@ end
 end
 Flux.@layer GraniteModel
 
-function embed(m::GraniteModel, input_ids, attention_mask)
+function input_embeddings(m::GraniteModel, input_ids)
     x = m.embed_tokens(input_ids)
-    x = x .* eltype(x)(m.embedding_multiplier)
-    position_embeddings = rotary_tables(m.rotary_emb, x, size(input_ids, 1))
-    return x, position_embeddings, kv_lengths_of(attention_mask, input_ids)
+    return x .* eltype(x)(m.embedding_multiplier)
 end
 
 # The causal language models of Granite, whose logits are divided by `logits_scaling`.

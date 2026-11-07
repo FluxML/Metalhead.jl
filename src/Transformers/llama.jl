@@ -22,17 +22,16 @@ Flux.@layer LlamaMLP
 end
 Flux.@layer LlamaAttention
 
-function (m::LlamaAttention)(x, position_embeddings, kv_lengths = nothing)
+function (m::LlamaAttention)(x, position_embeddings, kv_lengths = nothing, cache = nothing)
     _, n, b = size(x)
     cos, sin = position_embeddings
+    offset = rotary_offset(cache)
     q = reshape(m.q_proj(x), m.head_dim, :, n, b)
     k = reshape(m.k_proj(x), m.head_dim, :, n, b)
     v = reshape(m.v_proj(x), m.head_dim, :, n, b)
-    q = NNlib.apply_rotary_embedding(q, cos, sin)
-    k = NNlib.apply_rotary_embedding(k, cos, sin)
-    y = NNlib.scaled_dot_product_attention(q, k, v;
-        fdrop = attention_fdrop(m.attention_dropout, q),
-        is_causal = true, kv_lengths)
+    q = NNlib.apply_rotary_embedding(q, cos, sin; offset)
+    k = NNlib.apply_rotary_embedding(k, cos, sin; offset)
+    y = attend(q, k, v, kv_lengths, cache; fdrop = attention_fdrop(m.attention_dropout, q))
     return m.o_proj(reshape(y, :, n, b))
 end
 
@@ -44,8 +43,9 @@ end
 end
 Flux.@layer LlamaDecoderLayer
 
-function (m::LlamaDecoderLayer)(x, position_embeddings, kv_lengths = nothing)
-    x = x .+ m.self_attn(m.input_layernorm(x), position_embeddings, kv_lengths)
+function (m::LlamaDecoderLayer)(x, position_embeddings, kv_lengths = nothing,
+        cache = nothing)
+    x = x .+ m.self_attn(m.input_layernorm(x), position_embeddings, kv_lengths, cache)
     return x .+ m.mlp(m.post_attention_layernorm(x))
 end
 
@@ -61,15 +61,19 @@ abstract type DecoderModel end
 end
 Flux.@layer LlamaModel
 
+input_embeddings(m::LlamaModel, input_ids) = m.embed_tokens(input_ids)
+
 # The token embeddings, the rotary tables of the layers (transformers'
 # `position_embeddings`) and the lengths of the sequences of a batch.
-function embed(m::LlamaModel, input_ids, attention_mask)
-    x = m.embed_tokens(input_ids)
+function embed(m::DecoderModel, input_ids, attention_mask)
+    x = input_embeddings(m, input_ids)
     position_embeddings = rotary_tables(m.rotary_emb, x, size(input_ids, 1))
     return x, position_embeddings, kv_lengths_of(attention_mask, input_ids)
 end
 
-function (m::DecoderModel)(input_ids::AbstractMatrix{<:Integer}; attention_mask = nothing)
+function (m::DecoderModel)(input_ids::AbstractMatrix{<:Integer}; attention_mask = nothing,
+        cache = nothing)
+    cache === nothing || return cached_forward(m, input_ids, attention_mask, cache)
     x, position_embeddings, kv_lengths = embed(m, input_ids, attention_mask)
     for layer in m.layers
         x = layer(x, position_embeddings, kv_lengths)
@@ -77,22 +81,32 @@ function (m::DecoderModel)(input_ids::AbstractMatrix{<:Integer}; attention_mask 
     return m.norm(x)
 end
 
-function (m::DecoderModel)(input_ids::AbstractVector{<:Integer}; attention_mask = nothing)
+function (m::DecoderModel)(input_ids::AbstractVector{<:Integer}; attention_mask = nothing,
+        kwargs...)
     mask = attention_mask === nothing ? nothing : reshape(attention_mask, :, 1)
-    return dropdims(m(reshape(input_ids, :, 1); attention_mask = mask); dims = 3)
+    return one_output(m(reshape(input_ids, :, 1); attention_mask = mask, kwargs...))
 end
+
+# The output for a batch of one as that for a vector, with the cache of a call that has one
+one_output(x::AbstractArray) = dropdims(x; dims = 3)
+one_output((x, cache)::Tuple) = (one_output(x), cache)
 
 # A causal language model: a decoder `model` (a `DecoderModel`) and the output projection
 # `lm_head` of its `forward_head`.
 abstract type CausalLM end
 
 function forward_features(m::CausalLM, input_ids::AbstractArray{<:Integer};
-        attention_mask = nothing)
-    return m.model(input_ids; attention_mask)
+        attention_mask = nothing, cache = nothing)
+    cache === nothing && return m.model(input_ids; attention_mask)
+    check_cacheable(m)
+    return m.model(input_ids; attention_mask, cache)
 end
 
-function (m::CausalLM)(input_ids; kwargs...)
-    return forward_head(m, forward_features(m, input_ids; kwargs...))
+function (m::CausalLM)(input_ids; cache = nothing, kwargs...)
+    cache === nothing && return forward_head(m, forward_features(m, input_ids; kwargs...))
+    check_cacheable(m)
+    features, _ = forward_features(m, input_ids; cache, kwargs...)
+    return forward_head(m, features), cache
 end
 
 # The output of a processor, a NamedTuple, as the token indices and the keyword arguments
@@ -104,9 +118,9 @@ end
 input_keys(::CausalLM) = (:attention_mask,)
 input_hint(::CausalLM) = "pass `text` to the processor"
 
-function forward_features(m::CausalLM, inputs::NamedTuple)
-    input_ids, kwargs = token_inputs(m, inputs)
-    return forward_features(m, input_ids; kwargs...)
+function forward_features(m::CausalLM, inputs::NamedTuple; kwargs...)
+    input_ids, model_kwargs = token_inputs(m, inputs)
+    return forward_features(m, input_ids; model_kwargs..., kwargs...)
 end
 
 function forward_intermediates(m::CausalLM, inputs::NamedTuple; kwargs...)
@@ -194,6 +208,9 @@ different lengths, padded on the right, takes the tokenizer's `attention_mask` o
 The output of its processor, a [`TextProcessor`](@ref Metalhead.TextProcessor), can replace
 both: `model(tok(texts))`. [`forward_features`](@ref) returns the hidden states after the
 final norm, and [`forward_intermediates`](@ref) those of each layer.
+
+With a [`KVCache`](@ref Metalhead.Transformers.KVCache), `model(input_ids; cache)` takes the
+new tokens of each sequence only and returns `(logits, cache)`.
 """
 function llama_for_causal_lm(; vocab_size = 32000, hidden_size = 4096,
         intermediate_size = 11008, num_hidden_layers = 32, num_attention_heads = 32,

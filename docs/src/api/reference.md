@@ -54,6 +54,8 @@ Metalhead.Timm.pretrained_cfg
 ## transformers
 
 ```@docs
+Metalhead.Transformers.KVCache
+Metalhead.Transformers.last_tokens
 Metalhead.Transformers.Qwen3_5ForConditionalGeneration
 Metalhead.Transformers.Qwen3_5VisionModel
 ```
@@ -98,6 +100,7 @@ diffusers builders the arguments of the model's constructor.
 Modules = [Metalhead.Timm, Metalhead.Transformers]
 Order = [:function]
 Filter = f -> !(f in (Metalhead.Timm.pretrained_cfg, Metalhead.Timm.pil_resize,
+    Metalhead.Transformers.last_tokens,
     post_process_object_detection, post_process_instance_segmentation,
     post_process_semantic_segmentation, Metalhead.Transformers.clip_model,
     Metalhead.Transformers.clip_text_model, Metalhead.Transformers.clip_vision_model,
