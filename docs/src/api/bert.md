@@ -1,3 +1,7 @@
+```@meta
+CollapsedDocStrings = true
+```
+
 # BERT, XLM-RoBERTa and ModernBERT
 
 ```@index

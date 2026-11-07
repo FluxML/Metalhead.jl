@@ -1,3 +1,7 @@
+```@meta
+CollapsedDocStrings = true
+```
+
 # SAM 3
 
 ```@index

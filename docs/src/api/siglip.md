@@ -1,3 +1,7 @@
+```@meta
+CollapsedDocStrings = true
+```
+
 # SigLIP and SigLIP 2
 
 ```@index

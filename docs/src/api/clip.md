@@ -1,3 +1,7 @@
+```@meta
+CollapsedDocStrings = true
+```
+
 # CLIP
 
 ```@index
