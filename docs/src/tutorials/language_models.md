@@ -204,6 +204,17 @@ create_model("LlamaForCausalLM"; vocab_size = 1000, hidden_size = 64, intermedia
     num_hidden_layers = 2, num_attention_heads = 4, num_key_value_heads = 2)
 ```
 
+The vision-language models (Qwen3.5) and the other models made of several parts have their
+fields in sub-configs, `text_config` and `vision_config`. A keyword of that name is merged into
+the sub-config of the repository, so that the other fields keep the checkpoint's values; a
+field that depends on the one you change, such as `layer_types` with `num_hidden_layers`, is
+changed too, or reset to its default with `nothing`:
+
+```julia
+create_model("Qwen/Qwen3.5-0.8B"; pretrained = false,
+    text_config = (; num_hidden_layers = 4, layer_types = nothing))
+```
+
 The rotary embeddings are the default ones, or those scaled as in Llama 3.1 and later
 (`rope_type = "llama3"`) or linearly (`"linear"`). Options that the ports don't implement raise
 an error. These are the other rotary embeddings, such as `"yarn"`, and the sliding-window

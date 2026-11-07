@@ -95,6 +95,8 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
   samples in 9 steps with `guidance_scale = 0`. Its text encoder is the decoder of the
   `Qwen3ForCausalLM` checkpoint, as diffusers loads a `Qwen3Model`, whose prompt embeddings
   are a matrix per prompt, without the padding.
+- `num_images_per_prompt` in `Flux2KleinPipeline` and `ZImagePipeline`, as in diffusers: each
+  prompt generates that many images, one after the other in the batch (#342).
 
 ### Changed
 
@@ -119,6 +121,10 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
 
 ### Fixed
 
+- A `text_config`, `vision_config` or other sub-config in the keywords of `create_model`
+  (`create_model("Qwen/Qwen3.5-0.8B"; text_config = (; num_hidden_layers = 4, layer_types =
+  nothing))`) is merged into the sub-config of the repository's `config.json`. It replaced
+  the whole sub-config, so that its other fields fell back to transformers' defaults (#342).
 - Fix the deprecated `SqueezeNet(; pretrain = true)` with current Flux by loading plain
   weight arrays instead of deserializing an old Flux model (#384).
 - Rotary tables and Qwen3.5 chunk masks are generated on the input's device, avoiding CPU

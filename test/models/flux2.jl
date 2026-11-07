@@ -93,6 +93,12 @@ eight_bit(x) = round.(UInt8, (x .+ 1) ./ 2 .* 255)
     pair = pipe(embeds; image = [images[1], images[1]], height = 16, width = 20, kwargs...)
     stacked = cat(images[1], images[1]; dims = 4)
     @test pipe(embeds; image = stacked, height = 16, width = 20, kwargs...) ≈ pair
+    # the references are shared by the images of a prompt
+    noise = randn(Float32, 5, 4, 16, 4)
+    @test pipe(embeds; image = images, height = 16, width = 20, num_images_per_prompt = 2,
+        num_inference_steps = 2, latents = noise) ≈
+          pipe(embeds[:, :, [1, 1, 2, 2]]; image = images, height = 16, width = 20,
+        num_inference_steps = 2, latents = noise)
     @test_throws "no images" pipe(embeds; image = Matrix{UInt8}[], kwargs...)
     @test_throws "at least 64 pixels" pipe(embeds; image = zeros(UInt8, 32, 64, 3), kwargs...)
 end
@@ -217,6 +223,22 @@ end
     @test size(base(embeds; height = 16, width = 20, num_inference_steps = 1,
         negative_prompt_embeds = randn(Float32, 48, 3, 1))) == (20, 16, 3, 1)
     @test D.patchify_latents(D.unpatchify_latents(latents)) == latents
+
+    # several images per prompt are those of the prompts repeated in a row, as in diffusers,
+    # also for the negative prompts of guidance
+    two = randn(Float32, 48, 7, 2)
+    negative = randn(Float32, 48, 3, 2)
+    repeated = [1, 1, 1, 2, 2, 2]
+    kwargs = (; height = 16, width = 20, num_inference_steps = 2,
+        latents = randn(Float32, 5, 4, 16, 6))
+    images = pipe(two; num_images_per_prompt = 3, kwargs...)
+    @test size(images) == (20, 16, 3, 6)
+    @test images ≈ pipe(two[:, :, repeated]; kwargs...)
+    @test base(two; num_images_per_prompt = 3, negative_prompt_embeds = negative, kwargs...) ≈
+          base(two[:, :, repeated]; negative_prompt_embeds = negative[:, :, repeated],
+        kwargs...)
+    @test_throws "latents" pipe(two; kwargs...)
+    @test_throws "positive" pipe(two; num_images_per_prompt = 0, kwargs...)
 end
 
 # Tokenizes the chat prompts of a pipeline into the small vocabulary of the fixtures, with

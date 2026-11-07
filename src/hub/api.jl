@@ -111,7 +111,9 @@ architecture is the one `timm.create_model(name, pretrained=True)` loads.
 weights, downloading only its `config.json`. `revision` selects a branch, tag or commit of
 the repository; validated checkpoints default to the commit they were validated at.
 The remaining keyword arguments are the original library's model arguments, e.g. timm's
-`num_classes`, or the fields of a transformers model's `config.json`, e.g. `num_hidden_layers`.
+`num_classes`, or the fields of a transformers model's `config.json`, e.g. `num_hidden_layers`;
+for a model with sub-configs (`text_config`, `vision_config`, ...) they are NamedTuples that are
+merged into those of the `config.json`.
 Changing `num_classes` of a pretrained model re-initialises its classifier.
 
 A diffusers repository holds a pipeline, described by its `model_index.json`, whose

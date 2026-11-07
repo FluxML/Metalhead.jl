@@ -1,6 +1,6 @@
 # Ported from diffusers.pipelines.z_image.pipeline_z_image (diffusers 0.42.0, Apache-2.0,
 # Alibaba Z-Image Team and The HuggingFace Team): text-to-image generation, without several
-# images per prompt, LoRA and callbacks. Validated against test/fixtures/z_image_* and
+# LoRA and callbacks. Validated against test/fixtures/z_image_* and
 # test/references/Tongyi-MAI--Z-Image-Turbo.
 
 """
@@ -120,8 +120,8 @@ end
 Generate an image for each prompt (a string or a vector of strings, which the pipeline's
 tokenizer encodes, see [`encode_prompt`](@ref Metalhead.Diffusers.encode_prompt)), or for
 the prompt embeddings of `encode_prompt`, a vector of matrices of size
-`(cap_feat_dim, length)`. Returns an array of size `(width, height, 3, batch)` with values
-in [0, 1].
+`(cap_feat_dim, length)`. Returns an array of size
+`(width, height, 3, batch * num_images_per_prompt)` with values in [0, 1].
 
 Keyword arguments, with the defaults of diffusers:
 
@@ -136,9 +136,11 @@ Keyword arguments, with the defaults of diffusers:
   - `cfg_normalization`: when positive, the guided prediction of each image is scaled down
     to at most `cfg_normalization` times the norm of the prediction of its prompt.
   - `cfg_truncation`: guidance stops at the steps whose timestep `1 - σ` exceeds it.
-  - `latents`: the initial noise, of size `(width ÷ 8, height ÷ 8, in_channels, batch)`,
-    drawn from `rng` on the CPU by default. The latents are denoised in `Float32` (or
-    `Float64`).
+  - `num_images_per_prompt`: the number of images of each prompt (1), which come one after
+    the other in the batch: the images of the first prompt, then those of the second, ...
+  - `latents`: the initial noise, of size
+    `(width ÷ 8, height ÷ 8, in_channels, batch * num_images_per_prompt)`, drawn from `rng`
+    on the CPU by default. The latents are denoised in `Float32` (or `Float64`).
   - `output_type`: `:image`, or `:latent` for the denoised latents before the autoencoder.
   - `max_sequence_length`: as in [`encode_prompt`](@ref Metalhead.Diffusers.encode_prompt).
 """
@@ -163,7 +165,8 @@ end
 function (p::ZImagePipeline)(prompt_embeds::AbstractVector{<:AbstractMatrix};
         negative_prompt_embeds = nothing, height::Integer = 1024, width::Integer = 1024,
         num_inference_steps::Integer = 50, sigmas = nothing, guidance_scale = 5.0,
-        cfg_normalization::Real = false, cfg_truncation = 1.0, latents = nothing,
+        cfg_normalization::Real = false, cfg_truncation = 1.0,
+        num_images_per_prompt::Integer = 1, latents = nothing,
         rng::AbstractRNG = Random.default_rng(), output_type::Symbol = :image)
     output_type in (:image, :latent) ||
         error("`output_type` must be :image or :latent, not $(repr(output_type))")
@@ -178,12 +181,15 @@ function (p::ZImagePipeline)(prompt_embeds::AbstractVector{<:AbstractMatrix};
         length(negative_prompt_embeds) == b ||
             error("got $b prompt embeddings and $(length(negative_prompt_embeds)) negative ones")
     end
+    prompt_embeds = repeat_prompts(prompt_embeds, num_images_per_prompt)
+    negative_prompt_embeds = repeat_prompts(negative_prompt_embeds, num_images_per_prompt)
+    b = length(prompt_embeds)
     T = eltype(first(prompt_embeds))
     L = promote_type(Float32, T)
     shape = (2 * (width ÷ f), 2 * (height ÷ f), p.transformer.in_channels, b)
     latents = latents === nothing ? randn(rng, Float32, shape) : latents
     size(latents) == shape ||
-        error("`latents` must have size $shape for these `height`, `width` and prompts")
+        error("`latents` must have size $shape for these `height`, `width`, prompts and `num_images_per_prompt`")
     x = copyto!(similar(first(prompt_embeds), L, shape), latents)
     p.scheduler.use_dynamic_shifting &&
         error("the Metalhead port of ZImagePipeline doesn't support schedulers with `use_dynamic_shifting = true`")

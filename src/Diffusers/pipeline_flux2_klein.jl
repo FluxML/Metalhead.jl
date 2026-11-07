@@ -1,7 +1,7 @@
 # Ported from diffusers.pipelines.flux2.pipeline_flux2_klein and the preprocessing of its
 # reference images in .image_processor (`Flux2ImageProcessor`) (diffusers 0.42.1, Apache-2.0,
 # The HuggingFace Team): text-to-image generation and image editing with reference images,
-# without `num_images_per_prompt`, LoRA and callbacks. Validated against
+# without LoRA and callbacks. Validated against
 # test/fixtures/flux2_klein_tiny, test/fixtures/flux2_klein_cfg and
 # test/references/black-forest-labs--FLUX.2-klein-4B.
 
@@ -62,6 +62,15 @@ register!(ArchSpec(DIFFUSERS_PIPELINE, "Flux2KleinPipeline", flux2_klein_pipelin
     references = ["black-forest-labs/FLUX.2-klein-4B" => "e7b7dc27f91deacad38e78976d1f2b499d76a294"]))
 
 vae_scale_factor(p::Flux2KleinPipeline) = 2^(length(p.vae.encoder.down_blocks) - 1)
+
+# The embeddings of the prompts (`(features, length, batch)`, or a vector of matrices) with
+# each repeated `n` times in a row, as diffusers repeats them for `num_images_per_prompt`.
+repeat_prompts(::Nothing, n::Integer) = nothing
+function repeat_prompts(embeds, n::Integer)
+    n >= 1 || throw(ArgumentError("`num_images_per_prompt` must be positive, not $n"))
+    return embeds isa AbstractVector ? repeat(embeds; inner = n) :
+           embeds[:, :, repeat(axes(embeds, 3); inner = n)]
+end
 
 """
     encode_prompt(pipeline, prompt; max_sequence_length = 512,
@@ -242,8 +251,8 @@ end
 """
     (pipeline::Flux2KleinPipeline)(prompt; image = nothing, height = nothing, width = nothing,
                                    num_inference_steps = 50, guidance_scale = 4.0,
-                                   max_sequence_length = 512, latents = nothing,
-                                   rng = Random.default_rng(), ...)
+                                   num_images_per_prompt = 1, max_sequence_length = 512,
+                                   latents = nothing, rng = Random.default_rng(), ...)
     (pipeline::Flux2KleinPipeline)(prompt_embeds::AbstractArray{<:Real, 3}; ...)
 
 Generate an image for each prompt (a string or a vector of strings, which the pipeline's
@@ -251,8 +260,8 @@ tokenizer encodes, see [`encode_prompt`](@ref Metalhead.Diffusers.encode_prompt)
 the prompt embeddings of
 [`encode_prompt`](@ref Metalhead.Diffusers.encode_prompt), of size
 `(joint_attention_dim, seq_len, batch)`; with reference images `image`, edit them as each
-prompt says. Returns an array of size `(width, height, 3, batch)` with values in [0, 1]:
-[`Metalhead.image_matrix`](@ref) makes images of it with ImageCore.jl.
+prompt says. Returns an array of size `(width, height, 3, batch * num_images_per_prompt)`
+with values in [0, 1]: [`Metalhead.image_matrix`](@ref) makes images of it with ImageCore.jl.
 
 Keyword arguments, with the defaults of diffusers:
 
@@ -273,8 +282,11 @@ Keyword arguments, with the defaults of diffusers:
   - `guidance_scale`: the scale of classifier-free guidance, for checkpoints that are not
     distilled, whose negative prompt is the empty one (the embeddings `negative_prompt_embeds`
     with prompt embeddings).
-  - `latents`: the initial noise, of size `(width ÷ 16, height ÷ 16, in_channels, batch)`, drawn
-    from `rng` on the CPU by default.
+  - `num_images_per_prompt`: the number of images of each prompt (1), which come one after
+    the other in the batch: the images of the first prompt, then those of the second, ...
+  - `latents`: the initial noise, of size
+    `(width ÷ 16, height ÷ 16, in_channels, batch * num_images_per_prompt)`, drawn from `rng`
+    on the CPU by default.
   - `output_type`: `:image`, or `:latent` for the denoised latents before the autoencoder.
   - `max_sequence_length`, `text_encoder_out_layers`: as in
     [`encode_prompt`](@ref Metalhead.Diffusers.encode_prompt).
@@ -293,10 +305,12 @@ function (p::Flux2KleinPipeline)(prompt_embeds::AbstractArray{<:Real, 3};
         image = nothing, negative_prompt_embeds = nothing,
         height::Union{Nothing, Integer} = nothing, width::Union{Nothing, Integer} = nothing,
         num_inference_steps::Integer = 50, sigmas = nothing, guidance_scale = 4.0,
-        latents = nothing, rng::AbstractRNG = Random.default_rng(),
-        output_type::Symbol = :image)
+        num_images_per_prompt::Integer = 1, latents = nothing,
+        rng::AbstractRNG = Random.default_rng(), output_type::Symbol = :image)
     output_type in (:image, :latent) ||
         error("`output_type` must be :image or :latent, not $(repr(output_type))")
+    prompt_embeds = repeat_prompts(prompt_embeds, num_images_per_prompt)
+    negative_prompt_embeds = repeat_prompts(negative_prompt_embeds, num_images_per_prompt)
     guided = guidance_scale > 1 && !p.is_distilled
     guided && negative_prompt_embeds === nothing &&
         error("classifier-free guidance (`guidance_scale > 1`) needs `negative_prompt_embeds`, the embeddings of the empty prompt")
@@ -317,7 +331,7 @@ function (p::Flux2KleinPipeline)(prompt_embeds::AbstractArray{<:Real, 3};
     shape = (width ÷ f, height ÷ f, channels, b)
     latents = latents === nothing ? randn(rng, Float32, shape) : latents
     size(latents) == shape ||
-        error("`latents` must have size $shape for these `height`, `width` and prompts")
+        error("`latents` must have size $shape for these `height`, `width`, prompts and `num_images_per_prompt`")
     x = pack_latents(to_device_of(prompt_embeds, latents))
     T = eltype(x)
     n = size(x, 2)
