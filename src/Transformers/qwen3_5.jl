@@ -849,8 +849,15 @@ function qwen3_5_vision_language(text_model; text_config, vision_config, image_t
         Qwen3_5Model(visual, language_model, image_token_id), lm_head, GenerationConfig())
 end
 
+# The ids of the video and vision tokens, which the model never reads (it has no video, and
+# takes the image tokens by `image_token_id`), and `language_model_only` of Qwen3.8, which
+# transformers 5.22 doesn't read either
+const QWEN3_5_VISION_IGNORE_CONFIG = ["video_token_id", "vision_start_token_id",
+    "vision_end_token_id"]
+
 register!(ArchSpec(TRANSFORMERS, "Qwen3_5ForConditionalGeneration",
     qwen3_5_for_conditional_generation;
     family = "qwen", ignore = [r"^mtp\."],
+    ignore_config = [QWEN3_5_VISION_IGNORE_CONFIG; "language_model_only"],
     references = ["Qwen/Qwen3.5-0.8B" => "2fc06364715b967f1860aea9cf38778875588b17",
         "Qwen/Qwen3.8-27B" => "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0"]))

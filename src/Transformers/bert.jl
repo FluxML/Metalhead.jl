@@ -496,13 +496,20 @@ end
 # the position ids that old checkpoints store, which transformers no longer keeps
 const POSITION_IDS_IGNORE = [r"embeddings\.position_ids$"]
 
+# `position_embedding_type`, which transformers 5 no longer reads (the positions are always
+# absolute), the `classifier_dropout` of the model without a classifier, and the activation
+# of the head that sentence-transformers' CrossEncoder applies to the scores
+const BERT_IGNORE_CONFIG = ["position_embedding_type", "classifier_dropout",
+    "sbert_ce_default_activation_function"]
+
 register!(ArchSpec(TRANSFORMERS, "BertModel", bert_model; family = "bert",
-    ignore = POSITION_IDS_IGNORE,
+    ignore = POSITION_IDS_IGNORE, ignore_config = BERT_IGNORE_CONFIG,
     references = [
         "sentence-transformers/all-MiniLM-L6-v2" => "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
         "BAAI/bge-small-en-v1.5" => "5c38ec7c405ec4b44b94cc5a9bb96e735b38267a"]))
 register!(ArchSpec(TRANSFORMERS, "BertForSequenceClassification",
     bert_for_sequence_classification; family = "bert", ignore = POSITION_IDS_IGNORE,
+    ignore_config = BERT_IGNORE_CONFIG,
     references = [
         "cross-encoder/ms-marco-MiniLM-L6-v2" => "233902d25c440f23af6f7d6e94d2946bac0bee0a"]))
 MODEL_TYPE_CLASSES["bert"] = "BertModel"

@@ -224,6 +224,10 @@ end
 
 string_keys(d) = Dict{String, Any}(string(k) => v for (k, v) in pairs(d))
 
+# `attn_logit_softcapping` is ignored by the attention of transformers' Gemma 3, and
+# `_sliding_window_pattern` is the attribute that the config class derives from
+# `sliding_window_pattern`
 register!(ArchSpec(TRANSFORMERS, "Gemma3ForCausalLM", gemma3_for_causal_lm;
     family = "gemma3", ignore = ROTARY_INV_FREQ_IGNORE,
+    ignore_config = ["attn_logit_softcapping", "_sliding_window_pattern"],
     references = ["unsloth/gemma-3-270m" => "edcf1fe394ee1168e7c5538afd104cfb1f7947e6"]))

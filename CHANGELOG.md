@@ -100,6 +100,14 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
 
 ### Changed
 
+- `create_model` warns about the keys of a transformers or diffusers `config.json` (and of a
+  scheduler's) that the port doesn't read, instead of dropping them silently: a setting of a
+  new checkpoint that changes the results would otherwise not apply. The keys that the
+  libraries record about a checkpoint (`architectures`, `transformers_version`, the
+  `_`-prefixed ones of diffusers, ...) and those that an architecture ignores on purpose
+  (the router loss of the mixtures of experts, the tracker of SAM 3 video, ...) don't warn,
+  and the reference checkpoints of every architecture load without a warning. The keys of a
+  sub-config (`text_config`, ...) are still dropped silently (#367).
 - The package no longer contains the data of its tests, which made it a download of 68 MB
   (2.6 MB now): the fixtures and reference outputs are lazy artifacts on the Hub dataset
   `FluxML/metalhead-test-data`, which the tests download on first use (#372).

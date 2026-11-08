@@ -567,6 +567,17 @@ first. The workflow is the one above, with these differences.
   of `load_checkpoint!` (the `CausalLM` one is in `llama.jl`). Checkpoints that carry buffers
   that transformers drops (Llama-2's `rotary_emb.inv_freq`) go in the spec's `ignore`
   (`ROTARY_INV_FREQ_IGNORE`).
+- **Keys of `config.json` the builder doesn't take.** `create_model` passes a builder only
+  the keys it declares as keywords and warns about every other key, so that a setting of a
+  new checkpoint that changes the results doesn't apply silently. The format ignores the
+  generic ones (`IGNORED_CONFIG_KEYS` in `Transformers/config.jl`, the underscore-prefixed
+  keys of diffusers); list the others the model doesn't read in the spec's `ignore_config`
+  (`ROUTER_LOSS_IGNORE_CONFIG`, the `mamba_*` keys of Granite 4). Before listing a key,
+  grep the modeling code of the pinned transformers (diffusers) for it: one that is read and
+  changes the results is declared by the builder, which errors on the values it doesn't
+  implement (`check_output_gate_type`). `test/hub/config_keys.jl` checks that the `references`
+  of every spec have no unread key, so a new reference that warns fails it. Keys in a
+  sub-config (`text_config`, ...) are still dropped without a warning.
 - **Text encoders** (BERT, XLM-RoBERTa and ModernBERT, `bert.jl`, `xlm_roberta.jl`,
   `modernbert.jl`). A base model is a `TextEncoder`: `model(input_ids; attention_mask,
   token_type_ids)` returns the `last_hidden_state` array, as a decoder does (the

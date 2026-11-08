@@ -224,17 +224,25 @@ end
 
 register!(ArchSpec(TRANSFORMERS, "GraniteMoeForCausalLM", granitemoe_for_causal_lm;
     family = "granite", ignore = ROTARY_INV_FREQ_IGNORE,
+    ignore_config = ROUTER_LOSS_IGNORE_CONFIG,
     references = [
         "ibm-granite/granite-3.1-1b-a400m-base" => "408b6e90baab8cf24f4aa9f8e19703ffa0a53b29"]))
 
 register!(ArchSpec(TRANSFORMERS, "GraniteMoeSharedForCausalLM",
     granitemoeshared_for_causal_lm;
     family = "granite", ignore = ROTARY_INV_FREQ_IGNORE,
+    ignore_config = ROUTER_LOSS_IGNORE_CONFIG,
     references = [
         "ibm-research/moe-7b-1b-active-shared-experts" => "6194d7218c3e792b939b535f5640f9c32be9b442"]))
 
+# The `mamba_*` keys and `time_step_limit` set the Mamba layers, which error, and
+# `init_method` and `normalization_function` aren't read by transformers' modeling code
 register!(ArchSpec(TRANSFORMERS, "GraniteMoeHybridForCausalLM",
     granitemoehybrid_for_causal_lm;
     family = "granite", ignore = ROTARY_INV_FREQ_IGNORE,
+    ignore_config = vcat(ROUTER_LOSS_IGNORE_CONFIG,
+        ["init_method", "normalization_function", "time_step_limit", "mamba_chunk_size",
+            "mamba_conv_bias", "mamba_d_conv", "mamba_d_head", "mamba_d_state",
+            "mamba_expand", "mamba_n_groups", "mamba_n_heads", "mamba_proj_bias"]),
     references = [
         "ibm-granite/granite-4.0-350m-base" => "a50b46cef21c8a86b15f0496cb794487a78a910b"]))

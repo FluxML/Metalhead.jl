@@ -30,9 +30,14 @@ end
 
 weights_name(::DiffusersFormat) = "diffusion_pytorch_model"
 
+# diffusers drops the keys of a configuration that start with an underscore (`_class_name`,
+# `_diffusers_version`, ...) when it builds a model.
+const DiffusersFormats = Union{DiffusersFormat, DiffusersPipelineFormat}
+ignores_config_key(::DiffusersFormats, key) = startswith(key, "_")
+
 # diffusers passes a model the keys of its config.json that its constructor declares.
-function model_args(::Union{DiffusersFormat, DiffusersPipelineFormat}, spec, config, kwargs)
-    return merge(spec.defaults, declared_args(spec.build, config), kwargs)
+function model_args(format::DiffusersFormats, spec, config, kwargs)
+    return merge(spec.defaults, declared_args(format, spec, config), kwargs)
 end
 
 # Schedulers have no weights, and their own scheduler_config.json: they are built from it by
@@ -51,7 +56,11 @@ function instantiate(format::DiffusersPipelineFormat, spec, source, config;
             nothing
         elseif haskey(SCHEDULERS, class)
             build = SCHEDULERS[class]
-            build(; declared_args(build, JSON.parsefile(source_file(sub, "scheduler_config.json")))...)
+            file = source_file(sub, "scheduler_config.json")
+            what = "scheduler_config.json of the $class `$name` of $(spec.name)"
+            args = declared_args(build, JSON.parsefile(file);
+                ignored = k -> ignores_config_key(format, k), what)
+            build(; args...)
         elseif occursin("Tokenizer", class)
             pipeline_tokenizer(sub)
         else

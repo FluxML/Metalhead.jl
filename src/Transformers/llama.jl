@@ -221,8 +221,9 @@ end
 Port of transformers' `LlamaForCausalLM`, built from the fields of its `LlamaConfig` (the
 `config.json` of a checkpoint), with the same names and defaults. `create_model` reads the
 generation settings of the checkpoint into its `generation_config` (see
-[`GenerationConfig`](@ref Metalhead.Transformers.GenerationConfig)), and ignores the other
-keys of `config.json`, as transformers does.
+[`GenerationConfig`](@ref Metalhead.Transformers.GenerationConfig)). It ignores the keys of
+`config.json` that transformers records or doesn't read, and warns about any other that
+this function doesn't take.
 The rotary embedding is the default one or, with `rope_scaling` or `rope_parameters`, one
 with `rope_type = "linear"` or `"llama3"` (Llama 3.1 and later); other types error.
 
@@ -291,8 +292,11 @@ function llama_like(attention; vocab_size, hidden_size, intermediate_size,
     return LlamaForCausalLM(model, lm_head, GenerationConfig())
 end
 
+# `pretraining_tp` is a setting of the training that transformers 5 doesn't read, as it
+# doesn't read `rope_interleaved` and `is_llama_config` of some checkpoints
 register!(ArchSpec(TRANSFORMERS, "LlamaForCausalLM", llama_for_causal_lm;
     family = "llama", ignore = ROTARY_INV_FREQ_IGNORE,
+    ignore_config = ["pretraining_tp", "rope_interleaved", "is_llama_config"],
     references = [
         "HuggingFaceTB/SmolLM2-135M" => "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
         "unsloth/Llama-3.2-1B" => "9535bd9b1d1dea6acafbdc4813b728796aeb28da"]))
