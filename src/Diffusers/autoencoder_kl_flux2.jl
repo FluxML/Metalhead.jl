@@ -73,5 +73,8 @@ function autoencoder_kl_flux2(; in_channels = 3, out_channels = 3,
     return AutoencoderKLFlux2(encoder, decoder, quant_conv, post_quant_conv, bn)
 end
 
+# `force_upcast` of the config of the checkpoint, which diffusers' AutoencoderKLFlux2
+# doesn't declare either
 register!(ArchSpec(DIFFUSERS, "AutoencoderKLFlux2", autoencoder_kl_flux2; family = "flux2",
+    ignore_config = ["force_upcast"],
     references = ["black-forest-labs/FLUX.2-klein-4B/vae" => "e7b7dc27f91deacad38e78976d1f2b499d76a294"]))

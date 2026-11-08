@@ -184,12 +184,16 @@ function xlm_roberta_for_sequence_classification(; vocab_size = 30522, hidden_si
     return XLMRobertaForSequenceClassification(classifier, roberta)
 end
 
+# as for BERT, and the `output_past` of old configs, which `use_cache` replaced
+const XLM_ROBERTA_IGNORE_CONFIG = [BERT_IGNORE_CONFIG; "output_past"]
+
 register!(ArchSpec(TRANSFORMERS, "XLMRobertaModel", xlm_roberta_model;
     family = "xlm_roberta", ignore = POSITION_IDS_IGNORE,
+    ignore_config = XLM_ROBERTA_IGNORE_CONFIG,
     references = ["intfloat/multilingual-e5-base" => "d128750597153bb5987e10b1c3493a34e5a4502a"]))
 register!(ArchSpec(TRANSFORMERS, "XLMRobertaForSequenceClassification",
     xlm_roberta_for_sequence_classification; family = "xlm_roberta",
-    ignore = POSITION_IDS_IGNORE,
+    ignore = POSITION_IDS_IGNORE, ignore_config = XLM_ROBERTA_IGNORE_CONFIG,
     references = ["BAAI/bge-reranker-base" => "2cfc18c9415c912f9d8155881c133215df768a70",
         "BAAI/bge-reranker-v2-m3" => "953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e"]))
 MODEL_TYPE_CLASSES["xlm-roberta"] = "XLMRobertaModel"

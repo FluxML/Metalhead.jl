@@ -30,7 +30,8 @@ using ..Metalhead: ArchSpec, AbstractConfigFormat, ModelSource, register!, decla
 using ..Timm: pil_resize
 using ..Transformers: RMSNorm, CausalLM, decoder, embed, to_device_of, device_indices
 import ..Metalhead: architecture_of, model_args, weights_name, instantiate,
-                    instantiate_processor, forward_intermediates, direct_weight_init
+                    instantiate_processor, forward_intermediates, direct_weight_init,
+                    ignores_config_key
 
 include("config.jl")
 include("layers.jl")

@@ -407,13 +407,23 @@ function modernbert_for_sequence_classification(; vocab_size = 50368, hidden_siz
         dropout_or_identity(classifier_dropout), classifier, classifier_pooling)
 end
 
+# What ModernBERT's modeling code doesn't read: the heads of the other models, `norm_eps`
+# for `layer_norm_eps`, `position_embedding_type` (the positions are rotary), the options of
+# flash attention and sparse prediction, and the scale of the weights' initialization
+const MODERNBERT_IGNORE_CONFIG = ["classifier_dropout", "classifier_pooling",
+    "classifier_activation", "classifier_bias", "decoder_bias", "sparse_prediction",
+    "sparse_pred_ignore_index", "layer_norm_eps", "position_embedding_type",
+    "deterministic_flash_attn", "initializer_cutoff_factor"]
+
 register!(ArchSpec(
     TRANSFORMERS, "ModernBertModel", modernbert_model; family = "modernbert",
+    ignore_config = MODERNBERT_IGNORE_CONFIG,
     references = ["Alibaba-NLP/gte-modernbert-base" => "e7f32e3c00f91d699e8c43b53106206bcc72bb22"]))
 register!(ArchSpec(TRANSFORMERS, "ModernBertForMaskedLM", modernbert_for_masked_lm;
-    family = "modernbert",
+    family = "modernbert", ignore_config = MODERNBERT_IGNORE_CONFIG,
     references = ["answerdotai/ModernBERT-base" => "8949b909ec900327062f0ebf497f51aef5e6f0c8"]))
 register!(ArchSpec(TRANSFORMERS, "ModernBertForSequenceClassification",
     modernbert_for_sequence_classification; family = "modernbert",
+    ignore_config = MODERNBERT_IGNORE_CONFIG,
     references = ["Alibaba-NLP/gte-reranker-modernbert-base" => "f7481e6055501a30fb19d090657df9ec1f79ab2c"]))
 MODEL_TYPE_CLASSES["modernbert"] = "ModernBertModel"

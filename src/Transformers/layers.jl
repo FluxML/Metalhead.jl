@@ -53,6 +53,9 @@ Flux.@layer RotaryEmbedding
 # layer, which transformers drops on loading and Metalhead computes.
 const ROTARY_INV_FREQ_IGNORE = [r"rotary_emb\.inv_freq$"]
 
+# The settings of the load-balancing loss of a mixture of experts, which only training reads
+const ROUTER_LOSS_IGNORE_CONFIG = ["output_router_logits", "router_aux_loss_coef"]
+
 # transformers' `inv_freq`, in Float64. "linear" divides the default frequencies by
 # `factor`. "llama3" divides by `factor` those whose wavelength is above
 # `original_max_position_embeddings / low_freq_factor`, keeps those below

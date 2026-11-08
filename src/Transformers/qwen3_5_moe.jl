@@ -104,7 +104,7 @@ function qwen3_5_moe_for_causal_lm(; vocab_size = 248_320, hidden_size = 2048,
 end
 
 register!(ArchSpec(TRANSFORMERS, "Qwen3_5MoeForCausalLM", qwen3_5_moe_for_causal_lm;
-    family = "qwen", ignore = [r"^mtp\."]))
+    family = "qwen", ignore = [r"^mtp\."], ignore_config = ROUTER_LOSS_IGNORE_CONFIG))
 
 """
     qwen3_5_moe_for_conditional_generation(; text_config, vision_config, image_token_id = 248056,
@@ -127,5 +127,5 @@ end
 
 register!(ArchSpec(TRANSFORMERS, "Qwen3_5MoeForConditionalGeneration",
     qwen3_5_moe_for_conditional_generation;
-    family = "qwen", ignore = [r"^mtp\."],
+    family = "qwen", ignore = [r"^mtp\."], ignore_config = QWEN3_5_VISION_IGNORE_CONFIG,
     references = ["Qwen/Qwen3.6-35B-A3B" => "995ad96eacd98c81ed38be0c5b274b04031597b0"]))

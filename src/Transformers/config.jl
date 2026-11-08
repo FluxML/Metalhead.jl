@@ -21,10 +21,46 @@ function architecture_of(::TransformersFormat, config)
     return only(archs)
 end
 
+# The keys of config.json that every transformers model ignores: what `PretrainedConfig`
+# records about the checkpoint, the settings of training, fine-tuning and generation that
+# older versions saved in it, and the ids of tokens that no ported model reads (a model that
+# does, such as CLIP's `eos_token_id`, declares the key). A model with an output head
+# declares `tie_word_embeddings`.
+const IGNORED_CONFIG_KEYS = Set([
+    # what is recorded about the checkpoint
+    "architectures", "model_type", "transformers_version", "_name_or_path", "name_or_path",
+    "_commit_hash", "auto_map", "dtype", "torch_dtype", "tokenizer_class", "unsloth_fixed",
+    # the runtime: Metalhead picks the element type, and the attention
+    "use_cache", "output_hidden_states", "output_attentions", "return_dict",
+    "chunk_size_feed_forward", "gradient_checkpointing", "torchscript", "use_bfloat16",
+    "tf_legacy_loss", "attn_implementation", "_attn_implementation",
+    "experts_implementation", "pruned_heads",
+    # fine-tuning: the heads that need the labels declare them
+    "id2label", "label2id", "problem_type", "finetuning_task", "task_specific_params",
+    "prefix",
+    # the output head, which the models that have one declare
+    "tie_word_embeddings",
+    # the ids of special tokens
+    "bos_token_id", "eos_token_id", "pad_token_id", "sep_token_id", "cls_token_id",
+    "decoder_start_token_id", "forced_bos_token_id", "forced_eos_token_id",
+    # encoder-decoders
+    "is_encoder_decoder", "is_decoder", "add_cross_attention",
+    "cross_attention_hidden_size", "tie_encoder_decoder",
+    # generation, which `generation_config.json` sets: older versions saved it here
+    "max_length", "min_length", "do_sample", "early_stopping", "num_beams",
+    "num_beam_groups", "diversity_penalty", "temperature", "top_k", "top_p", "typical_p",
+    "repetition_penalty", "length_penalty", "no_repeat_ngram_size",
+    "encoder_no_repeat_ngram_size", "bad_words_ids", "num_return_sequences",
+    "output_scores", "return_dict_in_generate", "remove_invalid_values",
+    "exponential_decay_length_penalty", "suppress_tokens", "begin_suppress_tokens"])
+
+ignores_config_key(::TransformersFormat, key) = key in IGNORED_CONFIG_KEYS
+
 # The keys of config.json that the builder declares as keywords, as transformers ignores the
-# others, overridden by `kwargs`.
-function model_args(::TransformersFormat, spec, config, kwargs)
-    return merge(spec.defaults, merge_configs(declared_args(spec.build, config), kwargs))
+# others, overridden by `kwargs`. Keys that neither the builder nor the format or the
+# architecture ignore warn.
+function model_args(format::TransformersFormat, spec, config, kwargs)
+    return merge(spec.defaults, merge_configs(declared_args(format, spec, config), kwargs))
 end
 
 # `overrides` over `config`, where an override of a sub-config (`text_config`, ...) is merged

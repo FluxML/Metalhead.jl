@@ -1222,7 +1222,18 @@ function sam3_video_model(; detector_config = nothing, tracker_config = nothing)
     return Sam3VideoModel(sam3_model(; config_args(sam3_model, detector_config)...))
 end
 
-# jetjodh/sam3 is an ungated copy of the gated facebook/sam3, with the same weights
+# jetjodh/sam3 is an ungated copy of the gated facebook/sam3, with the same weights. The
+# `ignore_config` keys set the tracker: its thresholds, its memory of the masklets and its
+# hotstart.
 register!(ArchSpec(TRANSFORMERS, "Sam3VideoModel", sam3_video_model; family = "sam3",
     ignore = [r"^tracker_model\.", r"^tracker_neck\."],
+    ignore_config = ["assoc_iou_thresh", "decrease_trk_keep_alive_for_empty_masklets",
+        "det_nms_thresh", "fill_hole_area", "high_conf_thresh", "high_iou_thresh",
+        "hotstart_delay", "hotstart_dup_thresh", "hotstart_unmatch_thresh",
+        "init_trk_keep_alive", "initializer_range", "low_res_mask_size", "max_num_objects",
+        "max_trk_keep_alive", "min_trk_keep_alive", "new_det_thresh",
+        "recondition_every_nth_frame", "recondition_on_trk_masks",
+        "score_threshold_detection",
+        "suppress_overlapping_based_on_recent_occlusion_threshold",
+        "suppress_unmatched_only_within_hotstart", "trk_assoc_iou_thresh"],
     references = ["jetjodh/sam3" => "1aa50ce07302cb375f85d8084b68a0fb378b8d85"]))

@@ -566,11 +566,15 @@ end
 # The `position_ids` buffers that checkpoints saved before transformers 4.31 hold
 const CLIP_IGNORE = [r"(^|\.)embeddings\.position_ids$"]
 
+# The `dropout` of the text encoder config of Stable Diffusion, which `CLIPTextConfig`
+# doesn't declare: it has `attention_dropout`
+const CLIP_IGNORE_CONFIG = ["dropout"]
+
 # The main branch of openai/clip-vit-base-patch32 has pytorch_model.bin only: its commit is
 # that of the pull request (refs/pr/66) of Hugging Face's conversion bot, which adds the
 # same weights as model.safetensors, as transformers' `auto_conversion` would load them.
 register!(ArchSpec(TRANSFORMERS, "CLIPModel", clip_model; family = "clip",
-    ignore = CLIP_IGNORE,
+    ignore = CLIP_IGNORE, ignore_config = CLIP_IGNORE_CONFIG,
     references = [
         "openai/clip-vit-base-patch32" => "c237dc49a33fc61debc9276459120b7eac67e7ef",
         "openai/clip-vit-large-patch14" => "32bd64288804d66eefd0ccbe215aa642df71cc41",
@@ -578,11 +582,12 @@ register!(ArchSpec(TRANSFORMERS, "CLIPModel", clip_model; family = "clip",
             "1a25a446712ba5ee05982a381eed697ef9b435cf"]))
 # the text encoder of Stable Diffusion 1.5, that of openai/clip-vit-large-patch14
 register!(ArchSpec(TRANSFORMERS, "CLIPTextModel", clip_text_model; family = "clip",
-    ignore = CLIP_IGNORE,
+    ignore = CLIP_IGNORE, ignore_config = CLIP_IGNORE_CONFIG,
     references = ["stable-diffusion-v1-5/stable-diffusion-v1-5/text_encoder" =>
         "451f4fe16113bff5a5d2269ed5ad43b0592e9a14"]))
 for (name, build) in ("CLIPTextModelWithProjection" => clip_text_model_with_projection,
     "CLIPVisionModel" => clip_vision_model,
     "CLIPVisionModelWithProjection" => clip_vision_model_with_projection)
-    register!(ArchSpec(TRANSFORMERS, name, build; family = "clip", ignore = CLIP_IGNORE))
+    register!(ArchSpec(TRANSFORMERS, name, build; family = "clip", ignore = CLIP_IGNORE,
+        ignore_config = CLIP_IGNORE_CONFIG))
 end

@@ -141,6 +141,8 @@ function qwen3_moe_for_causal_lm(; vocab_size = 151_936, hidden_size = 2048,
         rope_parameters = rope, head_dim, mlp)
 end
 
+# `max_window_layers` counts the layers of sliding-window attention, which errors
 register!(ArchSpec(TRANSFORMERS, "Qwen3MoeForCausalLM", qwen3_moe_for_causal_lm;
     family = "qwen", ignore = ROTARY_INV_FREQ_IGNORE,
+    ignore_config = [ROUTER_LOSS_IGNORE_CONFIG; "max_window_layers"],
     references = ["Qwen/Qwen3-30B-A3B" => "ad44e777bcd18fa416d9da3bd8f70d33ebb85d39"]))

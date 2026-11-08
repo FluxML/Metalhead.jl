@@ -43,9 +43,9 @@ using Metalhead: Timm, Transformers, Diffusers, SentenceTransformers
     @testset "internals are not public" begin
         INTERNAL = Dict(
             Metalhead => [:ArchSpec, :register!, :AbstractConfigFormat, :architecture_of,
-                :model_args, :skip_prefix, :weights_name, :instantiate, :Checkpoint,
-                :load_state!, :checkpoint_prefix, :checkpoint_tensor, :AbstractProcessor,
-                :REGISTRY, :lookup],
+                :model_args, :ignores_config_key, :skip_prefix, :weights_name, :instantiate,
+                :Checkpoint, :load_state!, :checkpoint_prefix, :checkpoint_tensor,
+                :AbstractProcessor, :REGISTRY, :lookup],
             Timm => [:resnet, :vit, :efficientnet, :pil_resize, :create_conv2d],
             Transformers => [:bert_model, :llama_for_causal_lm, :clip_model, :sam3_model,
                 :get_vision_features, :qwen3_5_decode, :MultiheadAttention],

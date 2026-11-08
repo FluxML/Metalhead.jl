@@ -24,11 +24,52 @@ configuration and then by the user's `kwargs`.
 """
 model_args(::AbstractConfigFormat, spec, config, kwargs) = merge(spec.defaults, kwargs)
 
+"""
+    ignores_config_key(format, key) -> Bool
+
+Whether every architecture of `format` ignores the key `key` of a configuration on purpose:
+what its library records about the checkpoint, or sets for training (transformers'
+`architectures`, `transformers_version`, ...). Other keys that a model doesn't read warn
+when it is created, and an architecture lists its own in `ArchSpec`'s `ignore_config`. By
+default no key is ignored.
+"""
+ignores_config_key(::AbstractConfigFormat, key) = false
+
+declared_keywords(build) = Set(k for m in methods(build) for k in Base.kwarg_decl(m))
+
+# The keys of `config` that are not in `declared` and that `ignored(key)` doesn't excuse.
+function undeclared_keys(declared, config, ignored)
+    return sort!([k for k in keys(config) if Symbol(k) ∉ declared && !ignored(k)])
+end
+
+# Whether `format` or `spec` ignores the key `key` on purpose.
+function ignores_key(format, spec, key)
+    return ignores_config_key(format, key) || key in spec.ignore_config
+end
+
+# The keys of `config` that a model of `spec` doesn't read: neither a keyword argument of
+# `spec.build` nor ignored on purpose by `format` or `spec`.
+function unread_keys(format::AbstractConfigFormat, spec, config)
+    return undeclared_keys(declared_keywords(spec.build), config,
+        k -> ignores_key(format, spec, k))
+end
+
 # The entries of `config` that `build` declares as keyword arguments, as a NamedTuple: the
 # arguments of a configuration that also holds keys its library doesn't pass to the model.
-function declared_args(build, config)
-    declared = Set(k for m in methods(build) for k in Base.kwarg_decl(m))
+# The others, but those that `ignored(key)` excuses, warn, naming `what` they are in: a
+# setting that changes the results could be among them.
+function declared_args(build, config; ignored = Returns(false), what = "the configuration")
+    declared = declared_keywords(build)
+    unread = undeclared_keys(declared, config, ignored)
+    isempty(unread) ||
+        @warn "$what has keys that Metalhead does not read, and ignores: $(join(("`$k`" for k in unread), ", "))"
     return nt(filter(p -> Symbol(first(p)) in declared, config))
+end
+
+# `declared_args` of the configuration of a model of `spec`.
+function declared_args(format::AbstractConfigFormat, spec, config)
+    return declared_args(spec.build, config; ignored = k -> ignores_key(format, spec, k),
+        what = "the configuration of $(spec.name)")
 end
 
 """
@@ -120,13 +161,16 @@ end
 
 """
     ArchSpec(format, name, build; family = "other", defaults = (;),
-             references = Pair{String,String}[], ignore = Regex[])
+             references = Pair{String,String}[], ignore = Regex[], ignore_config = String[])
 
 A ported architecture, as `config.json` files in `format` name it. `build(; kwargs...)`
 constructs the model from the keyword arguments of the original library (e.g. timm's), merged
 over `defaults`. `references` lists `repo => sha` checkpoints the port was validated against;
 the first one is the default pretrained checkpoint. `ignore` lists extra checkpoint keys the
-model doesn't use. `family` is the original library's family identifier, used to group
+model doesn't use, and `ignore_config` the keys of `config.json` that it doesn't read on
+purpose (training-only settings, ...) on top of those that `format` ignores
+([`ignores_config_key`](@ref)): `create_model` warns about every other key that `build`
+doesn't declare. `family` is the original library's family identifier, used to group
 architectures in [`list_models`](@ref) and the documentation.
 """
 struct ArchSpec
@@ -137,15 +181,16 @@ struct ArchSpec
     defaults::NamedTuple
     references::Vector{Pair{String, String}}
     ignore::Vector{Regex}
+    ignore_config::Vector{String}
 end
 
 function ArchSpec(format::AbstractConfigFormat, name::AbstractString, build;
         family::AbstractString = "other", defaults::NamedTuple = (;),
-        references = Pair{String, String}[], ignore = Regex[])
+        references = Pair{String, String}[], ignore = Regex[], ignore_config = String[])
     return ArchSpec(
         format, String(name), String(family), build, defaults,
         collect(Pair{String, String}, references),
-        collect(Regex, ignore))
+        collect(Regex, ignore), collect(String, ignore_config))
 end
 
 # Architecture names are unique across formats, so that `create_model("name")` is unambiguous.

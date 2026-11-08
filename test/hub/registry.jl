@@ -110,12 +110,14 @@ end
             "rope_parameters" =>
                 Dict("rope_theta" => 1.0e4, "mrope_interleaved" => true)),
         "vision_config" => Dict("depth" => 2))
-    args = model_args(TRANSFORMERS, spec, config, (;))
+    args = @test_logs (:warn, r"Qwen3_5ForConditionalGeneration.*`unused`") model_args(
+        TRANSFORMERS, spec, config, (;))
     @test args.tie_word_embeddings && !haskey(args, :unused)
     @test args.text_config.hidden_size == 8 && args.vision_config.depth == 2
 
     # a keyword overrides a field, a sub-config is merged into that of the config, and any
     # other nested field is replaced
+    config = delete!(copy(config), "unused")
     args = model_args(TRANSFORMERS, spec, config,
         (; tie_word_embeddings = false, vision_config = (; depth = 1, hidden_size = 4),
             text_config = (; num_hidden_layers = 2,

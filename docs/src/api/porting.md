@@ -51,6 +51,7 @@ A format is a subtype of `AbstractConfigFormat` with methods of these functions.
 Metalhead.AbstractConfigFormat
 Metalhead.architecture_of
 Metalhead.model_args
+Metalhead.ignores_config_key
 Metalhead.skip_prefix
 Metalhead.weights_name
 Metalhead.instantiate
