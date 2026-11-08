@@ -85,7 +85,7 @@ function (m::Qwen3_5Attention)(x, position_embeddings, kv_lengths = nothing)
     k = apply_partial_rotary(k, cos, sin)
     y = NNlib.scaled_dot_product_attention(q, k, v;
         fdrop = attention_fdrop(m.attention_dropout, q),
-        is_causal = true, kv_lengths)
+        is_causal = true, kv_lengths, q_lengths = query_lengths(kv_lengths, n))
     return m.o_proj(reshape(y, :, n, b) .* sigmoid.(gate))
 end
 
@@ -122,6 +122,8 @@ keys and values of `in_proj_qkv`, after a causal depthwise convolution `conv1d`.
 recurrent state, `(head_v_dim, head_k_dim)` per value head, decays by
 `exp(-exp(A_log) * softplus(in_proj_a(x) + dt_bias))` at each token and is written with
 the rate `sigmoid(in_proj_b(x))`. The output is normed and gated by `in_proj_z(x)`.
+Under `f16`/`bf16` its `A_log` stays `Float32`, as in the checkpoints: in `BFloat16` it
+would err by up to 1.5% on the decay rate `exp(A_log)`.
 """
 @concrete struct Qwen3_5GatedDeltaNet
     num_k_heads
@@ -140,6 +142,15 @@ the rate `sigmoid(in_proj_b(x))`. The output is normed and gated by `in_proj_z(x
     in_proj_a
 end
 Flux.@layer Qwen3_5GatedDeltaNet
+
+# Unlike the norms, which stay Float32 whole, only `A_log` does here: the rest converts.
+function convert_except_A_log(convert, m::Qwen3_5GatedDeltaNet, cx)
+    fields, rebuild = Functors.functor(m)
+    cast(k, c) = k === :A_log ? f32(c, cx) : convert(c, cx)
+    return rebuild(NamedTuple{keys(fields)}(map(cast, keys(fields), values(fields))))
+end
+Flux.f16(m::Qwen3_5GatedDeltaNet, cx) = convert_except_A_log(f16, m, cx)
+Flux.bf16(m::Qwen3_5GatedDeltaNet, cx) = convert_except_A_log(bf16, m, cx)
 
 function (m::Qwen3_5GatedDeltaNet)(x, kv_lengths = nothing)
     x = mask_padding(x, kv_lengths)
@@ -522,7 +533,7 @@ function qwen3_5_text_like(mlp; vocab_size, hidden_size, num_hidden_layers,
         kernel = linear_conv_kernel_dim
         conv1d = init_layer(Conv, (kernel,), conv_dim => conv_dim; groups = conv_dim,
             pad = (kernel - 1, 0), bias = false, init)
-        A_log = init_array(linear_num_value_heads) do n
+        A_log = init_array(linear_num_value_heads; norm = true) do n
             A = 0.01f0 .+ (16 - 0.01f0) .* rand(Float32, n)
             return log.(A)
         end

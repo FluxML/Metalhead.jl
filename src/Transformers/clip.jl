@@ -84,7 +84,7 @@ function (m::CLIPAttention)(x, kv_lengths = nothing; is_causal::Bool = false)
     heads(p) = reshape(p(x), :, m.num_heads, n, b)
     q, k, v = heads(m.q_proj), heads(m.k_proj), heads(m.v_proj)
     y = NNlib.scaled_dot_product_attention(q, k, v; is_causal, kv_lengths,
-        fdrop = attention_fdrop(m.dropout, q))
+        q_lengths = query_lengths(kv_lengths, n), fdrop = attention_fdrop(m.dropout, q))
     return m.out_proj(reshape(y, :, n, b))
 end
 

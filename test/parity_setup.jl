@@ -96,7 +96,8 @@ Whether the Float32 `model` converted to `T` (by `f16` or `bf16`) runs in mixed 
 the inputs `x` (floating-point arrays, and vectors of them, are converted to `T`) and
 keyword arguments `kwargs`:
 the layers with a conversion method of their own (the norms, such as
-`Flux.f16(::LayerNorm2d, cx)`) keep `Float32` arrays and every other floating-point array is
+`Flux.f16(::LayerNorm2d, cx)`) keep `Float32` arrays (so does the `A_log` of
+`Qwen3_5GatedDeltaNet`, whose other arrays are `T`) and every other floating-point array is
 `T`, the output has eltype `T`, no warning other than a deprecation is logged (such as
 Flux's eltype mismatch), and the relative error of the output against `model(x)` is at most
 `rtol`. A NamedTuple output is checked field by field, and so are its NamedTuple fields.
@@ -107,8 +108,18 @@ function check_half_precision(model, x...; T = Float16, rtol = 1e-2, kwargs...)
     half = cast(model)
     keeps_f32(l) = which(cast, Tuple{typeof(l), Any}) !== which(cast, Tuple{Any, Any})
     wrong = String[]
+    # layers with a conversion method of their own that keep some fields in Float32
+    partial(l) = l isa Metalhead.Transformers.Qwen3_5GatedDeltaNet ? (:A_log,) : ()
     function walk(l, path)
-        if keeps_f32(l)
+        if !isempty(partial(l))
+            for (k, c) in pairs(Functors.children(l))
+                if k in partial(l)
+                    eltype(c) == Float32 || push!(wrong, "$path.$k")
+                else
+                    walk(c, "$path.$k")
+                end
+            end
+        elseif keeps_f32(l)
             all(a -> !(a isa AbstractArray{<:AbstractFloat}) || eltype(a) == Float32,
                 Functors.fleaves(l)) || push!(wrong, path)
         elseif l isa AbstractArray{<:AbstractFloat}

@@ -174,7 +174,8 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
     without random initialization. Normalization constructors use it too.
   - Allocate a custom parameter through `init_array(init, dims...)`, where `init(dims...)`
     gives its normal Float32 initialization. Pass `norm = true` for a normalization
-    parameter that stays Float32 under `f16`/`bf16`. Wrap the whole initialization in the
+    parameter, or another one that the checkpoint keeps in float32 (Qwen3.5's `A_log`), that
+    stays Float32 under `f16`/`bf16`. Wrap the whole initialization in the
     function, so that pretrained construction skips its random draws and temporaries.
     An initializer applied after layer construction uses `init_parameter!(array, init)`.
     These helpers preserve random initialization with `pretrained = false`.
@@ -327,6 +328,12 @@ normalization layers keep their parameters and statistics in `Float32` and norma
   `NNlib.layernorm(g, b, x; dims, eps)` with `g` and `b` reshaped to broadcast against `x`.
   These return the eltype of `x`, and throw on 16-bit parameters with 16-bit input. Don't
   multiply by the weight yourself: a `Float32` weight times `Float16` data is `Float32`.
+- **A parameter of another layer that the checkpoint keeps in float32** (Qwen3.5's `A_log`,
+  whose exponential is the decay rate of the linear attention) stays `Float32` too, though
+  the rest of its layer converts: give the layer `Flux.f16`/`Flux.bf16` methods that
+  convert each field (`f32(m.A_log, cx)`, `convert(field, cx)` for the others; see
+  `convert_except_A_log`), allocate it with `init_array(...; norm = true)`, and list it in
+  `partial` of `check_half_precision`.
 - Other parameters (layer scale `gamma`, ResMLP's `Affine`) convert like any weight.
 - **Constants built in the forward pass** (blur filters, pooling matrices, rotary tables,
   masks) take `eltype(x)`, and scalars `oftype(x, c)` or `eltype(x)(c)`: a `Float32` array
@@ -474,9 +481,12 @@ first. The workflow is the one above, with these differences.
   `window = attention_window(n, sliding_window)` to `NNlib.scaled_dot_product_attention`; no
   mask is needed, and NNlib only goes through the keys of the windows. In a batch padded on
   the right, a padding query whose window holds only padding attends to nothing: PyTorch
-  returns zeros there, and NNlib NaNs unless `sliding_window_q_lengths` gives it the
-  matching `q_lengths`. Give a padded fixture such queries (Gemma 3's `lengths = [9, 7, 2]`
-  with a window of 4).
+  returns zeros there, and NNlib NaNs unless `query_lengths(kv_lengths, n, sliding_window)`
+  gives it the matching `q_lengths`. Give a padded fixture such queries (Gemma 3's
+  `lengths = [9, 7, 2]` with a window of 4). The same goes for a sequence of all padding
+  (`kv_lengths` of 0), whose every query attends to nothing: pass
+  `q_lengths = query_lengths(kv_lengths, n)` wherever `kv_lengths` goes to NNlib's attention
+  (`test/models/all_padding.jl`).
 - **Key-value cache** (`kvcache.jl`, `LayerCache` and `attend` in `layers.jl`). A decoder
   whose layers are all full attention takes a `KVCache` if its attention layers and decoder
   layers accept a fourth argument `cache = nothing`: rotate the queries and keys with

@@ -116,6 +116,34 @@ end
     end
 end
 
+# timm builds a LayerScale only `if init_values`, so 0 gives an identity like None.
+@testset "init_values = 0 builds no layer scale" begin
+    T = Metalhead.Timm
+    arch = "vit_tiny_patch16_224"
+    tiny = (; patch_size = 8, embed_dim = 16, depth = 2, num_heads = 2, num_classes = 3,
+        img_size = 16)
+    keys_of(m) = [p.key for p in first(Metalhead.torch_params(m))]
+
+    for init_values in (0, 0.0)
+        m = create_model(arch; pretrained = false, tiny..., init_values)
+        @test all(b -> b.ls1 === identity && b.ls2 === identity, m.blocks.layers)
+    end
+    m = create_model(arch; pretrained = false, tiny..., init_values = 1e-5)
+    @test all(b -> b.ls1 isa T.LayerScale && b.ls2 isa T.LayerScale, m.blocks.layers)
+    @test all(==(1.0f-5), m.blocks.layers[1].ls1.gamma)
+
+    # a checkpoint without layer scale loads into the model with `init_values = 0`
+    plain = create_model(arch; pretrained = false, tiny..., init_values = nothing)
+    @test !any(contains(r"\.ls[12]\."), keys_of(plain))
+    mktempdir() do dir
+        save_repository(dir, arch, Dict(string(k) => v for (k, v) in pairs(tiny)), plain)
+        loaded = create_model(dir; init_values = 0)
+        @test keys_of(loaded) == keys_of(plain)
+        x = rand(Float32, 16, 16, 3, 2)
+        @test loaded(x) == plain(x)
+    end
+end
+
 # timm loads the SigLIP models non-strictly when `global_pool != "map"`, which drops the
 # tensors of the attention pool; Metalhead ignores those only.
 @testset "SigLIP without the attention pool" begin

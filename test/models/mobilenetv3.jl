@@ -140,6 +140,35 @@ end
     @test_throws "query_strides" T.MultiQueryAttention2d(16; query_strides = 2)
 end
 
+# timm's MultiQueryAttention2d.init_weights runs after _init_weight_goog and sets
+# xavier_uniform on every conv of the attention: uniform in ±sqrt(6 / (fan_in + fan_out)).
+@testset "MobileNetV4 hybrid initialisation" begin
+    using Flux
+    T = Metalhead.Timm
+    fans(w) = (prod(size(w)[[1, 2, 3]]), prod(size(w)[[1, 2, 4]]))
+    function std0(w)
+        μ = sum(w) / length(w)
+        return sqrt(sum(x -> (x - μ)^2, w) / length(w))
+    end
+
+    m = create_model("mobilenetv4_hybrid_medium_075")
+    attentions = [a for a in Flux.modules(m) if a isa T.MultiQueryAttention2d]
+    weights = [c.weight for a in attentions for c in Flux.modules(a) if c isa Conv]
+    @test !isempty(attentions)
+    @test any(w -> size(w, 3) == 1, weights) # the depthwise down_conv of keys and values
+    for w in weights
+        bound = sqrt(6 / sum(fans(w)))
+        @test maximum(abs, w) <= bound
+        @test maximum(abs, w) > 0.95 * bound
+        @test std0(w) ≈ bound / sqrt(3) rtol = 0.1
+    end
+
+    # the other convs keep _init_weight_goog: normal with std sqrt(2 / fan_out)
+    w = m.conv_stem.weight
+    @test std0(w) ≈ sqrt(2 / last(fans(w))) rtol = 0.1
+    @test maximum(abs, w) > sqrt(6 / sum(fans(w)))
+end
+
 @testset "unsupported options" begin
     @test_throws "global_pool" create_model("mobilenetv3_large_100"; global_pool = "max")
     @test_throws "aa_layer" create_model("mobilenetv3_large_100"; aa_layer = "avg")

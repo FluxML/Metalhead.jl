@@ -67,7 +67,7 @@ function (m::SiglipAttention)(x, kv_lengths)
     heads(p) = reshape(p(x), :, m.num_heads, n, b)
     q, k, v = heads(m.q_proj), heads(m.k_proj), heads(m.v_proj)
     y = NNlib.scaled_dot_product_attention(q, k, v; kv_lengths,
-        fdrop = attention_fdrop(m.dropout, q))
+        q_lengths = query_lengths(kv_lengths, n), fdrop = attention_fdrop(m.dropout, q))
     return m.out_proj(reshape(y, :, n, b))
 end
 
@@ -135,7 +135,8 @@ end
 
 function (m::MultiheadAttention)(query, key, value; kv_lengths = nothing)
     y = NNlib.scaled_dot_product_attention(in_projection(m, query, 1),
-        in_projection(m, key, 2), in_projection(m, value, 3); kv_lengths)
+        in_projection(m, key, 2), in_projection(m, value, 3); kv_lengths,
+        q_lengths = query_lengths(kv_lengths, size(query, 2)))
     return m.out_proj(reshape(y, size(query))), nothing
 end
 

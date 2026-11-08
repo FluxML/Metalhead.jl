@@ -8,8 +8,8 @@ using .TestData: fixture
 @testset "pretrained precision and weights" begin
     # Cover Flux layers, custom parameters, normalization, stacked experts and tied weights.
     for name in ("resnet_basic", "convnext_linear_mlp", "vit_dinov2_reg", "resmlp",
-        "gmlp", "efficientnet_cc_tf_same", "llama_options", "gemma3_tiny",
-        "granitemoe_tiny", "qwen3_5_tiny", "sam3_tiny", "vae_flux2_options",
+        "gmlp", "efficientnet_cc_tf_same", "mobilenetv4_hybrid_medium", "llama_options",
+        "gemma3_tiny", "granitemoe_tiny", "qwen3_5_tiny", "sam3_tiny", "vae_flux2_options",
         "transformer_flux2_options", "autoencoder_kl_tiny", "autoencoder_kl_options",
         "transformer_z_image_tiny", "transformer_z_image_options")
         dir = fixture(name)

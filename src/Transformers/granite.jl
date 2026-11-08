@@ -32,6 +32,15 @@ function (m::GraniteAttention)(x, position_embeddings, kv_lengths = nothing,
     return m.o_proj(reshape(y, :, n, b))
 end
 
+# The multipliers of Granite are Python floats, which torch applies to a half-precision
+# tensor in Float32 and rounds only the result of, not the float: `T(0.22)` would be 0.2197
+# in BFloat16. The residual's addition is a second rounding, as in torch.
+mul_scalar(x::AbstractArray{T}, s) where {T} = T.(x .* promote_type(T, Float32)(s))
+div_scalar(x::AbstractArray{T}, s) where {T} = T.(x ./ promote_type(T, Float32)(s))
+function add_scaled(x, y::AbstractArray{T}, s) where {T}
+    return x .+ T.(y .* promote_type(T, Float32)(s))
+end
+
 # `LlamaDecoderLayer` whose attention and MLP outputs are multiplied by `residual_multiplier`.
 @concrete struct GraniteDecoderLayer
     self_attn
@@ -44,9 +53,10 @@ Flux.@layer GraniteDecoderLayer
 
 function (m::GraniteDecoderLayer)(x, position_embeddings, kv_lengths = nothing,
         cache = nothing)
-    r = eltype(x)(m.residual_multiplier)
-    x = x .+ m.self_attn(m.input_layernorm(x), position_embeddings, kv_lengths, cache) .* r
-    return x .+ m.mlp(m.post_attention_layernorm(x)) .* r
+    r = m.residual_multiplier
+    x = add_scaled(x,
+        m.self_attn(m.input_layernorm(x), position_embeddings, kv_lengths, cache), r)
+    return add_scaled(x, m.mlp(m.post_attention_layernorm(x)), r)
 end
 
 # `LlamaModel` whose token embeddings are multiplied by `embedding_multiplier`, and whose
@@ -62,7 +72,7 @@ Flux.@layer GraniteModel
 
 function input_embeddings(m::GraniteModel, input_ids)
     x = m.embed_tokens(input_ids)
-    return x .* eltype(x)(m.embedding_multiplier)
+    return mul_scalar(x, m.embedding_multiplier)
 end
 
 # The causal language models of Granite, whose logits are divided by `logits_scaling`.
@@ -76,8 +86,7 @@ Flux.@layer GraniteForCausalLM
 
 function forward_head(m::GraniteForCausalLM, x; pre_logits::Bool = false)
     pre_logits && return x
-    logits = m.lm_head(x)
-    return logits ./ eltype(logits)(m.logits_scaling)
+    return div_scalar(m.lm_head(x), m.logits_scaling)
 end
 
 """
