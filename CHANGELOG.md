@@ -4,7 +4,9 @@ All notable changes to Metalhead.jl are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Releases before 0.9.6 are described
 in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
 
-## [0.10.0]
+## [0.10.1]
+
+## [0.10.0] - 2026-11-08
 
 Breaking: Flux 0.16.14, NNlib 0.9.57 and MLUtils 0.4.9 are now the minimum versions, and the
 hand-written models of 0.9 are deprecated, with warnings (see "Deprecated" and the
@@ -162,7 +164,8 @@ Around the models:
 
 - Compat with JLD2 0.6 (#291).
 
-[0.10.0]: https://github.com/FluxML/Metalhead.jl/compare/v0.9.8...HEAD
+[0.10.1]: https://github.com/FluxML/Metalhead.jl/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/FluxML/Metalhead.jl/compare/v0.9.8...v0.10.0
 [0.9.8]: https://github.com/FluxML/Metalhead.jl/compare/v0.9.7...v0.9.8
 [0.9.7]: https://github.com/FluxML/Metalhead.jl/compare/v0.9.6...v0.9.7
 [0.9.6]: https://github.com/FluxML/Metalhead.jl/compare/v0.9.5...v0.9.6
