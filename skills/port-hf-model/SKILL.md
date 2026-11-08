@@ -42,10 +42,12 @@ Metalhead before it checks anything. Run Julia in one persistent session instead
    the entry point, plus `num_classes = 0` when the default pretrained cfg has no classifier.
    `param_counts.py` prints `num_classes` to check this. Register only architectures whose
    code paths your fixtures cover. Checkpoint tensors of modules the port omits on purpose
-   (e.g. Inception's `AuxLogits`) go in `ignore`. An entry point whose arguments change with
-   `pretrained = True` (`fbnetc_100` sets `bn_eps` only then) gets the pretrained values in
-   `defaults`, since the weights need them; say so in the file header, and pass them
-   explicitly in its fixture specs.
+   (e.g. Inception's `AuxLogits`) go in `ignore`. A tensor that timm's `checkpoint_filter_fn`
+   changes as it loads (ViT resamples `pos_embed` for another `img_size`) gets a method of
+   `checkpoint_tensor(model, param, x)` (`vit.jl`), which returns `x` itself where nothing
+   changes. An entry point whose arguments change with `pretrained = True` (`fbnetc_100` sets
+   `bn_eps` only then) gets the pretrained values in `defaults`, since the weights need them;
+   say so in the file header, and pass them explicitly in its fixture specs.
 4. **Tiny fixtures.** For each distinct code path (block type, stem type, optional branch),
    write `porting/specs/<name>.json` (see "Fixtures" below). Give every
    keyword the builder accepts a non-default value in at least one spec. Two or three fixtures
@@ -560,6 +562,11 @@ first. The workflow is the one above, with these differences.
   their weights under `text_model.` and `vision_model.` (`PrefixChange`), those saved by
   transformers 5 don't. Mirror transformers 5's module tree, and load the other layout with a
   method of `checkpoint_prefix(model, ckpt)` (`src/hub/registry.jl`; CLIP's in `clip.jl`).
+  A checkpoint of a different structure, such as the base model of a `...ForCausalLM`
+  (transformers' `base_model_prefix`: keys without `model.` and no `lm_head`), needs a method
+  of `load_checkpoint!` (the `CausalLM` one is in `llama.jl`). Checkpoints that carry buffers
+  that transformers drops (Llama-2's `rotary_emb.inv_freq`) go in the spec's `ignore`
+  (`ROTARY_INV_FREQ_IGNORE`).
 - **Text encoders** (BERT, XLM-RoBERTa and ModernBERT, `bert.jl`, `xlm_roberta.jl`,
   `modernbert.jl`). A base model is a `TextEncoder`: `model(input_ids; attention_mask,
   token_type_ids)` returns the `last_hidden_state` array, as a decoder does (the

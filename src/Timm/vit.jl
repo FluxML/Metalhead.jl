@@ -132,6 +132,17 @@ function feature_info(m::VisionTransformer)
             for i in eachindex(m.blocks.layers)]
 end
 
+# timm's checkpoint_filter_fn resamples the position embedding of a checkpoint saved at
+# another image size to the grid of the model. Like timm 1.0.30, it takes the grid of the
+# checkpoint as square; the strict loader reports any other.
+function checkpoint_tensor(m::VisionTransformer, param, x)
+    param.array === m.pos_embed && size(x, 2) != size(m.pos_embed, 2) || return x
+    num_prefix_tokens = m.no_embed_class ? 0 : m.num_prefix_tokens
+    n = size(x, 2) - num_prefix_tokens
+    n > 0 && isqrt(n)^2 == n || return x
+    return resample_abs_pos_embed(x, m.grid_size; num_prefix_tokens)
+end
+
 # timm's init_weights_vit_timm for nn.Linear
 vit_dense(in_out; bias = true) = init_layer(Dense, in_out; bias, init = TRUNC_NORMAL)
 
@@ -378,7 +389,8 @@ for (name, args) in [
     "vit_so400m_patch14_siglip_gap_224" =>
         (; SIGLIP_GAP..., SIGLIP_SO400M..., patch_size = 14)
 ]
+    # timm loads SigLIP non-strictly when `global_pool != "map"`, to drop the attention pool
     register!(ArchSpec(
         TIMM, name, vit; family = "vision_transformer", defaults = args,
-        references = get(VIT_REFERENCES, name, [])))
+        references = get(VIT_REFERENCES, name, []), ignore = [r"^attn_pool\."]))
 end

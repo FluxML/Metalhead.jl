@@ -18,7 +18,7 @@ using ..Metalhead: ArchSpec, AbstractConfigFormat, JSON, register!, model_source
                    source_file, image_array, image_batch, convert_to_rgb,
                    AbstractImageProcessor, processor_from_entries, jsonvalue, @processor
 import ..Metalhead: layer_params, architecture_of, model_args, skip_prefix,
-                    direct_weight_init
+                    direct_weight_init, checkpoint_tensor
 import ..Metalhead: forward_features, forward_head, forward_intermediates, feature_info
 import ..Metalhead: instantiate_processor, ignored_keys, standardize_settings
 

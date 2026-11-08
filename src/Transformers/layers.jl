@@ -49,6 +49,10 @@ tables are computed on the input's device.
 end
 Flux.@layer RotaryEmbedding
 
+# Llama-2-era checkpoints store the `inv_freq` of the rotary embedding of each attention
+# layer, which transformers drops on loading and Metalhead computes.
+const ROTARY_INV_FREQ_IGNORE = [r"rotary_emb\.inv_freq$"]
+
 # transformers' `inv_freq`, in Float64. "linear" divides the default frequencies by
 # `factor`. "llama3" divides by `factor` those whose wavelength is above
 # `original_max_position_embeddings / low_freq_factor`, keeps those below

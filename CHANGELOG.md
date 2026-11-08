@@ -121,6 +121,25 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
 
 ### Fixed
 
+- Llama-2-era checkpoints (`NousResearch/Llama-2-7b-hf`), which store the
+  `rotary_emb.inv_freq` of each attention layer, load into the language models (Llama,
+  Qwen2, Qwen3, Gemma 3, Granite, and their mixtures of experts): transformers drops those
+  buffers, and so do we, instead of failing on unused keys (#399).
+- A checkpoint of the base model of a `...ForCausalLM` config, whose keys have no `model.`
+  prefix and no `lm_head` (what `Qwen3Model.save_pretrained` writes), loads through
+  `create_model`, as in transformers (`base_model_prefix`). The tied head shares the loaded
+  embeddings; an untied head is newly initialized, with a warning. Any other mismatch of the
+  keys still fails (#399).
+- A pretrained ViT created at another `img_size` than its checkpoint's, such as DINOv2 at 224
+  instead of 518 (`create_model("timm/vit_small_patch14_dinov2.lvd142m"; img_size = 224)`),
+  failed on the shape of `pos_embed`. As timm's `checkpoint_filter_fn` does, the position
+  embedding is resampled to the grid of the model (bicubic with antialiasing, the result of
+  `dynamic_img_size = true`); a checkpoint of the size of the model loads as before (#399).
+- A SigLIP checkpoint loaded with `global_pool != "map"`
+  (`create_model("timm/vit_base_patch16_siglip_224.v2_webli"; global_pool = "avg", fc_norm =
+  false)`) failed on its unused `attn_pool.*` weights, which timm drops. The rest of the
+  checkpoint is still checked: `fc_norm = false` keeps the final norm where the checkpoint
+  has it, as in the `siglip_gap` models (#399).
 - A `text_config`, `vision_config` or other sub-config in the keywords of `create_model`
   (`create_model("Qwen/Qwen3.5-0.8B"; text_config = (; num_hidden_layers = 4, layer_types =
   nothing))`) is merged into the sub-config of the repository's `config.json`. It replaced

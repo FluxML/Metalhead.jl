@@ -104,6 +104,21 @@ end
     load_state!(m, Checkpoint(path); skip = "head")
     @test m.fc.weight == ones(Float32, 2, 3)
     @test m.head.weight == w
+
+    # `filter_fn` replaces a tensor before its shape is checked, as a filter of the original
+    # library does
+    SafeTensors.serialize(path,
+        Dict("fc.weight" => Float32[1 2 3 4; 5 6 7 8], "fc.bias" => Float32[0, 0]))
+    m = (; fc = Dense(3 => 2))
+    @test_throws "mismatched: fc.weight" load_state!(m, Checkpoint(path))
+    seen = String[]
+    function crop(p, x)
+        push!(seen, p.key)
+        return p.key == "fc.weight" ? x[:, 1:3] : x
+    end
+    @test load_state!(m, Checkpoint(path); filter_fn = crop).loaded == 2
+    @test seen == ["fc.weight", "fc.bias"]
+    @test m.fc.weight == Float32[1 2 3; 5 6 7]
 end
 
 @testset "create_model" begin

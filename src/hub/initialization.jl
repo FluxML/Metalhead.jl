@@ -46,18 +46,23 @@ function pretrained_layer(layer::Union{Type{LayerNorm}, Type{BatchNorm}, Type{Gr
     return ELTYPE_CONVERTERS[weight_init_context().eltype](layer(args...; kwargs...))
 end
 
-function build_pretrained(build, args, eltype; skip = nothing)
-    initializers = skip === nothing ? nothing : IdDict{Any, Any}()
+function build_pretrained(build, args, eltype; skip = nothing,
+        initializers = skip === nothing ? nothing : IdDict{Any, Any}())
     context = (; eltype, initializers)
     model = task_local_storage(:metalhead_weight_init, context) do
         return build(; args...)
     end
-    if skip !== nothing
-        for p in first(torch_params(model))
-            (p.key == skip || startswith(p.key, skip * ".")) || continue
-            haskey(initializers, p.array) || continue
-            copyto!(p.array, initializers[p.array](size(p.array)...))
-        end
+    skip === nothing || initialize!(model, initializers, skip)
+    return model
+end
+
+# Fill the parameters of `model` whose key is `prefix` or starts with `prefix.` with the
+# initializers recorded while building it, as a random construction would have.
+function initialize!(model, initializers, prefix)
+    for p in first(torch_params(model))
+        (p.key == prefix || startswith(p.key, prefix * ".")) || continue
+        haskey(initializers, p.array) || continue
+        copyto!(p.array, initializers[p.array](size(p.array)...))
     end
     return model
 end

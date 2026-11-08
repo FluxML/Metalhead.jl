@@ -66,11 +66,12 @@ function instantiate(format::AbstractConfigFormat, spec, source, config; pretrai
     convert_eltype = ELTYPE_CONVERTERS[eltype]
     if pretrained
         skip = skip_prefix(format, config, args)
+        initializers = IdDict{Any, Any}()
         model = direct_weight_init(format) ?
-                build_pretrained(spec.build, args, eltype; skip) :
+                build_pretrained(spec.build, args, eltype; skip, initializers) :
                 convert_eltype(spec.build(; args...))
         ckpt = Checkpoint(source_weights(source, weights_name(format)))
-        load_state!(model, ckpt; prefix = checkpoint_prefix(model, ckpt), skip,
+        load_checkpoint!(model, ckpt; skip, initializers,
             ignore = [DEFAULT_IGNORE; spec.ignore])
     else
         model = convert_eltype(spec.build(; args...))
@@ -88,6 +89,34 @@ in, and that the original library removes from their keys as it loads them (tran
 transformers 5).
 """
 checkpoint_prefix(model, ckpt) = ""
+
+"""
+    checkpoint_tensor(model, param::TorchParam, x) -> AbstractArray
+
+The tensor `x` that a checkpoint holds for `param`, a parameter of `model`, in the layout of
+`param.array`, as [`load_state!`](@ref) is about to check and copy it. By default it is `x`
+itself. A method does what the original library's checkpoint filter does to that tensor
+(timm's `checkpoint_filter_fn` resamples the position embedding of a Vision Transformer
+saved for another image size), and returns `x` itself where nothing changes. A result of
+another shape than `param.array` is a mismatch for the strict loader.
+"""
+checkpoint_tensor(model, param, x) = x
+
+"""
+    load_checkpoint!(model, ckpt::Checkpoint; skip, ignore, initializers)
+
+Load the checkpoint `ckpt` into `model`, as [`instantiate`](@ref) does after building it,
+with the keywords of [`load_state!`](@ref): the weights under
+[`checkpoint_prefix`](@ref)`(model, ckpt)` by default, each tensor through
+[`checkpoint_tensor`](@ref). A method for a model type loads the checkpoints of another
+layout, as transformers loads those of a base model into a model with a head.
+`initializers` maps the arrays of `model` to the functions of their size that initialize
+them, for the parameters that such a method leaves out of the checkpoint.
+"""
+function load_checkpoint!(model, ckpt::Checkpoint; skip, ignore, initializers)
+    return load_state!(model, ckpt; prefix = checkpoint_prefix(model, ckpt), skip, ignore,
+        filter_fn = (param, x) -> checkpoint_tensor(model, param, x))
+end
 
 """
     ArchSpec(format, name, build; family = "other", defaults = (;),

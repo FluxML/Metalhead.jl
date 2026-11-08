@@ -146,6 +146,29 @@ one_sequence(k, v) = v
 # The decoder of a language model, and the name of its module in PyTorch
 decoder(m::CausalLM) = m.model, "model"
 
+# Whether `ckpt` holds the base model of `m` (transformers' `base_model_prefix`, "model"),
+# saved without its head: the keys of `m.model`, without the prefix `model.`.
+function base_checkpoint(m::CausalLM, ckpt)
+    any(startswith("model."), keys(ckpt)) && return false
+    return any(p -> haskey(ckpt, p.key), first(torch_params(m.model)))
+end
+
+# Like transformers, a checkpoint of the base model loads into `m.model`, and into the head
+# if it holds one. The head that it lacks is tied to the embeddings or, untied, newly
+# initialized.
+function load_checkpoint!(m::CausalLM, ckpt::Checkpoint; skip, ignore, initializers)
+    base_checkpoint(m, ckpt) || return invoke(load_checkpoint!, Tuple{Any, Checkpoint}, m,
+        ckpt; skip, ignore, initializers)
+    new_head = !(m.lm_head isa TiedLMHead) && !any(startswith("lm_head."), keys(ckpt))
+    layout = merge(Functors.children(m.model), (; lm_head = m.lm_head))
+    report = load_state!(layout, ckpt; skip = new_head ? "lm_head" : skip, ignore)
+    if new_head
+        @warn "The checkpoint holds the base model of $(nameof(typeof(m))), without the output head: `lm_head.weight` is newly initialized"
+        initialize!(m, initializers, "lm_head")
+    end
+    return report
+end
+
 function feature_info(m::CausalLM)
     model, name = decoder(m)
     num_chs = size(model.embed_tokens.weight, 1)
@@ -269,7 +292,7 @@ function llama_like(attention; vocab_size, hidden_size, intermediate_size,
 end
 
 register!(ArchSpec(TRANSFORMERS, "LlamaForCausalLM", llama_for_causal_lm;
-    family = "llama",
+    family = "llama", ignore = ROTARY_INV_FREQ_IGNORE,
     references = [
         "HuggingFaceTB/SmolLM2-135M" => "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
         "unsloth/Llama-3.2-1B" => "9535bd9b1d1dea6acafbdc4813b728796aeb28da"]))
