@@ -191,7 +191,9 @@ and the other decoding strategies of transformers are left to your loop (see the
   The `i`-th is transformers' `output_hidden_states[i]`, and [`feature_info`](@ref) gives
   the size and the module of each layer.
 - The weights are converted to `eltype` (`Float32` by default) when they are loaded, whatever
-  their type on the Hub (often `bfloat16`).
+  their type on the Hub (often `bfloat16`). In `Float16` and `BFloat16` the weights of the
+  norms stay `Float32`, and so does the `A_log` of the linear attention of Qwen3.5, as in
+  its checkpoints.
 
 ## Configuration
 

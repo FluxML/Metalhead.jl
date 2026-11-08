@@ -32,6 +32,41 @@ end
     end
 end
 
+@testset "multipliers in half precision" begin
+    # torch applies a Python float to a half-precision tensor in Float32 and rounds only the
+    # product, not the float: 0.22 is 0.2197 in BFloat16. The residual sums here have a zero
+    # operand, so that only the product's rounding is checked.
+    Tr = Metalhead.Transformers
+    for E in (Float16, Metalhead.BFloat16), s in (0.22, 6.3)
+        y = E.(randn(Float32, 8, 5, 2))
+        z = zeros(E, size(y))
+        times = E.(Float32.(y) .* Float32(s))
+        over = E.(Float32.(y) ./ Float32(s))
+        @test times != y .* E(s)
+        @test over != y ./ E(s)
+
+        branch(v) = (args...) -> v
+        for (attn, mlp) in ((y, z), (z, y))
+            layer = Tr.GraniteDecoderLayer(branch(attn), branch(mlp), identity, identity, s)
+            @test layer(z, nothing) == times
+            moe = Tr.GraniteMoeDecoderLayer(branch(attn), branch(mlp), nothing, identity,
+                identity, s)
+            @test moe(z, nothing) == times
+        end
+
+        embeddings = Tr.GraniteModel(branch(y), nothing, nothing, nothing, s)
+        @test Tr.input_embeddings(embeddings, 1:3) == times
+        lm = Tr.GraniteForCausalLM(nothing, branch(y), s, nothing)
+        @test forward_head(lm, z) == over
+    end
+    for E in (Float32, Float64)
+        x, y = randn(E, 6, 3), randn(E, 6, 3)
+        @test Tr.add_scaled(x, y, 0.22) == x .+ y .* E(0.22)
+        @test Tr.mul_scalar(x, 0.22) == x .* E(0.22)
+        @test Tr.div_scalar(x, 0.22) == x ./ E(0.22)
+    end
+end
+
 @testset "experts" begin
     # each token goes through its experts, weighted; expert 4 gets no token, and with the
     # second routing experts 1 and 2 get none and expert 4 gets every token

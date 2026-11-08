@@ -158,7 +158,9 @@ function vit_block(dim, num_heads; mlp_ratio, qkv_bias, proj_bias, init_values, 
         num_heads, vit_dense(dim => 3dim; bias = qkv_bias), dropout_or_identity(attn_drop),
         vit_dense(dim => dim; bias = proj_bias), dropout_or_identity(proj_drop))
     mlp = Mlp(dim, hidden; act_layer, bias = proj_bias, drop = proj_drop)
-    ls() = init_values === nothing ? identity : layer_scale(dim, init_values)
+    # timm tests `if init_values`: 0 builds an identity too
+    ls() = init_values === nothing || iszero(init_values) ? identity :
+           layer_scale(dim, init_values)
     return ViTBlock(
         init_layer(LayerNorm, dim; eps = norm_eps), attn, ls(), token_drop_path(drop_path),
         init_layer(LayerNorm, dim; eps = norm_eps), mlp, ls(), token_drop_path(drop_path))

@@ -198,7 +198,7 @@ function (m::BertSelfAttention)(x, kv_lengths)
     heads(p) = reshape(p(x), :, m.num_attention_heads, n, b)
     q, k, v = heads(m.query), heads(m.key), heads(m.value)
     y = NNlib.scaled_dot_product_attention(q, k, v; kv_lengths,
-        fdrop = attention_fdrop(m.dropout, q))
+        q_lengths = query_lengths(kv_lengths, n), fdrop = attention_fdrop(m.dropout, q))
     return reshape(y, :, n, b)
 end
 

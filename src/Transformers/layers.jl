@@ -99,16 +99,19 @@ rotary_tables(::Nothing, x, n) = nothing
 attention_window(n, sliding_window) =
     sliding_window === nothing || sliding_window >= n ? nothing : sliding_window
 
-# In a batch padded on the right, the queries past `kv_lengths + sliding_window - 1` have
-# only padding in their window. PyTorch's attention gives them zeros, as
-# `NNlib.scaled_dot_product_attention` does to the queries past its `q_lengths`, rather
-# than NaNs.
-function sliding_window_q_lengths(kv_lengths, n, sliding_window)
-    (kv_lengths === nothing || sliding_window === nothing || sliding_window >= n) &&
-        return nothing
-    return min.(kv_lengths .+ (sliding_window - 1), n)
+# The `q_lengths` of `NNlib.scaled_dot_product_attention` for `n` queries over the first
+# `kv_lengths` keys of each sequence of a batch padded on the right, or `nothing` if no
+# query needs them. A query with no key to attend to has NaNs in NNlib and zeros in
+# PyTorch's attention, which `q_lengths` gives it too: every query of a sequence of all
+# padding, and with a sliding window those past `kv_lengths + sliding_window - 1`.
+function query_lengths(kv_lengths, n, sliding_window = nothing)
+    kv_lengths === nothing && return nothing
+    windowed = sliding_window !== nothing && sliding_window < n
+    (windowed || any(iszero, kv_lengths)) || return nothing
+    lengths = windowed ? min.(kv_lengths .+ (sliding_window - 1), n) : n
+    return ifelse.(iszero.(kv_lengths), 0, lengths)
 end
-ChainRulesCore.@non_differentiable sliding_window_q_lengths(::Any...)
+ChainRulesCore.@non_differentiable query_lengths(::Any...)
 
 to_device_of(x, a) = copyto!(similar(x, size(a)), a)
 device_indices(x, index) = copyto!(similar(x, Int, size(index)), index)
@@ -174,7 +177,7 @@ end
 # call without one: it attends to the new keys, not to the whole buffer.
 function attend(q, k, v, kv_lengths, ::Nothing; kwargs...)
     return NNlib.scaled_dot_product_attention(q, k, v; is_causal = true, kv_lengths,
-        kwargs...)
+        q_lengths = query_lengths(kv_lengths, size(q, 3)), kwargs...)
 end
 
 function attend(q, k, v, kv_lengths, cache::LayerCache; kwargs...)

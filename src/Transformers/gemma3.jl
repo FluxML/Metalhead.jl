@@ -70,7 +70,7 @@ function (m::Gemma3Attention)(x, position_embeddings, kv_lengths = nothing)
         fdrop = attention_fdrop(m.attention_dropout, q),
         scale = m.scaling, is_causal = true, kv_lengths,
         window = attention_window(n, m.sliding_window),
-        q_lengths = sliding_window_q_lengths(kv_lengths, n, m.sliding_window))
+        q_lengths = query_lengths(kv_lengths, n, m.sliding_window))
     return m.o_proj(reshape(y, :, n, b))
 end
 

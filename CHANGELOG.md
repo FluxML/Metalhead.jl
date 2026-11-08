@@ -126,9 +126,24 @@ in the [GitHub releases](https://github.com/FluxML/Metalhead.jl/releases).
   `vit_base_patch32_clip_quickgelu_224` (`laion400m_e32`, was `metaclip_400m`). The weights
   of 0.9 are `timm/resnet50.tv2_in1k` and `timm/wide_resnet50_2.tv2_in1k`, as in the
   [migration guide](https://fluxml.ai/Metalhead.jl/dev/migration/) (#391).
+- The `A_log` of the Qwen3.5 linear-attention layers stays `Float32` under `eltype =
+  Float16`/`BFloat16` and `Flux.f16`/`bf16`, as in the checkpoints and in vLLM, instead of
+  being rounded to 16 bits. transformers rounds it, so half-precision outputs differ from
+  transformers' by far less than the half-precision noise itself (#342).
 
 ### Fixed
 
+- A sequence of a batch that is all padding (a column of zeros in the `attention_mask`) no
+  longer gives NaN outputs in the language models, the BERT-like encoders and the CLIP and
+  SigLIP text encoders: its attention output is zero, as in transformers' `sdpa` (#342).
+- Granite's `residual_multiplier`, `embedding_multiplier` and `logits_scaling` are no longer
+  rounded to the element type in `Float16`/`BFloat16`; as in PyTorch, the product is rounded,
+  not the scalar. A `residual_multiplier` of 0.22 had scaled every residual branch by 0.2197
+  in `BFloat16` (#342).
+- A ViT with `init_values = 0` builds no layer scale, as in timm, where `0` is falsy; it built
+  a `LayerScale` of zeros that silenced every residual branch (#342).
+- The convolutions of the multi-query attention of the MobileNetV4 hybrid models start from
+  `xavier_uniform`, as in timm, when they are initialized randomly (#342).
 - Llama-2-era checkpoints (`NousResearch/Llama-2-7b-hf`), which store the
   `rotary_emb.inv_freq` of each attention layer, load into the language models (Llama,
   Qwen2, Qwen3, Gemma 3, Granite, and their mixtures of experts): transformers drops those

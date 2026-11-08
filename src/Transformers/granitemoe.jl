@@ -70,9 +70,10 @@ Flux.@layer GraniteMoeDecoderLayer
 
 function (m::GraniteMoeDecoderLayer)(x, position_embeddings, kv_lengths = nothing,
         cache = nothing)
-    r = eltype(x)(m.residual_multiplier)
-    x = x .+ m.self_attn(m.input_layernorm(x), position_embeddings, kv_lengths, cache) .* r
-    return x .+ feedforward(m, m.post_attention_layernorm(x)) .* r
+    r = m.residual_multiplier
+    x = add_scaled(x,
+        m.self_attn(m.input_layernorm(x), position_embeddings, kv_lengths, cache), r)
+    return add_scaled(x, feedforward(m, m.post_attention_layernorm(x)), r)
 end
 
 function feedforward(m::GraniteMoeDecoderLayer, x)

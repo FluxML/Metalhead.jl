@@ -340,6 +340,14 @@ function efficientnet_init_weights!(model)
             m.bias isa AbstractArray && fill!(m.bias, 0)
         end
     end
+    # timm calls `init_weights()` after the pass above: the convs of the multi-query
+    # attention (MobileNetV4 hybrids) start from xavier_uniform, not _init_weight_goog
+    for m in Flux.modules(model)
+        m isa MultiQueryAttention2d || continue
+        for conv in Flux.modules(m)
+            conv isa Conv && init_parameter!(conv.weight, Flux.glorot_uniform)
+        end
+    end
     # CondConv routing layers: fan-in plus fan-out (CondConv2d inits itself)
     for m in Flux.modules(model)
         m isa CondConvResidual || continue
