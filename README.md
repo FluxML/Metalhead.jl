@@ -1,14 +1,9 @@
 # Metalhead
 
+[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://fluxml.github.io/Metalhead.jl/stable)
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://fluxml.github.io/Metalhead.jl/dev)
 [![CI](https://github.com/FluxML/Metalhead.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/FluxML/Metalhead.jl/actions/workflows/CI.yml)
 [![Coverage](https://codecov.io/gh/FluxML/Metalhead.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/FluxML/Metalhead.jl)
-
->[!WARNING]
->Metalhead.jl is undergoing a major rewrite that significantly expands its scope.
->This README refers to the upcoming v0.10 release, which has not yet been published.
->The current API (v0.9 series) will remain supported, although it will be deprecated.
-
 
 Metalhead.jl brings pretrained models from the [Hugging Face Hub](https://huggingface.co/models)
 to [Flux.jl](https://fluxml.ai), **in pure Julia**. It covers vision, language and
