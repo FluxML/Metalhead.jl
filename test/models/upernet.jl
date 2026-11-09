@@ -134,8 +134,8 @@ end
 end
 
 @testset "batch norm training boundary" begin
-    module = Flux.trainmode!(UperNetConvModule(4 => 4, 1))
-    @test_throws ArgumentError module(reshape(rand(Float32, 4), 1, 1, 4, 1))
+    block = Flux.trainmode!(UperNetConvModule(4 => 4, 1))
+    @test_throws ArgumentError block(reshape(rand(Float32, 4), 1, 1, 4, 1))
 end
 
 @testset "gradient" begin
