@@ -29,7 +29,7 @@ using ..Metalhead: AbstractProcessor, AbstractImageProcessor, register_processor
                    @processor, tokenizer_of, encode_ids, token_id, pad_token_id,
                    pad_ids, text_list
 using ..Timm: dropout_or_identity, attention_fdrop, feature_take_indices, stage_outputs,
-              pil_resize
+              pil_resize, adaptive_avg_pool2d
 import ..Metalhead: layer_params, architecture_of, model_args, direct_weight_init,
                     checkpoint_prefix, load_checkpoint!, instantiate, ignores_config_key
 import ..Metalhead: forward_features, forward_head, forward_intermediates, feature_info
@@ -69,6 +69,7 @@ include("processing_siglip2.jl")
 include("bert.jl")
 include("xlm_roberta.jl")
 include("modernbert.jl")
+include("upernet.jl")
 
 # `public` is a syntax error before Julia 1.11.
 VERSION >= v"1.11.0-DEV.469" && eval(Expr(:public,

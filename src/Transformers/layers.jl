@@ -1,3 +1,10 @@
+# Bilinear resizing as in torch's `F.interpolate(..., mode = "bilinear", align_corners = false)`,
+# for maps in (W, H, channels, batch) order.
+function interpolate_bilinear(x, (w, h))
+    (w, h) == size(x)[1:2] && return x
+    return NNlib.upsample_bilinear(x; size = (w, h), align_corners = false)
+end
+
 # Building blocks shared by the decoder-only language models of transformers
 # (transformers 5.20, Apache-2.0, The Hugging Face Team).
 
